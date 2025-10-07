@@ -45,7 +45,21 @@ export default async function odooStockSyncHandler({
 
     const totalQuantity = levels.reduce((sum, level) => sum + level.stocked_quantity, 0)
 
-    console.log(`📦 [ODOO STOCK] Synchronisation ${inventoryItem.variant.sku}: ${totalQuantity} unités`)
+    // Vérifier le stock actuel dans Odoo pour éviter les mises à jour inutiles
+    const odooStock = await odooService.getStockBySku(inventoryItem.variant.sku)
+
+    if (odooStock === null) {
+      console.log(`⚠️  [ODOO STOCK] ${inventoryItem.variant.sku} non trouvé dans Odoo`)
+      return
+    }
+
+    // Ne mettre à jour que si le stock a changé
+    if (odooStock === totalQuantity) {
+      console.log(`⏭️  [ODOO STOCK] ${inventoryItem.variant.sku}: stock identique (${totalQuantity}), skip`)
+      return
+    }
+
+    console.log(`📦 [ODOO STOCK] ${inventoryItem.variant.sku}: ${odooStock} → ${totalQuantity}`)
 
     // Update stock in Odoo
     await odooService.updateStock(inventoryItem.variant.sku, totalQuantity)

@@ -35,9 +35,10 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
       return
     }
 
-    console.log(`📦 [STOCK SYNC] ${productsWithOdooId.length} produits à synchroniser`)
+    console.log(`📦 [STOCK SYNC] ${productsWithOdooId.length} produits à vérifier`)
 
     let updated = 0
+    let skipped = 0
     let errors = 0
 
     // Pour chaque produit, récupérer le stock depuis Odoo et mettre à jour Medusa
@@ -81,6 +82,9 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
                 `✅ [STOCK SYNC] ${variant.sku}: ${currentStock} → ${odooStock}`
               )
               updated++
+            } else {
+              // Stock identique, pas de mise à jour
+              skipped++
             }
           }
         } catch (error: any) {
@@ -91,7 +95,7 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
     }
 
     console.log(
-      `✅ [STOCK SYNC] Terminé: ${updated} mis à jour, ${errors} erreurs`
+      `✅ [STOCK SYNC] Terminé: ${updated} mis à jour, ${skipped} inchangés, ${errors} erreurs`
     )
   } catch (error: any) {
     console.error("❌ [STOCK SYNC] Erreur globale:", error)
