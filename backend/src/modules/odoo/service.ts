@@ -99,6 +99,22 @@ export default class OdooModuleService {
     })
   }
 
+  /**
+   * Ping Odoo to verify connection and authentication
+   * @returns Object with ok status, uid, and database name
+   */
+  async ping(): Promise<{ ok: boolean; uid: number; db: string; url: string }> {
+    if (!this.uid) {
+      await this.login()
+    }
+    return {
+      ok: true,
+      uid: this.uid!,
+      db: this.options.dbName,
+      url: this.options.url,
+    }
+  }
+
   async fetchProducts(
     pagination: Pagination = {}
   ): Promise<OdooProduct[]> {

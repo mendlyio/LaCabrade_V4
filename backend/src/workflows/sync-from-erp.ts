@@ -18,7 +18,9 @@ import { ODOO_MODULE } from "../modules/odoo"
 import { OdooProduct, Pagination } from "../modules/odoo/service"
 import OdooModuleService from "../modules/odoo/service"
 
-type SyncFromErpInput = Pagination
+type SyncFromErpInput = Pagination & {
+  dryRun?: boolean
+}
 
 // Step pour récupérer les produits depuis Odoo
 const fetchOdooProductsStep = createStep(
@@ -158,22 +160,27 @@ export const syncFromErpWorkflow = createWorkflow(
       }
     )
 
-    // Créer les nouveaux produits
-    createProductsWorkflow.runAsStep({
-      input: {
-        products: productsToCreate,
-      },
-    })
+    // Créer les nouveaux produits (sauf si dry-run)
+    if (!input.dryRun) {
+      createProductsWorkflow.runAsStep({
+        input: {
+          products: productsToCreate,
+        },
+      })
 
-    // Mettre à jour les produits existants
-    updateProductsWorkflow.runAsStep({
-      input: {
-        products: productsToUpdate,
-      },
-    })
+      // Mettre à jour les produits existants
+      updateProductsWorkflow.runAsStep({
+        input: {
+          products: productsToUpdate,
+        },
+      })
+    }
 
     return new WorkflowResponse({
       odooProducts,
+      productsProcessed: odooProducts.length,
+      toCreate: productsToCreate.length,
+      toUpdate: productsToUpdate.length,
     })
   }
 )

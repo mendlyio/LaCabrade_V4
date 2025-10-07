@@ -18,7 +18,10 @@
     "ib": "init-backend",
     "start": "init-backend && cd .medusa/server && medusa start --verbose",
     "dev": "medusa develop",
-    "email:dev": "email dev --dir=./src/modules/email-notifications/templates --port=3002"
+    "email:dev": "email dev --dir=./src/modules/email-notifications/templates --port=3002",
+    "odoo:ping": "tsx src/scripts/odoo-ping.ts",
+    "odoo:sync:dry": "tsx src/scripts/odoo-sync.ts --dry",
+    "odoo:sync": "tsx src/scripts/odoo-sync.ts"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.10.2",
@@ -42,7 +45,8 @@
     "pg": "^8.13.1",
     "resend": "4.0.1",
     "ulid": "^2.3.0",
-    "json-rpc-2.0": "^1.7.0"
+    "json-rpc-2.0": "^1.7.0",
+    "tsx": "^4.19.2"
   },
   "devDependencies": {
     "@medusajs/test-utils": "2.10.2",
