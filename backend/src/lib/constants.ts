@@ -91,6 +91,14 @@ export const MEILISEARCH_HOST = process.env.MEILISEARCH_HOST;
 export const MEILISEARCH_ADMIN_KEY = process.env.MEILISEARCH_ADMIN_KEY;
 
 /**
+ * (optional) Odoo ERP configuration
+ */
+export const ODOO_URL = process.env.ODOO_URL;
+export const ODOO_DB_NAME = process.env.ODOO_DB_NAME;
+export const ODOO_USERNAME = process.env.ODOO_USERNAME;
+export const ODOO_API_KEY = process.env.ODOO_API_KEY;
+
+/**
  * Worker mode
  */
 export const WORKER_MODE =

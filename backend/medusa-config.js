@@ -21,7 +21,11 @@ import {
   MINIO_SECRET_KEY,
   MINIO_BUCKET,
   MEILISEARCH_HOST,
-  MEILISEARCH_ADMIN_KEY
+  MEILISEARCH_ADMIN_KEY,
+  ODOO_URL,
+  ODOO_DB_NAME,
+  ODOO_USERNAME,
+  ODOO_API_KEY
 } from 'lib/constants';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
@@ -132,6 +136,15 @@ const medusaConfig = {
           },
         ],
       },
+    }] : []),
+    ...(ODOO_URL && ODOO_DB_NAME && ODOO_USERNAME && ODOO_API_KEY ? [{
+      resolve: './src/modules/odoo',
+      options: {
+        url: ODOO_URL,
+        dbName: ODOO_DB_NAME,
+        username: ODOO_USERNAME,
+        apiKey: ODOO_API_KEY
+      }
     }] : [])
   ],
   plugins: [
