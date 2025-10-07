@@ -4,7 +4,9 @@ import {
   transform,
   createStep,
   StepResponse,
+  WorkflowData,
 } from "@medusajs/framework/workflows-sdk"
+import type { WorkflowTypes } from "@medusajs/framework/types"
 import {
   createProductsWorkflow,
   updateProductsWorkflow,
@@ -48,9 +50,12 @@ const fetchExistingProductsStep = createStep(
   }
 )
 
-export const syncFromErpWorkflow = createWorkflow(
+export const syncFromErpWorkflow = createWorkflow<
+  SyncFromErpInput,
+  { odooProducts: OdooProduct[] }
+>(
   "sync-from-erp",
-  (input: SyncFromErpInput) => {
+  (input: WorkflowData<SyncFromErpInput>) => {
     // Récupérer les produits depuis Odoo
     const odooProducts = fetchOdooProductsStep(input)
 
