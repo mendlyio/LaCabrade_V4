@@ -115,6 +115,183 @@ export default class OdooModuleService {
     }
   }
 
+  /**
+   * Update stock quantity in Odoo for a product variant
+   * @param variantSku - SKU of the variant
+   * @param quantity - New quantity
+   */
+  async updateStock(variantSku: string, quantity: number): Promise<void> {
+    if (!this.uid) {
+      await this.login()
+    }
+
+    // Find product.product by SKU (default_code in Odoo)
+    const productIds: number[] = await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid,
+        this.options.apiKey,
+        "product.product",
+        "search",
+        [[["default_code", "=", variantSku]]],
+        { limit: 1 },
+      ],
+    })
+
+    if (!productIds.length) {
+      throw new Error(`Product with SKU ${variantSku} not found in Odoo`)
+    }
+
+    const productId = productIds[0]
+
+    // Update stock via stock.quant
+    // Find or create stock.quant for the product
+    await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid,
+        this.options.apiKey,
+        "stock.quant",
+        "create",
+        [
+          {
+            product_id: productId,
+            location_id: 8, // Stock location (adjust based on your Odoo config)
+            quantity: quantity,
+          },
+        ],
+      ],
+    })
+  }
+
+  /**
+   * Create an order in Odoo from Medusa order data
+   * @param orderData - Medusa order data
+   * @returns Odoo order ID
+   */
+  async createOrder(orderData: {
+    customerEmail: string
+    customerName: string
+    items: Array<{
+      sku: string
+      quantity: number
+      price: number
+      name: string
+    }>
+    total: number
+    shippingAddress?: {
+      address_1?: string
+      city?: string
+      postal_code?: string
+      country_code?: string
+    }
+  }): Promise<number> {
+    if (!this.uid) {
+      await this.login()
+    }
+
+    // 1. Find or create customer (res.partner)
+    let partnerIds: number[] = await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid,
+        this.options.apiKey,
+        "res.partner",
+        "search",
+        [[["email", "=", orderData.customerEmail]]],
+        { limit: 1 },
+      ],
+    })
+
+    let partnerId: number
+
+    if (partnerIds.length === 0) {
+      // Create customer
+      partnerId = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "res.partner",
+          "create",
+          [
+            {
+              name: orderData.customerName,
+              email: orderData.customerEmail,
+              street: orderData.shippingAddress?.address_1 || "",
+              city: orderData.shippingAddress?.city || "",
+              zip: orderData.shippingAddress?.postal_code || "",
+            },
+          ],
+        ],
+      })
+    } else {
+      partnerId = partnerIds[0]
+    }
+
+    // 2. Create order lines
+    const orderLines = []
+    for (const item of orderData.items) {
+      // Find product by SKU
+      const productIds: number[] = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.product",
+          "search",
+          [[["default_code", "=", item.sku]]],
+          { limit: 1 },
+        ],
+      })
+
+      if (productIds.length > 0) {
+        orderLines.push([
+          0,
+          0,
+          {
+            product_id: productIds[0],
+            product_uom_qty: item.quantity,
+            price_unit: item.price / 100, // Medusa uses cents
+            name: item.name,
+          },
+        ])
+      }
+    }
+
+    // 3. Create sale.order
+    const orderId: number = await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid,
+        this.options.apiKey,
+        "sale.order",
+        "create",
+        [
+          {
+            partner_id: partnerId,
+            order_line: orderLines,
+            note: "Order created from Medusa",
+          },
+        ],
+      ],
+    })
+
+    return orderId
+  }
+
   async fetchProducts(
     pagination: Pagination = {}
   ): Promise<OdooProduct[]> {

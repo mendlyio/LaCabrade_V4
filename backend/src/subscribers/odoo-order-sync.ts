@@ -1,51 +1,89 @@
 import type { SubscriberConfig } from "@medusajs/framework"
 import { Modules } from "@medusajs/framework/utils"
+import { ODOO_MODULE } from "../modules/odoo"
+import OdooModuleService from "../modules/odoo/service"
 
 /**
  * Subscriber pour créer des commandes dans Odoo lors de commandes Medusa
  * 
- * TODO: Implémenter la création de sale.order dans Odoo
- * - Récupérer les détails de la commande Medusa
- * - Mapper les données vers le format Odoo (sale.order + sale.order.line)
- * - Créer la commande dans Odoo via API JSON-RPC
- * - Stocker l'ID Odoo dans metadata de la commande Medusa
+ * Crée une sale.order dans Odoo avec:
+ * - Client (res.partner)
+ * - Lignes de commande (sale.order.line)
+ * - Stocke l'ID Odoo dans metadata de la commande Medusa
  */
 
 export default async function odooOrderSyncHandler({
   event: { data },
   container,
 }: any) {
-  console.log("🛒 [ODOO ORDER] Commande créée dans Medusa:", data.id)
-  
-  // TODO: Résoudre les services nécessaires
-  // const odooService = container.resolve("odoo")
-  // const orderService = container.resolve(Modules.ORDER)
-  
-  // TODO: Récupérer la commande complète
-  // const order = await orderService.retrieve(data.id, {
-  //   relations: ["items", "items.variant", "shipping_address", "billing_address"]
-  // })
-  
-  // TODO: Mapper et créer dans Odoo
-  // const odooOrderData = {
-  //   partner_id: ..., // Client Odoo ou créer
-  //   order_line: order.items.map(item => [...]),
-  //   // ... autres champs
-  // }
-  // const odooOrderId = await odooService.createOrder(odooOrderData)
-  
-  // TODO: Sauvegarder l'ID Odoo dans metadata
-  // await orderService.update(data.id, {
-  //   metadata: { odoo_order_id: odooOrderId }
-  // })
-  
-  console.log("⚠️  [ODOO ORDER] Création de commande Odoo non implémentée (TODO)")
+  // Check if Odoo is configured
+  if (!process.env.ODOO_URL || !process.env.ODOO_API_KEY) {
+    console.log("⚠️  [ODOO ORDER] Odoo non configuré, synchronisation ignorée")
+    return
+  }
+
+  try {
+    console.log("🛒 [ODOO ORDER] Commande Medusa créée:", data.id)
+
+    const odooService: OdooModuleService = container.resolve(ODOO_MODULE)
+    const orderService = container.resolve(Modules.ORDER)
+
+    // Retrieve full order details
+    const order = await orderService.retrieveOrder(data.id, {
+      relations: ["items", "items.variant", "shipping_address", "billing_address", "customer"],
+    })
+
+    // Prepare order data for Odoo
+    const orderData = {
+      customerEmail: order.email || order.customer?.email || "noemail@medusa.com",
+      customerName:
+        order.shipping_address?.first_name && order.shipping_address?.last_name
+          ? `${order.shipping_address.first_name} ${order.shipping_address.last_name}`
+          : order.customer?.first_name && order.customer?.last_name
+          ? `${order.customer.first_name} ${order.customer.last_name}`
+          : "Customer",
+      items: order.items.map((item: any) => ({
+        sku: item.variant?.sku || item.variant_sku || `MEDUSA-${item.id}`,
+        quantity: item.quantity,
+        price: item.unit_price,
+        name: item.title,
+      })),
+      total: order.total,
+      shippingAddress: order.shipping_address
+        ? {
+            address_1: order.shipping_address.address_1,
+            city: order.shipping_address.city,
+            postal_code: order.shipping_address.postal_code,
+            country_code: order.shipping_address.country_code,
+          }
+        : undefined,
+    }
+
+    console.log(`🛒 [ODOO ORDER] Création dans Odoo pour ${orderData.customerEmail}`)
+
+    // Create order in Odoo
+    const odooOrderId = await odooService.createOrder(orderData)
+
+    console.log(`✅ [ODOO ORDER] Commande créée dans Odoo: ID ${odooOrderId}`)
+
+    // Store Odoo order ID in Medusa order metadata
+    await orderService.updateOrders(data.id, {
+      metadata: {
+        ...order.metadata,
+        odoo_order_id: odooOrderId,
+      },
+    })
+
+    console.log(`✅ [ODOO ORDER] ID Odoo sauvegardé dans metadata Medusa`)
+  } catch (error: any) {
+    console.error(`❌ [ODOO ORDER] Erreur de synchronisation:`, error.message)
+    // Don't throw - we don't want to block order placement if Odoo sync fails
+  }
 }
 
 export const config: SubscriberConfig = {
   event: [
     "order.placed",
-    // Ou utiliser "order.completed" selon votre workflow
   ],
 }
 
