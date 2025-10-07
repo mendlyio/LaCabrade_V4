@@ -20,6 +20,7 @@ import OdooModuleService from "../modules/odoo/service"
 
 type SyncFromErpInput = Pagination & {
   dryRun?: boolean
+  filterProductIds?: number[] // IDs des produits à synchroniser (si non fourni, tous)
 }
 
 // Step pour récupérer les produits depuis Odoo
@@ -54,7 +55,14 @@ export const syncFromErpWorkflow = createWorkflow(
   "sync-from-erp",
   function (input: SyncFromErpInput) {
     // Récupérer les produits depuis Odoo
-    const odooProducts = fetchOdooProductsStep(input)
+    let odooProducts = fetchOdooProductsStep(input)
+    
+    // Filtrer par IDs si spécifié
+    if (input.filterProductIds && input.filterProductIds.length > 0) {
+      odooProducts = transform({ odooProducts, filterIds: input.filterProductIds }, ({ odooProducts, filterIds }) => {
+        return odooProducts.filter((p: any) => filterIds.includes(p.id))
+      })
+    }
 
     // Récupérer les produits existants dans Medusa
     const existingProducts = fetchExistingProductsStep({ odooProducts })

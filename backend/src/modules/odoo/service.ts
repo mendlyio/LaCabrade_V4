@@ -19,6 +19,7 @@ export type OdooProduct = {
   list_price: number
   default_code: string
   description_sale: string
+  qty_available?: number
   currency_id: {
     id: number
     display_name: string
@@ -343,6 +344,7 @@ export default class OdooModuleService {
             "product_variant_ids",
             "product_variant_count",
             "attribute_line_ids",
+            "qty_available",
           ],
         },
       ],
