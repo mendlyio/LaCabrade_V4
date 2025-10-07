@@ -27,7 +27,14 @@ type SyncFromErpInput = Pagination & {
 const fetchOdooProductsStep = createStep(
   "fetch-odoo-products",
   async (input: SyncFromErpInput, { container }) => {
-    const odooModuleService = container.resolve(ODOO_MODULE) as OdooModuleService
+    // Vérifier si le module Odoo est disponible
+    let odooModuleService: OdooModuleService
+    try {
+      odooModuleService = container.resolve(ODOO_MODULE) as OdooModuleService
+    } catch (error) {
+      throw new Error("Module Odoo non configuré. Veuillez ajouter les variables d'environnement ODOO_*")
+    }
+    
     const products = await odooModuleService.fetchProducts(input)
     return new StepResponse(products)
   }

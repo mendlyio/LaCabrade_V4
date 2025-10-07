@@ -9,7 +9,17 @@ import { Modules } from "@medusajs/framework/utils"
  */
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   try {
-    const odooService: OdooModuleService = req.scope.resolve(ODOO_MODULE)
+    // Vérifier si le module Odoo est disponible
+    let odooService: OdooModuleService
+    try {
+      odooService = req.scope.resolve(ODOO_MODULE)
+    } catch (error) {
+      return res.status(503).json({
+        error: "Odoo non configuré",
+        message: "Le module Odoo n'est pas disponible. Veuillez configurer les variables d'environnement.",
+      })
+    }
+    
     const productService = req.scope.resolve(Modules.PRODUCT)
 
     // Récupérer tous les produits Odoo (limite à 1000 pour l'UI)
