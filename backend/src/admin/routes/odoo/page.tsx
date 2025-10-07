@@ -1,6 +1,72 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk"
-import { Container, Heading, Button, Table, Checkbox, Badge, Text } from "@medusajs/ui"
 import { useState, useEffect } from "react"
+
+// Composants inline pour éviter les erreurs de build avec @medusajs/ui
+const Container = ({ children, className = "" }: any) => (
+  <div className={`container mx-auto ${className}`}>{children}</div>
+)
+
+const Heading = ({ children, className = "" }: any) => (
+  <h1 className={`text-2xl font-bold ${className}`}>{children}</h1>
+)
+
+const Button = ({ children, onClick, disabled, variant = "secondary", className = "" }: any) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    className={`px-4 py-2 rounded-md font-medium transition-colors ${
+      variant === "primary"
+        ? "bg-blue-600 text-white hover:bg-blue-700"
+        : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+    } disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+  >
+    {children}
+  </button>
+)
+
+const Badge = ({ children, color = "gray" }: any) => {
+  const colors: Record<string, string> = {
+    green: "bg-green-100 text-green-800",
+    red: "bg-red-100 text-red-800",
+    gray: "bg-gray-100 text-gray-800",
+  }
+  return (
+    <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[color]}`}>
+      {children}
+    </span>
+  )
+}
+
+const Text = ({ children, className = "" }: any) => (
+  <p className={`text-sm ${className}`}>{children}</p>
+)
+
+const Checkbox = ({ checked, onCheckedChange }: any) => (
+  <input
+    type="checkbox"
+    checked={checked}
+    onChange={(e) => onCheckedChange(e.target.checked)}
+    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+  />
+)
+
+const Table = ({ children }: any) => (
+  <table className="min-w-full divide-y divide-gray-200">{children}</table>
+)
+
+Table.Header = ({ children }: any) => <thead className="bg-gray-50">{children}</thead>
+Table.Body = ({ children }: any) => (
+  <tbody className="bg-white divide-y divide-gray-200">{children}</tbody>
+)
+Table.Row = ({ children }: any) => <tr className="hover:bg-gray-50">{children}</tr>
+Table.HeaderCell = ({ children, className = "" }: any) => (
+  <th className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${className}`}>
+    {children}
+  </th>
+)
+Table.Cell = ({ children, className = "" }: any) => (
+  <td className={`px-6 py-4 whitespace-nowrap text-sm ${className}`}>{children}</td>
+)
 
 const OdooSettingsPage = () => {
   const [connectionStatus, setConnectionStatus] = useState<any>(null)
@@ -65,6 +131,7 @@ const OdooSettingsPage = () => {
       if (data.success) {
         alert(`✅ ${data.synced} produits synchronisés avec succès !`)
         setSelectedProducts(new Set())
+        fetchOdooProducts() // Recharger pour voir les badges mis à jour
       } else {
         alert("❌ Erreur lors de la synchronisation")
       }
@@ -99,9 +166,7 @@ const OdooSettingsPage = () => {
   if (!connectionStatus?.configured) {
     return (
       <Container className="p-8">
-        <Heading level="h1" className="mb-4">
-          Configuration Odoo
-        </Heading>
+        <Heading className="mb-4">Configuration Odoo</Heading>
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
           <Text className="text-orange-800">
             ⚠️ Odoo n'est pas configuré. Veuillez ajouter les variables d'environnement :
@@ -121,7 +186,7 @@ const OdooSettingsPage = () => {
     <Container className="p-8">
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          <Heading level="h1">Gestion Produits Odoo</Heading>
+          <Heading>Gestion Produits Odoo</Heading>
           <Badge color={connectionStatus.connected ? "green" : "red"}>
             {connectionStatus.connected ? "Connecté" : "Déconnecté"}
           </Badge>
@@ -162,7 +227,7 @@ const OdooSettingsPage = () => {
       </div>
 
       {products.length > 0 && (
-        <div className="bg-white border rounded-lg">
+        <div className="bg-white border rounded-lg overflow-hidden">
           <div className="p-4 border-b flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Checkbox
@@ -175,51 +240,55 @@ const OdooSettingsPage = () => {
             </div>
           </div>
 
-          <Table>
-            <Table.Header>
-              <Table.Row>
-                <Table.HeaderCell className="w-12"></Table.HeaderCell>
-                <Table.HeaderCell>Nom du produit</Table.HeaderCell>
-                <Table.HeaderCell>SKU</Table.HeaderCell>
-                <Table.HeaderCell>Prix</Table.HeaderCell>
-                <Table.HeaderCell>Stock Odoo</Table.HeaderCell>
-                <Table.HeaderCell>Statut</Table.HeaderCell>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {products.map((product) => (
-                <Table.Row key={product.id}>
-                  <Table.Cell>
-                    <Checkbox
-                      checked={selectedProducts.has(product.id)}
-                      onCheckedChange={() => toggleProduct(product.id)}
-                    />
-                  </Table.Cell>
-                  <Table.Cell className="font-medium">
-                    {product.display_name}
-                  </Table.Cell>
-                  <Table.Cell>{product.default_code || "-"}</Table.Cell>
-                  <Table.Cell>{product.list_price} €</Table.Cell>
-                  <Table.Cell>{product.qty_available || 0}</Table.Cell>
-                  <Table.Cell>
-                    <Badge color={product.synced ? "green" : "gray"}>
-                      {product.synced ? "Synchronisé" : "Non importé"}
-                    </Badge>
-                  </Table.Cell>
+          <div className="overflow-x-auto">
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.HeaderCell className="w-12"></Table.HeaderCell>
+                  <Table.HeaderCell>Nom du produit</Table.HeaderCell>
+                  <Table.HeaderCell>SKU</Table.HeaderCell>
+                  <Table.HeaderCell>Prix</Table.HeaderCell>
+                  <Table.HeaderCell>Stock Odoo</Table.HeaderCell>
+                  <Table.HeaderCell>Statut</Table.HeaderCell>
                 </Table.Row>
-              ))}
-            </Table.Body>
-          </Table>
+              </Table.Header>
+              <Table.Body>
+                {products.map((product) => (
+                  <Table.Row key={product.id}>
+                    <Table.Cell>
+                      <Checkbox
+                        checked={selectedProducts.has(product.id)}
+                        onCheckedChange={() => toggleProduct(product.id)}
+                      />
+                    </Table.Cell>
+                    <Table.Cell className="font-medium">
+                      {product.display_name}
+                    </Table.Cell>
+                    <Table.Cell>{product.default_code || "-"}</Table.Cell>
+                    <Table.Cell>{product.list_price} {product.currency}</Table.Cell>
+                    <Table.Cell>{product.qty_available || 0}</Table.Cell>
+                    <Table.Cell>
+                      <Badge color={product.synced ? "green" : "gray"}>
+                        {product.synced ? "Synchronisé" : "Non importé"}
+                      </Badge>
+                    </Table.Cell>
+                  </Table.Row>
+                ))}
+              </Table.Body>
+            </Table>
+          </div>
         </div>
       )}
 
       <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <Text className="text-sm text-blue-800">
-          <strong>ℹ️ Synchronisation du stock :</strong>
+        <Text className="text-blue-800">
+          <strong>ℹ️ Synchronisation automatique :</strong>
           <br />
-          • Vente sur Medusa → Stock mis à jour automatiquement dans Odoo
+          • Stock : Synchronisé automatiquement toutes les 15 minutes (Odoo ↔ Medusa)
           <br />
-          • Vente sur Odoo → Configurer un webhook Odoo pointant vers : <code>/admin/odoo/webhook/stock</code>
+          • Vente sur Medusa → Stock mis à jour dans Odoo en temps réel
+          <br />
+          • Commande sur Medusa → Créée automatiquement dans Odoo
         </Text>
       </div>
     </Container>
@@ -232,4 +301,3 @@ export const config = defineRouteConfig({
 })
 
 export default OdooSettingsPage
-
