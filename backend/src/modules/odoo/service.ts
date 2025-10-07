@@ -174,6 +174,56 @@ export default class OdooModuleService {
    * @param orderData - Medusa order data
    * @returns Odoo order ID
    */
+  /**
+   * Récupère le stock disponible d'un produit par son SKU
+   */
+  async getStockBySku(sku: string): Promise<number | null> {
+    if (!this.uid) {
+      await this.login()
+    }
+
+    try {
+      // Rechercher le produit par SKU
+      const productIds: number[] = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.product",
+          "search",
+          [[["default_code", "=", sku]]],
+          { limit: 1 },
+        ],
+      })
+
+      if (!productIds.length) {
+        return null
+      }
+
+      // Récupérer les détails du produit incluant le stock
+      const products: any[] = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.product",
+          "read",
+          [productIds],
+          { fields: ["qty_available"] },
+        ],
+      })
+
+      return products[0]?.qty_available || 0
+    } catch (error) {
+      console.error(`Erreur getStockBySku pour ${sku}:`, error)
+      throw error
+    }
+  }
+
   async createOrder(orderData: {
     customerEmail: string
     customerName: string
