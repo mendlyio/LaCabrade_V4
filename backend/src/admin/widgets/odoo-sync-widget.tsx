@@ -1,4 +1,4 @@
-import { defineWidgetConfig } from "@medusajs/admin-shared"
+import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { useState, useEffect } from "react"
 
 // Import dynamique pour éviter les problèmes de build
