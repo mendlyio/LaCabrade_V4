@@ -16,6 +16,7 @@ import {
 import { Modules } from "@medusajs/framework/utils"
 import { ODOO_MODULE } from "../modules/odoo"
 import { OdooProduct, Pagination } from "../modules/odoo/service"
+import OdooModuleService from "../modules/odoo/service"
 
 type SyncFromErpInput = Pagination
 
@@ -23,7 +24,7 @@ type SyncFromErpInput = Pagination
 const fetchOdooProductsStep = createStep(
   "fetch-odoo-products",
   async (input: SyncFromErpInput, { container }) => {
-    const odooModuleService = container.resolve(ODOO_MODULE)
+    const odooModuleService = container.resolve(ODOO_MODULE) as OdooModuleService
     const products = await odooModuleService.fetchProducts(input)
     return new StepResponse(products)
   }
@@ -37,15 +38,13 @@ const fetchExistingProductsStep = createStep(
     
     const externalIds = odooProducts.map((p: OdooProduct) => `${p.id}`)
     
-    const { data } = await productService.listProducts({
-      filters: {
-        metadata: {
-          external_id: externalIds,
-        },
-      },
-    })
+    // Récupérer tous les produits et filtrer manuellement
+    const products = await productService.listProducts({})
+    const filteredProducts = products.filter((p: any) => 
+      externalIds.includes(p.metadata?.external_id)
+    )
 
-    return new StepResponse(data)
+    return new StepResponse(filteredProducts)
   }
 )
 

@@ -1,6 +1,35 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
-import { Container, Heading, Button, Text, Badge, Toaster, toast } from "@medusajs/ui"
 import { useState, useEffect } from "react"
+
+// Import dynamique pour éviter les problèmes de build
+const Container = (props: any) => <div className="bg-ui-bg-base shadow-elevation-card-rest rounded-lg" {...props} />
+const Heading = ({ level, children, ...props }: any) => <h2 className="text-xl font-semibold" {...props}>{children}</h2>
+const Button = (props: any) => (
+  <button 
+    className="px-4 py-2 bg-ui-button-neutral text-ui-fg-on-color rounded-md hover:bg-ui-button-neutral-hover disabled:opacity-50 disabled:cursor-not-allowed"
+    {...props} 
+  />
+)
+const Text = (props: any) => <p {...props} />
+const Badge = ({ color, children, ...props }: any) => {
+  const colorClasses = {
+    green: "bg-green-100 text-green-800",
+    red: "bg-red-100 text-red-800",
+    orange: "bg-orange-100 text-orange-800"
+  }
+  return (
+    <span className={`px-2 py-1 rounded-full text-xs font-medium ${colorClasses[color] || colorClasses.green}`} {...props}>
+      {children}
+    </span>
+  )
+}
+
+// Toast simple sans dépendance
+const toast = {
+  info: (message: string) => alert(`ℹ️ ${message}`),
+  success: (message: string) => alert(`✅ ${message}`),
+  error: (message: string) => alert(`❌ ${message}`)
+}
 
 const OdooSyncWidget = () => {
   const [isLoading, setIsLoading] = useState(false)
@@ -90,7 +119,6 @@ const OdooSyncWidget = () => {
 
   return (
     <>
-      <Toaster />
       <Container className="p-6">
         <div className="flex flex-col gap-6">
           <div className="flex items-center justify-between">
