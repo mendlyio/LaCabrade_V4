@@ -18,14 +18,21 @@ export default async function odooStockSyncHandler({
 }: any) {
   // Check if Odoo is configured
   if (!process.env.ODOO_URL || !process.env.ODOO_API_KEY) {
-    console.log("⚠️  [ODOO STOCK] Odoo non configuré, synchronisation ignorée")
-    return
+    return // Silent skip si Odoo non configuré
   }
 
   try {
+    // Vérifier si le module Odoo est enregistré
+    let odooService: OdooModuleService
+    try {
+      odooService = container.resolve(ODOO_MODULE)
+    } catch (error) {
+      // Module Odoo non enregistré, skip silencieusement
+      return
+    }
+
     console.log("📦 [ODOO STOCK] Événement de stock détecté:", data.id)
 
-    const odooService: OdooModuleService = container.resolve(ODOO_MODULE)
     const inventoryService = container.resolve(Modules.INVENTORY)
 
     // Get inventory item details

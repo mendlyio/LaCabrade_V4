@@ -18,14 +18,21 @@ export default async function odooOrderSyncHandler({
 }: any) {
   // Check if Odoo is configured
   if (!process.env.ODOO_URL || !process.env.ODOO_API_KEY) {
-    console.log("⚠️  [ODOO ORDER] Odoo non configuré, synchronisation ignorée")
-    return
+    return // Silent skip si Odoo non configuré
   }
 
   try {
+    // Vérifier si le module Odoo est enregistré
+    let odooService: OdooModuleService
+    try {
+      odooService = container.resolve(ODOO_MODULE)
+    } catch (error) {
+      // Module Odoo non enregistré, skip silencieusement
+      return
+    }
+
     console.log("🛒 [ODOO ORDER] Commande Medusa créée:", data.id)
 
-    const odooService: OdooModuleService = container.resolve(ODOO_MODULE)
     const orderService = container.resolve(Modules.ORDER)
 
     // Retrieve full order details

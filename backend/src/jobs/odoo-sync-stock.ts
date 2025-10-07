@@ -13,13 +13,20 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
   try {
     // Vérifier la configuration Odoo
     if (!process.env.ODOO_URL || !process.env.ODOO_DB_NAME) {
-      console.log("⏭️  [STOCK SYNC] Odoo non configuré, skip")
+      return // Silent skip si Odoo non configuré
+    }
+
+    // Vérifier si le module Odoo est enregistré
+    let odooService: OdooModuleService
+    try {
+      odooService = container.resolve(ODOO_MODULE)
+    } catch (error) {
+      // Module Odoo non enregistré, skip silencieusement
       return
     }
 
     console.log("🔄 [STOCK SYNC] Démarrage sync stock depuis Odoo...")
 
-    const odooService: OdooModuleService = container.resolve(ODOO_MODULE)
     const inventoryService = container.resolve(Modules.INVENTORY)
     const productService = container.resolve(Modules.PRODUCT)
 
