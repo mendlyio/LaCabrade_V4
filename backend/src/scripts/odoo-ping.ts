@@ -1,7 +1,4 @@
 #!/usr/bin/env tsx
-import { Modules } from "@medusajs/framework/utils"
-import { MedusaApp } from "@medusajs/framework"
-import { ODOO_MODULE } from "../modules/odoo"
 import OdooModuleService from "../modules/odoo/service"
 
 async function main() {
@@ -19,23 +16,13 @@ async function main() {
   }
 
   try {
-    // Initialize Medusa app to get DI container
-    const { container } = await MedusaApp({
-      modulesConfig: {
-        [ODOO_MODULE]: {
-          resolve: "./src/modules/odoo",
-          options: {
-            url: process.env.ODOO_URL!,
-            dbName: process.env.ODOO_DB_NAME!,
-            username: process.env.ODOO_USERNAME!,
-            apiKey: process.env.ODOO_API_KEY!,
-          },
-        },
-      },
+    // Create Odoo service directly without DI container
+    const odooService = new OdooModuleService({}, {
+      url: process.env.ODOO_URL!,
+      dbName: process.env.ODOO_DB_NAME!,
+      username: process.env.ODOO_USERNAME!,
+      apiKey: process.env.ODOO_API_KEY!,
     })
-
-    // Resolve Odoo service
-    const odooService: OdooModuleService = container.resolve(ODOO_MODULE)
     
     // Test connection
     console.log("Connecting to Odoo...")
