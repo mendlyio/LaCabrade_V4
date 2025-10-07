@@ -55,15 +55,14 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
             continue
           }
 
-          // Récupérer le variant avec ses inventory items
-          const variants = await productService.listProductVariants(
-            { id: [variant.id] },
-            { relations: ["inventory_items"] }
-          )
+          // Récupérer l'inventory item via le SKU
+          const inventoryItems = await inventoryService.listInventoryItems({
+            sku: [variant.sku],
+          })
 
-          if (!variants.length || !variants[0].inventory_items?.[0]) continue
+          if (!inventoryItems.length) continue
 
-          const inventoryItem = variants[0].inventory_items[0]
+          const inventoryItem = inventoryItems[0]
 
           const levels = await inventoryService.listInventoryLevels({
             inventory_item_id: [inventoryItem.id],

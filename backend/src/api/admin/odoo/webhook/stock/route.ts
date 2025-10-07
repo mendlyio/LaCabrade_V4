@@ -37,11 +37,8 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     const inventoryService = req.scope.resolve(Modules.INVENTORY)
     const productService = req.scope.resolve(Modules.PRODUCT)
 
-    // Trouver le variant Medusa par SKU avec ses inventory items
-    const variants = await productService.listProductVariants(
-      { sku: [sku] },
-      { relations: ["inventory_items"] }
-    )
+    // Trouver le variant Medusa par SKU
+    const variants = await productService.listProductVariants({ sku: [sku] })
 
     if (!variants.length) {
       console.log(`⚠️  [ODOO WEBHOOK] Produit non trouvé dans Medusa: ${sku}`)
@@ -52,15 +49,21 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     }
 
     const variant = variants[0]
-    const inventoryItem = variant.inventory_items?.[0]
     
-    if (!inventoryItem) {
+    // Récupérer les inventory items liés à ce variant
+    const inventoryItems = await inventoryService.listInventoryItems({
+      sku: [sku],
+    })
+    
+    if (!inventoryItems.length) {
       console.log(`⚠️  [ODOO WEBHOOK] Pas d'inventory item pour ${sku}`)
       return res.json({
         success: false,
         message: "Inventory item non trouvé",
       })
     }
+    
+    const inventoryItem = inventoryItems[0]
     
     const levels = await inventoryService.listInventoryLevels({
       inventory_item_id: [inventoryItem.id],
