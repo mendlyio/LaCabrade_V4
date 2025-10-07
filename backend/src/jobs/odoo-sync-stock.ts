@@ -55,12 +55,15 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
             continue
           }
 
-          // Récupérer l'inventory item Medusa
-          if (!variant.inventory_item_id) continue
-
-          const inventoryItem = await inventoryService.retrieveInventoryItem(
-            variant.inventory_item_id
+          // Récupérer le variant avec ses inventory items
+          const variants = await productService.listProductVariants(
+            { id: [variant.id] },
+            { relations: ["inventory_items"] }
           )
+
+          if (!variants.length || !variants[0].inventory_items?.[0]) continue
+
+          const inventoryItem = variants[0].inventory_items[0]
 
           const levels = await inventoryService.listInventoryLevels({
             inventory_item_id: [inventoryItem.id],
@@ -71,12 +74,11 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
             
             // Mettre à jour seulement si différent
             if (currentStock !== odooStock) {
-              await inventoryService.updateInventoryLevels([
-                {
-                  id: levels[0].id,
-                  stocked_quantity: odooStock,
-                },
-              ])
+              await inventoryService.updateInventoryLevels({
+                inventory_item_id: inventoryItem.id,
+                location_id: levels[0].location_id,
+                stocked_quantity: odooStock,
+              })
               
               console.log(
                 `✅ [STOCK SYNC] ${variant.sku}: ${currentStock} → ${odooStock}`

@@ -37,13 +37,13 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     const inventoryService = req.scope.resolve(Modules.INVENTORY)
     const productService = req.scope.resolve(Modules.PRODUCT)
 
-    // Trouver le produit Medusa par SKU
-    const products = await productService.listProducts({})
-    const product = products.find((p: any) => 
-      p.variants?.some((v: any) => v.sku === sku)
+    // Trouver le variant Medusa par SKU avec ses inventory items
+    const variants = await productService.listProductVariants(
+      { sku: [sku] },
+      { relations: ["inventory_items"] }
     )
 
-    if (!product) {
+    if (!variants.length) {
       console.log(`⚠️  [ODOO WEBHOOK] Produit non trouvé dans Medusa: ${sku}`)
       return res.json({
         success: false,
@@ -51,10 +51,16 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       })
     }
 
-    const variant = product.variants.find((v: any) => v.sku === sku)
+    const variant = variants[0]
+    const inventoryItem = variant.inventory_items?.[0]
     
-    // Mettre à jour le stock dans Medusa
-    const inventoryItem = await inventoryService.retrieveInventoryItem(variant.inventory_item_id)
+    if (!inventoryItem) {
+      console.log(`⚠️  [ODOO WEBHOOK] Pas d'inventory item pour ${sku}`)
+      return res.json({
+        success: false,
+        message: "Inventory item non trouvé",
+      })
+    }
     
     const levels = await inventoryService.listInventoryLevels({
       inventory_item_id: [inventoryItem.id],
@@ -62,10 +68,11 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
     if (levels.length > 0) {
       // Mettre à jour le niveau de stock existant
-      await inventoryService.updateInventoryLevels([{
-        id: levels[0].id,
+      await inventoryService.updateInventoryLevels({
+        inventory_item_id: inventoryItem.id,
+        location_id: levels[0].location_id,
         stocked_quantity: qty_available,
-      }])
+      })
       
       console.log(`✅ [ODOO WEBHOOK] Stock mis à jour dans Medusa: ${sku} = ${qty_available}`)
       
