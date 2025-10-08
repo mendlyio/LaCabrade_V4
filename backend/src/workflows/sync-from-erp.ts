@@ -282,10 +282,15 @@ export const syncFromErpWorkflow = createWorkflow(
         
         for (const productData of productsToCreate) {
           try {
-            console.log(`  🔨 Création du produit: ${productData.title}`)
+            console.log(`\n  🔨 Création du produit: ${productData.title}`)
+            console.log(`  📝 Options:`, JSON.stringify(productData.options, null, 2))
+            console.log(`  📝 Variantes (${productData.variants?.length || 0}):`)
+            productData.variants?.forEach((v: any, i: number) => {
+              console.log(`    [${i}] SKU: ${v.sku}, Titre: ${v.title}, Prix: ${v.prices?.[0]?.amount || 'N/A'}`)
+            })
             
             // ÉTAPE 1: Créer le produit de base (sans sales_channels dans createProducts)
-            const createdArray = await productService.createProducts({
+            const productPayload = {
               title: productData.title,
               description: productData.description,
               handle: productData.handle,
@@ -293,12 +298,18 @@ export const syncFromErpWorkflow = createWorkflow(
               metadata: productData.metadata,
               options: productData.options,
               variants: productData.variants,
-            })
+            }
             
-            const created = createdArray[0]
+            console.log(`  🚀 Appel createProducts()...`)
+            const createdArray = await productService.createProducts(productPayload)
+            console.log(`  📦 Résultat createProducts:`, createdArray?.length || 0, 'produit(s)')
+            
+            const created = createdArray?.[0]
             
             if (!created || !created.id) {
               console.error(`  ❌ Produit non créé - pas d'ID retourné!`)
+              console.error(`  ❌ Created:`, created)
+              console.error(`  ❌ CreatedArray:`, createdArray)
               continue
             }
             
