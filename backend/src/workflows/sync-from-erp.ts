@@ -35,7 +35,13 @@ const fetchOdooProductsStep = createStep(
       throw new Error("Module Odoo non configuré. Veuillez ajouter les variables d'environnement ODOO_*")
     }
     
-    const products = await odooModuleService.fetchProducts(input)
+    let products = await odooModuleService.fetchProducts(input)
+    
+    // Filtrer par IDs si spécifié (dans le step, pas dans le workflow)
+    if (input.filterProductIds && input.filterProductIds.length > 0) {
+      products = products.filter((p: OdooProduct) => input.filterProductIds!.includes(p.id))
+    }
+    
     return new StepResponse(products)
   }
 )
@@ -61,15 +67,8 @@ const fetchExistingProductsStep = createStep(
 export const syncFromErpWorkflow = createWorkflow(
   "sync-from-erp",
   function (input: SyncFromErpInput) {
-    // Récupérer les produits depuis Odoo
-    let odooProducts = fetchOdooProductsStep(input)
-    
-    // Filtrer par IDs si spécifié
-    if (input.filterProductIds && input.filterProductIds.length > 0) {
-      odooProducts = transform({ odooProducts, filterIds: input.filterProductIds }, ({ odooProducts, filterIds }) => {
-        return odooProducts.filter((p: any) => filterIds.includes(p.id))
-      })
-    }
+    // Récupérer les produits depuis Odoo (filtrage déjà fait dans le step)
+    const odooProducts = fetchOdooProductsStep(input)
 
     // Récupérer les produits existants dans Medusa
     const existingProducts = fetchExistingProductsStep({ odooProducts })
