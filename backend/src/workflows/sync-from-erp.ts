@@ -400,7 +400,7 @@ export const syncFromErpWorkflow = createWorkflow(
               try {
                 // Récupérer les stock locations
                 const stockLocationService = container.resolve(Modules.STOCK_LOCATION)
-                const { result: stockLocations } = await stockLocationService.listStockLocations({})
+                const stockLocations = await stockLocationService.listStockLocations({})
                 
                 console.log(`      → ${stockLocations.length} stock location(s) trouvé(s)`)
                 
@@ -413,7 +413,7 @@ export const syncFromErpWorkflow = createWorkflow(
                       console.log(`      → Variante ${variantData.sku}: stock Odoo = ${odooStock}`)
                       
                       // Récupérer l'inventory item de cette variante
-                      const { result: inventoryItems } = await inventoryService.listInventoryItems({
+                      const inventoryItems = await inventoryService.listInventoryItems({
                         sku: variantData.sku,
                       })
                       
