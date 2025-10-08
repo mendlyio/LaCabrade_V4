@@ -249,26 +249,52 @@ export const syncFromErpWorkflow = createWorkflow(
     )
 
     // Créer les nouveaux produits (sauf si dry-run)
-    if (!input.dryRun) {
-      createProductsWorkflow.runAsStep({
-        input: {
-          products: productsToCreate,
-        },
-      })
+    const createResult = transform(
+      { productsToCreate, dryRun: input.dryRun },
+      async ({ productsToCreate, dryRun }) => {
+        if (dryRun || productsToCreate.length === 0) {
+          console.log(`⏭️  [WORKFLOW] Pas de création (dry-run ou liste vide)`)
+          return { created: [] }
+        }
 
-      // Mettre à jour les produits existants
-      updateProductsWorkflow.runAsStep({
-        input: {
-          products: productsToUpdate,
-        },
-      })
-    }
+        console.log(`📦 [WORKFLOW] Création de ${productsToCreate.length} produits...`)
+        const result = await createProductsWorkflow.runAsStep({
+          input: {
+            products: productsToCreate,
+          },
+        })
+        console.log(`✅ [WORKFLOW] ${productsToCreate.length} produits créés`)
+        return result
+      }
+    )
+
+    // Mettre à jour les produits existants
+    const updateResult = transform(
+      { productsToUpdate, dryRun: input.dryRun },
+      async ({ productsToUpdate, dryRun }) => {
+        if (dryRun || productsToUpdate.length === 0) {
+          console.log(`⏭️  [WORKFLOW] Pas de mise à jour (dry-run ou liste vide)`)
+          return { updated: [] }
+        }
+
+        console.log(`📝 [WORKFLOW] Mise à jour de ${productsToUpdate.length} produits...`)
+        const result = await updateProductsWorkflow.runAsStep({
+          input: {
+            products: productsToUpdate,
+          },
+        })
+        console.log(`✅ [WORKFLOW] ${productsToUpdate.length} produits mis à jour`)
+        return result
+      }
+    )
 
     return new WorkflowResponse({
       odooProducts,
       productsProcessed: odooProducts.length,
       toCreate: productsToCreate.length,
       toUpdate: productsToUpdate.length,
+      createResult,
+      updateResult,
     })
   }
 )
