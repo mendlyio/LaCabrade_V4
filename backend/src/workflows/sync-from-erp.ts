@@ -286,13 +286,41 @@ export const syncFromErpWorkflow = createWorkflow(
             
             const created = createdArray[0] // createProducts retourne un tableau
             
-            // TODO: Upload d'images Odoo vers MinIO
-            // Pour l'instant, les images base64 d'Odoo ne sont pas uploadées automatiquement
-            // car l'API File de Medusa v2 nécessite une implémentation spécifique
-            // L'image base64 est stockée dans productData.odoo_image_base64 si besoin futur
-            
+            // Uploader l'image Odoo vers MinIO si disponible
             if (productData.odoo_image_base64) {
-              console.log(`    📷 Image Odoo détectée (${productData.odoo_image_base64.length} chars) - upload manuel requis`)
+              try {
+                console.log(`    📷 Upload image vers MinIO...`)
+                
+                // Résoudre directement le provider MinIO file
+                const minioProvider = container.resolve("minioFileProviderService")
+                
+                // Préparer le fichier pour upload
+                const filename = `odoo-product-${created.id}-${Date.now()}.png`
+                
+                // Uploader via le provider MinIO (méthode upload de AbstractFileProviderService)
+                const uploadResult = await (minioProvider as any).upload({
+                  filename,
+                  content: productData.odoo_image_base64, // Base64 string
+                  mimeType: 'image/png',
+                })
+                
+                if (uploadResult && uploadResult.url) {
+                  // Associer l'image au produit
+                  await productService.updateProducts(created.id, {
+                    images: [{
+                      url: uploadResult.url,
+                    }],
+                  })
+                  
+                  console.log(`    🖼️  Image uploadée: ${uploadResult.url}`)
+                } else {
+                  console.log(`    ⚠️  Upload échoué - pas d'URL retournée`)
+                }
+              } catch (imgErr: any) {
+                console.error(`    ⚠️  Erreur upload image:`, imgErr.message)
+                console.error(`    Stack:`, imgErr.stack)
+                // Ne pas bloquer la création du produit si l'image échoue
+              }
             }
             
             // Initialiser le stock pour chaque variante
