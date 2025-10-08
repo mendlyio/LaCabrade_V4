@@ -126,8 +126,8 @@ export const syncFromErpWorkflow = createWorkflow(
             },
             options: [],
             variants: [],
-              odoo_image_base64: (odooProduct.image_128 && typeof odooProduct.image_128 === 'string') 
-                ? odooProduct.image_128 
+              odoo_image_base64: (odooProduct.image_512 && typeof odooProduct.image_512 === 'string') 
+                ? odooProduct.image_512 
                 : undefined, // Stockage temporaire pour upload ultérieur
           }
 
@@ -168,9 +168,9 @@ export const syncFromErpWorkflow = createWorkflow(
               // Poids en grammes (Odoo utilise des kg)
               const weightInGrams = variant.weight ? Math.round(variant.weight * 1000) : undefined
               
-              // Prix : Odoo retourne en EUROS, convertir en centimes pour Medusa
-              const priceInCents = Math.round(variant.list_price * 100)
-              console.log(`    💰 Prix variante ${variant.code || variant.id}: Odoo ${variant.list_price}€ → Medusa ${priceInCents} centimes (${priceInCents / 100}€)`)
+              // Prix : utiliser directement le prix Odoo (pas de conversion)
+              const priceAmount = Math.round(variant.list_price)
+              console.log(`    💰 Prix variante ${variant.code || variant.id}: Odoo ${variant.list_price} → Medusa ${priceAmount}`)
               
               // Générer un SKU : utilise code OU génère "ODOO-{variant_id}"
               const variantSku = variant.code || `ODOO-${variant.id}`
@@ -187,7 +187,7 @@ export const syncFromErpWorkflow = createWorkflow(
                 options,
                 prices: [
                   {
-                    amount: priceInCents,
+                    amount: priceAmount,
                     currency_code: (Array.isArray(variant.currency_id) ? variant.currency_id[1] : "eur")?.toLowerCase() || "eur",
                   },
                 ],
@@ -206,9 +206,9 @@ export const syncFromErpWorkflow = createWorkflow(
             // Produit simple sans variantes
             const weightInGrams = odooProduct.weight ? Math.round(odooProduct.weight * 1000) : undefined
             
-            // Prix : Odoo retourne en EUROS, convertir en centimes pour Medusa
-            const priceInCents = Math.round(odooProduct.list_price * 100)
-            console.log(`    💰 Prix produit: Odoo ${odooProduct.list_price}€ → Medusa ${priceInCents} centimes (${priceInCents / 100}€)`)
+            // Prix : utiliser directement le prix Odoo (pas de conversion)
+            const priceAmount = Math.round(odooProduct.list_price)
+            console.log(`    💰 Prix produit: Odoo ${odooProduct.list_price} → Medusa ${priceAmount}`)
             
             // Générer un SKU : utilise default_code OU génère "ODOO-{product_id}"
             const productSku = odooProduct.default_code || `ODOO-${odooProduct.id}`
@@ -230,7 +230,7 @@ export const syncFromErpWorkflow = createWorkflow(
               },
               prices: [
                 {
-                  amount: priceInCents,
+                  amount: priceAmount,
                   currency_code: (Array.isArray(odooProduct.currency_id) ? odooProduct.currency_id[1] : "eur")?.toLowerCase() || "eur",
                 },
               ],

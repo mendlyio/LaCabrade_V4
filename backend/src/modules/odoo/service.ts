@@ -20,7 +20,7 @@ export type OdooProduct = {
   default_code?: string
   description_sale?: string
   qty_available?: number
-  image_128?: string | false
+  image_512?: string | false
   weight?: number
   volume?: number
   currency_id: any // Peut être [id, name] ou {id, display_name}
@@ -49,7 +49,7 @@ export type OdooProductVariant = {
   weight?: number
   volume?: number
   barcode?: string
-  image_128?: string | false
+  image_512?: string | false
   qty_available?: number
   currency_id: any // Peut être [id, name] ou {id, display_name}
   product_template_variant_value_ids: {
@@ -449,7 +449,7 @@ export default class OdooModuleService {
                   "weight",
                   "volume",
                   "barcode",
-                  "image_128",
+                  "image_512",
                   "qty_available",
                 ],
               },
@@ -518,7 +518,7 @@ export default class OdooModuleService {
             "product_variant_count",
             "attribute_line_ids",
             "qty_available",
-            "image_128",
+            "image_512",
             "weight",
             "volume",
           ],
@@ -551,7 +551,7 @@ export default class OdooModuleService {
                   "weight",
                   "volume",
                   "barcode",
-                  "image_128",
+                  "image_512",
                   "qty_available",
                 ],
               },
@@ -713,7 +713,7 @@ export default class OdooModuleService {
             "product_variant_count",
             "attribute_line_ids",
             "qty_available",
-            "image_128",
+            "image_512",
             "weight",
             "volume",
           ],
@@ -745,7 +745,7 @@ export default class OdooModuleService {
                   "weight",
                   "volume",
                   "barcode",
-                  "image_128",
+                  "image_512",
                   "qty_available",
                 ],
               },

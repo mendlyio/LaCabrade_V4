@@ -75,8 +75,8 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       qty_available: product.qty_available || 0,
       synced: syncedOdooIds.has(product.id.toString()),
       currency: product.currency_id?.display_name || "EUR",
-      image_url: (product.image_128 && typeof product.image_128 === 'string')
-        ? `data:image/png;base64,${product.image_128}` 
+      image_url: (product.image_512 && typeof product.image_512 === 'string')
+        ? `data:image/png;base64,${product.image_512}` 
         : null,
     }))
 
