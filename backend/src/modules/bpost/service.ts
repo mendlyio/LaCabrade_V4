@@ -69,11 +69,11 @@ export default class BpostModuleService {
     return { httpCode, response }
   }
 
-  async ping(): Promise<{ ok: boolean; accountId?: string }> {
+  async ping(): Promise<{ ok: boolean }> {
     try {
       // Appel léger: récupérer la liste des transporteurs
       await this.getCarriers()
-      return { ok: true, accountId: this.options.accountId }
+      return { ok: true }
     } catch {
       return { ok: false }
     }

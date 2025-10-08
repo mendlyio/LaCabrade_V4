@@ -5,7 +5,7 @@ import { BPOST_WEBHOOK_SECRET } from "../../../../lib/constants"
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   try {
     // Optionally verify signature using BPOST_WEBHOOK_SECRET
-    const event = req.body
+    const event = req.body as any
     const orderService = req.scope.resolve(Modules.ORDER)
 
     if (event?.shipment_id && event?.status) {

@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { BPOST_MODULE } from "../../../../modules/bpost"
+import BpostModuleService from "../../../../modules/bpost/service"
 import { Modules } from "@medusajs/framework/utils"
 
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
@@ -8,7 +9,11 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     const orderService = req.scope.resolve(Modules.ORDER)
     const order = await orderService.retrieveOrder(order_id)
 
-    const svc = req.scope.resolve(BPOST_MODULE)
+    const svc = req.scope.resolve(BPOST_MODULE) as BpostModuleService
+    // Récupérer éventuellement le point relais depuis les métadonnées de la commande
+    const pickupFromMetadata = (order.metadata as any)?.bpost_pickup_point
+    const inferredPickupId = pickup_point_id || pickupFromMetadata?.Id || pickupFromMetadata?.id
+
     const result = await svc.createShipment({
       orderId: order_id,
       recipient: {
@@ -23,7 +28,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
           country_code: order.shipping_address?.country_code || "BE",
         },
       },
-      pickupPointId: pickup_point_id,
+      pickupPointId: inferredPickupId,
       weightGrams: weight_grams,
       reference,
     })
