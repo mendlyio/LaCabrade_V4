@@ -38,7 +38,7 @@ const BpostSettingsPage = () => {
       {!isConfigured && (
         <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded p-4 text-sm">
           <p className="font-medium text-orange-900 dark:text-orange-200">Module non configuré</p>
-          <p className="text-orange-800 dark:text-orange-300 mt-1">Ajoutez: BPOST_API_KEY, BPOST_ACCOUNT_ID (optionnel: BPOST_ENV, BPOST_WEBHOOK_SECRET)</p>
+          <p className="text-orange-800 dark:text-orange-300 mt-1">Ajoutez: BPOST_PUBLIC_KEY, BPOST_PRIVATE_KEY (optionnel: BPOST_WEBHOOK_SECRET)</p>
         </div>
       )}
 

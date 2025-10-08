@@ -1,4 +1,4 @@
-import crypto from "node:crypto"
+import crypto from "crypto"
 
 type BpostOptions = {
   publicKey?: string
@@ -8,8 +8,6 @@ type BpostOptions = {
 
 export default class BpostModuleService {
   private options: BpostOptions
-  private token?: string
-  private tokenExpires?: string
 
   constructor({}, options: BpostOptions) {
     this.options = options
@@ -26,8 +24,8 @@ export default class BpostModuleService {
   }
 
   private authUsername(jsonBody: string): string {
-    // Si un token temporaire est actif (non implémenté ici), l’utiliser sinon publicKey
-    return this.token && this.tokenExpires ? this.token : (this.options.publicKey as string)
+    // Utiliser toujours la publicKey pour l'authentification HMAC
+    return this.options.publicKey as string
   }
 
   private buildHeaders(jsonBody: string): Record<string, string> {
@@ -48,6 +46,8 @@ export default class BpostModuleService {
     const body = data ? JSON.stringify(data) : ""
     const baseHeaders = this.buildHeaders(body)
 
+    console.log(`[Bpost] ${method} ${url}`)
+
     const res = await fetch(url, {
       method,
       headers: { ...baseHeaders, ...(headers || {}) },
@@ -64,6 +64,7 @@ export default class BpostModuleService {
 
     if (!res.ok) {
       const message = (response && (response.Error?.Info || response.message)) || `Bpost API ${httpCode}`
+      console.error(`[Bpost] Erreur ${httpCode}: ${message}`, response)
       throw new Error(message)
     }
     return { httpCode, response }
@@ -155,6 +156,15 @@ export default class BpostModuleService {
     // Selon la plateforme, un callback/url de suivi peut être renvoyé
     const labelUrl = response?.Url || response?.LabelUrl || ""
     return { labelUrl }
+  }
+
+  validateWebhookSignature(rawBody: string, signature: string): boolean {
+    if (!this.options.webhookSecret) {
+      console.warn("[Bpost] Webhook secret non configuré, validation impossible")
+      return false
+    }
+    const expectedSignature = crypto.createHmac("sha256", this.options.webhookSecret).update(rawBody).digest("hex")
+    return signature === expectedSignature
   }
 }
 

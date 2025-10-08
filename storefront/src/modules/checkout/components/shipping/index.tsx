@@ -128,7 +128,9 @@ const Shipping: React.FC<ShippingProps> = ({
               })}
             </RadioGroup>
           </div>
-          <PickupPoints cart={cart} />
+          {selectedShippingMethod?.name?.toLowerCase().includes("bpost") && (
+            <PickupPoints cart={cart} />
+          )}
 
           <ErrorMessage
             error={error}

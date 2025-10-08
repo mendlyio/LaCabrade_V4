@@ -104,10 +104,16 @@ const PickupPoints: React.FC<Props> = ({ cart }) => {
   }
 
   return (
-    <div className="mt-6">
+    <div className="mt-6 p-4 border border-ui-border-base rounded-rounded bg-ui-bg-subtle">
       <div className="mb-2">
         <Text className="txt-medium-plus">Point relais (Bpost) — optionnel</Text>
+        <Text className="text-ui-fg-subtle text-small-regular">Vous pouvez choisir un point relais ou continuer avec la livraison à domicile.</Text>
       </div>
+      {selectedId && (
+        <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded text-small-regular text-green-800">
+          ✓ Point relais sélectionné
+        </div>
+      )}
       <div className="flex items-center gap-2 mb-3">
         <Input
           placeholder="Code postal"
@@ -126,7 +132,7 @@ const PickupPoints: React.FC<Props> = ({ cart }) => {
       {error && (
         <div className="text-red-600 text-small-regular mb-2">{error}</div>
       )}
-      {!loading && points.length === 0 && (
+      {!loading && points.length === 0 && postalCode && (
         <div className="text-ui-fg-subtle text-small-regular">Aucun point trouvé.</div>
       )}
       <ul className="divide-y rounded-rounded border">
