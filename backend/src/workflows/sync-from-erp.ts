@@ -289,18 +289,21 @@ export const syncFromErpWorkflow = createWorkflow(
             // Uploader l'image Odoo vers MinIO si disponible
             if (productData.odoo_image_base64) {
               try {
-                console.log(`    📷 Upload image vers MinIO...`)
+                console.log(`    📷 Upload image vers MinIO pour produit ${created.id}...`)
                 
-                // Résoudre directement le provider MinIO file
-                const minioProvider = container.resolve("minioFileProviderService")
+                // Résoudre le service de fichiers via le module FILE
+                const fileService = container.resolve(Modules.FILE)
                 
-                // Préparer le fichier pour upload
-                const filename = `odoo-product-${created.id}-${Date.now()}.png`
+                // Décoder le base64 en buffer
+                const imageBuffer = Buffer.from(productData.odoo_image_base64, 'base64')
+                const filename = `odoo/products/${created.id}/${Date.now()}.png`
                 
-                // Uploader via le provider MinIO (méthode upload de AbstractFileProviderService)
-                const uploadResult = await (minioProvider as any).upload({
+                console.log(`    📤 Tentative upload: ${filename} (${imageBuffer.length} bytes)`)
+                
+                // Upload via le service de fichiers Medusa
+                const uploadResult = await fileService.uploadFile({
                   filename,
-                  content: productData.odoo_image_base64, // Base64 string
+                  file: imageBuffer,
                   mimeType: 'image/png',
                 })
                 
@@ -312,12 +315,12 @@ export const syncFromErpWorkflow = createWorkflow(
                     }],
                   })
                   
-                  console.log(`    🖼️  Image uploadée: ${uploadResult.url}`)
+                  console.log(`    🖼️  Image uploadée avec succès: ${uploadResult.url}`)
                 } else {
                   console.log(`    ⚠️  Upload échoué - pas d'URL retournée`)
                 }
               } catch (imgErr: any) {
-                console.error(`    ⚠️  Erreur upload image:`, imgErr.message)
+                console.error(`    ❌ Erreur upload image:`, imgErr.message)
                 console.error(`    Stack:`, imgErr.stack)
                 // Ne pas bloquer la création du produit si l'image échoue
               }
