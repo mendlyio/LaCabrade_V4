@@ -235,28 +235,110 @@ const OdooConfigurationWidget = () => {
   }
 
   const resyncAll = async () => {
-    if (!confirm("🔄 Re-synchroniser tous les produits déjà importés depuis Odoo ?\n\nCela mettra à jour les prix, descriptions, et autres données.")) {
+    if (!confirm("🔄 Re-synchroniser tous les produits déjà importés depuis Odoo ?\n\nCela mettra à jour les prix, descriptions, et autres données.\n\nCette opération peut prendre plusieurs minutes.")) {
       return
     }
 
     setIsSyncing(true)
+    setImportProgress({
+      show: true,
+      processed: 0,
+      total: 0,
+      created: 0,
+      updated: 0,
+      errors: 0,
+      currentBatch: 0,
+      totalBatches: 0,
+    })
+
     try {
       const response = await fetch("/admin/odoo/resync", {
         method: "POST",
         credentials: "include",
       })
 
-      const data = await response.json()
+      if (!response.ok) {
+        throw new Error("Erreur lors de la connexion au serveur")
+      }
 
-      if (response.ok && data.success) {
-        alert(`✅ ${data.message}\n${data.updated} produit(s) mis à jour`)
-        fetchProducts()
-      } else {
-        alert(`❌ ${data.message || "Erreur lors de la re-synchronisation"}`)
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error("Impossible de lire la réponse du serveur")
+      }
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const event = JSON.parse(line.substring(6))
+
+              if (event.type === 'start') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  total: event.total,
+                  totalBatches: event.batches,
+                } : null)
+              } else if (event.type === 'batch_start') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  currentBatch: event.batchNum,
+                } : null)
+              } else if (event.type === 'batch_complete') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  processed: event.processed,
+                  created: prev.created + event.created,
+                  updated: prev.updated + event.updated,
+                  currentBatch: event.batchNum,
+                } : null)
+              } else if (event.type === 'batch_error') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  processed: event.processed,
+                  errors: prev.errors + 1,
+                  currentBatch: event.batchNum,
+                } : null)
+              } else if (event.type === 'complete') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  processed: event.total,
+                  created: event.created,
+                  updated: event.updated,
+                  errors: event.errors,
+                } : null)
+
+                // Attendre 2 secondes avant de fermer la modal
+                setTimeout(() => {
+                  setImportProgress(null)
+                  fetchProducts()
+                  
+                  if (event.errors > 0) {
+                    alert(`⚠️ Re-synchronisation terminée avec des erreurs:\n${event.updated} mis à jour, ${event.errors} erreurs`)
+                  } else {
+                    alert(`✅ Re-synchronisation terminée:\n${event.updated} produit(s) mis à jour`)
+                  }
+                }, 2000)
+              } else if (event.type === 'error') {
+                throw new Error(event.message)
+              }
+            } catch (parseError) {
+              console.error("Erreur parsing SSE:", parseError)
+            }
+          }
+        }
       }
     } catch (error) {
       console.error("Erreur re-synchronisation:", error)
       alert("❌ Erreur lors de la re-synchronisation")
+      setImportProgress(null)
     } finally {
       setIsSyncing(false)
     }
