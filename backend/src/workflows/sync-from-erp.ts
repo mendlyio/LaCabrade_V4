@@ -98,21 +98,22 @@ export const syncFromErpWorkflow = createWorkflow(
         const productsToUpdate: UpdateProductWorkflowInputDTO[] = []
 
         odooProducts.forEach((odooProduct: OdooProduct) => {
-          console.log(`📝 [WORKFLOW] Traitement produit: ${odooProduct.display_name} (ID: ${odooProduct.id})`)
-          const existingProduct = existingProducts.find(
-            (p) => p.metadata?.external_id === `${odooProduct.id}`
-          )
+          try {
+            console.log(`📝 [WORKFLOW] Traitement produit: ${odooProduct.display_name} (ID: ${odooProduct.id})`)
+            const existingProduct = existingProducts.find(
+              (p) => p.metadata?.external_id === `${odooProduct.id}`
+            )
 
-          const product: any = {
-            id: existingProduct?.id,
-            title: odooProduct.display_name,
-            description: odooProduct.description_sale || undefined,
-            metadata: {
-              external_id: `${odooProduct.id}`,
-            },
-            options: [],
-            variants: [],
-          }
+            const product: any = {
+              id: existingProduct?.id,
+              title: odooProduct.display_name,
+              description: odooProduct.description_sale || undefined,
+              metadata: {
+                external_id: `${odooProduct.id}`,
+              },
+              options: [],
+              variants: [],
+            }
 
           // Gérer les options et variantes
           if (odooProduct.product_variant_count > 1) {
@@ -159,6 +160,12 @@ export const syncFromErpWorkflow = createWorkflow(
             })
           } else {
             // Produit simple sans variantes
+            product.options = [
+              {
+                title: "Default",
+                values: ["Default"],
+              }
+            ]
             product.variants.push({
               id: existingProduct ? existingProduct.variants[0].id : undefined,
               title: "Default",
@@ -174,7 +181,7 @@ export const syncFromErpWorkflow = createWorkflow(
               metadata: {
                 external_id: `${odooProduct.id}`,
               },
-              manage_inventory: false, // Changer en true si vous synchronisez l'inventaire depuis Odoo
+              manage_inventory: false,
             })
           }
 
@@ -184,6 +191,10 @@ export const syncFromErpWorkflow = createWorkflow(
           } else {
             console.log(`  ➕ Nouveau produit -> création`)
             productsToCreate.push(product as CreateProductWorkflowInputDTO)
+          }
+          } catch (error: any) {
+            console.error(`❌ [WORKFLOW] Erreur traitement produit ${odooProduct.id}:`, error.message)
+            console.error(`❌ [WORKFLOW] Stack:`, error.stack)
           }
         })
 
