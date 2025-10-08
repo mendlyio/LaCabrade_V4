@@ -283,23 +283,19 @@ export const syncFromErpWorkflow = createWorkflow(
         for (const productData of productsToCreate) {
           try {
             console.log(`  🔨 Création du produit: ${productData.title}`)
-            console.log(`  📊 Données produit:`, JSON.stringify({
+            
+            // ÉTAPE 1: Créer le produit de base (sans sales_channels dans createProducts)
+            const createdArray = await productService.createProducts({
               title: productData.title,
+              description: productData.description,
               handle: productData.handle,
               status: productData.status,
-              nb_options: productData.options?.length || 0,
-              nb_variants: productData.variants?.length || 0,
-              sales_channel_id: lacabradeChannel.id,
-            }, null, 2))
-            
-            // Créer le produit avec prix et variantes
-            const createdArray = await productService.createProducts({
-              ...productData,
-              sales_channels: [{ id: lacabradeChannel.id }], // Associer au canal
+              metadata: productData.metadata,
+              options: productData.options,
+              variants: productData.variants,
             })
             
-            console.log(`  ✨ Création terminée, résultat:`, createdArray?.length || 0, 'produit(s)')
-            const created = createdArray[0] // createProducts retourne un tableau
+            const created = createdArray[0]
             
             if (!created || !created.id) {
               console.error(`  ❌ Produit non créé - pas d'ID retourné!`)
@@ -308,67 +304,57 @@ export const syncFromErpWorkflow = createWorkflow(
             
             console.log(`  ✅ Produit créé avec ID: ${created.id}`)
             
-            // Uploader l'image Odoo vers MinIO si disponible
+            // ÉTAPE 2: Associer au sales channel via une mise à jour séparée
+            try {
+              await productService.updateProducts(created.id, {
+                sales_channels: [{ id: lacabradeChannel.id }]
+              })
+              console.log(`    📺 Sales channel associé: ${lacabradeChannel.name}`)
+            } catch (scErr: any) {
+              console.error(`    ⚠️  Erreur association sales channel:`, scErr.message)
+            }
+            
+            // ÉTAPE 3: Uploader l'image Odoo vers MinIO si disponible
             if (productData.odoo_image_base64) {
               try {
-                console.log(`    📷 Upload image vers MinIO pour produit ${created.id}...`)
+                console.log(`    📷 Upload image vers MinIO...`)
                 
-                // Résoudre le provider MinIO directement
                 const minioProvider = container.resolve("minioFileProviderService")
-                
-                // Préparer le fichier pour upload
                 const filename = `odoo-product-${created.id}-${Date.now()}.png`
                 
-                console.log(`    📤 Tentative upload: ${filename}`)
-                
-                // Upload via le provider MinIO (méthode upload)
                 const uploadResult = await (minioProvider as any).upload({
                   filename,
-                  content: productData.odoo_image_base64, // Base64 string
+                  content: productData.odoo_image_base64,
                   mimeType: 'image/png',
                 })
                 
-                console.log(`    🔍 Upload result:`, JSON.stringify(uploadResult))
-                
                 if (uploadResult && uploadResult.url) {
-                  // Associer l'image au produit
                   await productService.updateProducts(created.id, {
-                    images: [{
-                      url: uploadResult.url,
-                    }],
+                    images: [{ url: uploadResult.url }],
                   })
-                  
-                  console.log(`    🖼️  Image uploadée avec succès: ${uploadResult.url}`)
-                } else {
-                  console.log(`    ⚠️  Upload échoué - pas d'URL retournée`)
+                  console.log(`    🖼️  Image uploadée: ${uploadResult.url}`)
                 }
               } catch (imgErr: any) {
-                console.error(`    ❌ Erreur upload image:`, imgErr.message)
-                console.error(`    Stack:`, imgErr.stack)
-                // Ne pas bloquer la création du produit si l'image échoue
+                console.error(`    ⚠️  Erreur upload image:`, imgErr.message)
               }
             }
             
-            // Initialiser le stock pour chaque variante
-            if (created && created.variants && created.variants.length > 0) {
-              for (const variant of created.variants) {
-                // Récupérer l'inventory item de la variante
-                const inventoryItems = await inventoryService.listInventoryItems({
-                  sku: variant.sku,
-                })
-                
-                if (inventoryItems.length > 0) {
-                  const inventoryItem = inventoryItems[0]
-                  
-                  // Récupérer le stock depuis Odoo (metadata)
-                  const odooStock = (variant.metadata as any)?.odoo_qty_available || 0
-                  
-                  // Créer un niveau de stock pour l'inventory item (stock_location par défaut)
+            // ÉTAPE 4: Initialiser le stock pour chaque variante
+            if (created.variants && created.variants.length > 0) {
+              const stockLocationModule = container.resolve(Modules.STOCK_LOCATION)
+              const stockLocations = await stockLocationModule.listStockLocations({})
+              
+              if (stockLocations.length > 0) {
+                for (const variant of created.variants) {
                   try {
-                    const stockLocationModule = container.resolve(Modules.STOCK_LOCATION)
-                    const stockLocations = await stockLocationModule.listStockLocations({})
+                    const inventoryItems = await inventoryService.listInventoryItems({
+                      sku: variant.sku,
+                    })
                     
-                    if (stockLocations.length > 0) {
+                    if (inventoryItems.length > 0) {
+                      const inventoryItem = inventoryItems[0]
+                      const odooStock = (variant.metadata as any)?.odoo_qty_available || 0
+                      
                       await inventoryService.createInventoryLevels({
                         inventory_item_id: inventoryItem.id,
                         location_id: stockLocations[0].id,
@@ -377,21 +363,23 @@ export const syncFromErpWorkflow = createWorkflow(
                       console.log(`    📦 Stock initialisé: ${variant.sku} = ${odooStock}`)
                     }
                   } catch (stockErr: any) {
-                    console.error(`    ⚠️  Erreur initialisation stock ${variant.sku}:`, stockErr.message)
+                    console.error(`    ⚠️  Erreur stock ${variant.sku}:`, stockErr.message)
                   }
                 }
               }
             }
             
-            // Récupérer le produit complet avec toutes les relations (images, variants, etc.)
+            // ÉTAPE 5: Récupérer le produit complet avec toutes les relations
             const fullProduct = await productService.retrieveProduct(created.id, {
               relations: ["images", "variants", "variants.prices", "options", "options.values"]
             })
             
             createdProducts.push(fullProduct)
-            console.log(`  ✅ Créé: ${productData.title}`)
+            
+            console.log(`  ✅ COMPLET: ${productData.title}`)
             console.log(`    → Images: ${fullProduct.images?.length || 0}`)
             console.log(`    → Variantes: ${fullProduct.variants?.length || 0}`)
+            console.log(`    → Prix: ${fullProduct.variants?.[0]?.prices?.length || 0}`)
           } catch (error: any) {
             console.error(`  ❌ Erreur création ${productData.title}:`, error.message)
             console.error(`  Stack:`, error.stack)
