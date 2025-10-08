@@ -1,4 +1,4 @@
-import type { SubscriberConfig } from "@medusajs/framework"
+import type { SubscriberConfig, SubscriberArgs } from "@medusajs/framework"
 import { Modules } from "@medusajs/framework/utils"
 import { ODOO_MODULE } from "../modules/odoo"
 import OdooModuleService from "../modules/odoo/service"
@@ -15,7 +15,7 @@ import OdooModuleService from "../modules/odoo/service"
 export default async function odooOrderSyncHandler({
   event: { data },
   container,
-}: any) {
+}: SubscriberArgs<any>) {
   // Check if Odoo is configured
   if (!process.env.ODOO_URL || !process.env.ODOO_API_KEY) {
     return // Silent skip si Odoo non configuré
