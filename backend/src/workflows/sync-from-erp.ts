@@ -204,6 +204,7 @@ export const syncFromErpWorkflow = createWorkflow(
               id: existingProduct ? existingProduct.variants[0].id : undefined,
               title: "Default",
               sku: productSku,
+              barcode: odooProduct.default_code || undefined, // Utiliser le code produit comme barcode
               weight: weightInGrams,
               options: {
                 Default: "Default",
@@ -270,11 +271,14 @@ export const syncFromErpWorkflow = createWorkflow(
         
         if (!lacabradeChannel) {
           console.log(`  📺 Création du canal de vente "LaCabrade"`)
-          lacabradeChannel = await salesChannelService.createSalesChannels({
+          const createdChannels = await salesChannelService.createSalesChannels({
             name: "LaCabrade",
             description: "Canal de vente principal LaCabrade",
           })
+          lacabradeChannel = Array.isArray(createdChannels) ? createdChannels[0] : createdChannels
         }
+        
+        console.log(`  📺 Canal de vente utilisé: "${lacabradeChannel.name}" (ID: ${lacabradeChannel.id})`)
         
         for (const productData of productsToCreate) {
           try {
@@ -360,8 +364,16 @@ export const syncFromErpWorkflow = createWorkflow(
               }
             }
             
-            createdProducts.push(created)
+            // Récupérer le produit complet avec toutes les relations (images, sales_channels, etc.)
+            const fullProduct = await productService.retrieveProduct(created.id, {
+              relations: ["images", "variants", "variants.prices", "sales_channels", "options", "options.values"]
+            })
+            
+            createdProducts.push(fullProduct)
             console.log(`  ✅ Créé: ${productData.title}`)
+            console.log(`    → Images: ${fullProduct.images?.length || 0}`)
+            console.log(`    → Variantes: ${fullProduct.variants?.length || 0}`)
+            console.log(`    → Sales channels: ${fullProduct.sales_channels?.length || 0}`)
           } catch (error: any) {
             console.error(`  ❌ Erreur création ${productData.title}:`, error.message)
             console.error(`  Stack:`, error.stack)
