@@ -104,22 +104,23 @@ export const syncFromErpWorkflow = createWorkflow(
               (p) => p.metadata?.external_id === `${odooProduct.id}`
             )
 
-            // Gérer l'image principale du produit (thumbnail)
-            const thumbnail = (odooProduct.image_128 && typeof odooProduct.image_128 === 'string')
-              ? `data:image/png;base64,${odooProduct.image_128}`
-              : undefined
-
             const product: any = {
               id: existingProduct?.id,
               title: odooProduct.display_name,
               description: odooProduct.description_sale || undefined,
-              thumbnail,
+              handle: odooProduct.display_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+              status: "published",
               metadata: {
                 external_id: `${odooProduct.id}`,
               },
               options: [],
               variants: [],
             }
+            
+            // Ajouter l'image principale si disponible
+            // Note: Medusa v2 ne supporte pas les data URLs pour les images
+            // Il faudrait upload les images vers un service (MinIO) et utiliser l'URL
+            // Pour l'instant, on skip les images base64
 
           // Gérer les options et variantes
           if (odooProduct.product_variant_count > 1) {
@@ -148,10 +149,8 @@ export const syncFromErpWorkflow = createWorkflow(
               // Poids en grammes (Odoo utilise des kg)
               const weightInGrams = variant.weight ? Math.round(variant.weight * 1000) : undefined
               
-              // Image de la variante
-              const variantThumbnail = (variant.image_128 && typeof variant.image_128 === 'string')
-                ? `data:image/png;base64,${variant.image_128}`
-                : undefined
+              // Prix en centimes (Odoo retourne en unité monétaire)
+              const priceInCents = Math.round(variant.list_price * 100)
 
               return {
                 id: existingProduct 
@@ -164,7 +163,7 @@ export const syncFromErpWorkflow = createWorkflow(
                 options,
                 prices: [
                   {
-                    amount: variant.list_price,
+                    amount: priceInCents,
                     currency_code: variant.currency_id.display_name.toLowerCase(),
                   },
                 ],
@@ -179,6 +178,7 @@ export const syncFromErpWorkflow = createWorkflow(
           } else {
             // Produit simple sans variantes
             const weightInGrams = odooProduct.weight ? Math.round(odooProduct.weight * 1000) : undefined
+            const priceInCents = Math.round(odooProduct.list_price * 100)
             
             product.options = [
               {
@@ -196,7 +196,7 @@ export const syncFromErpWorkflow = createWorkflow(
               },
               prices: [
                 {
-                  amount: odooProduct.list_price,
+                  amount: priceInCents,
                   currency_code: odooProduct.currency_id.display_name.toLowerCase(),
                 },
               ],
