@@ -183,6 +183,7 @@ export const syncFromErpWorkflow = createWorkflow(
                   odoo_variant_id: variant.id,
                   odoo_weight_kg: variant.weight,
                   odoo_volume: variant.volume,
+                  odoo_qty_available: variant.qty_available || 0,
                   generated_sku: !variant.code, // Indique si le SKU a été généré automatiquement
                 },
               }
@@ -220,6 +221,7 @@ export const syncFromErpWorkflow = createWorkflow(
                 odoo_product_id: odooProduct.id,
                 odoo_weight_kg: odooProduct.weight,
                 odoo_volume: odooProduct.volume,
+                odoo_qty_available: odooProduct.qty_available || 0,
                 generated_sku: !odooProduct.default_code, // Indique si le SKU a été généré automatiquement
               },
               manage_inventory: true,
@@ -260,15 +262,71 @@ export const syncFromErpWorkflow = createWorkflow(
         console.log(`📦 [WORKFLOW] Création de ${productsToCreate.length} produits dans Medusa...`)
         
         const productService = container.resolve(Modules.PRODUCT)
+        const salesChannelService = container.resolve(Modules.SALES_CHANNEL)
+        const inventoryService = container.resolve(Modules.INVENTORY)
         const createdProducts = []
+        
+        // Récupérer le canal de vente "LaCabrade" (ou le créer s'il n'existe pas)
+        let salesChannels = await salesChannelService.listSalesChannels({ name: "LaCabrade" })
+        let lacabradeChannel = salesChannels[0]
+        
+        if (!lacabradeChannel) {
+          console.log(`  📺 Création du canal de vente "LaCabrade"`)
+          lacabradeChannel = await salesChannelService.createSalesChannels({
+            name: "LaCabrade",
+            description: "Canal de vente principal LaCabrade",
+          })
+        }
         
         for (const productData of productsToCreate) {
           try {
-            const created = await productService.createProducts(productData)
+            // Créer le produit avec prix et variantes
+            const createdArray = await productService.createProducts({
+              ...productData,
+              sales_channels: [{ id: lacabradeChannel.id }], // Associer au canal
+            })
+            
+            const created = createdArray[0] // createProducts retourne un tableau
+            
+            // Initialiser le stock pour chaque variante
+            if (created && created.variants && created.variants.length > 0) {
+              for (const variant of created.variants) {
+                // Récupérer l'inventory item de la variante
+                const inventoryItems = await inventoryService.listInventoryItems({
+                  sku: variant.sku,
+                })
+                
+                if (inventoryItems.length > 0) {
+                  const inventoryItem = inventoryItems[0]
+                  
+                  // Récupérer le stock depuis Odoo (metadata)
+                  const odooStock = (variant.metadata as any)?.odoo_qty_available || 0
+                  
+                  // Créer un niveau de stock pour l'inventory item (stock_location par défaut)
+                  try {
+                    const stockLocationModule = container.resolve(Modules.STOCK_LOCATION)
+                    const stockLocations = await stockLocationModule.listStockLocations({})
+                    
+                    if (stockLocations.length > 0) {
+                      await inventoryService.createInventoryLevels({
+                        inventory_item_id: inventoryItem.id,
+                        location_id: stockLocations[0].id,
+                        stocked_quantity: odooStock,
+                      })
+                      console.log(`    📦 Stock initialisé: ${variant.sku} = ${odooStock}`)
+                    }
+                  } catch (stockErr: any) {
+                    console.error(`    ⚠️  Erreur initialisation stock ${variant.sku}:`, stockErr.message)
+                  }
+                }
+              }
+            }
+            
             createdProducts.push(created)
             console.log(`  ✅ Créé: ${productData.title}`)
           } catch (error: any) {
             console.error(`  ❌ Erreur création ${productData.title}:`, error.message)
+            console.error(`  Stack:`, error.stack)
           }
         }
 

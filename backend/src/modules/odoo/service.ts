@@ -50,6 +50,7 @@ export type OdooProductVariant = {
   volume?: number
   barcode?: string
   image_128?: string | false
+  qty_available?: number
   currency_id: any // Peut être [id, name] ou {id, display_name}
   product_template_variant_value_ids: {
     id: number
@@ -445,6 +446,11 @@ export default class OdooModuleService {
                   "code",
                   "currency_id",
                   "product_template_variant_value_ids",
+                  "weight",
+                  "volume",
+                  "barcode",
+                  "image_128",
+                  "qty_available",
                 ],
               },
             ],
@@ -546,6 +552,7 @@ export default class OdooModuleService {
                   "volume",
                   "barcode",
                   "image_128",
+                  "qty_available",
                 ],
               },
             ],
@@ -739,6 +746,7 @@ export default class OdooModuleService {
                   "volume",
                   "barcode",
                   "image_128",
+                  "qty_available",
                 ],
               },
             ],
