@@ -103,28 +103,28 @@ export const syncFromErpWorkflow = createWorkflow(
         odooProducts.forEach((odooProduct: OdooProduct) => {
           try {
             console.log(`📝 [WORKFLOW] Traitement produit: ${odooProduct.display_name} (ID: ${odooProduct.id})`)
-            const existingProduct = existingProducts.find(
-              (p) => p.metadata?.external_id === `${odooProduct.id}`
-            )
+          const existingProduct = existingProducts.find(
+            (p) => p.metadata?.external_id === `${odooProduct.id}`
+          )
 
-            const product: any = {
-              id: existingProduct?.id,
+          const product: any = {
+            id: existingProduct?.id,
               title: odooProduct.display_name || odooProduct.name || `Produit ${odooProduct.id}`,
-              description: odooProduct.description_sale || undefined,
+            description: odooProduct.description_sale || undefined,
               handle: (odooProduct.display_name || odooProduct.name || `product-${odooProduct.id}`)
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-')
                 .replace(/^-|-$/g, ''),
               status: "published",
-              metadata: {
-                external_id: `${odooProduct.id}`,
-              },
-              options: [],
-              variants: [],
+            metadata: {
+              external_id: `${odooProduct.id}`,
+            },
+            options: [],
+            variants: [],
               odoo_image_base64: (odooProduct.image_128 && typeof odooProduct.image_128 === 'string') 
                 ? odooProduct.image_128 
                 : undefined, // Stockage temporaire pour upload ultérieur
-            }
+          }
 
           // Gérer les options et variantes
           if (odooProduct.product_variant_count > 1) {
@@ -380,11 +380,12 @@ export const syncFromErpWorkflow = createWorkflow(
                 const imageUrl = `https://${MINIO_ENDPOINT}/${MINIO_BUCKET}/${filename}`
                 console.log(`    🔗 URL générée: ${imageUrl}`)
                 
-                // Associer l'image au produit
+                // Associer l'image au produit ET définir comme thumbnail
                 await productService.updateProducts(created.id, {
                   images: [{ url: imageUrl }],
+                  thumbnail: imageUrl, // Pour la miniature
                 })
-                console.log(`    🖼️  Image uploadée et associée au produit`)
+                console.log(`    🖼️  Image uploadée et associée au produit (+ thumbnail)`)
               } catch (imgErr: any) {
                 console.error(`    ⚠️  Erreur upload image:`, imgErr.message)
                 console.error(`    Stack:`, imgErr.stack)
@@ -392,32 +393,53 @@ export const syncFromErpWorkflow = createWorkflow(
             }
             
             // ÉTAPE 4: Initialiser le stock pour chaque variante
-            if (created.variants && created.variants.length > 0) {
-              const stockLocationModule = container.resolve(Modules.STOCK_LOCATION)
-              const stockLocations = await stockLocationModule.listStockLocations({})
-              
-              if (stockLocations.length > 0) {
-                for (const variant of created.variants) {
-                  try {
-                    const inventoryItems = await inventoryService.listInventoryItems({
-                      sku: variant.sku,
-                    })
-                    
-                    if (inventoryItems.length > 0) {
-                      const inventoryItem = inventoryItems[0]
-                      const odooStock = (variant.metadata as any)?.odoo_qty_available || 0
+            console.log(`    📦 Initialisation du stock...`)
+            
+            // Utiliser les variantes des données d'origine (productData) qui contiennent le stock Odoo
+            if (productData.variants && productData.variants.length > 0) {
+              try {
+                // Récupérer les stock locations
+                const stockLocationService = container.resolve(Modules.STOCK_LOCATION)
+                const { result: stockLocations } = await stockLocationService.listStockLocations({})
+                
+                console.log(`      → ${stockLocations.length} stock location(s) trouvé(s)`)
+                
+                if (stockLocations.length > 0) {
+                  const defaultLocation = stockLocations[0]
+                  
+                  for (const variantData of productData.variants) {
+                    try {
+                      const odooStock = variantData.metadata?.odoo_qty_available || 0
+                      console.log(`      → Variante ${variantData.sku}: stock Odoo = ${odooStock}`)
                       
-                      await inventoryService.createInventoryLevels({
-                        inventory_item_id: inventoryItem.id,
-                        location_id: stockLocations[0].id,
-                        stocked_quantity: odooStock,
+                      // Récupérer l'inventory item de cette variante
+                      const { result: inventoryItems } = await inventoryService.listInventoryItems({
+                        sku: variantData.sku,
                       })
-                      console.log(`    📦 Stock initialisé: ${variant.sku} = ${odooStock}`)
+                      
+                      if (inventoryItems.length > 0) {
+                        const inventoryItem = inventoryItems[0]
+                        
+                        // Créer le niveau de stock
+                        await inventoryService.createInventoryLevels({
+                          inventory_item_id: inventoryItem.id,
+                          location_id: defaultLocation.id,
+                          stocked_quantity: odooStock,
+                        })
+                        console.log(`      ✅ Stock initialisé: ${variantData.sku} = ${odooStock}`)
+                      } else {
+                        console.log(`      ⚠️  Pas d'inventory item pour ${variantData.sku}`)
+                      }
+                    } catch (stockErr: any) {
+                      console.error(`      ❌ Erreur stock ${variantData.sku}:`, stockErr.message)
                     }
-                  } catch (stockErr: any) {
-                    console.error(`    ⚠️  Erreur stock ${variant.sku}:`, stockErr.message)
                   }
+                } else {
+                  console.log(`    ⚠️  Aucun stock location trouvé - stock non initialisé`)
                 }
+              } catch (stockErr: any) {
+                console.error(`    ❌ Erreur initialisation stock globale:`, stockErr.message)
+                console.error(`    Stack:`, stockErr.stack)
               }
             }
             
@@ -430,7 +452,13 @@ export const syncFromErpWorkflow = createWorkflow(
             
             console.log(`  ✅ COMPLET: ${productData.title}`)
             console.log(`    → Images: ${fullProduct.images?.length || 0}`)
+            console.log(`    → Thumbnail: ${fullProduct.thumbnail ? 'OUI' : 'NON'}`)
             console.log(`    → Variantes: ${fullProduct.variants?.length || 0}`)
+            if (fullProduct.variants && fullProduct.variants.length > 0) {
+              fullProduct.variants.forEach((v: any, i: number) => {
+                console.log(`      [${i}] ${v.sku}: Prix = ${v.prices?.[0]?.amount || 'N/A'} ${v.prices?.[0]?.currency_code || ''}`)
+              })
+            }
           } catch (error: any) {
             console.error(`  ❌ Erreur création ${productData.title}:`, error.message)
             console.error(`  Stack:`, error.stack)
