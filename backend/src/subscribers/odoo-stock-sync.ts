@@ -36,11 +36,9 @@ export default async function odooStockSyncHandler({
     const inventoryService = container.resolve(Modules.INVENTORY)
 
     // Get inventory item details
-    const inventoryItem = await inventoryService.retrieveInventoryItem(data.id, {
-      relations: ["variant"],
-    })
+    const inventoryItem = await inventoryService.retrieveInventoryItem(data.id)
 
-    if (!inventoryItem?.variant?.sku) {
+    if (!inventoryItem?.sku) {
       console.log("⚠️  [ODOO STOCK] Pas de SKU trouvé, synchronisation ignorée")
       return
     }
@@ -53,25 +51,25 @@ export default async function odooStockSyncHandler({
     const totalQuantity = levels.reduce((sum, level) => sum + level.stocked_quantity, 0)
 
     // Vérifier le stock actuel dans Odoo pour éviter les mises à jour inutiles
-    const odooStock = await odooService.getStockBySku(inventoryItem.variant.sku)
+    const odooStock = await odooService.getStockBySku(inventoryItem.sku)
 
     if (odooStock === null) {
-      console.log(`⚠️  [ODOO STOCK] ${inventoryItem.variant.sku} non trouvé dans Odoo`)
+      console.log(`⚠️  [ODOO STOCK] ${inventoryItem.sku} non trouvé dans Odoo`)
       return
     }
 
     // Ne mettre à jour que si le stock a changé
     if (odooStock === totalQuantity) {
-      console.log(`⏭️  [ODOO STOCK] ${inventoryItem.variant.sku}: stock identique (${totalQuantity}), skip`)
+      console.log(`⏭️  [ODOO STOCK] ${inventoryItem.sku}: stock identique (${totalQuantity}), skip`)
       return
     }
 
-    console.log(`📦 [ODOO STOCK] ${inventoryItem.variant.sku}: ${odooStock} → ${totalQuantity}`)
+    console.log(`📦 [ODOO STOCK] ${inventoryItem.sku}: ${odooStock} → ${totalQuantity}`)
 
     // Update stock in Odoo
-    await odooService.updateStock(inventoryItem.variant.sku, totalQuantity)
+    await odooService.updateStock(inventoryItem.sku, totalQuantity)
 
-    console.log(`✅ [ODOO STOCK] Stock synchronisé pour ${inventoryItem.variant.sku}`)
+    console.log(`✅ [ODOO STOCK] Stock synchronisé pour ${inventoryItem.sku}`)
   } catch (error: any) {
     console.error(`❌ [ODOO STOCK] Erreur de synchronisation:`, error.message)
     // Don't throw - we don't want to block Medusa operations if Odoo sync fails

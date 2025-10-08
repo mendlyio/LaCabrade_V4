@@ -37,17 +37,15 @@ export default async function odooOrderSyncHandler({
 
     // Retrieve full order details
     const order = await orderService.retrieveOrder(data.id, {
-      relations: ["items", "items.variant", "shipping_address", "billing_address", "customer"],
+      relations: ["items", "items.variant", "shipping_address", "billing_address"],
     })
 
     // Prepare order data for Odoo
     const orderData = {
-      customerEmail: order.email || order.customer?.email || "noemail@medusa.com",
+      customerEmail: order.email || "noemail@medusa.com",
       customerName:
         order.shipping_address?.first_name && order.shipping_address?.last_name
           ? `${order.shipping_address.first_name} ${order.shipping_address.last_name}`
-          : order.customer?.first_name && order.customer?.last_name
-          ? `${order.customer.first_name} ${order.customer.last_name}`
           : "Customer",
       items: order.items.map((item: any) => ({
         sku: item.variant?.sku || item.variant_sku || `MEDUSA-${item.id}`,
@@ -55,7 +53,7 @@ export default async function odooOrderSyncHandler({
         price: item.unit_price,
         name: item.title,
       })),
-      total: order.total,
+      total: typeof order.total === 'number' ? order.total : parseFloat(order.total?.toString() || "0"),
       shippingAddress: order.shipping_address
         ? {
             address_1: order.shipping_address.address_1,
