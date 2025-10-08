@@ -298,11 +298,56 @@ export const syncFromErpWorkflow = createWorkflow(
         
         for (const productData of productsToUpdate) {
           try {
-            const updated = await productService.updateProducts(productData.id, productData)
+            // Mise à jour du produit principal
+            const updated = await productService.updateProducts(productData.id, {
+              title: productData.title,
+              description: productData.description,
+              handle: productData.handle,
+              status: productData.status,
+              metadata: productData.metadata,
+            })
+            
+            // Mise à jour des variantes et prix
+            if (productData.variants && productData.variants.length > 0) {
+              for (const variantData of productData.variants) {
+                if (variantData.id) {
+                  // Variante existante : mise à jour
+                  try {
+                    await productService.updateProductVariants(variantData.id, {
+                      title: variantData.title,
+                      sku: variantData.sku,
+                      barcode: variantData.barcode,
+                      weight: variantData.weight,
+                      options: variantData.options,
+                      metadata: variantData.metadata,
+                      manage_inventory: variantData.manage_inventory,
+                    })
+                    
+                    // Note: Les prix sont mis à jour lors de la création/import initial
+                    // Pour mettre à jour les prix d'une variante existante, il faut supprimer et recréer la variante
+                    // TODO: Implémenter la mise à jour des prix via le service de prix (région-specific)
+                    
+                    console.log(`    ↳ Variante mise à jour: ${variantData.title}`)
+                  } catch (varErr: any) {
+                    console.error(`    ❌ Erreur MAJ variante ${variantData.title}:`, varErr.message)
+                  }
+                } else {
+                  // Nouvelle variante : création
+                  try {
+                    await productService.createProductVariants(productData.id, variantData)
+                    console.log(`    ↳ Nouvelle variante créée: ${variantData.title}`)
+                  } catch (varErr: any) {
+                    console.error(`    ❌ Erreur création variante ${variantData.title}:`, varErr.message)
+                  }
+                }
+              }
+            }
+            
             updatedProducts.push(updated)
             console.log(`  ✅ Mis à jour: ${productData.title}`)
           } catch (error: any) {
             console.error(`  ❌ Erreur mise à jour ${productData.title}:`, error.message)
+            console.error(`  Stack:`, error.stack)
           }
         }
 

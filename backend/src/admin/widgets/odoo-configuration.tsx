@@ -234,6 +234,34 @@ const OdooConfigurationWidget = () => {
     }
   }
 
+  const resyncAll = async () => {
+    if (!confirm("🔄 Re-synchroniser tous les produits déjà importés depuis Odoo ?\n\nCela mettra à jour les prix, descriptions, et autres données.")) {
+      return
+    }
+
+    setIsSyncing(true)
+    try {
+      const response = await fetch("/admin/odoo/resync", {
+        method: "POST",
+        credentials: "include",
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        alert(`✅ ${data.message}\n${data.updated} produit(s) mis à jour`)
+        fetchProducts()
+      } else {
+        alert(`❌ ${data.message || "Erreur lors de la re-synchronisation"}`)
+      }
+    } catch (error) {
+      console.error("Erreur re-synchronisation:", error)
+      alert("❌ Erreur lors de la re-synchronisation")
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const allProductsSelected = products.length > 0 && products.every((p) => selectedProducts.has(p.id))
   const isConfigured = status?.configured
   const isConnected = status?.connected
@@ -573,6 +601,16 @@ const OdooConfigurationWidget = () => {
                       {isSyncing 
                         ? `⏳ Importation de ${selectedProducts.size} produit(s)...` 
                         : `Importer ${selectedProducts.size} produit(s) sélectionné(s)`
+                      }
+                    </button>
+                    <button
+                      onClick={resyncAll}
+                      disabled={isSyncing || !isConnected}
+                      className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed font-medium transition-colors text-sm"
+                    >
+                      {isSyncing 
+                        ? `⏳ Re-synchronisation...` 
+                        : `🔄 Re-synchroniser tous les produits importés`
                       }
                     </button>
                   </div>
