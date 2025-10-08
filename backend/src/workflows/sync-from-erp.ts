@@ -130,10 +130,12 @@ export const syncFromErpWorkflow = createWorkflow(
           if (odooProduct.product_variant_count > 1) {
             // Créer les options basées sur les attributs
             if (odooProduct.attribute_line_ids?.length) {
-              product.options = odooProduct.attribute_line_ids.map((line) => ({
-                title: line.attribute_id.display_name,
-                values: line.value_ids.map((v) => v.name),
-              }))
+              product.options = odooProduct.attribute_line_ids
+                .filter((line) => line.attribute_id && line.value_ids?.length) // Filtrer les lignes invalides
+                .map((line) => ({
+                  title: line.attribute_id.display_name || line.attribute_id.name || 'Attribut',
+                  values: line.value_ids.map((v) => v.name || 'Valeur'),
+                }))
             }
 
             // Créer les variantes
@@ -142,7 +144,10 @@ export const syncFromErpWorkflow = createWorkflow(
               
               if (variant.product_template_variant_value_ids?.length) {
                 variant.product_template_variant_value_ids.forEach((value) => {
-                  options[value.attribute_id.display_name] = value.name
+                  if (value.attribute_id && value.name) {
+                    const attrName = value.attribute_id.display_name || value.attribute_id.name || 'Attribut'
+                    options[attrName] = value.name
+                  }
                 })
               } else {
                 product.options?.forEach((option: any) => {
