@@ -1,4 +1,3 @@
-import { Container, Heading } from "@medusajs/ui"
 import { useState, useEffect } from "react"
 
 /**
@@ -111,18 +110,18 @@ const OdooSettingsPage = () => {
 
   if (isLoadingStatus) {
     return (
-      <Container className="py-8">
+      <div className="py-8 px-6">
         <div className="flex items-center justify-center">
           <p className="text-gray-600">Chargement de la configuration Odoo...</p>
         </div>
-      </Container>
+      </div>
     )
   }
 
   if (!status?.configured) {
     return (
-      <Container className="py-8">
-        <Heading level="h1" className="mb-6">Configuration Odoo</Heading>
+      <div className="py-8 px-6">
+        <h1 className="text-3xl font-semibold mb-6">Configuration Odoo</h1>
         
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
           <div className="flex items-start gap-4">
@@ -146,16 +145,16 @@ const OdooSettingsPage = () => {
             </div>
           </div>
         </div>
-      </Container>
+      </div>
     )
   }
 
   return (
-    <Container className="py-8">
+    <div className="py-8 px-6">
       <div className="space-y-8">
         {/* Header */}
         <div>
-          <Heading level="h1" className="mb-2">Configuration Odoo</Heading>
+          <h1 className="text-3xl font-semibold mb-2">Configuration Odoo</h1>
           <p className="text-gray-600">
             Gérez votre intégration Odoo et importez vos produits
           </p>
@@ -164,7 +163,7 @@ const OdooSettingsPage = () => {
         {/* Statut de connexion */}
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
-            <Heading level="h2">Statut de la connexion</Heading>
+            <h2 className="text-xl font-semibold">Statut de la connexion</h2>
             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
               status.connected 
                 ? "bg-green-100 text-green-800" 
@@ -195,7 +194,7 @@ const OdooSettingsPage = () => {
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <Heading level="h2" className="mb-1">Produits Odoo disponibles</Heading>
+                <h2 className="text-xl font-semibold mb-1">Produits Odoo disponibles</h2>
                 <p className="text-gray-600 text-sm">
                   Sélectionnez les produits que vous souhaitez importer dans Medusa
                 </p>
@@ -301,7 +300,7 @@ const OdooSettingsPage = () => {
           </ul>
         </div>
       </div>
-    </Container>
+    </div>
   )
 }
 
