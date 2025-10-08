@@ -305,14 +305,9 @@ export const syncFromErpWorkflow = createWorkflow(
             console.log(`  ✅ Produit créé avec ID: ${created.id}`)
             
             // ÉTAPE 2: Associer au sales channel via une mise à jour séparée
-            try {
-              await productService.updateProducts(created.id, {
-                sales_channels: [{ id: lacabradeChannel.id }]
-              })
-              console.log(`    📺 Sales channel associé: ${lacabradeChannel.name}`)
-            } catch (scErr: any) {
-              console.error(`    ⚠️  Erreur association sales channel:`, scErr.message)
-            }
+            // Note: updateProducts ne supporte pas sales_channels directement
+            // Il faut utiliser un autre service ou laisser l'association se faire via l'admin
+            console.log(`    📺 Sales channel: Sera associé via l'admin ou API séparée`)
             
             // ÉTAPE 3: Uploader l'image Odoo vers MinIO si disponible
             if (productData.odoo_image_base64) {
@@ -379,7 +374,6 @@ export const syncFromErpWorkflow = createWorkflow(
             console.log(`  ✅ COMPLET: ${productData.title}`)
             console.log(`    → Images: ${fullProduct.images?.length || 0}`)
             console.log(`    → Variantes: ${fullProduct.variants?.length || 0}`)
-            console.log(`    → Prix: ${fullProduct.variants?.[0]?.prices?.length || 0}`)
           } catch (error: any) {
             console.error(`  ❌ Erreur création ${productData.title}:`, error.message)
             console.error(`  Stack:`, error.stack)
