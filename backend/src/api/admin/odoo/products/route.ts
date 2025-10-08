@@ -39,9 +39,6 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         .map((p: any) => p.metadata.external_id)
     )
 
-    // Récupérer l'URL de base d'Odoo pour les images
-    const odooUrl = (odooService as any).options?.url || ""
-    
     // Enrichir les produits Odoo avec le statut de synchronisation
     const enrichedProducts = odooProducts.map((product) => ({
       id: product.id.toString(),
@@ -51,7 +48,9 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       qty_available: product.qty_available || 0,
       synced: syncedOdooIds.has(product.id.toString()),
       currency: product.currency_id?.display_name || "EUR",
-      image_url: odooUrl ? `${odooUrl}/web/image/product.template/${product.id}/image_128` : null,
+      image_url: product.image_128 && product.image_128 !== false 
+        ? `data:image/png;base64,${product.image_128}` 
+        : null,
     }))
 
     return res.json({

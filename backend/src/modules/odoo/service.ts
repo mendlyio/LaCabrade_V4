@@ -20,6 +20,7 @@ export type OdooProduct = {
   default_code: string
   description_sale: string
   qty_available?: number
+  image_128?: string | false
   currency_id: {
     id: number
     display_name: string
@@ -528,6 +529,7 @@ export default class OdooModuleService {
             "product_variant_count",
             "attribute_line_ids",
             "qty_available",
+            "image_128",
           ],
         },
       ],
