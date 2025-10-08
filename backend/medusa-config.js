@@ -165,10 +165,10 @@ const medusaConfig = {
       resolve: '@medusajs/fulfillment',
       options: {
         providers: [
-          {
+          ...((BPOST_PUBLIC_KEY && BPOST_PRIVATE_KEY) ? [{
             resolve: './src/modules/bpost-fulfillment',
             id: 'bpost'
-          },
+          }] : []),
           {
             resolve: '@medusajs/fulfillment-manual',
             id: 'manual'
