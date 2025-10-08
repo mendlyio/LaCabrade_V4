@@ -371,7 +371,7 @@ const OdooConfigurationWidget = () => {
 }
 
 export const config = defineWidgetConfig({
-  zone: "settings.before",
+  zone: "product.list.before",
 })
 
 export default OdooConfigurationWidget
