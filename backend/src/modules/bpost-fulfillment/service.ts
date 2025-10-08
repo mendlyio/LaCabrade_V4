@@ -19,8 +19,14 @@ type CalculateContext = {
 export default class BpostFulfillmentProviderService extends AbstractFulfillmentProviderService {
   static identifier = "bpost"
 
+  private container: MedusaContainer
+  private options?: Record<string, any>
+
   constructor(container: MedusaContainer, options?: Record<string, any>) {
-    super(container, options)
+    // La classe parente n'attend pas d'arguments
+    super()
+    this.container = container
+    this.options = options
   }
 
   async getFulfillmentOptions(): Promise<any[]> {
@@ -54,7 +60,11 @@ export default class BpostFulfillmentProviderService extends AbstractFulfillment
     return true
   }
 
-  async calculatePrice(optionData: any, data: any, context: CalculateContext): Promise<number> {
+  async calculatePrice(
+    optionData: Record<string, unknown>,
+    data: Record<string, unknown>,
+    context: any
+  ): Promise<number> {
     const cart = context?.cart
     const shippingOption = context?.option || optionData
 
