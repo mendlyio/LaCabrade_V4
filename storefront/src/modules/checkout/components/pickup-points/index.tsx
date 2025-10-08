@@ -45,9 +45,22 @@ const PickupPoints: React.FC<Props> = ({ cart }) => {
     setLoading(true)
     setError(null)
     try {
+      const pc = (postalCode || "").trim()
+      if (!pc) {
+        setPoints([])
+        setTotal(0)
+        setOffset(0)
+        setLoading(false)
+        return
+      }
+      if (countryCode === "BE" && !/^\d{4}$/.test(pc)) {
+        setError("Code postal invalide (format BE: 4 chiffres)")
+        setLoading(false)
+        return
+      }
       const off = typeof nextOffset === "number" ? nextOffset : offset
       const lim = typeof nextLimit === "number" ? nextLimit : limit
-      const url = `/store/bpost/pickup-points?postal_code=${encodeURIComponent(postalCode || "")}&country=${encodeURIComponent(countryCode)}&offset=${off}&limit=${lim}`
+      const url = `/store/bpost/pickup-points?postal_code=${encodeURIComponent(pc)}&country=${encodeURIComponent(countryCode)}&offset=${off}&limit=${lim}`
       const res = await fetch(url)
       const data = await res.json()
       setPoints(data.points || [])
