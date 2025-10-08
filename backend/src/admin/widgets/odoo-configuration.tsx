@@ -344,6 +344,34 @@ const OdooConfigurationWidget = () => {
     }
   }
 
+  const syncModified = async () => {
+    if (!confirm("🔄 Synchroniser uniquement les produits modifiés dans Odoo ?\n\nCette action compare les dates de modification et met à jour uniquement les produits changés.")) {
+      return
+    }
+
+    setIsSyncing(true)
+    try {
+      const response = await fetch("/admin/odoo/sync-modified", {
+        method: "POST",
+        credentials: "include",
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        alert(`✅ ${data.message}`)
+        fetchProducts()
+      } else {
+        alert(`❌ ${data.message || "Erreur lors de la synchronisation"}`)
+      }
+    } catch (error) {
+      console.error("Erreur sync modifiés:", error)
+      alert("❌ Erreur lors de la synchronisation")
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const allProductsSelected = products.length > 0 && products.every((p) => selectedProducts.has(p.id))
   const isConfigured = status?.configured
   const isConnected = status?.connected
@@ -686,13 +714,25 @@ const OdooConfigurationWidget = () => {
                       }
                     </button>
                     <button
+                      onClick={syncModified}
+                      disabled={isSyncing || !isConnected}
+                      className="w-full md:w-auto px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-500 disabled:cursor-not-allowed font-medium transition-colors text-sm"
+                      title="Synchronise uniquement les produits modifiés dans Odoo (rapide)"
+                    >
+                      {isSyncing 
+                        ? `⏳ Synchronisation...` 
+                        : `⚡ Sync produits modifiés`
+                      }
+                    </button>
+                    <button
                       onClick={resyncAll}
                       disabled={isSyncing || !isConnected}
                       className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed font-medium transition-colors text-sm"
+                      title="Re-synchronise TOUS les produits importés (long)"
                     >
                       {isSyncing 
                         ? `⏳ Re-synchronisation...` 
-                        : `🔄 Re-synchroniser tous les produits importés`
+                        : `🔄 Re-sync tous`
                       }
                     </button>
                   </div>

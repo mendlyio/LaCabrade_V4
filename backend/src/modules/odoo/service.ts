@@ -600,6 +600,38 @@ export default class OdooModuleService {
     return products
   }
 
+  /**
+   * Récupère uniquement les IDs et dates de modification des produits
+   * Utile pour détecter les produits modifiés dans Odoo
+   */
+  async fetchProductsWithDates(productIds: number[]): Promise<Array<{ id: number; write_date: string }>> {
+    if (!this.uid) {
+      await this.login()
+    }
+
+    if (!productIds.length) {
+      return []
+    }
+
+    const products: Array<{ id: number; write_date: string }> = await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid!,
+        this.options.apiKey,
+        "product.template",
+        "read",
+        [productIds],
+        {
+          fields: ["id", "write_date"], // Seulement ID et date de modification
+        },
+      ],
+    })
+
+    return products
+  }
+
   async fetchProductsPaged(
     params: Pagination & { q?: string }
   ): Promise<{ products: OdooProduct[]; total: number }> {
