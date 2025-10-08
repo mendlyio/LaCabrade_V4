@@ -301,15 +301,31 @@ export const syncFromErpWorkflow = createWorkflow(
             }
             
             console.log(`  🚀 Appel createProducts()...`)
-            const createdArray = await productService.createProducts(productPayload)
-            console.log(`  📦 Résultat createProducts:`, createdArray?.length || 0, 'produit(s)')
+            let created: any
             
-            const created = createdArray?.[0]
+            try {
+              const createdArray = await productService.createProducts(productPayload)
+              console.log(`  📦 Résultat createProducts:`, createdArray?.length || 0, 'produit(s)')
+              
+              created = Array.isArray(createdArray) ? createdArray[0] : createdArray
+              
+              // Si pas d'ID, on récupère le produit par son handle
+              if (!created?.id && productPayload.handle) {
+                console.log(`  🔍 Récupération du produit par handle: ${productPayload.handle}`)
+                const products = await productService.listProducts({ handle: productPayload.handle })
+                if (products && products.length > 0) {
+                  created = products[0]
+                  console.log(`  ✅ Produit récupéré: ${created.id}`)
+                }
+              }
+            } catch (createError: any) {
+              console.error(`  ❌ Erreur createProducts:`, createError.message)
+              console.error(`  Stack:`, createError.stack)
+              continue
+            }
             
-            if (!created || !created.id) {
+            if (!created?.id) {
               console.error(`  ❌ Produit non créé - pas d'ID retourné!`)
-              console.error(`  ❌ Created:`, created)
-              console.error(`  ❌ CreatedArray:`, createdArray)
               continue
             }
             
