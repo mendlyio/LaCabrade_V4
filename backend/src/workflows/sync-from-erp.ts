@@ -341,23 +341,53 @@ export const syncFromErpWorkflow = createWorkflow(
               try {
                 console.log(`    📷 Upload image vers MinIO...`)
                 
-                const minioProvider = container.resolve("minioFileProviderService")
-                const filename = `odoo-product-${created.id}-${Date.now()}.png`
+                // Import du client MinIO
+                const { Client } = await import('minio')
                 
-                const uploadResult = await (minioProvider as any).upload({
-                  filename,
-                  content: productData.odoo_image_base64,
-                  mimeType: 'image/png',
+                const MINIO_ENDPOINT = process.env.MINIO_ENDPOINT || 'bucket-production-de72.up.railway.app'
+                const MINIO_ACCESS_KEY = process.env.MINIO_ACCESS_KEY || 'jrkw3qd9t17ftl'
+                const MINIO_SECRET_KEY = process.env.MINIO_SECRET_KEY || '9lmslk6nfmjhaph24v5qov71u43doz8x'
+                const MINIO_BUCKET = process.env.MINIO_BUCKET || 'medusa-media'
+                
+                // Créer le client MinIO
+                const minioClient = new Client({
+                  endPoint: MINIO_ENDPOINT,
+                  port: 443,
+                  useSSL: true,
+                  accessKey: MINIO_ACCESS_KEY,
+                  secretKey: MINIO_SECRET_KEY,
                 })
                 
-                if (uploadResult && uploadResult.url) {
-                  await productService.updateProducts(created.id, {
-                    images: [{ url: uploadResult.url }],
-                  })
-                  console.log(`    🖼️  Image uploadée: ${uploadResult.url}`)
-                }
+                // Préparer le fichier
+                const filename = `odoo/products/${created.id}/${Date.now()}.png`
+                const imageBuffer = Buffer.from(productData.odoo_image_base64, 'base64')
+                
+                console.log(`    📤 Upload vers ${MINIO_BUCKET}/${filename} (${imageBuffer.length} bytes)`)
+                
+                // Upload vers MinIO
+                await minioClient.putObject(
+                  MINIO_BUCKET,
+                  filename,
+                  imageBuffer,
+                  imageBuffer.length,
+                  {
+                    'Content-Type': 'image/png',
+                    'x-amz-acl': 'public-read'
+                  }
+                )
+                
+                // Générer l'URL publique
+                const imageUrl = `https://${MINIO_ENDPOINT}/${MINIO_BUCKET}/${filename}`
+                console.log(`    🔗 URL générée: ${imageUrl}`)
+                
+                // Associer l'image au produit
+                await productService.updateProducts(created.id, {
+                  images: [{ url: imageUrl }],
+                })
+                console.log(`    🖼️  Image uploadée et associée au produit`)
               } catch (imgErr: any) {
                 console.error(`    ⚠️  Erreur upload image:`, imgErr.message)
+                console.error(`    Stack:`, imgErr.stack)
               }
             }
             
