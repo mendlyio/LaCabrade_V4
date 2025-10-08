@@ -125,7 +125,7 @@ export default class OdooModuleService {
 
   /**
    * Update stock quantity in Odoo for a product variant
-   * @param variantSku - SKU of the variant
+   * @param variantSku - SKU of the variant (ou format "ODOO-{id}")
    * @param quantity - New quantity
    */
   async updateStock(variantSku: string, quantity: number): Promise<void> {
@@ -133,26 +133,37 @@ export default class OdooModuleService {
       await this.login()
     }
 
-    // Find product.product by SKU (default_code in Odoo)
-    const productIds: number[] = await this.client.request("call", {
-      service: "object",
-      method: "execute_kw",
-      args: [
-        this.options.dbName,
-        this.uid,
-        this.options.apiKey,
-        "product.product",
-        "search",
-        [[["default_code", "=", variantSku]]],
-        { limit: 1 },
-      ],
-    })
+    let productId: number
+    
+    // Si le SKU est généré (format ODOO-{id}), utiliser directement l'ID
+    if (variantSku.startsWith('ODOO-')) {
+      const odooId = parseInt(variantSku.replace('ODOO-', ''))
+      if (isNaN(odooId)) {
+        throw new Error(`Invalid generated SKU format: ${variantSku}`)
+      }
+      productId = odooId
+    } else {
+      // Find product.product by SKU (default_code in Odoo)
+      const productIds: number[] = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.product",
+          "search",
+          [[["default_code", "=", variantSku]]],
+          { limit: 1 },
+        ],
+      })
 
-    if (!productIds.length) {
-      throw new Error(`Product with SKU ${variantSku} not found in Odoo`)
+      if (!productIds.length) {
+        throw new Error(`Product with SKU ${variantSku} not found in Odoo`)
+      }
+
+      productId = productIds[0]
     }
-
-    const productId = productIds[0]
 
     // Update stock via stock.quant
     // Find or create stock.quant for the product
@@ -183,6 +194,7 @@ export default class OdooModuleService {
    */
   /**
    * Récupère le stock disponible d'un produit par son SKU
+   * Si le SKU est au format "ODOO-{id}", utilise directement l'ID
    */
   async getStockBySku(sku: string): Promise<number | null> {
     if (!this.uid) {
@@ -190,20 +202,30 @@ export default class OdooModuleService {
     }
 
     try {
-      // Rechercher le produit par SKU
-      const productIds: number[] = await this.client.request("call", {
-        service: "object",
-        method: "execute_kw",
-        args: [
-          this.options.dbName,
-          this.uid,
-          this.options.apiKey,
-          "product.product",
-          "search",
-          [[["default_code", "=", sku]]],
-          { limit: 1 },
-        ],
-      })
+      let productIds: number[] = []
+      
+      // Si le SKU est généré (format ODOO-{id}), utiliser directement l'ID
+      if (sku.startsWith('ODOO-')) {
+        const odooId = parseInt(sku.replace('ODOO-', ''))
+        if (!isNaN(odooId)) {
+          productIds = [odooId]
+        }
+      } else {
+        // Rechercher le produit par SKU (default_code)
+        productIds = await this.client.request("call", {
+          service: "object",
+          method: "execute_kw",
+          args: [
+            this.options.dbName,
+            this.uid,
+            this.options.apiKey,
+            "product.product",
+            "search",
+            [[["default_code", "=", sku]]],
+            { limit: 1 },
+          ],
+        })
+      }
 
       if (!productIds.length) {
         return null

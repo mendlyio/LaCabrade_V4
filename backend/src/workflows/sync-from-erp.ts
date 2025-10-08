@@ -151,13 +151,16 @@ export const syncFromErpWorkflow = createWorkflow(
               
               // Prix en centimes (Odoo retourne en unité monétaire)
               const priceInCents = Math.round(variant.list_price * 100)
+              
+              // Générer un SKU si absent : utilise code OU génère "ODOO-{variant_id}"
+              const variantSku = variant.code || `ODOO-${variant.id}`
 
               return {
                 id: existingProduct 
-                  ? existingProduct.variants.find((v) => v.sku === variant.code)?.id 
+                  ? existingProduct.variants.find((v) => v.sku === variantSku || v.sku === variant.code)?.id 
                   : undefined,
                 title: variant.display_name.replace(`[${variant.code}] `, ""),
-                sku: variant.code || undefined,
+                sku: variantSku,
                 barcode: variant.barcode || undefined,
                 weight: weightInGrams,
                 options,
@@ -170,8 +173,10 @@ export const syncFromErpWorkflow = createWorkflow(
                 manage_inventory: true,
                 metadata: {
                   external_id: `${variant.id}`,
+                  odoo_variant_id: variant.id,
                   odoo_weight_kg: variant.weight,
                   odoo_volume: variant.volume,
+                  generated_sku: !variant.code, // Indique si le SKU a été généré automatiquement
                 },
               }
             })
@@ -179,6 +184,9 @@ export const syncFromErpWorkflow = createWorkflow(
             // Produit simple sans variantes
             const weightInGrams = odooProduct.weight ? Math.round(odooProduct.weight * 1000) : undefined
             const priceInCents = Math.round(odooProduct.list_price * 100)
+            
+            // Générer un SKU si absent : utilise default_code OU génère "ODOO-{product_id}"
+            const productSku = odooProduct.default_code || `ODOO-${odooProduct.id}`
             
             product.options = [
               {
@@ -189,7 +197,7 @@ export const syncFromErpWorkflow = createWorkflow(
             product.variants.push({
               id: existingProduct ? existingProduct.variants[0].id : undefined,
               title: "Default",
-              sku: odooProduct.default_code || undefined,
+              sku: productSku,
               weight: weightInGrams,
               options: {
                 Default: "Default",
@@ -202,10 +210,12 @@ export const syncFromErpWorkflow = createWorkflow(
               ],
               metadata: {
                 external_id: `${odooProduct.id}`,
+                odoo_product_id: odooProduct.id,
                 odoo_weight_kg: odooProduct.weight,
                 odoo_volume: odooProduct.volume,
+                generated_sku: !odooProduct.default_code, // Indique si le SKU a été généré automatiquement
               },
-              manage_inventory: false,
+              manage_inventory: true,
             })
           }
 
