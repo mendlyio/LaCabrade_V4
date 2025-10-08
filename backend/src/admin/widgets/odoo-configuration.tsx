@@ -9,6 +9,11 @@ const OdooConfigurationWidget = () => {
   const [isLoadingProducts, setIsLoadingProducts] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [total, setTotal] = useState<number>(0)
+  const [limit, setLimit] = useState<number>(25)
+  const [offset, setOffset] = useState<number>(0)
+  const [search, setSearch] = useState<string>("")
+  const [searchInput, setSearchInput] = useState<string>("")
 
   useEffect(() => {
     fetchStatus()
@@ -23,7 +28,7 @@ const OdooConfigurationWidget = () => {
       const data = await response.json()
       setStatus(data)
       if (data.connected) {
-        fetchProducts()
+        fetchProducts({ offset: 0, limit, q: search })
       }
     } catch (error) {
       console.error("Erreur statut:", error)
@@ -32,14 +37,22 @@ const OdooConfigurationWidget = () => {
     }
   }
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (params?: { offset?: number; limit?: number; q?: string }) => {
     setIsLoadingProducts(true)
     try {
-      const response = await fetch("/admin/odoo/products", {
+      const off = params?.offset ?? offset
+      const lim = params?.limit ?? limit
+      const qParam = params?.q ?? search
+      const qs = `/admin/odoo/products?offset=${off}&limit=${lim}${qParam ? `&q=${encodeURIComponent(qParam)}` : ""}`
+      const response = await fetch(qs, {
         credentials: "include",
       })
       const data = await response.json()
       setProducts(data.products || [])
+      setTotal(data.total || 0)
+      setLimit(data.limit ?? lim)
+      setOffset(data.offset ?? off)
+      setSearch(data.q ?? qParam ?? "")
     } catch (error) {
       console.error("Erreur produits:", error)
       alert("❌ Erreur lors du chargement des produits")
@@ -102,9 +115,13 @@ const OdooConfigurationWidget = () => {
     }
   }
 
-  const allProductsSelected = products.length > 0 && selectedProducts.size === products.length
+  const allProductsSelected = products.length > 0 && products.every((p) => selectedProducts.has(p.id))
   const isConfigured = status?.configured
   const isConnected = status?.connected
+  const currentFrom = total === 0 ? 0 : offset + 1
+  const currentTo = Math.min(offset + (products?.length || 0), total)
+  const hasPrev = offset > 0
+  const hasNext = offset + (products?.length || 0) < total
 
   if (isLoadingStatus) {
     return (
@@ -197,20 +214,43 @@ const OdooConfigurationWidget = () => {
           {/* Liste des produits Odoo */}
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex flex-col md:flex-row md:items-center gap-3 md:justify-between">
+                <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100">Produits Odoo disponibles</h3>
-                  <p className="text-xs text-gray-800 dark:text-gray-300 mt-1">
-                    Sélectionnez les produits que vous souhaitez importer dans Medusa
-                  </p>
+                  <p className="text-xs text-gray-800 dark:text-gray-300 mt-1">Sélectionnez les produits que vous souhaitez importer dans Medusa</p>
                 </div>
-                <button
-                  onClick={fetchProducts}
-                  disabled={isLoadingProducts || !isConnected}
-                  className="px-3 py-1.5 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:bg-gray-500 disabled:cursor-not-allowed text-xs transition-colors"
-                >
-                  {isLoadingProducts ? "Chargement..." : "↻ Actualiser"}
-                </button>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        setOffset(0)
+                        fetchProducts({ offset: 0, limit, q: searchInput })
+                      }
+                    }}
+                    placeholder="Rechercher par nom"
+                    className="px-2 py-1 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400"
+                  />
+                  <button
+                    onClick={() => {
+                      setOffset(0)
+                      fetchProducts({ offset: 0, limit, q: searchInput })
+                    }}
+                    disabled={isLoadingProducts || !isConnected}
+                    className="px-2.5 py-1.5 bg-gray-900 text-white rounded hover:bg-gray-800 disabled:bg-gray-500 disabled:cursor-not-allowed text-xs"
+                  >
+                    Rechercher
+                  </button>
+                  <button
+                    onClick={() => fetchProducts()}
+                    disabled={isLoadingProducts || !isConnected}
+                    className="px-3 py-1.5 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:bg-gray-500 disabled:cursor-not-allowed text-xs transition-colors"
+                  >
+                    {isLoadingProducts ? "Chargement..." : "↻ Actualiser"}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -237,7 +277,7 @@ const OdooConfigurationWidget = () => {
               <>
                 <div className="p-4">
                   <p className="text-xs text-gray-800 dark:text-gray-300 mb-3">
-                    <strong>{selectedProducts.size}</strong> / {products.length} produits sélectionnés
+                    <strong>{selectedProducts.size}</strong> sélection(s) — {currentFrom}-{currentTo} sur {total}
                   </p>
                   
                   <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded max-h-96 overflow-y-auto">
@@ -291,16 +331,57 @@ const OdooConfigurationWidget = () => {
                 </div>
 
                 <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                  <button
-                    onClick={syncSelectedProducts}
-                    disabled={isSyncing || selectedProducts.size === 0 || !isConnected}
-                    className="w-full px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:bg-gray-500 disabled:cursor-not-allowed font-medium transition-colors text-sm"
-                  >
-                    {isSyncing 
-                      ? `⏳ Importation de ${selectedProducts.size} produit(s)...` 
-                      : `Importer ${selectedProducts.size} produit(s) sélectionné(s)`
-                    }
-                  </button>
+                  <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          const newOffset = Math.max(offset - limit, 0)
+                          setOffset(newOffset)
+                          fetchProducts({ offset: newOffset, limit, q: search })
+                        }}
+                        disabled={!hasPrev || isLoadingProducts}
+                        className="px-3 py-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-xs text-gray-900 dark:text-gray-100 disabled:opacity-50"
+                      >
+                        ◀ Précédent
+                      </button>
+                      <button
+                        onClick={() => {
+                          const newOffset = offset + limit
+                          setOffset(newOffset)
+                          fetchProducts({ offset: newOffset, limit, q: search })
+                        }}
+                        disabled={!hasNext || isLoadingProducts}
+                        className="px-3 py-1.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-xs text-gray-900 dark:text-gray-100 disabled:opacity-50"
+                      >
+                        Suivant ▶
+                      </button>
+                      <select
+                        value={limit}
+                        onChange={(e) => {
+                          const newLimit = parseInt(e.target.value)
+                          setLimit(newLimit)
+                          setOffset(0)
+                          fetchProducts({ offset: 0, limit: newLimit, q: search })
+                        }}
+                        className="px-2 py-1 text-xs bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-gray-900 dark:text-gray-100"
+                      >
+                        <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                    </div>
+                    <button
+                      onClick={syncSelectedProducts}
+                      disabled={isSyncing || selectedProducts.size === 0 || !isConnected}
+                      className="w-full md:w-auto px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:bg-gray-500 disabled:cursor-not-allowed font-medium transition-colors text-sm"
+                    >
+                      {isSyncing 
+                        ? `⏳ Importation de ${selectedProducts.size} produit(s)...` 
+                        : `Importer ${selectedProducts.size} produit(s) sélectionné(s)`
+                      }
+                    </button>
+                  </div>
                 </div>
               </>
             )}

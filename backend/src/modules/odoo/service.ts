@@ -62,7 +62,7 @@ export type OdooProductVariant = {
 
 export default class OdooModuleService {
   private options: Options
-  private client: JSONRPCClient
+  private client: any
   private uid?: number
 
   constructor({}, options: Options) {
@@ -452,6 +452,139 @@ export default class OdooModuleService {
     }
 
     return products
+  }
+
+  async fetchProductsPaged(
+    params: Pagination & { q?: string }
+  ): Promise<{ products: OdooProduct[]; total: number }> {
+    if (!this.uid) {
+      await this.login()
+    }
+
+    const { offset = 0, limit = 10, q } = params || {}
+
+    let domain: any[] = []
+    if (q && q.trim()) {
+      const term = q.trim()
+      // OR condition: name ILIKE term OR default_code ILIKE term
+      domain = ["|", ["name", "ilike", term], ["default_code", "ilike", term]]
+    }
+
+    // Total count
+    const total: number = await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid!,
+        this.options.apiKey,
+        "product.template",
+        "search_count",
+        [domain],
+      ],
+    })
+
+    // Page of IDs
+    const productIds: number[] = await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid!,
+        this.options.apiKey,
+        "product.template",
+        "search",
+        [domain],
+        {
+          offset,
+          limit,
+        },
+      ],
+    })
+
+    if (!productIds.length) {
+      return { products: [], total }
+    }
+
+    const products: OdooProduct[] = await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid!,
+        this.options.apiKey,
+        "product.template",
+        "read",
+        [productIds],
+        {
+          fields: [
+            "name",
+            "display_name",
+            "list_price",
+            "default_code",
+            "description_sale",
+            "currency_id",
+            "product_variant_ids",
+            "product_variant_count",
+            "attribute_line_ids",
+            "qty_available",
+          ],
+        },
+      ],
+    })
+
+    for (const product of products) {
+      if (product.product_variant_count > 1) {
+        const variants: OdooProductVariant[] = await this.client.request(
+          "call",
+          {
+            service: "object",
+            method: "execute_kw",
+            args: [
+              this.options.dbName,
+              this.uid!,
+              this.options.apiKey,
+              "product.product",
+              "read",
+              [product.product_variant_ids],
+              {
+                fields: [
+                  "display_name",
+                  "list_price",
+                  "code",
+                  "currency_id",
+                  "product_template_variant_value_ids",
+                ],
+              },
+            ],
+          }
+        )
+
+        product.product_variant_ids = variants
+      }
+
+      if (product.attribute_line_ids?.length) {
+        const attributeLines = await this.client.request("call", {
+          service: "object",
+          method: "execute_kw",
+          args: [
+            this.options.dbName,
+            this.uid!,
+            this.options.apiKey,
+            "product.template.attribute.line",
+            "read",
+            [product.attribute_line_ids],
+            {
+              fields: ["attribute_id", "value_ids"],
+            },
+          ],
+        })
+
+        product.attribute_line_ids = attributeLines
+      }
+    }
+
+    return { products, total }
   }
 }
 

@@ -19,11 +19,15 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         message: "Le module Odoo n'est pas disponible. Veuillez configurer les variables d'environnement.",
       })
     }
-    
     const productService = req.scope.resolve(Modules.PRODUCT)
 
-    // Récupérer tous les produits Odoo (limite à 1000 pour l'UI)
-    const odooProducts = await odooService.fetchProducts({ limit: 1000, offset: 0 })
+    // Lecture pagination + recherche
+    const limit = Math.min(parseInt((req.query.limit as string) || "25"), 100)
+    const offset = parseInt((req.query.offset as string) || "0")
+    const q = (req.query.q as string) || ""
+
+    // Récupérer page de produits Odoo avec total + recherche
+    const { products: odooProducts, total } = await odooService.fetchProductsPaged({ limit, offset, q })
 
     // Récupérer les produits déjà synchronisés dans Medusa
     const medusaProducts = await productService.listProducts({})
@@ -48,7 +52,11 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
 
     return res.json({
       products: enrichedProducts,
-      total: enrichedProducts.length,
+      total,
+      count: enrichedProducts.length,
+      limit,
+      offset,
+      q,
     })
   } catch (error: any) {
     console.error("Erreur lors du chargement des produits Odoo:", error)
