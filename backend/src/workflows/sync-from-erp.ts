@@ -109,9 +109,12 @@ export const syncFromErpWorkflow = createWorkflow(
 
             const product: any = {
               id: existingProduct?.id,
-              title: odooProduct.display_name,
+              title: odooProduct.display_name || odooProduct.name || `Produit ${odooProduct.id}`,
               description: odooProduct.description_sale || undefined,
-              handle: odooProduct.display_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+              handle: (odooProduct.display_name || odooProduct.name || `product-${odooProduct.id}`)
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, ''),
               status: "published",
               metadata: {
                 external_id: `${odooProduct.id}`,
@@ -162,7 +165,8 @@ export const syncFromErpWorkflow = createWorkflow(
                 id: existingProduct 
                   ? existingProduct.variants.find((v) => v.sku === variantSku || v.sku === variant.code)?.id 
                   : undefined,
-                title: variant.display_name.replace(`[${variant.code}] `, ""),
+                title: (variant.display_name || variant.name || "Variante")
+                  .replace(variant.code ? `[${variant.code}] ` : "", ""),
                 sku: variantSku,
                 barcode: variant.barcode || undefined,
                 weight: weightInGrams,
@@ -170,7 +174,7 @@ export const syncFromErpWorkflow = createWorkflow(
                 prices: [
                   {
                     amount: priceInCents,
-                    currency_code: variant.currency_id.display_name.toLowerCase(),
+                    currency_code: (Array.isArray(variant.currency_id) ? variant.currency_id[1] : "eur")?.toLowerCase() || "eur",
                   },
                 ],
                 manage_inventory: true,
@@ -208,7 +212,7 @@ export const syncFromErpWorkflow = createWorkflow(
               prices: [
                 {
                   amount: priceInCents,
-                  currency_code: odooProduct.currency_id.display_name.toLowerCase(),
+                  currency_code: (Array.isArray(odooProduct.currency_id) ? odooProduct.currency_id[1] : "eur")?.toLowerCase() || "eur",
                 },
               ],
               metadata: {

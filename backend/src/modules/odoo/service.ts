@@ -14,19 +14,16 @@ export type Pagination = {
 
 export type OdooProduct = {
   id: number
-  name: string
-  display_name: string
+  name?: string
+  display_name?: string
   list_price: number
-  default_code: string
-  description_sale: string
+  default_code?: string
+  description_sale?: string
   qty_available?: number
   image_128?: string | false
   weight?: number
   volume?: number
-  currency_id: {
-    id: number
-    display_name: string
-  }
+  currency_id: any // Peut être [id, name] ou {id, display_name}
   product_variant_ids: OdooProductVariant[]
   product_variant_count: number
   attribute_line_ids: {
@@ -45,17 +42,15 @@ export type OdooProduct = {
 
 export type OdooProductVariant = {
   id: number
-  display_name: string
+  name?: string
+  display_name?: string
   list_price: number
-  code: string
+  code?: string
   weight?: number
   volume?: number
   barcode?: string
   image_128?: string | false
-  currency_id: {
-    id: number
-    display_name: string
-  }
+  currency_id: any // Peut être [id, name] ou {id, display_name}
   product_template_variant_value_ids: {
     id: number
     name: string
