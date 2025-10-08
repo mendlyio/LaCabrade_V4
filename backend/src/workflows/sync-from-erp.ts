@@ -553,6 +553,8 @@ export const syncFromErpWorkflow = createWorkflow(
                         // Mettre à jour le niveau existant
                         await inventoryService.updateInventoryLevels([{
                           id: existingLevels[0].id,
+                          inventory_item_id: inventoryItem.id,
+                          location_id: defaultLocation.id,
                           stocked_quantity: odooStock,
                         }])
                         console.log(`      ✅ Stock mis à jour: ${createdVariant.sku} = ${odooStock} unités`)
