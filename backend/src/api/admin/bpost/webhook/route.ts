@@ -27,8 +27,8 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
     if (event?.shipment_id && event?.status) {
       // AMÉLIORATION: Utiliser une table de mapping ou un index custom pour éviter de charger toutes les commandes
-      // Pour l'instant, on limite à 1000 résultats et on scanne
-      const orders = await orderService.listOrders({ take: 1000 })
+      // Pour l'instant, on scanne sans paramètre (compatibilité types)
+      const orders = await orderService.listOrders({})
       const matched = orders.find((o: any) => o.metadata?.bpost_shipment_id === event.shipment_id)
       if (matched) {
         console.log(`[Bpost Webhook] Mise à jour commande ${matched.id}: ${event.status}`)
