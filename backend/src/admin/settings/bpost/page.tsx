@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 
 const BpostSettingsPage = () => {
   const [status, setStatus] = useState<any>(null)
+  const [options, setOptions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -10,6 +11,9 @@ const BpostSettingsPage = () => {
         const res = await fetch("/admin/bpost/status", { credentials: "include" })
         const data = await res.json()
         setStatus(data)
+        const r2 = await fetch("/admin/bpost/shipping-options", { credentials: "include" })
+        const d2 = await r2.json()
+        setOptions(d2.shipping_options || [])
       } finally {
         setLoading(false)
       }
@@ -60,6 +64,28 @@ const BpostSettingsPage = () => {
             Tester connexion
           </button>
         </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded p-4">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-3">Options d'expédition Bpost</h2>
+        {options.length === 0 && (
+          <p className="text-sm text-gray-700 dark:text-gray-300">Aucune option Bpost trouvée. Créez des options avec provider "bpost" dans Emplacements & Livraison.</p>
+        )}
+        <ul className="divide-y">
+          {options.map((o: any) => (
+            <li key={o.id} className="py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-base-regular text-gray-900 dark:text-gray-100">{o.name}</div>
+                  <div className="text-small-regular text-gray-700 dark:text-gray-300">provider: {o.provider_id}</div>
+                </div>
+              </div>
+              {o.metadata?.bpost_pricing_rules && (
+                <pre className="mt-2 text-xs bg-gray-50 dark:bg-gray-800 p-2 rounded overflow-auto max-h-48">{JSON.stringify(o.metadata.bpost_pricing_rules, null, 2)}</pre>
+              )}
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   )

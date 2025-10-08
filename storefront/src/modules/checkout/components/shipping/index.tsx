@@ -128,7 +128,8 @@ const Shipping: React.FC<ShippingProps> = ({
               })}
             </RadioGroup>
           </div>
-          {selectedShippingMethod?.name?.toLowerCase().includes("bpost") && (
+          {selectedShippingMethod?.provider_id?.toLowerCase?.().includes("bpost") &&
+            (selectedShippingMethod as any)?.metadata?.mode === "pickup" && (
             <PickupPoints cart={cart} />
           )}
 
