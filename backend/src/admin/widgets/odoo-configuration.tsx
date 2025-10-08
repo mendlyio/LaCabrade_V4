@@ -14,6 +14,16 @@ const OdooConfigurationWidget = () => {
   const [offset, setOffset] = useState<number>(0)
   const [search, setSearch] = useState<string>("")
   const [searchInput, setSearchInput] = useState<string>("")
+  const [importProgress, setImportProgress] = useState<{
+    show: boolean
+    processed: number
+    total: number
+    created: number
+    updated: number
+    errors: number
+    currentBatch: number
+    totalBatches: number
+  } | null>(null)
 
   useEffect(() => {
     fetchStatus()
@@ -88,29 +98,137 @@ const OdooConfigurationWidget = () => {
       return
     }
 
+    const productCount = selectedProducts.size
+
+    // Si peu de produits (< 50), utiliser l'ancienne méthode simple
+    if (productCount < 50) {
+      setIsSyncing(true)
+
+      try {
+        const response = await fetch("/admin/odoo/sync-selected", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productIds: Array.from(selectedProducts) }),
+        })
+
+        const data = await response.json()
+
+        if (response.ok && (data.success !== false)) {
+          const message = data.message || `${data.created || 0} produit(s) créé(s), ${data.updated || 0} mis à jour`
+          alert(`✅ Importation réussie: ${message}`)
+          setSelectedProducts(new Set())
+          fetchProducts()
+        } else {
+          alert(`❌ ${data.message || data.error || "Erreur lors de l'importation des produits."}`)
+        }
+      } catch (error) {
+        console.error("Erreur d'importation:", error)
+        alert("❌ Erreur lors de l'importation des produits Odoo.")
+      } finally {
+        setIsSyncing(false)
+      }
+      return
+    }
+
+    // Pour beaucoup de produits, utiliser SSE avec progression
     setIsSyncing(true)
+    setImportProgress({
+      show: true,
+      processed: 0,
+      total: productCount,
+      created: 0,
+      updated: 0,
+      errors: 0,
+      currentBatch: 0,
+      totalBatches: Math.ceil(productCount / 10),
+    })
 
     try {
-      const response = await fetch("/admin/odoo/sync-selected", {
+      const response = await fetch("/admin/odoo/sync-progress", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ productIds: Array.from(selectedProducts) }),
       })
 
-      const data = await response.json()
+      if (!response.ok) {
+        throw new Error("Erreur lors de la connexion au serveur")
+      }
 
-      if (response.ok && (data.success !== false)) {
-        const message = data.message || `${data.created || 0} produit(s) créé(s), ${data.updated || 0} mis à jour`
-        alert(`✅ Importation réussie: ${message}`)
-        setSelectedProducts(new Set())
-        fetchProducts()
-      } else {
-        alert(`❌ ${data.message || data.error || "Erreur lors de l'importation des produits."}`)
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error("Impossible de lire la réponse du serveur")
+      }
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const event = JSON.parse(line.substring(6))
+
+              if (event.type === 'batch_start') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  currentBatch: event.batchNum,
+                } : null)
+              } else if (event.type === 'batch_complete') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  processed: event.processed,
+                  created: prev.created + event.created,
+                  updated: prev.updated + event.updated,
+                  currentBatch: event.batchNum,
+                } : null)
+              } else if (event.type === 'batch_error') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  processed: event.processed,
+                  errors: prev.errors + 1,
+                  currentBatch: event.batchNum,
+                } : null)
+              } else if (event.type === 'complete') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  processed: event.total,
+                  created: event.created,
+                  updated: event.updated,
+                  errors: event.errors,
+                } : null)
+
+                // Attendre 2 secondes avant de fermer la modal
+                setTimeout(() => {
+                  setImportProgress(null)
+                  setSelectedProducts(new Set())
+                  fetchProducts()
+                  
+                  if (event.errors > 0) {
+                    alert(`⚠️ Import terminé avec des erreurs:\n${event.created} créés, ${event.updated} mis à jour, ${event.errors} erreurs`)
+                  } else {
+                    alert(`✅ Import terminé:\n${event.created} créés, ${event.updated} mis à jour`)
+                  }
+                }, 2000)
+              } else if (event.type === 'error') {
+                throw new Error(event.message)
+              }
+            } catch (parseError) {
+              console.error("Erreur parsing SSE:", parseError)
+            }
+          }
+        }
       }
     } catch (error) {
       console.error("Erreur d'importation:", error)
       alert("❌ Erreur lors de l'importation des produits Odoo.")
+      setImportProgress(null)
     } finally {
       setIsSyncing(false)
     }
@@ -133,7 +251,65 @@ const OdooConfigurationWidget = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+    <>
+      {/* Modal de progression pour import en masse */}
+      {importProgress && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-8 max-w-md w-full mx-4">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-4">⏳</div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                Import en cours...
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Lot {importProgress.currentBatch} / {importProgress.totalBatches}
+              </p>
+            </div>
+
+            {/* Barre de progression */}
+            <div className="mb-6">
+              <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+                <span>{importProgress.processed} / {importProgress.total} produits</span>
+                <span>{Math.round((importProgress.processed / importProgress.total) * 100)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                <div 
+                  className="bg-blue-600 h-3 transition-all duration-300 ease-out rounded-full"
+                  style={{ width: `${(importProgress.processed / importProgress.total) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Statistiques */}
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {importProgress.created}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Créés</div>
+              </div>
+              <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  {importProgress.updated}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Mis à jour</div>
+              </div>
+              <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                  {importProgress.errors}
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400">Erreurs</div>
+              </div>
+            </div>
+
+            <p className="text-xs text-center text-gray-500 dark:text-gray-500">
+              ⚠️ Ne fermez pas cette page pendant l'import
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
       {/* Header - Toujours visible */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
@@ -465,7 +641,8 @@ const OdooConfigurationWidget = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }
 
