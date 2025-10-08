@@ -102,24 +102,24 @@ const OdooConfigurationWidget = () => {
 
     // Si peu de produits (< 50), utiliser l'ancienne méthode simple
     if (productCount < 50) {
-      setIsSyncing(true)
+    setIsSyncing(true)
 
-      try {
-        const response = await fetch("/admin/odoo/sync-selected", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productIds: Array.from(selectedProducts) }),
-        })
+    try {
+      const response = await fetch("/admin/odoo/sync-selected", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productIds: Array.from(selectedProducts) }),
+      })
 
-        const data = await response.json()
+      const data = await response.json()
 
         if (response.ok && (data.success !== false)) {
           const message = data.message || `${data.created || 0} produit(s) créé(s), ${data.updated || 0} mis à jour`
           alert(`✅ Importation réussie: ${message}`)
-          setSelectedProducts(new Set())
-          fetchProducts()
-        } else {
+        setSelectedProducts(new Set())
+        fetchProducts()
+      } else {
           alert(`❌ ${data.message || data.error || "Erreur lors de l'importation des produits."}`)
         }
       } catch (error) {
@@ -558,13 +558,13 @@ const OdooConfigurationWidget = () => {
                   >
                     Rechercher
                   </button>
-                  <button
+                <button
                     onClick={() => fetchProducts()}
-                    disabled={isLoadingProducts || !isConnected}
+                  disabled={isLoadingProducts || !isConnected}
                     className="px-3 py-1.5 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:bg-gray-500 disabled:cursor-not-allowed text-xs transition-colors"
-                  >
-                    {isLoadingProducts ? "Chargement..." : "↻ Actualiser"}
-                  </button>
+                >
+                  {isLoadingProducts ? "Chargement..." : "↻ Actualiser"}
+                </button>
                 </div>
               </div>
             </div>
@@ -703,16 +703,16 @@ const OdooConfigurationWidget = () => {
                         <option value={100}>100</option>
                       </select>
                     </div>
-                    <button
-                      onClick={syncSelectedProducts}
-                      disabled={isSyncing || selectedProducts.size === 0 || !isConnected}
+                  <button
+                    onClick={syncSelectedProducts}
+                    disabled={isSyncing || selectedProducts.size === 0 || !isConnected}
                       className="w-full md:w-auto px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800 disabled:bg-gray-500 disabled:cursor-not-allowed font-medium transition-colors text-sm"
-                    >
-                      {isSyncing 
-                        ? `⏳ Importation de ${selectedProducts.size} produit(s)...` 
-                        : `Importer ${selectedProducts.size} produit(s) sélectionné(s)`
-                      }
-                    </button>
+                  >
+                    {isSyncing 
+                      ? `⏳ Importation de ${selectedProducts.size} produit(s)...` 
+                      : `Importer ${selectedProducts.size} produit(s) sélectionné(s)`
+                    }
+                  </button>
                     <button
                       onClick={syncModified}
                       disabled={isSyncing || !isConnected}
@@ -801,7 +801,7 @@ const OdooConfigurationWidget = () => {
           </div>
         </div>
       )}
-      </div>
+    </div>
     </>
   )
 }

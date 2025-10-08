@@ -70,15 +70,19 @@ const fetchExistingProductsStep = createStep(
     
     const externalIds = odooProducts.map((p: OdooProduct) => `${p.id}`)
     
-    // Récupérer tous les produits et filtrer manuellement
+    // Récupérer tous les produits ACTIFS uniquement
+    // Les produits supprimés (deleted_at != null) ne sont PAS retournés par défaut
     const products = await productService.listProducts({})
-    const filteredProducts = products.filter((p: any) => 
+    
+    // Filtrer uniquement ceux qui correspondent aux IDs Odoo
+    const activeProducts = products.filter((p: any) => 
       externalIds.includes(p.metadata?.external_id)
     )
 
-    console.log(`✅ [WORKFLOW] ${filteredProducts.length} produits déjà présents dans Medusa`)
+    console.log(`✅ [WORKFLOW] ${activeProducts.length} produits actifs trouvés dans Medusa`)
+    console.log(`   → Les produits supprimés de Medusa pourront être réimportés`)
 
-    return new StepResponse(filteredProducts)
+    return new StepResponse(activeProducts)
   }
 )
 
@@ -111,10 +115,11 @@ export const syncFromErpWorkflow = createWorkflow(
             id: existingProduct?.id,
               title: odooProduct.display_name || odooProduct.name || `Produit ${odooProduct.id}`,
             description: odooProduct.description_sale || undefined,
-              handle: (odooProduct.display_name || odooProduct.name || `product-${odooProduct.id}`)
+              // Ajouter l'ID Odoo au handle pour éviter les conflits avec les produits supprimés
+              handle: `${(odooProduct.display_name || odooProduct.name || `product-${odooProduct.id}`)
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-|-$/g, ''),
+                .replace(/^-|-$/g, '')}-odoo-${odooProduct.id}`,
               status: "published",
             metadata: {
               external_id: `${odooProduct.id}`,
@@ -130,12 +135,17 @@ export const syncFromErpWorkflow = createWorkflow(
           if (odooProduct.product_variant_count > 1) {
             // Créer les options basées sur les attributs
             if (odooProduct.attribute_line_ids?.length) {
-              product.options = odooProduct.attribute_line_ids
+              const validOptions = odooProduct.attribute_line_ids
                 .filter((line) => line.attribute_id && line.value_ids?.length) // Filtrer les lignes invalides
                 .map((line) => ({
                   title: line.attribute_id.display_name || line.attribute_id.name || 'Attribut',
                   values: line.value_ids.map((v) => v.name || 'Valeur'),
                 }))
+              
+              // Ne créer des options que si on a des options valides
+              if (validOptions.length > 0) {
+                product.options = validOptions
+              }
             }
 
             // Créer les variantes
@@ -158,10 +168,11 @@ export const syncFromErpWorkflow = createWorkflow(
               // Poids en grammes (Odoo utilise des kg)
               const weightInGrams = variant.weight ? Math.round(variant.weight * 1000) : undefined
               
-              // Prix en centimes (Odoo retourne en unité monétaire)
+              // Prix : Odoo retourne en EUROS, convertir en centimes pour Medusa
               const priceInCents = Math.round(variant.list_price * 100)
+              console.log(`    💰 Prix variante ${variant.code || variant.id}: Odoo ${variant.list_price}€ → Medusa ${priceInCents} centimes (${priceInCents / 100}€)`)
               
-              // Générer un SKU si absent : utilise code OU génère "ODOO-{variant_id}"
+              // Générer un SKU : utilise code OU génère "ODOO-{variant_id}"
               const variantSku = variant.code || `ODOO-${variant.id}`
 
               return {
@@ -194,9 +205,12 @@ export const syncFromErpWorkflow = createWorkflow(
           } else {
             // Produit simple sans variantes
             const weightInGrams = odooProduct.weight ? Math.round(odooProduct.weight * 1000) : undefined
-            const priceInCents = Math.round(odooProduct.list_price * 100)
             
-            // Générer un SKU si absent : utilise default_code OU génère "ODOO-{product_id}"
+            // Prix : Odoo retourne en EUROS, convertir en centimes pour Medusa
+            const priceInCents = Math.round(odooProduct.list_price * 100)
+            console.log(`    💰 Prix produit: Odoo ${odooProduct.list_price}€ → Medusa ${priceInCents} centimes (${priceInCents / 100}€)`)
+            
+            // Générer un SKU : utilise default_code OU génère "ODOO-{product_id}"
             const productSku = odooProduct.default_code || `ODOO-${odooProduct.id}`
             
             product.options = [
@@ -294,7 +308,7 @@ export const syncFromErpWorkflow = createWorkflow(
               console.log(`    [${i}] SKU: ${v.sku}, Titre: ${v.title}, Prix: ${v.prices?.[0]?.amount || 'N/A'}`)
             })
             
-            // ÉTAPE 1: Créer le produit de base (sans sales_channels dans createProducts)
+            // ÉTAPE 1: Créer le produit de base avec le sales channel
             const productPayload = {
               title: productData.title,
               description: productData.description,
@@ -303,16 +317,66 @@ export const syncFromErpWorkflow = createWorkflow(
               metadata: productData.metadata,
               options: productData.options,
               variants: productData.variants,
+              sales_channels: [
+                {
+                  id: lacabradeChannel.id,
+                },
+              ],
             }
             
-            console.log(`  🚀 Appel createProducts()...`)
+            console.log(`  🚀 Appel createProductsWorkflow()...`)
+            console.log(`  📋 Payload complet:`, JSON.stringify(productPayload, null, 2))
             let created: any
             
             try {
-              const createdArray = await productService.createProducts(productPayload)
-              console.log(`  📦 Résultat createProducts:`, createdArray?.length || 0, 'produit(s)')
+              // ÉTAPE 0: Nettoyer les inventory items orphelins avec les mêmes SKU
+              console.log(`  🧹 Nettoyage des inventory items orphelins...`)
+              for (const variant of productPayload.variants) {
+                try {
+                  const existingInvItems = await inventoryService.listInventoryItems({ sku: variant.sku })
+                  for (const item of existingInvItems) {
+                    // Vérifier s'il y a des variantes associées
+                    const query = container.resolve("query")
+                    const { data } = await query.graph({
+                      entity: "inventory_item",
+                      fields: ["id", "variant_id"],
+                      filters: { id: item.id },
+                    })
+                    
+                    // Si pas de variante associée, supprimer l'inventory item
+                    if (!data || data.length === 0 || !data[0].variant_id) {
+                      await inventoryService.softDeleteInventoryItems([item.id])
+                      console.log(`    ✓ Inventory item orphelin supprimé: ${variant.sku}`)
+                    }
+                  }
+                } catch (cleanErr) {
+                  console.log(`    ⚠️  Erreur nettoyage ${variant.sku}:`, cleanErr.message)
+                }
+              }
               
-              created = Array.isArray(createdArray) ? createdArray[0] : createdArray
+              // Utiliser le workflow officiel au lieu du service direct
+              console.log(`  ⚙️  Instanciation du workflow...`)
+              const workflow = createProductsWorkflow(container)
+              
+              console.log(`  ▶️  Exécution du workflow avec ${productPayload.variants?.length || 0} variante(s)...`)
+              const { result, errors } = await workflow.run({
+        input: {
+                  products: [productPayload],
+                },
+              })
+              
+              // Vérifier les erreurs du workflow
+              if (errors && errors.length > 0) {
+                console.error(`  ❌ Erreurs du workflow:`, JSON.stringify(errors, null, 2))
+                throw new Error(`Workflow errors: ${errors.map((e: any) => e.error || e).join(', ')}`)
+              }
+              
+              console.log(`  📦 Résultat createProductsWorkflow:`, result ? `${result.length} produit(s)` : 'null')
+              if (result && result.length > 0) {
+                console.log(`  📝 Premier produit:`, JSON.stringify(result[0], null, 2))
+              }
+              
+              created = result && result.length > 0 ? result[0] : null
               
               // Si pas d'ID, on récupère le produit par son handle
               if (!created?.id && productPayload.handle) {
@@ -321,25 +385,28 @@ export const syncFromErpWorkflow = createWorkflow(
                 if (products && products.length > 0) {
                   created = products[0]
                   console.log(`  ✅ Produit récupéré: ${created.id}`)
+                } else {
+                  console.error(`  ⚠️  Aucun produit trouvé avec handle: ${productPayload.handle}`)
                 }
               }
             } catch (createError: any) {
-              console.error(`  ❌ Erreur createProducts:`, createError.message)
-              console.error(`  Stack:`, createError.stack)
+              console.error(`  ❌ ERREUR createProductsWorkflow pour [${productData.title}]:`)
+              console.error(`     Message: ${createError.message}`)
+              console.error(`     Stack: ${createError.stack}`)
+              if (createError.errors) {
+                console.error(`     Détails:`, JSON.stringify(createError.errors, null, 2))
+              }
               continue
             }
             
             if (!created?.id) {
-              console.error(`  ❌ Produit non créé - pas d'ID retourné!`)
+              console.error(`  ❌ ÉCHEC: Produit [${productData.title}] non créé - pas d'ID retourné!`)
+              console.error(`     Vérifiez les logs ci-dessus pour plus de détails`)
               continue
             }
             
             console.log(`  ✅ Produit créé avec ID: ${created.id}`)
-            
-            // ÉTAPE 2: Associer au sales channel via une mise à jour séparée
-            // Note: updateProducts ne supporte pas sales_channels directement
-            // Il faut utiliser un autre service ou laisser l'association se faire via l'admin
-            console.log(`    📺 Sales channel: Sera associé via l'admin ou API séparée`)
+            console.log(`    📺 Sales channel: "${lacabradeChannel.name}" associé automatiquement`)
             
             // ÉTAPE 3: Uploader l'image Odoo vers MinIO si disponible
             if (productData.odoo_image_base64) {
@@ -397,11 +464,22 @@ export const syncFromErpWorkflow = createWorkflow(
               }
             }
             
-            // ÉTAPE 4: Initialiser le stock pour chaque variante
+            // ÉTAPE 4: Récupérer le produit avec ses variantes
+            console.log(`    🔄 Récupération du produit avec variantes...`)
+            const productWithVariants = await productService.retrieveProduct(created.id, {
+              relations: ["variants"]
+            })
+            
+            console.log(`    → ${productWithVariants.variants?.length || 0} variante(s) créée(s)`)
+            
+            // ÉTAPE 5: Les prix sont créés automatiquement par createProductsWorkflow
+            console.log(`    💰 Prix créés automatiquement par le workflow`)
+            
+            // ÉTAPE 6: Initialiser le stock pour chaque variante
             console.log(`    📦 Initialisation du stock...`)
             
             // Utiliser les variantes des données d'origine (productData) qui contiennent le stock Odoo
-            if (productData.variants && productData.variants.length > 0) {
+            if (productWithVariants.variants && productWithVariants.variants.length > 0) {
               try {
                 // Récupérer les stock locations
                 const stockLocationService = container.resolve(Modules.STOCK_LOCATION)
@@ -411,32 +489,85 @@ export const syncFromErpWorkflow = createWorkflow(
                 
                 if (stockLocations.length > 0) {
                   const defaultLocation = stockLocations[0]
+                  console.log(`      → Location par défaut: ${defaultLocation.name} (${defaultLocation.id})`)
                   
-                  for (const variantData of productData.variants) {
+                      // Attendre que les inventory items soient créés par le workflow
+                      await new Promise(resolve => setTimeout(resolve, 2000))
+                  
+                  for (let i = 0; i < productWithVariants.variants.length; i++) {
+                    const createdVariant = productWithVariants.variants[i]
+                    const originalVariant = productData.variants[i]
+                    
                     try {
-                      const odooStock = variantData.metadata?.odoo_qty_available || 0
-                      console.log(`      → Variante ${variantData.sku}: stock Odoo = ${odooStock}`)
+                      const odooStock = originalVariant.metadata?.odoo_qty_available || 0
+                      console.log(`      → Variante ${createdVariant.sku}: stock Odoo = ${odooStock}`)
                       
-                      // Récupérer l'inventory item de cette variante
-                      const inventoryItems = await inventoryService.listInventoryItems({
-                        sku: variantData.sku,
+                      // Récupérer ou créer l'inventory item
+                      let inventoryItems = await inventoryService.listInventoryItems({
+                        sku: createdVariant.sku
                       })
                       
-                      if (inventoryItems.length > 0) {
-                        const inventoryItem = inventoryItems[0]
+                      let inventoryItem: any
+                      
+                      if (inventoryItems && inventoryItems.length > 0) {
+                        inventoryItem = inventoryItems[0]
+                        console.log(`      ✓ Inventory item existant trouvé: ${inventoryItem.id}`)
+                      } else {
+                        // Créer l'inventory item manuellement et l'associer
+                        console.log(`      🔨 Création de l'inventory item pour ${createdVariant.sku}...`)
                         
-                        // Créer le niveau de stock
+                        // Créer l'inventory item
+                        const createdItems = await inventoryService.createInventoryItems({
+                          sku: createdVariant.sku,
+                        })
+                        inventoryItem = Array.isArray(createdItems) ? createdItems[0] : createdItems
+                        console.log(`      ✅ Inventory item créé: ${inventoryItem.id}`)
+                        
+                        // Associer l'inventory item à la variante via le module Link
+                        try {
+                          const link = container.resolve("remoteLink")
+                          await link.create([
+                            {
+                              [Modules.PRODUCT]: {
+                                variant_id: createdVariant.id,
+                              },
+                              [Modules.INVENTORY]: {
+                                inventory_item_id: inventoryItem.id,
+                              },
+                            },
+                          ])
+                          console.log(`      🔗 Inventory item associé à la variante`)
+                        } catch (linkErr: any) {
+                          console.log(`      ⚠️  Impossible d'associer via remoteLink: ${linkErr.message}`)
+                          console.log(`      💡 L'association sera faite manuellement via l'admin`)
+                        }
+                      }
+                      
+                      // Maintenant créer ou mettre à jour le niveau de stock
+                      const existingLevels = await inventoryService.listInventoryLevels({
+                        inventory_item_id: inventoryItem.id,
+                        location_id: defaultLocation.id,
+                      })
+                      
+                      if (existingLevels && existingLevels.length > 0) {
+                        // Mettre à jour le niveau existant
+                        await inventoryService.updateInventoryLevels([{
+                          id: existingLevels[0].id,
+                          stocked_quantity: odooStock,
+                        }])
+                        console.log(`      ✅ Stock mis à jour: ${createdVariant.sku} = ${odooStock} unités`)
+                      } else {
+                        // Créer un nouveau niveau de stock
                         await inventoryService.createInventoryLevels({
                           inventory_item_id: inventoryItem.id,
                           location_id: defaultLocation.id,
                           stocked_quantity: odooStock,
                         })
-                        console.log(`      ✅ Stock initialisé: ${variantData.sku} = ${odooStock}`)
-                      } else {
-                        console.log(`      ⚠️  Pas d'inventory item pour ${variantData.sku}`)
+                        console.log(`      ✅ Stock créé: ${createdVariant.sku} = ${odooStock} unités`)
                       }
                     } catch (stockErr: any) {
-                      console.error(`      ❌ Erreur stock ${variantData.sku}:`, stockErr.message)
+                      console.error(`      ❌ Erreur stock ${createdVariant.sku}:`, stockErr.message)
+                      console.error(`      Stack:`, stockErr.stack)
                     }
                   }
                 } else {
@@ -448,22 +579,24 @@ export const syncFromErpWorkflow = createWorkflow(
               }
             }
             
-            // ÉTAPE 5: Récupérer le produit complet avec toutes les relations
+            // ÉTAPE 7: Récupérer le produit complet avec les relations principales
             const fullProduct = await productService.retrieveProduct(created.id, {
-              relations: ["images", "variants", "variants.prices", "options", "options.values"]
+              relations: ["images", "variants", "options"]
             })
             
             createdProducts.push(fullProduct)
             
             console.log(`  ✅ COMPLET: ${productData.title}`)
+            console.log(`    → ID: ${fullProduct.id}`)
             console.log(`    → Images: ${fullProduct.images?.length || 0}`)
             console.log(`    → Thumbnail: ${fullProduct.thumbnail ? 'OUI' : 'NON'}`)
             console.log(`    → Variantes: ${fullProduct.variants?.length || 0}`)
             if (fullProduct.variants && fullProduct.variants.length > 0) {
               fullProduct.variants.forEach((v: any, i: number) => {
-                console.log(`      [${i}] ${v.sku}: Prix = ${v.prices?.[0]?.amount || 'N/A'} ${v.prices?.[0]?.currency_code || ''}`)
+                console.log(`      [${i}] SKU: ${v.sku}, ID: ${v.id}`)
               })
             }
+            console.log(`    ℹ️  Vérifiez les prix et stock dans l'admin Medusa`)
           } catch (error: any) {
             console.error(`  ❌ Erreur création ${productData.title}:`, error.message)
             console.error(`  Stack:`, error.stack)
