@@ -282,33 +282,53 @@ export const syncFromErpWorkflow = createWorkflow(
         
         for (const productData of productsToCreate) {
           try {
+            console.log(`  🔨 Création du produit: ${productData.title}`)
+            console.log(`  📊 Données produit:`, JSON.stringify({
+              title: productData.title,
+              handle: productData.handle,
+              status: productData.status,
+              nb_options: productData.options?.length || 0,
+              nb_variants: productData.variants?.length || 0,
+              sales_channel_id: lacabradeChannel.id,
+            }, null, 2))
+            
             // Créer le produit avec prix et variantes
             const createdArray = await productService.createProducts({
               ...productData,
               sales_channels: [{ id: lacabradeChannel.id }], // Associer au canal
             })
             
+            console.log(`  ✨ Création terminée, résultat:`, createdArray?.length || 0, 'produit(s)')
             const created = createdArray[0] // createProducts retourne un tableau
+            
+            if (!created || !created.id) {
+              console.error(`  ❌ Produit non créé - pas d'ID retourné!`)
+              continue
+            }
+            
+            console.log(`  ✅ Produit créé avec ID: ${created.id}`)
             
             // Uploader l'image Odoo vers MinIO si disponible
             if (productData.odoo_image_base64) {
               try {
                 console.log(`    📷 Upload image vers MinIO pour produit ${created.id}...`)
                 
-                // Résoudre le service de fichiers via le module FILE
-                const fileService = container.resolve(Modules.FILE)
+                // Résoudre le provider MinIO directement
+                const minioProvider = container.resolve("minioFileProviderService")
                 
                 // Préparer le fichier pour upload
                 const filename = `odoo-product-${created.id}-${Date.now()}.png`
                 
                 console.log(`    📤 Tentative upload: ${filename}`)
                 
-                // Upload via le service de fichiers Medusa (méthode create)
-                const uploadResult = await fileService.createFiles({
+                // Upload via le provider MinIO (méthode upload)
+                const uploadResult = await (minioProvider as any).upload({
                   filename,
                   content: productData.odoo_image_base64, // Base64 string
                   mimeType: 'image/png',
                 })
+                
+                console.log(`    🔍 Upload result:`, JSON.stringify(uploadResult))
                 
                 if (uploadResult && uploadResult.url) {
                   // Associer l'image au produit
