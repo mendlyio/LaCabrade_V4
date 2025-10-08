@@ -27,7 +27,7 @@ type SyncFromErpInput = Pagination & {
 const fetchOdooProductsStep = createStep(
   "fetch-odoo-products",
   async (input: SyncFromErpInput, { container }) => {
-    console.log(`📥 [WORKFLOW] Récupération produits Odoo (offset: ${input.offset}, limit: ${input.limit})`)
+    console.log(`📥 [WORKFLOW] Récupération produits Odoo`)
     
     // Vérifier si le module Odoo est disponible
     let odooModuleService: OdooModuleService
@@ -38,22 +38,25 @@ const fetchOdooProductsStep = createStep(
       throw new Error("Module Odoo non configuré. Veuillez ajouter les variables d'environnement ODOO_*")
     }
     
-    const { products } = await odooModuleService.fetchProductsPaged({
-      offset: input.offset,
-      limit: input.limit,
-    })
+    let products: OdooProduct[]
     
-    console.log(`📦 [WORKFLOW] ${products.length} produits récupérés depuis Odoo`)
-    
-    // Filtrer par IDs si spécifié
-    let filteredProducts = products
+    // Si des IDs spécifiques sont demandés, les récupérer directement
     if (input.filterProductIds && input.filterProductIds.length > 0) {
-      console.log(`🔍 [WORKFLOW] Filtrage par IDs:`, input.filterProductIds)
-      filteredProducts = products.filter((p: OdooProduct) => input.filterProductIds!.includes(p.id))
-      console.log(`✅ [WORKFLOW] ${filteredProducts.length} produits après filtrage`)
+      console.log(`🔍 [WORKFLOW] Récupération directe des produits IDs:`, input.filterProductIds)
+      products = await odooModuleService.fetchProductsByIds(input.filterProductIds)
+      console.log(`✅ [WORKFLOW] ${products.length} produits récupérés`)
+    } else {
+      // Sinon, récupération paginée
+      console.log(`📄 [WORKFLOW] Récupération paginée (offset: ${input.offset}, limit: ${input.limit})`)
+      const result = await odooModuleService.fetchProductsPaged({
+        offset: input.offset,
+        limit: input.limit,
+      })
+      products = result.products
+      console.log(`📦 [WORKFLOW] ${products.length} produits récupérés depuis Odoo`)
     }
     
-    return new StepResponse(filteredProducts)
+    return new StepResponse(products)
   }
 )
 

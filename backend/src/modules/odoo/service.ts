@@ -483,6 +483,128 @@ export default class OdooModuleService {
     return products
   }
 
+  /**
+   * Récupère des produits spécifiques par leurs IDs
+   */
+  async fetchProductsByIds(productIds: number[]): Promise<OdooProduct[]> {
+    if (!this.uid) {
+      await this.login()
+    }
+
+    if (!productIds.length) {
+      return []
+    }
+
+    const products: OdooProduct[] = await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid!,
+        this.options.apiKey,
+        "product.template",
+        "read",
+        [productIds],
+        {
+          fields: [
+            "name",
+            "display_name",
+            "list_price",
+            "default_code",
+            "description_sale",
+            "currency_id",
+            "product_variant_ids",
+            "product_variant_count",
+            "attribute_line_ids",
+            "qty_available",
+            "image_128",
+            "weight",
+            "volume",
+          ],
+        },
+      ],
+    })
+
+    // Enrichir les produits avec les variantes et attributs (même logique que fetchProductsPaged)
+    for (const product of products) {
+      if (product.product_variant_count > 1) {
+        const variants: OdooProductVariant[] = await this.client.request(
+          "call",
+          {
+            service: "object",
+            method: "execute_kw",
+            args: [
+              this.options.dbName,
+              this.uid!,
+              this.options.apiKey,
+              "product.product",
+              "read",
+              [product.product_variant_ids],
+              {
+                fields: [
+                  "display_name",
+                  "list_price",
+                  "code",
+                  "currency_id",
+                  "product_template_variant_value_ids",
+                  "weight",
+                  "volume",
+                  "barcode",
+                  "image_128",
+                ],
+              },
+            ],
+          }
+        )
+
+        product.product_variant_ids = variants
+      }
+
+      if (product.attribute_line_ids?.length) {
+        const attributeLines = await this.client.request("call", {
+          service: "object",
+          method: "execute_kw",
+          args: [
+            this.options.dbName,
+            this.uid!,
+            this.options.apiKey,
+            "product.template.attribute.line",
+            "read",
+            [product.attribute_line_ids],
+            {
+              fields: ["attribute_id", "value_ids"],
+            },
+          ],
+        })
+
+        for (const line of attributeLines) {
+          if (line.value_ids?.length) {
+            const values = await this.client.request("call", {
+              service: "object",
+              method: "execute_kw",
+              args: [
+                this.options.dbName,
+                this.uid!,
+                this.options.apiKey,
+                "product.template.attribute.value",
+                "read",
+                [line.value_ids],
+                {
+                  fields: ["name", "attribute_id"],
+                },
+              ],
+            })
+            line.value_ids = values
+          }
+        }
+
+        product.attribute_line_ids = attributeLines
+      }
+    }
+
+    return products
+  }
+
   async fetchProductsPaged(
     params: Pagination & { q?: string }
   ): Promise<{ products: OdooProduct[]; total: number }> {
