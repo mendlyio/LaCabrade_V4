@@ -7,6 +7,7 @@ import { Button, Heading, Text, clx } from "@medusajs/ui"
 import Divider from "@modules/common/components/divider"
 import Radio from "@modules/common/components/radio"
 import ErrorMessage from "@modules/checkout/components/error-message"
+import PickupPoints from "@modules/checkout/components/pickup-points"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { setShippingMethod } from "@lib/data/cart"
@@ -127,6 +128,7 @@ const Shipping: React.FC<ShippingProps> = ({
               })}
             </RadioGroup>
           </div>
+          <PickupPoints cart={cart} />
 
           <ErrorMessage
             error={error}
