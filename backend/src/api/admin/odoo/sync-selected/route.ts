@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { syncFromErpWorkflow } from "../../../../workflows/sync-from-erp"
+import { odooSyncCache } from "../../../../lib/odoo-cache"
 
 /**
  * POST /admin/odoo/sync-selected
@@ -33,6 +34,12 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     const { toCreate, toUpdate } = result.result
 
     console.log(`✅ [ADMIN] ${toCreate + toUpdate} produits synchronisés (${toCreate} créés, ${toUpdate} mis à jour)`)
+
+    // Invalider le cache après une synchronisation réussie
+    if (toCreate > 0 || toUpdate > 0) {
+      odooSyncCache.invalidate()
+      console.log(`🔄 [CACHE] Cache invalidé après synchronisation`)
+    }
 
     return res.json({
       success: true,
