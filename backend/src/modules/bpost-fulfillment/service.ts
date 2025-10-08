@@ -64,7 +64,7 @@ export default class BpostFulfillmentProviderService extends AbstractFulfillment
     optionData: Record<string, unknown>,
     data: Record<string, unknown>,
     context: any
-  ): Promise<number> {
+  ): Promise<any> {
     const cart = context?.cart
     const shippingOption = context?.option || optionData
 
@@ -90,13 +90,15 @@ export default class BpostFulfillmentProviderService extends AbstractFulfillment
       return totalWeight >= min && totalWeight <= max
     })
 
-    if (matched) {
-      return matched.amount
-    }
+    const calculatedAmount = matched 
+      ? matched.amount 
+      : (Number(metadata?.bpost_amount ?? 0) || 0)
 
-    // Fallback: montant fixe par mode si défini
-    const fallbackAmount = Number(metadata?.bpost_amount ?? 0)
-    return isNaN(fallbackAmount) ? 0 : fallbackAmount
+    // Retourne un objet CalculatedShippingOptionPrice
+    return {
+      calculated_amount: calculatedAmount,
+      is_calculated_price_tax_inclusive: false,
+    }
   }
 
   // Hooks de création d'expédition: délègue au module Bpost existant
