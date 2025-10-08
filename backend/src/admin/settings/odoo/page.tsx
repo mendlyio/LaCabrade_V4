@@ -84,3 +84,11 @@ const OdooSettingsPage = () => {
 }
 
 export default OdooSettingsPage
+
+// Enregistre la carte dans Settings (pas de typage requis)
+export const config = {
+  card: {
+    label: "Odoo",
+    description: "Configurer Odoo et importer des produits",
+  },
+}
