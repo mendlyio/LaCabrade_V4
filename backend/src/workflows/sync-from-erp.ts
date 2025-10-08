@@ -121,12 +121,10 @@ export const syncFromErpWorkflow = createWorkflow(
               },
               options: [],
               variants: [],
+              odoo_image_base64: (odooProduct.image_128 && typeof odooProduct.image_128 === 'string') 
+                ? odooProduct.image_128 
+                : undefined, // Stockage temporaire pour upload ultérieur
             }
-            
-            // Ajouter l'image principale si disponible
-            // Note: Medusa v2 ne supporte pas les data URLs pour les images
-            // Il faudrait upload les images vers un service (MinIO) et utiliser l'URL
-            // Pour l'instant, on skip les images base64
 
           // Gérer les options et variantes
           if (odooProduct.product_variant_count > 1) {
@@ -287,6 +285,15 @@ export const syncFromErpWorkflow = createWorkflow(
             })
             
             const created = createdArray[0] // createProducts retourne un tableau
+            
+            // TODO: Upload d'images Odoo vers MinIO
+            // Pour l'instant, les images base64 d'Odoo ne sont pas uploadées automatiquement
+            // car l'API File de Medusa v2 nécessite une implémentation spécifique
+            // L'image base64 est stockée dans productData.odoo_image_base64 si besoin futur
+            
+            if (productData.odoo_image_base64) {
+              console.log(`    📷 Image Odoo détectée (${productData.odoo_image_base64.length} chars) - upload manuel requis`)
+            }
             
             // Initialiser le stock pour chaque variante
             if (created && created.variants && created.variants.length > 0) {
