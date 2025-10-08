@@ -27,11 +27,14 @@ type SyncFromErpInput = Pagination & {
 const fetchOdooProductsStep = createStep(
   "fetch-odoo-products",
   async (input: SyncFromErpInput, { container }) => {
+    console.log(`📥 [WORKFLOW] Récupération produits Odoo (offset: ${input.offset}, limit: ${input.limit})`)
+    
     // Vérifier si le module Odoo est disponible
     let odooModuleService: OdooModuleService
     try {
       odooModuleService = container.resolve(ODOO_MODULE) as OdooModuleService
     } catch (error) {
+      console.error(`❌ [WORKFLOW] Module Odoo non disponible:`, error)
       throw new Error("Module Odoo non configuré. Veuillez ajouter les variables d'environnement ODOO_*")
     }
     
@@ -40,10 +43,14 @@ const fetchOdooProductsStep = createStep(
       limit: input.limit,
     })
     
+    console.log(`📦 [WORKFLOW] ${products.length} produits récupérés depuis Odoo`)
+    
     // Filtrer par IDs si spécifié
     let filteredProducts = products
     if (input.filterProductIds && input.filterProductIds.length > 0) {
+      console.log(`🔍 [WORKFLOW] Filtrage par IDs:`, input.filterProductIds)
       filteredProducts = products.filter((p: OdooProduct) => input.filterProductIds!.includes(p.id))
+      console.log(`✅ [WORKFLOW] ${filteredProducts.length} produits après filtrage`)
     }
     
     return new StepResponse(filteredProducts)
@@ -54,6 +61,8 @@ const fetchOdooProductsStep = createStep(
 const fetchExistingProductsStep = createStep(
   "fetch-existing-products",
   async ({ odooProducts }: { odooProducts: OdooProduct[] }, { container }) => {
+    console.log(`🔍 [WORKFLOW] Recherche produits existants dans Medusa pour ${odooProducts.length} produits`)
+    
     const productService = container.resolve(Modules.PRODUCT)
     
     const externalIds = odooProducts.map((p: OdooProduct) => `${p.id}`)
@@ -63,6 +72,8 @@ const fetchExistingProductsStep = createStep(
     const filteredProducts = products.filter((p: any) => 
       externalIds.includes(p.metadata?.external_id)
     )
+
+    console.log(`✅ [WORKFLOW] ${filteredProducts.length} produits déjà présents dans Medusa`)
 
     return new StepResponse(filteredProducts)
   }
@@ -81,10 +92,13 @@ export const syncFromErpWorkflow = createWorkflow(
     const { productsToCreate, productsToUpdate } = transform(
       { odooProducts, existingProducts },
       ({ odooProducts, existingProducts }) => {
+        console.log(`🔄 [WORKFLOW] Transformation des produits...`)
+        
         const productsToCreate: CreateProductWorkflowInputDTO[] = []
         const productsToUpdate: UpdateProductWorkflowInputDTO[] = []
 
         odooProducts.forEach((odooProduct: OdooProduct) => {
+          console.log(`📝 [WORKFLOW] Traitement produit: ${odooProduct.display_name} (ID: ${odooProduct.id})`)
           const existingProduct = existingProducts.find(
             (p) => p.metadata?.external_id === `${odooProduct.id}`
           )
@@ -165,11 +179,15 @@ export const syncFromErpWorkflow = createWorkflow(
           }
 
           if (existingProduct) {
+            console.log(`  ✏️  Produit existant -> mise à jour`)
             productsToUpdate.push(product as UpdateProductWorkflowInputDTO)
           } else {
+            console.log(`  ➕ Nouveau produit -> création`)
             productsToCreate.push(product as CreateProductWorkflowInputDTO)
           }
         })
+
+        console.log(`✅ [WORKFLOW] Transformation terminée: ${productsToCreate.length} à créer, ${productsToUpdate.length} à mettre à jour`)
 
         return {
           productsToCreate,

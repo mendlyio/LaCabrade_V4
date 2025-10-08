@@ -16,7 +16,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       })
     }
 
-    console.log(`🔄 [ADMIN] Synchronisation de ${productIds.length} produits sélectionnés`)
+    console.log(`🔄 [ADMIN] Synchronisation de ${productIds.length} produits sélectionnés:`, productIds)
 
     // Exécuter le workflow de synchronisation avec filtre
     const result = await syncFromErpWorkflow(req.scope).run({
@@ -28,9 +28,11 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       },
     })
 
+    console.log(`✅ [ADMIN] Workflow result:`, JSON.stringify(result.result, null, 2))
+
     const { toCreate, toUpdate } = result.result
 
-    console.log(`✅ [ADMIN] ${toCreate + toUpdate} produits synchronisés`)
+    console.log(`✅ [ADMIN] ${toCreate + toUpdate} produits synchronisés (${toCreate} créés, ${toUpdate} mis à jour)`)
 
     return res.json({
       success: true,
@@ -40,10 +42,12 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     })
   } catch (error: any) {
     console.error("❌ [ADMIN] Erreur synchronisation sélective:", error)
+    console.error("❌ [ADMIN] Stack trace:", error.stack)
     return res.status(500).json({
       success: false,
       message: "Erreur lors de la synchronisation",
       error: error.message,
+      stack: error.stack,
     })
   }
 }
