@@ -101,13 +101,8 @@ export const ODOO_API_KEY = process.env.ODOO_API_KEY;
 /**
  * (optional) Bpost Shipping configuration
  */
-export const BPOST_API_KEY = process.env.BPOST_API_KEY;
-export const BPOST_ACCOUNT_ID = process.env.BPOST_ACCOUNT_ID;
 export const BPOST_PUBLIC_KEY = process.env.BPOST_PUBLIC_KEY;
 export const BPOST_PRIVATE_KEY = process.env.BPOST_PRIVATE_KEY;
-export const BPOST_APP_ID = process.env.BPOST_APP_ID;
-export const BPOST_API_URL = process.env.BPOST_API_URL; // ex: https://api.bpost.cloud/shm/v3
-export const BPOST_ENV = process.env.BPOST_ENV; // sandbox | production
 export const BPOST_WEBHOOK_SECRET = process.env.BPOST_WEBHOOK_SECRET;
 
 /**

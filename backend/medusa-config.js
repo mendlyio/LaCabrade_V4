@@ -26,13 +26,8 @@ import {
   ODOO_DB_NAME,
   ODOO_USERNAME,
   ODOO_API_KEY,
-  BPOST_API_KEY,
-  BPOST_ACCOUNT_ID,
   BPOST_PUBLIC_KEY,
   BPOST_PRIVATE_KEY,
-  BPOST_APP_ID,
-  BPOST_API_URL,
-  BPOST_ENV,
   BPOST_WEBHOOK_SECRET
 } from 'lib/constants';
 
@@ -155,17 +150,12 @@ const medusaConfig = {
         apiKey: ODOO_API_KEY
       }
     }] : []),
-    ...((BPOST_API_KEY && BPOST_ACCOUNT_ID) ? [{
+    ...((BPOST_PUBLIC_KEY && BPOST_PRIVATE_KEY) ? [{
       key: 'bpost',
       resolve: './src/modules/bpost',
       options: {
-        apiKey: BPOST_API_KEY,
-        accountId: BPOST_ACCOUNT_ID,
         publicKey: BPOST_PUBLIC_KEY,
         privateKey: BPOST_PRIVATE_KEY,
-        appId: BPOST_APP_ID,
-        apiUrl: BPOST_API_URL,
-        environment: BPOST_ENV || 'sandbox',
         webhookSecret: BPOST_WEBHOOK_SECRET
       }
     }] : [])

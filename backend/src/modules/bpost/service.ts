@@ -1,13 +1,8 @@
 import crypto from "node:crypto"
 
 type BpostOptions = {
-  apiKey?: string
-  accountId?: string
   publicKey?: string
   privateKey?: string
-  appId?: string
-  apiUrl?: string
-  environment?: "sandbox" | "production"
   webhookSecret?: string
 }
 
@@ -20,16 +15,9 @@ export default class BpostModuleService {
     this.options = options
   }
 
-  private getApiUrl(): string {
-    if (!this.options.apiUrl) {
-      throw new Error("Bpost apiUrl manquant (BPOST_API_URL)")
-    }
-    return this.options.apiUrl.replace(/\/$/, "")
-  }
-
   private ensureKeys() {
-    if (!this.options.publicKey || !this.options.privateKey || !this.options.appId) {
-      throw new Error("Clés Bpost manquantes (BPOST_PUBLIC_KEY, BPOST_PRIVATE_KEY, BPOST_APP_ID)")
+    if (!this.options.publicKey || !this.options.privateKey) {
+      throw new Error("Clés Bpost manquantes (BPOST_PUBLIC_KEY, BPOST_PRIVATE_KEY)")
     }
   }
 
@@ -49,14 +37,14 @@ export default class BpostModuleService {
     return {
       "Content-Type": "application/json",
       Accept: "application/json",
-      "X-APPID": this.options.appId as string,
       Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`,
     }
   }
 
   private async sendToApi<T = any>({ method, endpoint, data, headers }: { method: string; endpoint: string; data?: any; headers?: Record<string, string> }): Promise<{ httpCode: number; response: T }> {
     this.ensureKeys()
-    const url = `${this.getApiUrl()}${endpoint.startsWith("/") ? endpoint : "/" + endpoint}`
+    const baseUrl = process.env.BPOST_API_URL || "https://api.bpost.cloud/shm/v3"
+    const url = `${baseUrl.replace(/\/$/, "")}${endpoint.startsWith("/") ? endpoint : "/" + endpoint}`
     const body = data ? JSON.stringify(data) : ""
     const baseHeaders = this.buildHeaders(body)
 
