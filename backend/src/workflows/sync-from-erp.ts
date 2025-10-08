@@ -167,7 +167,7 @@ export const syncFromErpWorkflow = createWorkflow(
                     currency_code: variant.currency_id.display_name.toLowerCase(),
                   },
                 ],
-                manage_inventory: false,
+                manage_inventory: true,
                 metadata: {
                   external_id: `${variant.id}`,
                   odoo_weight_kg: variant.weight,
