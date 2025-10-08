@@ -248,45 +248,73 @@ export const syncFromErpWorkflow = createWorkflow(
       }
     )
 
-    // Créer les nouveaux produits (sauf si dry-run)
-    const createResult = transform(
-      { productsToCreate, dryRun: input.dryRun },
-      async ({ productsToCreate, dryRun }) => {
+    // Créer les nouveaux produits avec une étape dédiée
+    const createProductsStep = createStep(
+      "create-products-from-odoo",
+      async ({ productsToCreate, dryRun }: { productsToCreate: any[]; dryRun: boolean }, { container }) => {
         if (dryRun || productsToCreate.length === 0) {
-          console.log(`⏭️  [WORKFLOW] Pas de création (dry-run ou liste vide)`)
-          return { created: [] }
+          console.log(`⏭️  [WORKFLOW] Pas de création (dry-run=${dryRun}, count=${productsToCreate.length})`)
+          return new StepResponse({ created: 0 })
         }
 
-        console.log(`📦 [WORKFLOW] Création de ${productsToCreate.length} produits...`)
-        const result = await createProductsWorkflow.runAsStep({
-          input: {
-            products: productsToCreate,
-          },
-        })
-        console.log(`✅ [WORKFLOW] ${productsToCreate.length} produits créés`)
-        return result
+        console.log(`📦 [WORKFLOW] Création de ${productsToCreate.length} produits dans Medusa...`)
+        
+        const productService = container.resolve(Modules.PRODUCT)
+        const createdProducts = []
+        
+        for (const productData of productsToCreate) {
+          try {
+            const created = await productService.createProducts(productData)
+            createdProducts.push(created)
+            console.log(`  ✅ Créé: ${productData.title}`)
+          } catch (error: any) {
+            console.error(`  ❌ Erreur création ${productData.title}:`, error.message)
+          }
+        }
+
+        console.log(`✅ [WORKFLOW] ${createdProducts.length}/${productsToCreate.length} produits créés avec succès`)
+        return new StepResponse({ created: createdProducts.length })
       }
     )
 
-    // Mettre à jour les produits existants
-    const updateResult = transform(
-      { productsToUpdate, dryRun: input.dryRun },
-      async ({ productsToUpdate, dryRun }) => {
+    const createResult = createProductsStep({ 
+      productsToCreate, 
+      dryRun: input.dryRun 
+    })
+
+    // Mettre à jour les produits existants avec une étape dédiée
+    const updateProductsStep = createStep(
+      "update-products-from-odoo",
+      async ({ productsToUpdate, dryRun }: { productsToUpdate: any[]; dryRun: boolean }, { container }) => {
         if (dryRun || productsToUpdate.length === 0) {
-          console.log(`⏭️  [WORKFLOW] Pas de mise à jour (dry-run ou liste vide)`)
-          return { updated: [] }
+          console.log(`⏭️  [WORKFLOW] Pas de mise à jour (dry-run=${dryRun}, count=${productsToUpdate.length})`)
+          return new StepResponse({ updated: 0 })
         }
 
-        console.log(`📝 [WORKFLOW] Mise à jour de ${productsToUpdate.length} produits...`)
-        const result = await updateProductsWorkflow.runAsStep({
-          input: {
-            products: productsToUpdate,
-          },
-        })
-        console.log(`✅ [WORKFLOW] ${productsToUpdate.length} produits mis à jour`)
-        return result
+        console.log(`📝 [WORKFLOW] Mise à jour de ${productsToUpdate.length} produits dans Medusa...`)
+        
+        const productService = container.resolve(Modules.PRODUCT)
+        const updatedProducts = []
+        
+        for (const productData of productsToUpdate) {
+          try {
+            const updated = await productService.updateProducts(productData.id, productData)
+            updatedProducts.push(updated)
+            console.log(`  ✅ Mis à jour: ${productData.title}`)
+          } catch (error: any) {
+            console.error(`  ❌ Erreur mise à jour ${productData.title}:`, error.message)
+          }
+        }
+
+        console.log(`✅ [WORKFLOW] ${updatedProducts.length}/${productsToUpdate.length} produits mis à jour avec succès`)
+        return new StepResponse({ updated: updatedProducts.length })
       }
     )
+
+    const updateResult = updateProductsStep({ 
+      productsToUpdate, 
+      dryRun: input.dryRun 
+    })
 
     return new WorkflowResponse({
       odooProducts,
