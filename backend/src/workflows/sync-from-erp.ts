@@ -298,16 +298,15 @@ export const syncFromErpWorkflow = createWorkflow(
                 // Résoudre le service de fichiers via le module FILE
                 const fileService = container.resolve(Modules.FILE)
                 
-                // Décoder le base64 en buffer
-                const imageBuffer = Buffer.from(productData.odoo_image_base64, 'base64')
-                const filename = `odoo/products/${created.id}/${Date.now()}.png`
+                // Préparer le fichier pour upload
+                const filename = `odoo-product-${created.id}-${Date.now()}.png`
                 
-                console.log(`    📤 Tentative upload: ${filename} (${imageBuffer.length} bytes)`)
+                console.log(`    📤 Tentative upload: ${filename}`)
                 
-                // Upload via le service de fichiers Medusa
-                const uploadResult = await fileService.uploadFile({
+                // Upload via le service de fichiers Medusa (méthode create)
+                const uploadResult = await fileService.createFiles({
                   filename,
-                  file: imageBuffer,
+                  content: productData.odoo_image_base64, // Base64 string
                   mimeType: 'image/png',
                 })
                 
@@ -364,16 +363,15 @@ export const syncFromErpWorkflow = createWorkflow(
               }
             }
             
-            // Récupérer le produit complet avec toutes les relations (images, sales_channels, etc.)
+            // Récupérer le produit complet avec toutes les relations (images, variants, etc.)
             const fullProduct = await productService.retrieveProduct(created.id, {
-              relations: ["images", "variants", "variants.prices", "sales_channels", "options", "options.values"]
+              relations: ["images", "variants", "variants.prices", "options", "options.values"]
             })
             
             createdProducts.push(fullProduct)
             console.log(`  ✅ Créé: ${productData.title}`)
             console.log(`    → Images: ${fullProduct.images?.length || 0}`)
             console.log(`    → Variantes: ${fullProduct.variants?.length || 0}`)
-            console.log(`    → Sales channels: ${fullProduct.sales_channels?.length || 0}`)
           } catch (error: any) {
             console.error(`  ❌ Erreur création ${productData.title}:`, error.message)
             console.error(`  Stack:`, error.stack)
