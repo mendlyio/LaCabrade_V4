@@ -159,6 +159,23 @@ const medusaConfig = {
         webhookSecret: BPOST_WEBHOOK_SECRET
       }
     }] : [])
+    ,
+    {
+      key: Modules.FULFILLMENT,
+      resolve: '@medusajs/fulfillment',
+      options: {
+        providers: [
+          {
+            resolve: './src/modules/bpost-fulfillment',
+            id: 'bpost'
+          },
+          {
+            resolve: '@medusajs/fulfillment-manual',
+            id: 'manual'
+          }
+        ]
+      }
+    }
   ],
   plugins: [
   ...(MEILISEARCH_HOST && MEILISEARCH_ADMIN_KEY ? [{
