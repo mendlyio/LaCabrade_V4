@@ -138,6 +138,7 @@ const medusaConfig = {
       },
     }] : []),
     ...(ODOO_URL && ODOO_DB_NAME && ODOO_USERNAME && ODOO_API_KEY ? [{
+      key: 'odoo',
       resolve: './src/modules/odoo',
       options: {
         url: ODOO_URL,
