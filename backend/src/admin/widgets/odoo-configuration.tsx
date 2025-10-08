@@ -100,12 +100,13 @@ const OdooConfigurationWidget = () => {
 
       const data = await response.json()
 
-      if (data.success) {
-        alert(`✅ ${data.message}`)
+      if (response.ok && (data.success !== false)) {
+        const message = data.message || `${data.created || 0} produit(s) créé(s), ${data.updated || 0} mis à jour`
+        alert(`✅ Importation réussie: ${message}`)
         setSelectedProducts(new Set())
         fetchProducts()
       } else {
-        alert(`❌ ${data.message || "Erreur lors de l'importation des produits."}`)
+        alert(`❌ ${data.message || data.error || "Erreur lors de l'importation des produits."}`)
       }
     } catch (error) {
       console.error("Erreur d'importation:", error)
@@ -292,6 +293,7 @@ const OdooConfigurationWidget = () => {
                               className="w-3.5 h-3.5"
                             />
                           </th>
+                          <th className="p-3">Image</th>
                           <th className="p-3">Nom</th>
                           <th className="p-3">SKU</th>
                           <th className="p-3">Prix</th>
@@ -309,6 +311,22 @@ const OdooConfigurationWidget = () => {
                                 onChange={(e) => handleCheckboxChange(product.id, e.target.checked)}
                                 className="w-3.5 h-3.5"
                               />
+                            </td>
+                            <td className="p-3">
+                              {product.image_url ? (
+                                <img 
+                                  src={product.image_url} 
+                                  alt={product.display_name}
+                                  className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-700"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none'
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 text-xs">
+                                  📦
+                                </div>
+                              )}
                             </td>
                             <td className="p-3 font-medium text-gray-900 dark:text-gray-100">{product.display_name}</td>
                             <td className="p-3 text-gray-800 dark:text-gray-300">{product.default_code || "N/A"}</td>

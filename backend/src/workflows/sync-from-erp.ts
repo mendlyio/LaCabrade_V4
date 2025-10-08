@@ -35,14 +35,18 @@ const fetchOdooProductsStep = createStep(
       throw new Error("Module Odoo non configuré. Veuillez ajouter les variables d'environnement ODOO_*")
     }
     
-    let products = await odooModuleService.fetchProducts(input)
+    const { products } = await odooModuleService.fetchProductsPaged({
+      offset: input.offset,
+      limit: input.limit,
+    })
     
-    // Filtrer par IDs si spécifié (dans le step, pas dans le workflow)
+    // Filtrer par IDs si spécifié
+    let filteredProducts = products
     if (input.filterProductIds && input.filterProductIds.length > 0) {
-      products = products.filter((p: OdooProduct) => input.filterProductIds!.includes(p.id))
+      filteredProducts = products.filter((p: OdooProduct) => input.filterProductIds!.includes(p.id))
     }
     
-    return new StepResponse(products)
+    return new StepResponse(filteredProducts)
   }
 )
 
