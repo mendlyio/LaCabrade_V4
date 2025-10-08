@@ -104,10 +104,16 @@ export const syncFromErpWorkflow = createWorkflow(
               (p) => p.metadata?.external_id === `${odooProduct.id}`
             )
 
+            // Gérer l'image principale du produit (thumbnail)
+            const thumbnail = (odooProduct.image_128 && typeof odooProduct.image_128 === 'string')
+              ? `data:image/png;base64,${odooProduct.image_128}`
+              : undefined
+
             const product: any = {
               id: existingProduct?.id,
               title: odooProduct.display_name,
               description: odooProduct.description_sale || undefined,
+              thumbnail,
               metadata: {
                 external_id: `${odooProduct.id}`,
               },
@@ -139,12 +145,22 @@ export const syncFromErpWorkflow = createWorkflow(
                 })
               }
 
+              // Poids en grammes (Odoo utilise des kg)
+              const weightInGrams = variant.weight ? Math.round(variant.weight * 1000) : undefined
+              
+              // Image de la variante
+              const variantThumbnail = (variant.image_128 && typeof variant.image_128 === 'string')
+                ? `data:image/png;base64,${variant.image_128}`
+                : undefined
+
               return {
                 id: existingProduct 
                   ? existingProduct.variants.find((v) => v.sku === variant.code)?.id 
                   : undefined,
                 title: variant.display_name.replace(`[${variant.code}] `, ""),
                 sku: variant.code || undefined,
+                barcode: variant.barcode || undefined,
+                weight: weightInGrams,
                 options,
                 prices: [
                   {
@@ -152,14 +168,18 @@ export const syncFromErpWorkflow = createWorkflow(
                     currency_code: variant.currency_id.display_name.toLowerCase(),
                   },
                 ],
-                manage_inventory: false, // Changer en true si vous synchronisez l'inventaire depuis Odoo
+                manage_inventory: false,
                 metadata: {
                   external_id: `${variant.id}`,
+                  odoo_weight_kg: variant.weight,
+                  odoo_volume: variant.volume,
                 },
               }
             })
           } else {
             // Produit simple sans variantes
+            const weightInGrams = odooProduct.weight ? Math.round(odooProduct.weight * 1000) : undefined
+            
             product.options = [
               {
                 title: "Default",
@@ -169,6 +189,8 @@ export const syncFromErpWorkflow = createWorkflow(
             product.variants.push({
               id: existingProduct ? existingProduct.variants[0].id : undefined,
               title: "Default",
+              sku: odooProduct.default_code || undefined,
+              weight: weightInGrams,
               options: {
                 Default: "Default",
               },
@@ -180,6 +202,8 @@ export const syncFromErpWorkflow = createWorkflow(
               ],
               metadata: {
                 external_id: `${odooProduct.id}`,
+                odoo_weight_kg: odooProduct.weight,
+                odoo_volume: odooProduct.volume,
               },
               manage_inventory: false,
             })
