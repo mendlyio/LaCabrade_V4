@@ -1,7 +1,7 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 
-import ProductTemplate from "@modules/products/templates"
+import ProductTemplateModern from "@modules/products/templates/product-template-modern"
 import { getRegion, listRegions } from "@lib/data/regions"
 import { getProductByHandle, getProductsList } from "@lib/data/products"
 
@@ -57,11 +57,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   return {
-    title: `${product.title} | Medusa Store`,
-    description: `${product.title}`,
+    title: `${product.title} | La Cabrade`,
+    description: product.description || `Découvrez ${product.title} sur La Cabrade - Sellerie équestre de qualité`,
     openGraph: {
-      title: `${product.title} | Medusa Store`,
-      description: `${product.title}`,
+      title: `${product.title} | La Cabrade`,
+      description: product.description || `Découvrez ${product.title} sur La Cabrade`,
       images: product.thumbnail ? [product.thumbnail] : [],
     },
   }
@@ -80,7 +80,7 @@ export default async function ProductPage({ params }: Props) {
   }
 
   return (
-    <ProductTemplate
+    <ProductTemplateModern
       product={pricedProduct}
       region={region}
       countryCode={params.countryCode}

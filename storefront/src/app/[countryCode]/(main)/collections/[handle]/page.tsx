@@ -7,14 +7,19 @@ import {
 } from "@lib/data/collections"
 import { listRegions } from "@lib/data/regions"
 import { StoreCollection, StoreRegion } from "@medusajs/types"
-import CollectionTemplate from "@modules/collections/templates"
-import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import CollectionTemplateModern from "@modules/collections/templates/collection-template-modern"
 
 type Props = {
   params: { handle: string; countryCode: string }
   searchParams: {
+    sortBy?: string
     page?: string
-    sortBy?: SortOptions
+    q?: string
+    category?: string
+    price_min?: string
+    price_max?: string
+    in_stock?: string
+    on_sale?: string
   }
 }
 
@@ -67,8 +72,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CollectionPage({ params, searchParams }: Props) {
-  const { sortBy, page } = searchParams
-
   const collection = await getCollectionByHandle(params.handle).then(
     (collection: StoreCollection) => collection
   )
@@ -78,10 +81,9 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   }
 
   return (
-    <CollectionTemplate
+    <CollectionTemplateModern
       collection={collection}
-      page={page}
-      sortBy={sortBy}
+      searchParams={searchParams}
       countryCode={params.countryCode}
     />
   )

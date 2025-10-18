@@ -10,10 +10,12 @@ const StoreTemplate = ({
   sortBy,
   page,
   countryCode,
+  search,
 }: {
   sortBy?: SortOptions
   page?: string
   countryCode: string
+  search?: string
 }) => {
   const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
@@ -23,16 +25,19 @@ const StoreTemplate = ({
       className="flex flex-col small:flex-row small:items-start py-6 content-container"
       data-testid="category-container"
     >
-      <RefinementList sortBy={sort} />
+      <RefinementList sortBy={sort} search={search} />
       <div className="w-full">
         <div className="mb-8 text-2xl-semi">
-          <h1 data-testid="store-page-title">All products</h1>
+          <h1 data-testid="store-page-title">
+            {search ? `Résultats pour "${search}"` : "Tous les produits"}
+          </h1>
         </div>
         <Suspense fallback={<SkeletonProductGrid />}>
           <PaginatedProducts
             sortBy={sort}
             page={pageNumber}
             countryCode={countryCode}
+            search={search}
           />
         </Suspense>
       </div>

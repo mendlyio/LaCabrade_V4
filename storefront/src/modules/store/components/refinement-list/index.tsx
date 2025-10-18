@@ -7,11 +7,11 @@ import SortProducts, { SortOptions } from "./sort-products"
 
 type RefinementListProps = {
   sortBy: SortOptions
-  search?: boolean
+  search?: string
   'data-testid'?: string
 }
 
-const RefinementList = ({ sortBy, 'data-testid': dataTestId }: RefinementListProps) => {
+const RefinementList = ({ sortBy, search, 'data-testid': dataTestId }: RefinementListProps) => {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()

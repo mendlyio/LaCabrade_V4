@@ -1,24 +1,46 @@
 "use client"
 
 import { Popover, Transition } from "@headlessui/react"
-import { ArrowRightMini, XMark } from "@medusajs/icons"
-import { Text, clx, useToggleState } from "@medusajs/ui"
-import { Fragment } from "react"
+import { XMark, ChevronDown } from "@medusajs/icons"
+import { useToggleState } from "@medusajs/ui"
+import { Fragment, useState } from "react"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CountrySelect from "../country-select"
 import { HttpTypes } from "@medusajs/types"
 
-const SideMenuItems = {
-  Home: "/",
-  Store: "/store",
-  Search: "/search",
-  Account: "/account",
-  Cart: "/cart",
+const SideMenuItems = [
+  { name: "Accueil", href: "/" },
+  { name: "Boutique", href: "/store" },
+  { name: "Nouveautés", href: "/nouveautes", badge: "NEW" },
+  { name: "Promotions", href: "/promotions" },
+  { name: "Collections", href: "/collections" },
+  { name: "Marques", href: "/marques" },
+  { name: "Recherche", href: "/search" },
+  { name: "Mon Compte", href: "/account" },
+  { name: "Panier", href: "/cart" },
+]
+
+type SideMenuProps = {
+  regions: HttpTypes.StoreRegion[] | null
+  categories?: any[]
 }
 
-const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
+const SideMenu = ({ regions, categories = [] }: SideMenuProps) => {
   const toggleState = useToggleState()
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  
+  const parentCategories = categories?.filter(cat => !cat.parent_category) || []
+
+  const toggleCategory = (categoryId: string) => {
+    const newExpanded = new Set(expandedCategories)
+    if (newExpanded.has(categoryId)) {
+      newExpanded.delete(categoryId)
+    } else {
+      newExpanded.add(categoryId)
+    }
+    setExpandedCategories(newExpanded)
+  }
 
   return (
     <div className="h-full">
@@ -29,71 +51,216 @@ const SideMenu = ({ regions }: { regions: HttpTypes.StoreRegion[] | null }) => {
               <div className="relative flex h-full">
                 <Popover.Button
                   data-testid="nav-menu-button"
-                  className="relative h-full flex items-center transition-all ease-out duration-200 focus:outline-none hover:text-ui-fg-base"
+                  className="relative h-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 focus:outline-none hover:bg-amber-50 hover:text-amber-600"
                 >
-                  Menu
+                  <div className="flex flex-col gap-1">
+                    <span className={`w-5 h-0.5 bg-current transition-all duration-300 ${open ? 'rotate-45 translate-y-1.5' : ''}`}></span>
+                    <span className={`w-5 h-0.5 bg-current transition-all duration-300 ${open ? 'opacity-0' : ''}`}></span>
+                    <span className={`w-5 h-0.5 bg-current transition-all duration-300 ${open ? '-rotate-45 -translate-y-1.5' : ''}`}></span>
+                  </div>
+                  <span className="text-sm font-medium">Menu</span>
                 </Popover.Button>
               </div>
 
               <Transition
                 show={open}
                 as={Fragment}
-                enter="transition ease-out duration-150"
+                enter="transition ease-out duration-300"
                 enterFrom="opacity-0"
-                enterTo="opacity-100 backdrop-blur-2xl"
-                leave="transition ease-in duration-150"
-                leaveFrom="opacity-100 backdrop-blur-2xl"
+                enterTo="opacity-100 backdrop-blur-sm"
+                leave="transition ease-in duration-200"
+                leaveFrom="opacity-100 backdrop-blur-sm"
                 leaveTo="opacity-0"
               >
-                <Popover.Panel className="flex flex-col absolute w-full pr-4 sm:pr-0 sm:w-1/3 2xl:w-1/4 sm:min-w-min h-[calc(100vh-1rem)] z-30 inset-x-0 text-sm text-ui-fg-on-color m-2 backdrop-blur-2xl">
-                  <div
-                    data-testid="nav-menu-popup"
-                    className="flex flex-col h-full bg-[rgba(3,7,18,0.5)] rounded-rounded justify-between p-6"
-                  >
-                    <div className="flex justify-end" id="xmark">
-                      <button data-testid="close-menu-button" onClick={close}>
-                        <XMark />
-                      </button>
-                    </div>
-                    <ul className="flex flex-col gap-6 items-start justify-start">
-                      {Object.entries(SideMenuItems).map(([name, href]) => {
-                        return (
-                          <li key={name}>
-                            <LocalizedClientLink
-                              href={href}
-                              className="text-3xl leading-10 hover:text-ui-fg-disabled"
-                              onClick={close}
-                              data-testid={`${name.toLowerCase()}-link`}
-                            >
-                              {name}
-                            </LocalizedClientLink>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                    <div className="flex flex-col gap-y-6">
-                      <div
-                        className="flex justify-between"
-                        onMouseEnter={toggleState.open}
-                        onMouseLeave={toggleState.close}
-                      >
-                        {regions && (
-                          <CountrySelect
-                            toggleState={toggleState}
-                            regions={regions}
-                          />
-                        )}
-                        <ArrowRightMini
-                          className={clx(
-                            "transition-transform duration-150",
-                            toggleState.state ? "-rotate-90" : ""
-                          )}
-                        />
+                <Popover.Panel className="fixed inset-0 z-40 lg:hidden">
+                  {/* Overlay */}
+                  <div 
+                    className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                    onClick={close}
+                  />
+                  
+                  {/* Menu Panel */}
+                  <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-sm bg-white shadow-2xl animate-slide-in-left">
+                    <div className="flex flex-col h-full">
+                      {/* Header */}
+                      <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-amber-800 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-lg">
+                            LC
+                          </div>
+                          <div>
+                            <h2 className="text-lg font-bold text-gray-900">La Cabrade</h2>
+                            <p className="text-xs text-gray-600">Menu</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={close}
+                          data-testid="close-menu-button"
+                          className="p-2 hover:bg-white rounded-full transition-colors"
+                          aria-label="Fermer le menu"
+                        >
+                          <XMark className="w-6 h-6" />
+                        </button>
                       </div>
-                      <Text className="flex justify-between txt-compact-small">
-                        © {new Date().getFullYear()} Medusa Store. All rights
-                        reserved.
-                      </Text>
+
+                      {/* Menu Items */}
+                      <nav className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                        <ul className="space-y-2">
+                          {SideMenuItems.map((item) => (
+                            <li key={item.name}>
+                              <LocalizedClientLink
+                                href={item.href}
+                                className="flex items-center gap-4 px-4 py-3 rounded-xl text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-all duration-200 group relative"
+                                onClick={close}
+                                data-testid={`${item.name.toLowerCase()}-link`}
+                              >
+                                <span className="text-base font-medium flex-1">
+                                  {item.name}
+                                </span>
+                                {item.badge && (
+                                  <span className="px-2 py-1 bg-red-500 text-white text-xs rounded-full font-bold">
+                                    {item.badge}
+                                  </span>
+                                )}
+                                <span className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  →
+                                </span>
+                              </LocalizedClientLink>
+                            </li>
+                          ))}
+                        </ul>
+
+                        {/* Categories Section */}
+                        {parentCategories.length > 0 && (
+                          <div className="mt-8 pt-6 border-t border-gray-200">
+                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-4">
+                              Catégories
+                            </h3>
+                            <ul className="space-y-2">
+                              {parentCategories.map((category) => {
+                                const children = category.category_children || []
+                                const isExpanded = expandedCategories.has(category.id)
+                                
+                                return (
+                                  <li key={category.id}>
+                                    <div className="flex items-center gap-2">
+                                      <LocalizedClientLink
+                                        href={`/categories/${category.handle}`}
+                                        className="flex-1 px-4 py-2 text-sm text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors font-medium"
+                                        onClick={close}
+                                      >
+                                        {category.name}
+                                      </LocalizedClientLink>
+                                      
+                                      {children.length > 0 && (
+                                        <button
+                                          onClick={() => toggleCategory(category.id)}
+                                          className="mr-2 p-2 rounded-lg hover:bg-amber-50 transition-colors"
+                                          aria-label={isExpanded ? "Masquer les sous-catégories" : "Afficher les sous-catégories"}
+                                        >
+                                          <ChevronDown
+                                            className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${
+                                              isExpanded ? 'rotate-180' : ''
+                                            }`}
+                                          />
+                                        </button>
+                                      )}
+                                    </div>
+                                    
+                                    {children.length > 0 && isExpanded && (
+                                      <ul className="ml-6 mt-1 space-y-1 border-l-2 border-amber-200 pl-3">
+                                        {children.map((child: any) => (
+                                          <li key={child.id}>
+                                            <LocalizedClientLink
+                                              href={`/categories/${child.handle}`}
+                                              className="block px-2 py-1.5 text-xs text-gray-600 hover:text-amber-600 transition-colors"
+                                              onClick={close}
+                                            >
+                                              {child.name}
+                                            </LocalizedClientLink>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    )}
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Quick Links */}
+                        <div className="mt-8 pt-6 border-t border-gray-200">
+                          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-4">
+                            Liens rapides
+                          </h3>
+                          <ul className="space-y-2">
+                            {[
+                              { name: "Service client", href: "/contact" },
+                              { name: "Livraison", href: "/livraison" },
+                              { name: "Retours", href: "/retours" },
+                              { name: "FAQ", href: "/faq" },
+                            ].map((link) => (
+                              <li key={link.name}>
+                                <LocalizedClientLink
+                                  href={link.href}
+                                  className="flex items-center gap-3 px-4 py-2 text-sm text-gray-600 hover:text-amber-600 transition-colors"
+                                  onClick={close}
+                                >
+                                  <span>{link.name}</span>
+                                </LocalizedClientLink>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </nav>
+
+                      {/* Footer */}
+                      <div className="border-t border-gray-200 p-6 bg-gray-50">
+                        {/* Country Select */}
+                        <div
+                          className="mb-4"
+                          onMouseEnter={toggleState.open}
+                          onMouseLeave={toggleState.close}
+                        >
+                          {regions && (
+                            <CountrySelect
+                              toggleState={toggleState}
+                              regions={regions}
+                            />
+                          )}
+                        </div>
+
+                        {/* Social Links */}
+                        <div className="flex items-center justify-center gap-3 mb-4">
+                          <a
+                            href="https://facebook.com"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-10 h-10 rounded-full bg-white border-2 border-gray-300 hover:border-amber-600 hover:bg-amber-50 flex items-center justify-center transition-all hover:scale-110"
+                            aria-label="Facebook"
+                          >
+                            <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                            </svg>
+                          </a>
+                          <a
+                            href="https://instagram.com"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-10 h-10 rounded-full bg-white border-2 border-gray-300 hover:border-amber-600 hover:bg-amber-50 flex items-center justify-center transition-all hover:scale-110"
+                            aria-label="Instagram"
+                          >
+                            <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                            </svg>
+                          </a>
+                        </div>
+
+                        <p className="text-xs text-gray-500 text-center">
+                          © {new Date().getFullYear()} La Cabrade
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </Popover.Panel>

@@ -30,7 +30,16 @@ async function getRegionMap() {
     }).then((res) => res.json())
 
     if (!regions?.length) {
-      notFound()
+      // Créer une région par défaut si aucune n'existe
+      const defaultRegion: HttpTypes.StoreRegion = {
+        id: 'reg_default',
+        name: 'France',
+        currency_code: 'eur',
+        countries: [{ iso_2: 'fr', name: 'France' }] as any,
+      } as any
+      regionMapCache.regionMap.set('fr', defaultRegion)
+      regionMapCache.regionMapUpdated = Date.now()
+      return regionMapCache.regionMap
     }
 
     // Create a map of country codes to regions.
