@@ -5,7 +5,7 @@ import { odooSyncCache } from "../lib/odoo-cache"
  * Subscriber: Invalide le cache Odoo quand un produit est supprimé
  * Permet de mettre à jour le statut de synchronisation dans le widget
  */
-export default async function productDeletedHandler({
+export default async function customOdooProductDeletedHandler({
   event: { data },
   container,
 }: SubscriberArgs<{ id: string }>) {

@@ -12,7 +12,7 @@ import OdooModuleService from "../modules/odoo/service"
  * - Une réservation est créée
  */
 
-export default async function odooStockSyncHandler({
+export default async function customOdooStockSyncHandler({
   event: { data },
   container,
 }: SubscriberArgs<any>) {
