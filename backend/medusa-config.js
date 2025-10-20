@@ -37,6 +37,17 @@ const medusaConfig = {
   projectConfig: {
     databaseUrl: DATABASE_URL,
     databaseLogging: false,
+    databaseDriverOptions: {
+      connection: {
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      },
+      pool: {
+        min: 2,
+        max: 10,
+        acquireTimeoutMillis: 30000,
+        idleTimeoutMillis: 30000,
+      },
+    },
     redisUrl: REDIS_URL,
     workerMode: WORKER_MODE,
     http: {
