@@ -31,14 +31,36 @@ if (fs.existsSync(envPath)) {
 console.log('Copying src directory to .medusa/server...');
 const srcPath = path.join(process.cwd(), 'src');
 const destSrcPath = path.join(MEDUSA_SERVER_PATH, 'src');
-if (fs.existsSync(srcPath)) {
-  // Create src directory if it doesn't exist
-  if (!fs.existsSync(destSrcPath)) {
-    fs.mkdirSync(destSrcPath, { recursive: true });
+
+function copyDirRecursive(src, dest) {
+  // Create destination directory if it doesn't exist
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true });
   }
-  
-  // Copy entire src directory, excluding .disabled files
-  execSync(`rsync -av --exclude='*.disabled' ${srcPath}/ ${destSrcPath}/`, { stdio: 'inherit' });
+
+  // Read all files and directories
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    // Skip .disabled files
+    if (entry.name.endsWith('.disabled')) {
+      console.log(`  Skipping: ${entry.name}`);
+      continue;
+    }
+
+    if (entry.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
+if (fs.existsSync(srcPath)) {
+  copyDirRecursive(srcPath, destSrcPath);
   console.log('✅ src directory copied successfully (excluding .disabled files)');
 }
 
