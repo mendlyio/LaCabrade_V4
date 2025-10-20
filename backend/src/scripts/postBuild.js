@@ -24,6 +24,21 @@ if (fs.existsSync(envPath)) {
   );
 }
 
+// Copy src directory (needed for medusa-config.js imports)
+console.log('Copying src directory to .medusa/server...');
+const srcPath = path.join(process.cwd(), 'src');
+const destSrcPath = path.join(MEDUSA_SERVER_PATH, 'src');
+if (fs.existsSync(srcPath)) {
+  // Create src directory if it doesn't exist
+  if (!fs.existsSync(destSrcPath)) {
+    fs.mkdirSync(destSrcPath, { recursive: true });
+  }
+  
+  // Copy entire src directory
+  execSync(`cp -r ${srcPath}/* ${destSrcPath}/`, { stdio: 'inherit' });
+  console.log('✅ src directory copied successfully');
+}
+
 // Install dependencies
 console.log('Installing dependencies in .medusa/server...');
 execSync('pnpm i --prod --no-frozen-lockfile', { 
