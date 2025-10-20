@@ -80,7 +80,6 @@ export const config: SubscriberConfig = {
   event: [
     "inventory-item.updated",
     "inventory-level.updated",
-  ],
-  subscriber_id: 'odoo-stock-sync-subscriber'
+  ]
 }
 

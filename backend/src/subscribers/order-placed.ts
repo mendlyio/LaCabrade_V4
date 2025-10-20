@@ -34,6 +34,5 @@ export default async function orderPlacedHandler({
 }
 
 export const config: SubscriberConfig = {
-  event: 'order.placed',
-  subscriber_id: 'custom-order-placed-notification'
+  event: 'order.placed'
 }

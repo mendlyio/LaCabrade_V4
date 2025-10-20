@@ -16,7 +16,6 @@ export default async function productDeletedHandler({
 }
 
 export const config: SubscriberConfig = {
-  event: "product.deleted",
-  subscriber_id: 'odoo-product-deleted-subscriber'
+  event: "product.deleted"
 }
 
