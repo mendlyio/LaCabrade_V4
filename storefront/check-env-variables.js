@@ -10,6 +10,12 @@ const requiredEnvs = [
 ]
 
 function checkEnvVariables() {
+  // Skip environment variable checks during build phase (Railway, CI/CD, etc.)
+  if (process.env.NODE_ENV === 'production' && process.argv.includes('build')) {
+    console.log(c.yellow("\n⚠️  Skipping environment variable checks during build phase\n"))
+    return
+  }
+
   const missingEnvs = requiredEnvs.filter(function (env) {
     return !process.env[env.key]
   })
@@ -32,7 +38,12 @@ function checkEnvVariables() {
       )
     )
 
-    process.exit(1)
+    // Only exit during runtime, not during build
+    if (!process.argv.includes('build')) {
+      process.exit(1)
+    } else {
+      console.log(c.yellow("⚠️  Continuing build without environment variables (they should be set at runtime)\n"))
+    }
   }
 }
 
