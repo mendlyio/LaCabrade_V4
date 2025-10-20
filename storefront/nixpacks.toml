@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_20"]
 
 [phases.install]
-cmds = ["npm install"]
+cmds = ["npm ci --prefer-offline --no-audit || npm install --no-audit"]
 
 [phases.build]
 cmds = ["npm run build"]
@@ -12,4 +12,6 @@ cmd = "npm start -- -H 0.0.0.0 -p ${PORT:-3000}"
 
 [variables]
 NPM_CONFIG_PRODUCTION = "false"
+NPM_CONFIG_FETCH_RETRIES = "3"
+NPM_CONFIG_FETCH_RETRY_MINTIMEOUT = "10000"
 
