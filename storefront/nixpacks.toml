@@ -5,14 +5,10 @@ nixPkgs = ["nodejs_20"]
 cmds = ["npm install"]
 
 [phases.build]
-cmds = [
-  "npm run build",
-  "cp -r .next/static .next/standalone/.next/",
-  "cp -r public .next/standalone/"
-]
+cmds = ["npm run build"]
 
 [start]
-cmd = "cd .next/standalone && HOSTNAME=0.0.0.0 PORT=${PORT:-3000} node server.js"
+cmd = "npm start -- -H 0.0.0.0 -p ${PORT:-3000}"
 
 [variables]
 NPM_CONFIG_PRODUCTION = "false"

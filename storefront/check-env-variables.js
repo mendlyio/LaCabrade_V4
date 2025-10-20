@@ -15,8 +15,7 @@ function checkEnvVariables() {
   })
 
   if (missingEnvs.length > 0) {
-    // During build phase, only show warnings, don't exit
-    // Check if we're in a build context by looking at the npm lifecycle event
+    // Check if we're in a build context
     const isBuildPhase = process.env.npm_lifecycle_event === 'build' || 
                          process.env.npm_lifecycle_event === 'build:next' ||
                          process.env.NEXT_PHASE === 'phase-production-build'
@@ -39,25 +38,26 @@ function checkEnvVariables() {
       return // Don't exit during build
     }
 
-    // During runtime, show errors and exit
-    console.error(
-      c.red.bold("\n🚫 Error: Missing required environment variables\n")
+    // During runtime, show warning but continue
+    // The application will fail when trying to use the API anyway
+    console.warn(
+      c.yellow("\n⚠️  Warning: Missing required environment variables at runtime\n")
     )
 
     missingEnvs.forEach(function (env) {
-      console.error(c.yellow(`  ${c.bold(env.key)}`))
+      console.warn(c.yellow(`  ${c.bold(env.key)}`))
       if (env.description) {
-        console.error(c.dim(`    ${env.description}\n`))
+        console.warn(c.dim(`    ${env.description}\n`))
       }
     })
 
-    console.error(
+    console.warn(
       c.yellow(
-        "\nPlease set these variables in your .env file or environment before starting the application.\n"
+        "⚠️  Application is starting but API calls may fail without these variables.\n"
       )
     )
-
-    process.exit(1)
+    
+    // Don't exit - let the application start and fail gracefully when needed
   }
 }
 

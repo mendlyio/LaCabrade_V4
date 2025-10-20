@@ -13,8 +13,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Disable static page generation for Railway builds
-  output: 'standalone',
   images: {
     remotePatterns: [
       {
