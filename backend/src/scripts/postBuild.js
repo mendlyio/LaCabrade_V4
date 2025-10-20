@@ -37,9 +37,9 @@ if (fs.existsSync(srcPath)) {
     fs.mkdirSync(destSrcPath, { recursive: true });
   }
   
-  // Copy entire src directory
-  execSync(`cp -r ${srcPath}/* ${destSrcPath}/`, { stdio: 'inherit' });
-  console.log('✅ src directory copied successfully');
+  // Copy entire src directory, excluding .disabled files
+  execSync(`rsync -av --exclude='*.disabled' ${srcPath}/ ${destSrcPath}/`, { stdio: 'inherit' });
+  console.log('✅ src directory copied successfully (excluding .disabled files)');
 }
 
 // Install dependencies
