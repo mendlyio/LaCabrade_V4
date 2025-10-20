@@ -81,5 +81,6 @@ export const config: SubscriberConfig = {
     "inventory-item.updated",
     "inventory-level.updated",
   ],
+  subscriber_id: 'odoo-stock-sync-subscriber'
 }
 

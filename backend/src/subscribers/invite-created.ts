@@ -35,5 +35,6 @@ export default async function userInviteHandler({
 }
 
 export const config: SubscriberConfig = {
-  event: ['invite.created', 'invite.resent']
+  event: ['invite.created', 'invite.resent'],
+  subscriber_id: 'custom-user-invite-handler'
 }

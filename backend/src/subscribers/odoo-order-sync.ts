@@ -90,5 +90,6 @@ export const config: SubscriberConfig = {
   event: [
     "order.placed",
   ],
+  subscriber_id: 'odoo-order-sync-subscriber'
 }
 
