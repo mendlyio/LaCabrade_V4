@@ -10,17 +10,36 @@ const requiredEnvs = [
 ]
 
 function checkEnvVariables() {
-  // Skip environment variable checks during build phase (Railway, CI/CD, etc.)
-  if (process.env.NODE_ENV === 'production' && process.argv.includes('build')) {
-    console.log(c.yellow("\n⚠️  Skipping environment variable checks during build phase\n"))
-    return
-  }
-
   const missingEnvs = requiredEnvs.filter(function (env) {
     return !process.env[env.key]
   })
 
   if (missingEnvs.length > 0) {
+    // During build phase, only show warnings, don't exit
+    // Check if we're in a build context by looking at the npm lifecycle event
+    const isBuildPhase = process.env.npm_lifecycle_event === 'build' || 
+                         process.env.npm_lifecycle_event === 'build:next' ||
+                         process.env.NEXT_PHASE === 'phase-production-build'
+
+    if (isBuildPhase) {
+      console.log(
+        c.yellow("\n⚠️  Warning: Missing required environment variables during build\n")
+      )
+      missingEnvs.forEach(function (env) {
+        console.log(c.yellow(`  ${c.bold(env.key)}`))
+        if (env.description) {
+          console.log(c.dim(`    ${env.description}\n`))
+        }
+      })
+      console.log(
+        c.yellow(
+          "⚠️  Continuing build. These variables MUST be set at runtime for the application to work.\n"
+        )
+      )
+      return // Don't exit during build
+    }
+
+    // During runtime, show errors and exit
     console.error(
       c.red.bold("\n🚫 Error: Missing required environment variables\n")
     )
@@ -38,12 +57,7 @@ function checkEnvVariables() {
       )
     )
 
-    // Only exit during runtime, not during build
-    if (!process.argv.includes('build')) {
-      process.exit(1)
-    } else {
-      console.log(c.yellow("⚠️  Continuing build without environment variables (they should be set at runtime)\n"))
-    }
+    process.exit(1)
   }
 }
 

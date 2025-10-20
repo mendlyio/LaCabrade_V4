@@ -7,6 +7,9 @@
   "keywords": [
     "medusa-storefront"
   ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "wait": "await-backend",
     "launcher": "launch-storefront",
