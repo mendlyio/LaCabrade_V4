@@ -3,7 +3,7 @@ import { INotificationModuleService, IOrderModuleService } from '@medusajs/frame
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa'
 import { EmailTemplates } from '../modules/email-notifications/templates'
 
-export default async function orderPlacedHandler({
+export default async function customOrderPlacedEmailHandler({
   event: { data },
   container,
 }: SubscriberArgs<any>) {

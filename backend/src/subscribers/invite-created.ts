@@ -4,7 +4,7 @@ import { SubscriberArgs, SubscriberConfig } from '@medusajs/framework'
 import { BACKEND_URL } from '../lib/constants'
 import { EmailTemplates } from '../modules/email-notifications/templates'
 
-export default async function userInviteHandler({
+export default async function customUserInviteEmailHandler({
     event: { data },
     container,
   }: SubscriberArgs<any>) {
