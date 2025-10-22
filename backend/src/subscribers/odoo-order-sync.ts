@@ -12,7 +12,7 @@ import OdooModuleService from "../modules/odoo/service"
  * - Stocke l'ID Odoo dans metadata de la commande Medusa
  */
 
-export default async function customOdooOrderSyncHandler({
+export default async function odooOrderPlacedSubscriber({
   event: { data },
   container,
 }: SubscriberArgs<any>) {
