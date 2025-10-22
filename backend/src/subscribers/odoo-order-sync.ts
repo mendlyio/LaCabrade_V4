@@ -12,7 +12,7 @@ import OdooModuleService from "../modules/odoo/service"
  * - Stocke l'ID Odoo dans metadata de la commande Medusa
  */
 
-export default async function odooOrderPlacedSubscriber({
+export default async function lacabradeOdooSyncOrderToErp({
   event: { data },
   container,
 }: SubscriberArgs<any>) {
@@ -87,8 +87,6 @@ export default async function odooOrderPlacedSubscriber({
 }
 
 export const config: SubscriberConfig = {
-  event: [
-    "order.placed",
-  ]
+  event: "order.placed"
 }
 
