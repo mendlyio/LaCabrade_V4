@@ -73,9 +73,10 @@ const Shipping: React.FC<ShippingProps> = ({
             }
           )}
         >
-          Delivery
+          <span className="text-2xl">🚚</span>
+          Livraison
           {!isOpen && (cart.shipping_methods?.length ?? 0) > 0 && (
-            <CheckCircleSolid />
+            <CheckCircleSolid className="text-green-600" />
           )}
         </Heading>
         {!isOpen &&
@@ -85,10 +86,10 @@ const Shipping: React.FC<ShippingProps> = ({
             <Text>
               <button
                 onClick={handleEdit}
-                className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
+                className="text-amber-600 hover:text-amber-700 font-medium transition-colors"
                 data-testid="edit-delivery-button"
               >
-                Edit
+                Modifier
               </button>
             </Text>
           )}
@@ -140,13 +141,13 @@ const Shipping: React.FC<ShippingProps> = ({
 
           <Button
             size="large"
-            className="mt-6"
+            className="mt-6 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             onClick={handleSubmit}
             isLoading={isLoading}
             disabled={!cart.shipping_methods?.[0]}
             data-testid="submit-delivery-option-button"
           >
-            Continue to payment
+            Continuer vers le paiement →
           </Button>
         </div>
       ) : (
@@ -154,8 +155,8 @@ const Shipping: React.FC<ShippingProps> = ({
           <div className="text-small-regular">
             {cart && (cart.shipping_methods?.length ?? 0) > 0 && (
               <div className="flex flex-col w-1/3">
-                <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                  Method
+                <Text className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+                  <span>📦</span> Méthode
                 </Text>
                 <Text className="txt-medium text-ui-fg-subtle">
                   {selectedShippingMethod?.name}{" "}
