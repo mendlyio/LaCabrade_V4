@@ -51,7 +51,12 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
     // Pour chaque produit, récupérer le stock depuis Odoo et mettre à jour Medusa
     for (const product of productsWithOdooId) {
       for (const variant of product.variants || []) {
-        if (!variant.sku) continue
+        if (!variant.sku) {
+          console.log(`⚠️  [STOCK SYNC] Variante sans SKU trouvée: ${variant.id} (produit: ${product.title})`)
+          console.log(`    → Cette variante ne sera pas synchronisée. Vérifiez l'import Odoo.`)
+          skipped++
+          continue
+        }
 
         try {
           // Récupérer le stock depuis Odoo via le SKU
