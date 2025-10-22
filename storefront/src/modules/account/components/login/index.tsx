@@ -15,26 +15,27 @@ const Login = ({ setCurrentView }: Props) => {
 
   return (
     <div
-      className="max-w-sm w-full flex flex-col items-center"
+      className="max-w-md w-full flex flex-col items-center bg-white rounded-xl shadow-lg border border-gray-200 p-8"
       data-testid="login-page"
     >
-      <h1 className="text-large-semi uppercase mb-6">Welcome back</h1>
-      <p className="text-center text-base-regular text-ui-fg-base mb-8">
-        Sign in to access an enhanced shopping experience.
+      <div className="mb-6 text-5xl">👤</div>
+      <h1 className="text-3xl font-bold text-gray-900 mb-2">Bon retour !</h1>
+      <p className="text-center text-base text-gray-600 mb-8">
+        Connectez-vous pour accéder à votre compte et profiter d'une expérience d'achat personnalisée.
       </p>
       <form className="w-full" action={formAction}>
-        <div className="flex flex-col w-full gap-y-2">
+        <div className="flex flex-col w-full gap-y-4">
           <Input
             label="Email"
             name="email"
             type="email"
-            title="Enter a valid email address."
+            title="Entrez une adresse email valide."
             autoComplete="email"
             required
             data-testid="email-input"
           />
           <Input
-            label="Password"
+            label="Mot de passe"
             name="password"
             type="password"
             autoComplete="current-password"
@@ -43,20 +44,19 @@ const Login = ({ setCurrentView }: Props) => {
           />
         </div>
         <ErrorMessage error={message} data-testid="login-error-message" />
-        <SubmitButton data-testid="sign-in-button" className="w-full mt-6">
-          Sign in
+        <SubmitButton data-testid="sign-in-button" className="w-full mt-6 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
+          Se connecter
         </SubmitButton>
       </form>
-      <span className="text-center text-ui-fg-base text-small-regular mt-6">
-        Not a member?{" "}
+      <span className="text-center text-gray-600 text-sm mt-6">
+        Pas encore membre ?{" "}
         <button
           onClick={() => setCurrentView(LOGIN_VIEW.REGISTER)}
-          className="underline"
+          className="text-amber-600 hover:text-amber-700 font-semibold underline"
           data-testid="register-button"
         >
-          Join us
+          Créer un compte
         </button>
-        .
       </span>
     </div>
   )

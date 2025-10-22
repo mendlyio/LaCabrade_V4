@@ -182,7 +182,7 @@ export default async function Footer() {
               </li>
               <li>
                 <LocalizedClientLink
-                  href="/commandes"
+                  href="/account?tab=orders"
                   className="text-sm text-gray-600 hover:text-amber-600 transition-colors flex items-center gap-2 group"
                 >
                   <span className="w-1 h-1 rounded-full bg-gray-300 group-hover:bg-amber-500 group-hover:scale-150 transition-all"></span>

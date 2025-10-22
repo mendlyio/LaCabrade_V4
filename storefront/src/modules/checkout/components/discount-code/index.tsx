@@ -59,10 +59,10 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
             <button
               onClick={() => setIsOpen(!isOpen)}
               type="button"
-              className="txt-medium text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
+              className="text-sm font-semibold text-amber-600 hover:text-amber-700 transition-colors flex items-center gap-2"
               data-testid="add-discount-button"
             >
-              Add Promotion Code(s)
+              🎟️ Ajouter un code promo
             </button>
 
             {/* <Tooltip content="You can add multiple promotion codes">
@@ -83,9 +83,10 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                 />
                 <SubmitButton
                   variant="secondary"
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-colors"
                   data-testid="discount-apply-button"
                 >
-                  Apply
+                  Appliquer
                 </SubmitButton>
               </div>
 
@@ -100,8 +101,8 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         {promotions.length > 0 && (
           <div className="w-full flex items-center">
             <div className="flex flex-col w-full">
-              <Heading className="txt-medium mb-2">
-                Promotion(s) applied:
+              <Heading className="text-sm font-semibold text-gray-900 mb-2">
+                Promotion(s) appliquée(s) :
               </Heading>
 
               {promotions.map((promotion) => {
@@ -157,7 +158,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                       >
                         <Trash size={14} />
                         <span className="sr-only">
-                          Remove discount code from order
+                          Retirer le code promo de la commande
                         </span>
                       </button>
                     )}

@@ -24,25 +24,28 @@ const Review = ({ cart }: { cart: any }) => {
         <Heading
           level="h2"
           className={clx(
-            "flex flex-row text-3xl-regular gap-x-2 items-baseline",
+            "flex flex-row text-xl font-bold text-gray-900 gap-x-2 items-center",
             {
               "opacity-50 pointer-events-none select-none": !isOpen,
             }
           )}
         >
-          Review
+          <span className="text-2xl">✓</span>
+          Vérification et validation
         </Heading>
       </div>
       {isOpen && previousStepsCompleted && (
         <>
           <div className="flex items-start gap-x-1 w-full mb-6">
-            <div className="w-full">
-              <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                By clicking the Place Order button, you confirm that you have
-                read, understand and accept our Terms of Use, Terms of Sale and
-                Returns Policy and acknowledge that you have read Medusa
-                Store&apos;s Privacy Policy.
-              </Text>
+            <div className="w-full bg-amber-50 border border-amber-200 rounded-lg p-6">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-6 h-6 bg-amber-600 rounded-full flex items-center justify-center text-white text-sm font-bold mt-0.5">
+                  i
+                </div>
+                <Text className="text-sm text-gray-700 leading-relaxed">
+                  En cliquant sur le bouton <strong>"Valider la commande"</strong>, vous confirmez avoir lu, compris et accepté nos Conditions Générales de Vente, notre Politique de Retour et notre Politique de Confidentialité.
+                </Text>
+              </div>
             </div>
           </div>
           <PaymentButton cart={cart} data-testid="submit-order-button" />

@@ -59,7 +59,7 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
         />
       )
     default:
-      return <Button disabled>Select a payment method</Button>
+      return <Button disabled>Sélectionnez un moyen de paiement</Button>
   }
 }
 
@@ -76,8 +76,9 @@ const GiftCardPaymentButton = () => {
       onClick={handleOrder}
       isLoading={submitting}
       data-testid="submit-order-button"
+      className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-4 px-8 rounded-lg transition-colors w-full text-lg"
     >
-      Place order
+      🎉 Valider la commande
     </Button>
   )
 }
@@ -178,8 +179,9 @@ const StripePaymentButton = ({
         size="large"
         isLoading={submitting}
         data-testid={dataTestId}
+        className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-4 px-8 rounded-lg transition-colors w-full text-lg"
       >
-        Place order
+        🎉 Valider la commande
       </Button>
       <ErrorMessage
         error={errorMessage}
@@ -223,13 +225,13 @@ const PayPalPaymentButton = ({
       ?.authorize()
       .then((authorization) => {
         if (authorization.status !== "COMPLETED") {
-          setErrorMessage(`An error occurred, status: ${authorization.status}`)
+          setErrorMessage(`Une erreur est survenue, statut : ${authorization.status}`)
           return
         }
         onPaymentCompleted()
       })
       .catch(() => {
-        setErrorMessage(`An unknown error occurred, please try again.`)
+        setErrorMessage(`Une erreur inconnue est survenue, veuillez réessayer.`)
         setSubmitting(false)
       })
   }
@@ -287,8 +289,9 @@ const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
         onClick={handlePayment}
         size="large"
         data-testid="submit-order-button"
+        className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-4 px-8 rounded-lg transition-colors w-full text-lg"
       >
-        Place order
+        🎉 Valider la commande
       </Button>
       <ErrorMessage
         error={errorMessage}
