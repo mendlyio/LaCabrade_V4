@@ -26,18 +26,19 @@ export default async function Home({
     return null
   }
 
-  // Récupérer les nouveautés (8 derniers produits)
+  // Récupérer les nouveautés (8 derniers produits ajoutés)
   let newProducts: any[] = []
   try {
     const result = await getProductsList({
       queryParams: {
         limit: 8,
         region_id: region.id,
+        order: "-created_at", // Trier par date de création décroissante
       },
       countryCode,
     })
-    console.log("🔍 Nouveautés récupérées:", result.products?.length || 0, "produits")
-    newProducts = result.products || []
+    console.log("🔍 Nouveautés récupérées:", result.response.products?.length || 0, "produits")
+    newProducts = result.response.products || []
   } catch (error) {
     console.error("❌ Erreur lors de la récupération des nouveautés:", error)
   }
@@ -52,8 +53,8 @@ export default async function Home({
       },
       countryCode,
     })
-    console.log("🔍 Produits outlet récupérés:", result.products?.length || 0, "produits")
-    outletProducts = result.products || []
+    console.log("🔍 Produits outlet récupérés:", result.response.products?.length || 0, "produits")
+    outletProducts = result.response.products || []
   } catch (error) {
     console.error("❌ Erreur lors de la récupération des produits outlet:", error)
   }

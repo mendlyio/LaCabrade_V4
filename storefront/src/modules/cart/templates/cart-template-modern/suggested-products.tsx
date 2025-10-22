@@ -2,7 +2,7 @@ import { getRegion } from "@lib/data/regions"
 import { getProductsList } from "@lib/data/products"
 import ProductCardModern from "@modules/products/components/product-card-modern"
 import { HttpTypes } from "@medusajs/types"
-import { Sparkles } from "@medusajs/icons"
+import Sparkles from "@medusajs/icons/dist/esm/sparkles"
 
 type SuggestedProductsProps = {
   cart: HttpTypes.StoreCart

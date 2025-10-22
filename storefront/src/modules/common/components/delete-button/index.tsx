@@ -1,5 +1,6 @@
 import { deleteLineItem } from "@lib/data/cart"
-import { Spinner, Trash } from "@medusajs/icons"
+import Spinner from "@medusajs/icons/dist/esm/spinner"
+import Trash from "@medusajs/icons/dist/esm/trash"
 import { clx } from "@medusajs/ui"
 import { useState } from "react"
 

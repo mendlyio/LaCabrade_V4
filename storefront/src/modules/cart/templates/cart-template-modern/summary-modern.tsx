@@ -4,7 +4,7 @@ import CartTotals from "@modules/common/components/cart-totals"
 import DiscountCode from "@modules/checkout/components/discount-code"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HttpTypes } from "@medusajs/types"
-import { ArrowRight } from "@medusajs/icons"
+import ArrowRight from "@medusajs/icons/dist/esm/arrow-right"
 
 type SummaryProps = {
   cart: HttpTypes.StoreCart & {

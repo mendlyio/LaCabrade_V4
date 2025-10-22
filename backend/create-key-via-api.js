@@ -1,61 +1,78 @@
-const https = require('https');
-const http = require('http');
+const fetch = require('node-fetch');
+
+const BACKEND_URL = process.env.BACKEND_URL || 'https://backend-production-7bbb.up.railway.app';
 
 async function createPublishableKey() {
-  const postData = JSON.stringify({
-    title: 'Local Development Key'
-  });
-
-  const options = {
-    hostname: 'localhost',
-    port: 9000,
-    path: '/admin/publishable-api-keys',
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(postData),
-      // Pas d'auth pour le moment, on teste
+  try {
+    console.log('🔑 Création d\'une Publishable Key via l\'API Admin...\n');
+    
+    // Step 1: Login admin (utilisez vos credentials)
+    const email = process.env.ADMIN_EMAIL || 'admin@medusa-test.com';
+    const password = process.env.ADMIN_PASSWORD || 'supersecret';
+    
+    console.log(`📧 Tentative de connexion avec: ${email}`);
+    
+    const loginResponse = await fetch(`${BACKEND_URL}/auth/user/emailpass`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    if (!loginResponse.ok) {
+      const error = await loginResponse.text();
+      console.error(`❌ Échec de connexion (${loginResponse.status}):`, error);
+      console.log('\n💡 Essayez:');
+      console.log(`   ADMIN_EMAIL="votre@email.com" ADMIN_PASSWORD="motdepasse" node ${__filename}`);
+      return;
     }
-  };
-
-  const req = http.request(options, (res) => {
-    let data = '';
-
-    res.on('data', (chunk) => {
-      data += chunk;
+    
+    const loginData = await loginResponse.json();
+    const token = loginData.token;
+    
+    console.log('✅ Connexion réussie!\n');
+    
+    // Step 2: Create publishable key
+    console.log('🔑 Création de la Publishable Key...');
+    
+    const keyResponse = await fetch(`${BACKEND_URL}/admin/publishable-api-keys`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        title: 'Production Storefront Key'
+      })
     });
-
-    res.on('end', () => {
-      if (res.statusCode === 200 || res.statusCode === 201) {
-        const result = JSON.parse(data);
-        console.log('\n✅ Publishable Key créée avec succès !');
-        console.log('\n📋 Votre clé :', result.publishable_api_key.id);
-        console.log('\nAjoutez-la dans storefront/.env.local :');
-        console.log('NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=' + result.publishable_api_key.id);
-      } else {
-        console.log('❌ Erreur:', res.statusCode);
-        console.log('Réponse:', data);
-        console.log('\n💡 Solution: Créez la clé via l\'admin Medusa:');
-        console.log('1. Allez sur http://localhost:9000/app');
-        console.log('2. Connectez-vous avec: welcome@mendly.io / 0818Enchante!');
-        console.log('3. Settings → API Key Management → Publishable API Keys');
-        console.log('4. Create API Key');
-        console.log('5. Copiez la clé dans storefront/.env.local');
-      }
-    });
-  });
-
-  req.on('error', (e) => {
-    console.error('❌ Erreur:', e.message);
-    console.log('\n💡 Le backend est-il démarré sur http://localhost:9000 ?');
-  });
-
-  req.write(postData);
-  req.end();
+    
+    if (!keyResponse.ok) {
+      const error = await keyResponse.text();
+      console.error(`❌ Échec création clé (${keyResponse.status}):`, error);
+      return;
+    }
+    
+    const keyData = await keyResponse.json();
+    const publishableKey = keyData.publishable_api_key?.id;
+    
+    if (!publishableKey) {
+      console.error('❌ Impossible de récupérer la clé créée');
+      return;
+    }
+    
+    console.log('\n✅ Publishable Key créée avec succès!\n');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📋 Votre Publishable Key:');
+    console.log(`   ${publishableKey}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    console.log('🚀 Ajoutez-la dans Railway:');
+    console.log('   1. Railway → Storefront service → Variables');
+    console.log('   2. Ajoutez:');
+    console.log(`      NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${publishableKey}`);
+    console.log('   3. Redéployez le frontend\n');
+    
+  } catch (error) {
+    console.error('❌ Erreur:', error.message);
+  }
 }
 
 createPublishableKey();
-
-
-
-

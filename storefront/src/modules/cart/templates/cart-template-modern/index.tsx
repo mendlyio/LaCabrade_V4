@@ -5,7 +5,10 @@ import SignInPrompt from "../../components/sign-in-prompt"
 import SuggestedProducts from "./suggested-products"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { ShoppingBag, Heart, Truck, Shield } from "@medusajs/icons"
+import ShoppingBag from "@medusajs/icons/dist/esm/shopping-bag"
+import Heart from "@medusajs/icons/dist/esm/heart"
+import TruckFast from "@medusajs/icons/dist/esm/truck-fast"
+import ShieldCheck from "@medusajs/icons/dist/esm/shield-check"
 
 const CartTemplateModern = ({
   cart,
@@ -113,14 +116,14 @@ const CartTemplateModern = ({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div className="text-center">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Shield className="w-6 h-6 text-green-600" />
+                    <ShieldCheck className="w-6 h-6 text-green-600" />
                   </div>
                   <h3 className="font-semibold text-sm mb-1">Paiement Sécurisé</h3>
                   <p className="text-xs text-gray-600">100% sécurisé</p>
                 </div>
                 <div className="text-center">
                   <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Truck className="w-6 h-6 text-blue-600" />
+                    <TruckFast className="w-6 h-6 text-blue-600" />
                   </div>
                   <h3 className="font-semibold text-sm mb-1">Livraison Rapide</h3>
                   <p className="text-xs text-gray-600">24-48h</p>

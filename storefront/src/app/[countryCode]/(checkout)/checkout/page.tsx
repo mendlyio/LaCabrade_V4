@@ -8,7 +8,9 @@ import { enrichLineItems, retrieveCart } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { getCustomer } from "@lib/data/customer"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { ShoppingBag, CreditCard, Shield, Lock } from "@medusajs/icons"
+import CreditCard from "@medusajs/icons/dist/esm/credit-card"
+import ShieldCheck from "@medusajs/icons/dist/esm/shield-check"
+import LockClosedSolid from "@medusajs/icons/dist/esm/lock-closed-solid"
 
 export const metadata: Metadata = {
   title: "Paiement | La Cabrade",
@@ -33,10 +35,12 @@ export default async function Checkout() {
   const cart = await fetchCart()
   const customer = await getCustomer()
 
+  const itemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white">
+      <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white">
         <div className="content-container py-12">
           <div className="max-w-3xl">
             <div className="inline-block bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full mb-4">
@@ -45,22 +49,28 @@ export default async function Checkout() {
                 Paiement Sécurisé
               </span>
             </div>
-            <h1 className="text-4xl font-bold mb-2">
-              Finalisation de la commande
+            <h1 className="text-4xl md:text-5xl font-bold mb-2">
+              Finalisation de votre commande
             </h1>
-            <p className="text-white/90 mb-6">
-              Complétez vos informations pour finaliser votre achat en toute sécurité
+            <p className="text-white/90 mb-4">
+              {itemCount > 0 
+                ? `${itemCount} article${itemCount > 1 ? 's' : ''} • Dernière étape avant de recevoir votre commande`
+                : "Complétez vos informations pour finaliser votre achat"}
             </p>
             
             {/* Étapes de checkout */}
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg">
-                <Lock className="w-4 h-4" />
+                <LockClosedSolid className="w-4 h-4" />
                 <span>SSL Sécurisé</span>
               </div>
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg">
-                <Shield className="w-4 h-4" />
+                <ShieldCheck className="w-4 h-4" />
                 <span>Données protégées</span>
+              </div>
+              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg">
+                <span>🚚</span>
+                <span>Livraison rapide</span>
               </div>
             </div>
           </div>
@@ -86,46 +96,103 @@ export default async function Checkout() {
 
       {/* Main Content */}
       <div className="content-container py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_450px] gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-8">
           {/* Formulaire de checkout */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-            <Wrapper cart={cart}>
-              <CheckoutForm cart={cart} customer={customer} />
-            </Wrapper>
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              {/* En-tête du formulaire */}
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 p-6">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <span className="w-8 h-8 bg-amber-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                    1
+                  </span>
+                  Informations de commande
+                </h2>
+              </div>
+
+              <div className="p-6 md:p-8">
+                <Wrapper cart={cart}>
+                  <CheckoutForm cart={cart} customer={customer} />
+                </Wrapper>
+              </div>
+            </div>
+
+            {/* Retour au panier */}
+            <LocalizedClientLink
+              href="/cart"
+              className="flex items-center justify-center gap-2 px-6 py-3 text-amber-600 hover:text-amber-700 font-medium transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>Retour au panier</span>
+            </LocalizedClientLink>
           </div>
 
           {/* Résumé de la commande */}
-          <div className="lg:sticky lg:top-24 h-fit">
+          <div className="lg:sticky lg:top-24 h-fit space-y-6">
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
               <CheckoutSummary cart={cart} />
             </div>
 
             {/* Trust badges */}
-            <div className="mt-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
-              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-green-600" />
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-200">
+              <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-amber-600" />
                 Paiement 100% sécurisé
               </h3>
-              <ul className="space-y-2 text-sm text-gray-600">
+              <ul className="space-y-3 text-sm text-gray-700">
                 <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
+                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
                   <span>Cryptage SSL 256 bits</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
+                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
                   <span>Vos données ne sont jamais stockées</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
+                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
                   <span>Conforme PCI-DSS</span>
                 </li>
+                <li className="flex items-center gap-2">
+                  <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <span>Paiement en toute confiance</span>
+                </li>
               </ul>
+            </div>
+
+            {/* Moyens de paiement acceptés */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h4 className="font-semibold text-gray-900 mb-4 text-sm">
+                Moyens de paiement acceptés
+              </h4>
+              <div className="flex flex-wrap gap-3">
+                <div className="px-3 py-2 bg-gray-50 rounded border border-gray-200 text-xs font-medium text-gray-700">
+                  💳 Carte bancaire
+                </div>
+                <div className="px-3 py-2 bg-gray-50 rounded border border-gray-200 text-xs font-medium text-gray-700">
+                  Visa
+                </div>
+                <div className="px-3 py-2 bg-gray-50 rounded border border-gray-200 text-xs font-medium text-gray-700">
+                  Mastercard
+                </div>
+              </div>
             </div>
           </div>
         </div>
