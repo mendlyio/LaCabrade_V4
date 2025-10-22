@@ -1,8 +1,17 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
 
+interface ContactRequestBody {
+  first_name: string
+  last_name: string
+  email: string
+  phone?: string
+  subject: string
+  message: string
+}
+
 export async function POST(
-  req: MedusaRequest,
+  req: MedusaRequest<ContactRequestBody>,
   res: MedusaResponse
 ): Promise<void> {
   const { first_name, last_name, email, phone, subject, message } = req.body
