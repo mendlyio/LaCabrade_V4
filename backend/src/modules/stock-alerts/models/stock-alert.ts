@@ -7,8 +7,7 @@ export const StockAlert = model.define("stock_alert", {
   customer_email: model.text(),
   customer_id: model.text().nullable(),
   notified: model.boolean().default(false),
-  created_at: model.dateTime(),
-  updated_at: model.dateTime(),
+  // created_at et updated_at sont ajoutés automatiquement par Medusa
 })
 
 export default StockAlert
