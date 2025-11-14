@@ -1,11 +1,12 @@
 import { Heading } from "@medusajs/ui"
+import { HttpTypes } from "@medusajs/types"
 
 import ItemsPreviewTemplate from "@modules/cart/templates/preview"
 import DiscountCode from "@modules/checkout/components/discount-code"
 import CartTotals from "@modules/common/components/cart-totals"
 import Divider from "@modules/common/components/divider"
 
-const CheckoutSummary = ({ cart }: { cart: any }) => {
+const CheckoutSummary = ({ cart, customer }: { cart: any; customer?: HttpTypes.StoreCustomer | null }) => {
   const itemCount = cart?.items?.reduce((acc: number, item: any) => acc + item.quantity, 0) || 0
   
   return (
@@ -41,7 +42,7 @@ const CheckoutSummary = ({ cart }: { cart: any }) => {
 
         {/* Code promo */}
         <div className="px-6 pb-6">
-          <DiscountCode cart={cart} />
+          <DiscountCode cart={cart} customer={customer} />
         </div>
       </div>
     </div>

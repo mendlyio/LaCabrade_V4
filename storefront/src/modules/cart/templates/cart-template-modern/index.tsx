@@ -105,7 +105,7 @@ const CartTemplateModern = ({
               <div className="lg:sticky lg:top-24 h-fit">
                 {cart && cart.region && (
                   <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-                    <Summary cart={cart as any} />
+                    <Summary cart={cart as any} customer={customer} />
                   </div>
                 )}
               </div>

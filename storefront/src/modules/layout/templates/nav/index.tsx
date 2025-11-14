@@ -1,15 +1,15 @@
 import { Suspense } from "react"
 import { listRegions } from "@lib/data/regions"
 import { listCategories } from "@lib/data/categories"
-import { getCollectionsList } from "@lib/data/collections"
 import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import WishlistButton from "@modules/layout/components/wishlist-button"
 import SideMenu from "@modules/layout/components/side-menu"
-import MegaMenu from "@modules/layout/components/mega-menu"
 import SearchBar from "@modules/layout/components/search-bar"
 import NavLink from "@modules/layout/components/nav-link"
+import TopBar from "@modules/layout/components/top-bar"
+import BrandsMenu from "@modules/layout/components/brands-menu"
 import {
   MagnifyingGlass,
   User,
@@ -19,19 +19,6 @@ import {
 export default async function Nav() {
   const regions = await listRegions().then((regions: StoreRegion[]) => regions)
   const categories = await listCategories()
-  const { collections } = await getCollectionsList(0, 20)
-
-  // Debug: Afficher les catégories et leurs enfants
-  if (process.env.NODE_ENV === 'development') {
-    console.log('📦 Catégories récupérées:', categories?.length)
-    categories?.forEach((cat: any) => {
-      console.log(`  - ${cat.name} (${cat.id})`, {
-        hasChildren: !!cat.category_children,
-        childrenCount: cat.category_children?.length || 0,
-        children: cat.category_children?.map((c: any) => c.name)
-      })
-    })
-  }
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
@@ -44,34 +31,8 @@ export default async function Nav() {
 
       {/* Header principal */}
       <header className="relative bg-white border-b border-ui-border-base shadow-sm transition-all duration-300 hover:shadow-md">
-        {/* Top Bar - Infos & Liens rapides */}
-        <div className="bg-gray-50 border-b border-gray-200">
-          <div className="content-container">
-            <div className="flex items-center justify-between h-10 text-xs">
-              <div className="hidden md:flex items-center gap-4 text-gray-600">
-                <span className="flex items-center gap-1">
-                  <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-                  Conseils experts équestres
-                </span>
-                <span className="text-gray-300">|</span>
-                <span className="flex items-center gap-1">
-                  <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-                  Paiement sécurisé
-                </span>
-              </div>
-              <div className="flex items-center gap-4 text-gray-600">
-                <a href="tel:+3243586099" className="hover:text-amber-600 transition-colors flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/></svg>
-                  +32 (0)4/358.60.99
-                </a>
-                <span className="text-gray-300">|</span>
-                <a href="/aide" className="hover:text-amber-600 transition-colors">
-                  Aide
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Top Bar - Simplifié avec langue, téléphone et aide */}
+        <TopBar regions={regions} />
 
         {/* Main Navigation */}
         <nav className="content-container">
@@ -102,18 +63,8 @@ export default async function Nav() {
               </LocalizedClientLink>
             </div>
 
-            {/* Desktop Navigation avec Mega Menu */}
+            {/* Desktop Navigation - Nouveau menu restructuré */}
             <div className="hidden lg:flex items-center gap-1 justify-center">
-              <NavLink
-                href="/store"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
-                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
-              >
-                Boutique
-              </NavLink>
-
-              <MegaMenu categories={categories} collections={collections} />
-
               <NavLink
                 href="/nouveautes"
                 className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
@@ -123,7 +74,47 @@ export default async function Nav() {
               </NavLink>
 
               <NavLink
-                href="/promotions"
+                href="/categories/lc-equestrian"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
+                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
+              >
+                LC Equestrian
+              </NavLink>
+
+              <NavLink
+                href="/categories/cavalier"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
+                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
+              >
+                Cavalier
+              </NavLink>
+
+              <NavLink
+                href="/categories/cheval"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
+                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
+              >
+                Cheval
+              </NavLink>
+
+              <NavLink
+                href="/categories/ecurie"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
+                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
+              >
+                Ecurie
+              </NavLink>
+
+              <NavLink
+                href="/categories/soins-alimentation"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
+                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
+              >
+                Soins et alimentation
+              </NavLink>
+
+              <NavLink
+                href="/outlet"
                 className="px-4 py-2 rounded-lg text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
                 activeClassName="bg-red-100 text-red-800 shadow-sm"
               >
@@ -131,19 +122,32 @@ export default async function Nav() {
               </NavLink>
 
               <NavLink
-                href="/marques"
+                href="/produits/bon-cadeau"
                 className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
                 activeClassName="bg-amber-100 text-amber-700 shadow-sm"
               >
-                Marques
+                Bon cadeau
+              </NavLink>
+
+              {/* Menu déroulant Marques */}
+              <BrandsMenu />
+
+              <NavLink
+                href="/a-propos"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
+                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
+              >
+                À Propos
               </NavLink>
             </div>
 
             {/* Actions de droite */}
             <div className="flex items-center gap-3 flex-[2] justify-end">
-              {/* Recherche Desktop */}
-              <div className="hidden xl:block w-full max-w-4xl">
-                <SearchBar />
+              {/* Recherche Desktop - Ultra visible */}
+              <div className="hidden xl:block w-full max-w-xl">
+                <div className="relative">
+                  <SearchBar />
+                </div>
               </div>
 
               {/* Icône recherche mobile */}

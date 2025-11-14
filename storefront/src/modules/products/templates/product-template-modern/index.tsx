@@ -34,6 +34,12 @@ const ProductTemplateModern: React.FC<ProductTemplateModernProps> = ({
   const isInStock = product.variants?.some(v => (v.inventory_quantity || 0) > 0)
   const lowStock = product.variants?.some(v => v.inventory_quantity && v.inventory_quantity < 5)
 
+  // Vérifier les metadata pour les pastilles NEW et PROMO
+  const isNew = product.metadata?.is_new === true || product.metadata?.is_new === "true"
+  const newUntil = product.metadata?.new_until ? new Date(product.metadata.new_until as string).getTime() : null
+  const showNewBadge = isNew && (!newUntil || Date.now() < newUntil)
+  const isPromo = product.metadata?.is_promo === true || product.metadata?.is_promo === "true"
+
   return (
     <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen">
       {/* Breadcrumbs */}
@@ -79,19 +85,19 @@ const ProductTemplateModern: React.FC<ProductTemplateModernProps> = ({
             
             {/* Badges sur l'image */}
             <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
-              {hasDiscount && (
-                <div className="bg-red-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg animate-pulse">
-                  PROMO
+              {showNewBadge && (
+                <div className="bg-green-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg uppercase tracking-wide">
+                  New
+                </div>
+              )}
+              {isPromo && (
+                <div className="bg-red-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg uppercase tracking-wide animate-pulse">
+                  Promo
                 </div>
               )}
               {!isInStock && (
                 <div className="bg-gray-800 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
                   Rupture de stock
-                </div>
-              )}
-              {product.metadata?.new && (
-                <div className="bg-green-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
-                  Nouveau
                 </div>
               )}
             </div>

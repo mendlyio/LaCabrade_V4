@@ -20,16 +20,21 @@ export default async function customOrderPlacedEmailHandler({
       template: EmailTemplates.ORDER_PLACED,
       data: {
         emailOptions: {
-          replyTo: 'info@example.com',
-          subject: 'Your order has been placed'
+          replyTo: 'info@lacabrade.be',
+          subject: `Confirmation de votre commande #${(order as any).display_id || order.id}`
         },
-        order,
+        order: {
+          ...order,
+          display_id: (order as any).display_id || order.id
+        },
         shippingAddress,
-        preview: 'Thank you for your order!'
+        preview: 'Merci pour votre commande !'
       }
     })
+    
+    console.log(`✅ Order confirmation email sent for order ${order.id}`)
   } catch (error) {
-    console.error('Error sending order confirmation notification:', error)
+    console.error('❌ Error sending order confirmation notification:', error)
   }
 }
 

@@ -10,6 +10,7 @@ type SummaryProps = {
   cart: HttpTypes.StoreCart & {
     promotions: HttpTypes.StorePromotion[]
   }
+  customer?: HttpTypes.StoreCustomer | null
 }
 
 function getCheckoutStep(cart: HttpTypes.StoreCart) {
@@ -22,7 +23,7 @@ function getCheckoutStep(cart: HttpTypes.StoreCart) {
   }
 }
 
-const SummaryModern = ({ cart }: SummaryProps) => {
+const SummaryModern = ({ cart, customer }: SummaryProps) => {
   const step = getCheckoutStep(cart)
 
   return (
@@ -38,7 +39,7 @@ const SummaryModern = ({ cart }: SummaryProps) => {
       <div className="p-6 space-y-6">
         {/* Code Promo */}
         <div>
-          <DiscountCode cart={cart} />
+          <DiscountCode cart={cart} customer={customer} />
         </div>
 
         <div className="border-t border-gray-200 pt-4">

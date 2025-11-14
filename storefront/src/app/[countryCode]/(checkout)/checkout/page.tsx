@@ -132,7 +132,7 @@ export default async function Checkout() {
           {/* Résumé de la commande */}
           <div className="lg:sticky lg:top-24 h-fit space-y-6">
             <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-              <CheckoutSummary cart={cart} />
+              <CheckoutSummary cart={cart} customer={customer} />
             </div>
 
             {/* Trust badges */}

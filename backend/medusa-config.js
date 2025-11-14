@@ -39,7 +39,8 @@ const medusaConfig = {
     databaseLogging: false,
     databaseDriverOptions: {
       connection: {
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+        // Activer SSL pour Railway (même en dev local)
+        ssl: DATABASE_URL.includes('railway') ? { rejectUnauthorized: false } : false,
       },
       pool: {
         min: 2,
@@ -169,8 +170,11 @@ const medusaConfig = {
         privateKey: BPOST_PRIVATE_KEY,
         webhookSecret: BPOST_WEBHOOK_SECRET
       }
-    }] : [])
-    ,
+    }] : []),
+    {
+      key: 'stock-alert',
+      resolve: './src/modules/stock-alerts'
+    },
     {
       key: Modules.FULFILLMENT,
       resolve: '@medusajs/fulfillment',

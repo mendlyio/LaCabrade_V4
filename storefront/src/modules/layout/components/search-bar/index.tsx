@@ -85,17 +85,17 @@ const SearchBar = () => {
 
   return (
     <div ref={searchRef} className="relative w-full">
-      {/* Champ de recherche */}
+      {/* Champ de recherche - Version ultra visible */}
       <div
         className={`
-          relative flex items-center bg-gray-50 rounded-lg border-2 transition-all duration-200
+          relative flex items-center bg-amber-50 rounded-xl border-2 transition-all duration-200
           ${isFocused 
-            ? 'border-amber-500 bg-white shadow-lg' 
-            : 'border-transparent hover:bg-gray-100'
+            ? 'border-amber-500 bg-white shadow-xl ring-4 ring-amber-100' 
+            : 'border-amber-200 hover:border-amber-300 hover:bg-amber-100 hover:shadow-md'
           }
         `}
       >
-        <MagnifyingGlass className="absolute left-3 w-4 h-4 text-gray-400" />
+        <MagnifyingGlass className={`absolute left-4 w-5 h-5 transition-colors ${isFocused ? 'text-amber-600' : 'text-amber-500'}`} />
         <input
           type="text"
           value={query}
@@ -103,7 +103,7 @@ const SearchBar = () => {
           onFocus={() => setIsFocused(true)}
           onKeyDown={handleKeyDown}
           placeholder="Rechercher un produit, une marque..."
-          className="w-full pl-10 pr-10 py-2 bg-transparent text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
+          className="w-full pl-12 pr-12 py-3 bg-transparent text-base font-medium text-gray-900 placeholder-gray-500 focus:outline-none"
         />
         {query && (
           <button

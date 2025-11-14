@@ -15,9 +15,10 @@ type DiscountCodeProps = {
   cart: HttpTypes.StoreCart & {
     promotions: HttpTypes.StorePromotion[]
   }
+  customer?: HttpTypes.StoreCustomer | null
 }
 
-const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
+const DiscountCode: React.FC<DiscountCodeProps> = ({ cart, customer }) => {
   const [isOpen, setIsOpen] = React.useState(false)
 
   const { items = [], promotions = [] } = cart
@@ -61,6 +62,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
               type="button"
               className="text-sm font-semibold text-amber-600 hover:text-amber-700 transition-colors flex items-center gap-2"
               data-testid="add-discount-button"
+              disabled={!customer}
             >
               🎟️ Ajouter un code promo
             </button>
@@ -70,7 +72,23 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
             </Tooltip> */}
           </Label>
 
-          {isOpen && (
+          {!customer && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="text-sm text-blue-800">
+                <span className="font-semibold">🔐 Connexion requise</span>
+                <br />
+                Vous devez être connecté(e) pour utiliser un code promo.
+              </p>
+              <a 
+                href="/account" 
+                className="inline-block mt-2 text-sm font-semibold text-blue-600 hover:text-blue-700 underline"
+              >
+                Se connecter →
+              </a>
+            </div>
+          )}
+
+          {customer && isOpen && (
             <>
               <div className="flex w-full gap-x-2">
                 <Input
