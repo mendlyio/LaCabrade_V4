@@ -4,14 +4,15 @@ import { InviteUserEmail, INVITE_USER, isInviteUserData } from './invite-user'
 import { OrderPlacedTemplate, ORDER_PLACED, isOrderPlacedTemplateData } from './order-placed'
 import { OrderShippedTemplate, ORDER_SHIPPED, isOrderShippedTemplateData } from './order-shipped'
 import { WelcomeTemplate, WELCOME, isWelcomeTemplateData } from './welcome'
-import { StockAlertTemplate, STOCK_ALERT, isStockAlertTemplateData } from './stock-alert'
+// StockAlert temporairement désactivé (cause des problèmes de build)
+// import { StockAlertTemplate, STOCK_ALERT, isStockAlertTemplateData } from './stock-alert'
 
 export const EmailTemplates = {
   INVITE_USER,
   ORDER_PLACED,
   ORDER_SHIPPED,
   WELCOME,
-  STOCK_ALERT
+  // STOCK_ALERT
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -54,14 +55,14 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <WelcomeTemplate {...data} />
 
-    case EmailTemplates.STOCK_ALERT:
-      if (!isStockAlertTemplateData(data)) {
-        throw new MedusaError(
-          MedusaError.Types.INVALID_DATA,
-          `Invalid data for template "${EmailTemplates.STOCK_ALERT}"`
-        )
-      }
-      return <StockAlertTemplate {...data} />
+    // case EmailTemplates.STOCK_ALERT:
+    //   if (!isStockAlertTemplateData(data)) {
+    //     throw new MedusaError(
+    //       MedusaError.Types.INVALID_DATA,
+    //       `Invalid data for template "${EmailTemplates.STOCK_ALERT}"`
+    //     )
+    //   }
+    //   return <StockAlertTemplate {...data} />
 
     default:
       throw new MedusaError(
@@ -71,4 +72,4 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
   }
 }
 
-export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, WelcomeTemplate, StockAlertTemplate }
+export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, WelcomeTemplate }

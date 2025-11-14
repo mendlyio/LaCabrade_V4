@@ -1,0 +1,88 @@
+
+> medusa-2.0-boilerplate-backend@0.0.2 dev
+> medusa develop
+
+{
+  "projectConfig": {
+    "databaseUrl": "postgresql://postgres:YIKujyFPHKidnMJIKJpXVpwyvRYCxCVV@postgres.railway.internal:5432/railway",
+    "databaseLogging": false,
+    "databaseDriverOptions": {
+      "connection": {
+        "ssl": false
+      },
+      "pool": {
+        "min": 2,
+        "max": 10,
+        "acquireTimeoutMillis": 30000,
+        "idleTimeoutMillis": 30000
+      }
+    },
+    "workerMode": "shared",
+    "http": {
+      "jwtSecret": "shl360wn4c77k4qb7bkagiwi1tficdah",
+      "cookieSecret": "ouqwemjikp1zow69r79d17aemdxzibqr"
+    },
+    "build": {
+      "rollupOptions": {
+        "external": [
+          "@medusajs/dashboard"
+        ]
+      }
+    }
+  },
+  "admin": {
+    "backendUrl": "http://localhost:9000",
+    "disable": false
+  },
+  "modules": [
+    {
+      "key": "file",
+      "resolve": "@medusajs/file",
+      "options": {
+        "providers": [
+          {
+            "resolve": "@medusajs/file-local",
+            "id": "local",
+            "options": {
+              "upload_dir": "static",
+              "backend_url": "http://localhost:9000/static"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "stock-alert",
+      "resolve": "./src/modules/stock-alerts"
+    },
+    {
+      "key": "fulfillment",
+      "resolve": "@medusajs/fulfillment",
+      "options": {
+        "providers": [
+          {
+            "resolve": "@medusajs/fulfillment-manual",
+            "id": "manual"
+          }
+        ]
+      }
+    }
+  ],
+  "plugins": []
+}
+[32minfo[39m:    redisUrl not found. A fake redis instance will be used.
+[33mwarn[39m:    Pg connection failed to connect to the database. Retrying...
+{"errno":-3008,"code":"ENOTFOUND","syscall":"getaddrinfo","hostname":"postgres.railway.internal"}
+[33mwarn[39m:    Pg connection failed to connect to the database. Retrying...
+{"errno":-3008,"code":"ENOTFOUND","syscall":"getaddrinfo","hostname":"postgres.railway.internal"}
+[33mwarn[39m:    Pg connection failed to connect to the database. Retrying...
+{"errno":-3008,"code":"ENOTFOUND","syscall":"getaddrinfo","hostname":"postgres.railway.internal"}
+[33mwarn[39m:    Pg connection failed to connect to the database. Retrying...
+{"errno":-3008,"code":"ENOTFOUND","syscall":"getaddrinfo","hostname":"postgres.railway.internal"}
+Error: getaddrinfo ENOTFOUND postgres.railway.internal
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:120:26) {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'postgres.railway.internal'
+}

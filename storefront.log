@@ -1,0 +1,13 @@
+
+> medusa-next@1.0.3 dev
+> npm run wait && npm run launcher dev
+
+
+> medusa-next@1.0.3 wait
+> await-backend
+
+Waiting for a medusajs backend to be available on http://localhost:9000/key-exchange... Elapsed time: 0 seconds
+Waiting for a medusajs backend to be available on http://localhost:9000/key-exchange... Elapsed time: 5 seconds
+Waiting for a medusajs backend to be available on http://localhost:9000/key-exchange... Elapsed time: 10 seconds
+Waiting for a medusajs backend to be available on http://localhost:9000/key-exchange... Elapsed time: 15 seconds
+sh: line 1: 68133 Terminated: 15          npm run wait

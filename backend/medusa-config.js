@@ -162,10 +162,6 @@ const medusaConfig = {
         apiKey: ODOO_API_KEY
       }
     }] : []),
-    {
-      key: 'stock_alerts',
-      resolve: './src/modules/stock-alerts'
-    },
     ...((BPOST_PUBLIC_KEY && BPOST_PRIVATE_KEY) ? [{
       key: 'bpost',
       resolve: './src/modules/bpost',
