@@ -176,10 +176,6 @@ const medusaConfig = {
       }
     }] : []),
     {
-      key: 'stock-alert',
-      resolve: './src/modules/stock-alerts'
-    },
-    {
       key: Modules.FULFILLMENT,
       resolve: '@medusajs/fulfillment',
       options: {
