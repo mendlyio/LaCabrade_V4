@@ -54,9 +54,14 @@ class MinioFileProviderService extends AbstractFileProviderService {
     this.bucket = this.config_.bucket || DEFAULT_BUCKET
     this.logger_.info(`MinIO service initialized with bucket: ${this.bucket}`)
 
-    // Initialize Minio client with hardcoded SSL settings
+    // Initialize Minio client
+    // Note: Railway provides endpoints without protocol
+    const endPoint = this.config_.endPoint.replace(/^https?:\/\//, '')
+    
+    this.logger_.info(`Initializing MinIO client with endpoint: ${endPoint}`)
+
     this.client = new Client({
-      endPoint: this.config_.endPoint,
+      endPoint: endPoint,
       port: 443,
       useSSL: true,
       accessKey: this.config_.accessKey,
@@ -66,6 +71,7 @@ class MinioFileProviderService extends AbstractFileProviderService {
     // Initialize bucket and policy
     this.initializeBucket().catch(error => {
       this.logger_.error(`Failed to initialize MinIO bucket: ${error.message}`)
+      this.logger_.error(`MinIO Configuration: Endpoint=${endPoint}, Bucket=${this.bucket}`)
     })
   }
 
