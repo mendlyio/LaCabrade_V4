@@ -252,3 +252,4 @@ tail -f backend/logs/medusa.log | grep "Stock notification"
 **Tout est prêt ! 🎉**
 
 
+

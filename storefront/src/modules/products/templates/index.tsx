@@ -72,18 +72,18 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
             >
               <ProductActionsWrapper id={product.id} region={region} />
             </Suspense>
-
-            {/* Description complète */}
-            {product.description && (
-              <div className="prose prose-gray max-w-none pt-6 border-t border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Description</h2>
-                <div className="text-gray-700 whitespace-pre-line leading-relaxed">
-                  {product.description}
-                </div>
-              </div>
-            )}
           </div>
         </div>
+        
+        {/* Description complète - Full width */}
+        {product.description && (
+          <div className="mt-16 max-w-3xl mx-auto text-center">
+            <h2 className="text-xl font-bold text-gray-900 mb-6 uppercase tracking-wide">Description</h2>
+            <div className="prose prose-lg prose-amber text-gray-700 whitespace-pre-line leading-relaxed mx-auto">
+              {product.description}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bannière infos livraison */}
