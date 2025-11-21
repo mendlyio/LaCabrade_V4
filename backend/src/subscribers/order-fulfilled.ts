@@ -48,7 +48,6 @@ export default async function orderFulfilledHandler({
 }
 
 export const config: SubscriberConfig = {
-  id: 'order-fulfilled-handler',
   event: 'order.fulfillment_created'
 }
 

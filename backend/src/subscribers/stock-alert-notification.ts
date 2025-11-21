@@ -97,7 +97,6 @@ export default async function stockAlertNotificationHandler({
 }
 
 export const config: SubscriberConfig = {
-  id: 'stock-alert-notification-handler',
   event: [
     'product-variant.updated',
     'inventory.updated'
