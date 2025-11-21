@@ -153,3 +153,4 @@ WelcomeTemplate.PreviewProps = {
 
 export default WelcomeTemplate
 
+

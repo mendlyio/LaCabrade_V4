@@ -43,5 +43,6 @@ export default async function customerCreatedEmailHandler({
 }
 
 export const config: SubscriberConfig = {
+  id: 'customer-created-welcome-email',
   event: 'customer.created'
 }

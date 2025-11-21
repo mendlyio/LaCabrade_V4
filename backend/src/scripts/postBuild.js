@@ -32,6 +32,9 @@ console.log('Copying src directory to .medusa/server...');
 const srcPath = path.join(process.cwd(), 'src');
 const destSrcPath = path.join(MEDUSA_SERVER_PATH, 'src');
 
+// Directories to exclude from copying (because they are already compiled to JS)
+const EXCLUDED_DIRS = ['subscribers', 'loaders', 'api', 'workflows', 'jobs', 'admin', 'types', 'utils'];
+
 function copyDirRecursive(src, dest) {
   // Create destination directory if it doesn't exist
   if (!fs.existsSync(dest)) {
@@ -49,6 +52,12 @@ function copyDirRecursive(src, dest) {
     if (entry.name.endsWith('.disabled')) {
       console.log(`  Skipping: ${entry.name}`);
       continue;
+    }
+
+    // Skip excluded source directories to prevent duplicate loading (TS vs JS)
+    if (EXCLUDED_DIRS.includes(entry.name)) {
+        console.log(`  Skipping source directory: ${entry.name} (already compiled)`);
+        continue;
     }
 
     if (entry.isDirectory()) {
