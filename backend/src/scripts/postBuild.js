@@ -57,7 +57,7 @@ function copyDirRecursive(src, dest) {
     // Skip excluded source directories to prevent duplicate loading (TS vs JS)
     if (EXCLUDED_DIRS.includes(entry.name)) {
         console.log(`  Skipping source directory: ${entry.name} (already compiled)`);
-        continue;
+      continue;
     }
 
     if (entry.isDirectory()) {
