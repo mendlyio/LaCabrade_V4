@@ -416,14 +416,16 @@ export const syncFromErpWorkflow = createWorkflow(
                 // Import du client MinIO
                 const { Client } = await import('minio')
                 
-                const MINIO_ENDPOINT = process.env.MINIO_ENDPOINT || 'bucket-production-de72.up.railway.app'
+                const rawEndpoint = process.env.MINIO_ENDPOINT || 'bucket-production-de72.up.railway.app'
+                const endpoint = rawEndpoint.replace(/^https?:\/\//, '')
+
                 const MINIO_ACCESS_KEY = process.env.MINIO_ACCESS_KEY || 'jrkw3qd9t17ftl'
                 const MINIO_SECRET_KEY = process.env.MINIO_SECRET_KEY || '9lmslk6nfmjhaph24v5qov71u43doz8x'
                 const MINIO_BUCKET = process.env.MINIO_BUCKET || 'medusa-media'
                 
                 // Créer le client MinIO
                 const minioClient = new Client({
-                  endPoint: MINIO_ENDPOINT,
+                  endPoint: endpoint,
                   port: 443,
                   useSSL: true,
                   accessKey: MINIO_ACCESS_KEY,
@@ -449,7 +451,8 @@ export const syncFromErpWorkflow = createWorkflow(
                 )
                 
                 // Générer l'URL publique
-                const imageUrl = `https://${MINIO_ENDPOINT}/${MINIO_BUCKET}/${filename}`
+                // Utiliser endpoint nettoyé pour éviter les doublons de protocole
+                const imageUrl = `https://${endpoint}/${MINIO_BUCKET}/${filename}`
                 console.log(`    🔗 URL générée: ${imageUrl}`)
                 
                 // Associer l'image au produit ET définir comme thumbnail
@@ -677,6 +680,57 @@ export const syncFromErpWorkflow = createWorkflow(
             }
             
             updatedProducts.push(updated)
+            
+            // Mise à jour de l'image si disponible dans Odoo (même pour update)
+            if (productData.odoo_image_base64) {
+              try {
+                console.log(`    📷 Mise à jour image vers MinIO pour ${productData.title}...`)
+                
+                const { Client } = await import('minio')
+                
+                // Nettoyage endpoint comme dans le service
+                const rawEndpoint = process.env.MINIO_ENDPOINT || 'bucket-production-de72.up.railway.app'
+                const endpoint = rawEndpoint.replace(/^https?:\/\//, '')
+                
+                const MINIO_ACCESS_KEY = process.env.MINIO_ACCESS_KEY || 'jrkw3qd9t17ftl'
+                const MINIO_SECRET_KEY = process.env.MINIO_SECRET_KEY || '9lmslk6nfmjhaph24v5qov71u43doz8x'
+                const MINIO_BUCKET = process.env.MINIO_BUCKET || 'medusa-media'
+                
+                const minioClient = new Client({
+                  endPoint: endpoint,
+                  port: 443,
+                  useSSL: true,
+                  accessKey: MINIO_ACCESS_KEY,
+                  secretKey: MINIO_SECRET_KEY,
+                })
+                
+                const filename = `odoo/products/${productData.id}/${Date.now()}.png`
+                const imageBuffer = Buffer.from(productData.odoo_image_base64, 'base64')
+                
+                await minioClient.putObject(
+                  MINIO_BUCKET,
+                  filename,
+                  imageBuffer,
+                  imageBuffer.length,
+                  {
+                    'Content-Type': 'image/png',
+                    'x-amz-acl': 'public-read'
+                  }
+                )
+                
+                const imageUrl = `https://${endpoint}/${MINIO_BUCKET}/${filename}`
+                console.log(`    🔗 Nouvelle URL image: ${imageUrl}`)
+                
+                await productService.updateProducts(productData.id, {
+                  images: [{ url: imageUrl }],
+                  thumbnail: imageUrl,
+                })
+                console.log(`    🖼️  Image mise à jour et associée`)
+              } catch (imgErr: any) {
+                console.error(`    ⚠️  Erreur update image:`, imgErr.message)
+              }
+            }
+
             console.log(`  ✅ Mis à jour: ${productData.title}`)
           } catch (error: any) {
             console.error(`  ❌ Erreur mise à jour ${productData.title}:`, error.message)
