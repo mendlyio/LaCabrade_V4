@@ -33,6 +33,29 @@ import {
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
+// Fonction pour nettoyer l'URL Redis sur Railway si elle contient un mot de passe inutile
+const getSanitizedRedisUrl = (url) => {
+  if (!url) return undefined;
+  // Sur Railway, si on a l'erreur AUTH failed alors que l'URL a un mot de passe,
+  // c'est souvent que le Redis interne est en mode no-auth.
+  if (url.includes('railway') && url.includes('@')) {
+    try {
+      // On parse l'URL pour retirer l'authentification
+      // Exemple: redis://default:pass@host:port -> redis://host:port
+      const urlObj = new URL(url);
+      const sanitized = `${urlObj.protocol}//${urlObj.host}`;
+      console.log(`[Redis] Using sanitized URL (removed auth): ${sanitized}`);
+      return sanitized;
+    } catch (e) {
+      return url;
+    }
+  }
+  return url;
+};
+
+// Utiliser l'URL nettoyée pour éviter l'erreur AUTH failed
+const redisUrlToUse = getSanitizedRedisUrl(REDIS_URL);
+
 const medusaConfig = {
   projectConfig: {
     databaseUrl: DATABASE_URL,
@@ -49,7 +72,7 @@ const medusaConfig = {
         idleTimeoutMillis: 30000,
       },
     },
-    redisUrl: REDIS_URL,
+    redisUrl: redisUrlToUse,
     workerMode: WORKER_MODE,
     http: {
       adminCors: ADMIN_CORS,
@@ -94,11 +117,11 @@ const medusaConfig = {
         ]
       }
     },
-    ...(REDIS_URL ? [{
+    ...(redisUrlToUse ? [{
       key: Modules.EVENT_BUS,
       resolve: '@medusajs/event-bus-redis',
       options: {
-        redisUrl: REDIS_URL
+        redisUrl: redisUrlToUse
       }
     },
     {
@@ -106,7 +129,7 @@ const medusaConfig = {
       resolve: '@medusajs/workflow-engine-redis',
       options: {
         redis: {
-          url: REDIS_URL,
+          url: redisUrlToUse,
         }
       }
     }] : []),
