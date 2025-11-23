@@ -313,6 +313,7 @@ export default class OdooModuleService {
       price: number
       name: string
     }>
+    shippingCost?: number // Ajout frais de port
     total: number
     shippingAddress?: {
       address_1?: string
@@ -325,6 +326,7 @@ export default class OdooModuleService {
       await this.login()
     }
 
+    // ... (Partner creation logic - unchanged)
     // 1. Find or create customer (res.partner)
     let partnerIds: number[] = await this.client.request("call", {
       service: "object",
@@ -398,6 +400,41 @@ export default class OdooModuleService {
           },
         ])
       }
+    }
+
+    // Ajouter la ligne de livraison si shippingCost > 0
+    if (orderData.shippingCost && orderData.shippingCost > 0) {
+      // On cherche un produit "Livraison" générique dans Odoo ou on crée une ligne sans product_id (si autorisé)
+      // Pour faire propre, on cherche un produit avec référence "DELIVERY"
+      const deliveryProductIds: number[] = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "product.product",
+          "search",
+          [[["default_code", "=", "DELIVERY"]]],
+          { limit: 1 },
+        ],
+      })
+
+      const deliveryLine: any = {
+        product_uom_qty: 1,
+        price_unit: orderData.shippingCost / 100,
+        name: "Frais de livraison",
+      }
+
+      if (deliveryProductIds.length > 0) {
+        deliveryLine.product_id = deliveryProductIds[0]
+      } else {
+         // Si pas de produit DELIVERY, on essaie sans product_id (peut échouer selon config Odoo)
+         // Ou mieux, on log un warning et on met juste le nom
+         console.warn("[ODOO] Produit DELIVERY non trouvé, ajout ligne livraison sans ID produit")
+      }
+
+      orderLines.push([0, 0, deliveryLine])
     }
 
     // 3. Create sale.order

@@ -13,7 +13,7 @@ export default async function customOrderPlacedEmailHandler({
   const orderModuleService: IOrderModuleService = container.resolve(Modules.ORDER)
   
   const order = await orderModuleService.retrieveOrder(data.id, { 
-    relations: ['items', 'summary', 'shipping_address'] 
+    relations: ['items', 'summary', 'shipping_address', 'shipping_methods'] 
   })
   
   // Récupération sécurisée de l'adresse (peut échouer si shipping_address est null, bien que rare sur order.placed)
@@ -73,11 +73,15 @@ export default async function customOrderPlacedEmailHandler({
         name: item.title // ou variant_title
       })).filter(i => i.sku) // On ne peut envoyer que les items avec SKU
 
+      // Calcul du coût de livraison
+      const shippingCost = order.shipping_methods?.reduce((acc, method) => acc + (Number(method.amount) || 0), 0) || 0
+
       if (items.length > 0) {
         const odooOrderId = await odooService.createOrder({
           customerEmail: order.email,
           customerName: shippingAddress ? `${shippingAddress.first_name} ${shippingAddress.last_name}` : 'Client Web',
           items: items,
+          shippingCost: shippingCost,
           total: (order.summary as any)?.total || order.total || 0,
           shippingAddress: shippingAddress ? {
             address_1: shippingAddress.address_1,
