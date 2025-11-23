@@ -21,6 +21,7 @@ import OdooModuleService from "../modules/odoo/service"
 type SyncFromErpInput = Pagination & {
   dryRun?: boolean
   filterProductIds?: number[]
+  filterCategoryId?: number // Import par catégorie
 }
 
 // Step 1: Récupérer les catégories Odoo
@@ -127,10 +128,11 @@ const fetchOdooProductsStep = createStep(
       console.log(`🔍 [WORKFLOW] Récupération directe des produits IDs:`, input.filterProductIds)
       products = await odooModuleService.fetchProductsByIds(input.filterProductIds)
     } else {
-      console.log(`📄 [WORKFLOW] Récupération paginée (offset: ${input.offset}, limit: ${input.limit})`)
+      console.log(`📄 [WORKFLOW] Récupération paginée (offset: ${input.offset}, limit: ${input.limit}, category: ${input.filterCategoryId || 'all'})`)
       const result = await odooModuleService.fetchProductsPaged({
         offset: input.offset,
         limit: input.limit,
+        categoryId: input.filterCategoryId // Filtrage par catégorie
       })
       products = result.products
     }

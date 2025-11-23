@@ -715,19 +715,25 @@ export default class OdooModuleService {
   }
 
   async fetchProductsPaged(
-    params: Pagination & { q?: string }
+    params: Pagination & { q?: string; categoryId?: number }
   ): Promise<{ products: OdooProduct[]; total: number }> {
     if (!this.uid) {
       await this.login()
     }
 
-    const { offset = 0, limit = 10, q } = params || {}
+    const { offset = 0, limit = 10, q, categoryId } = params || {}
 
     let domain: any[] = []
+    
     if (q && q.trim()) {
       const term = q.trim()
       // OR condition: name ILIKE term OR default_code ILIKE term
-      domain = ["|", ["name", "ilike", term], ["default_code", "ilike", term]]
+      domain.push("|", ["name", "ilike", term], ["default_code", "ilike", term])
+    }
+
+    if (categoryId) {
+      // child_of permet de récupérer les produits de la catégorie ET de ses sous-catégories
+      domain.push(["categ_id", "child_of", categoryId])
     }
 
     // Total count
