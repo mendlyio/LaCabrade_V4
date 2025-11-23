@@ -2,6 +2,8 @@ import { Modules } from '@medusajs/framework/utils'
 import { INotificationModuleService, IOrderModuleService } from '@medusajs/framework/types'
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa'
 import { EmailTemplates } from '../modules/email-notifications/templates'
+import { ODOO_MODULE } from '../modules/odoo'
+import OdooModuleService from '../modules/odoo/service'
 
 export default async function customOrderPlacedEmailHandler({
   event: { data },
@@ -10,9 +12,22 @@ export default async function customOrderPlacedEmailHandler({
   const notificationModuleService: INotificationModuleService = container.resolve(Modules.NOTIFICATION)
   const orderModuleService: IOrderModuleService = container.resolve(Modules.ORDER)
   
-  const order = await orderModuleService.retrieveOrder(data.id, { relations: ['items', 'summary', 'shipping_address'] })
-  const shippingAddress = await (orderModuleService as any).orderAddressService_.retrieve(order.shipping_address.id)
+  const order = await orderModuleService.retrieveOrder(data.id, { 
+    relations: ['items', 'summary', 'shipping_address'] 
+  })
+  
+  // Récupération sécurisée de l'adresse (peut échouer si shipping_address est null, bien que rare sur order.placed)
+  let shippingAddress
+  try {
+    if (order.shipping_address?.id) {
+      shippingAddress = await (orderModuleService as any).orderAddressService_.retrieve(order.shipping_address.id)
+    }
+  } catch (e) {
+    console.warn('⚠️ Impossible de récupérer l\'adresse complète:', e)
+    shippingAddress = order.shipping_address
+  }
 
+  // 1. Envoyer l'email de confirmation
   try {
     await notificationModuleService.createNotifications({
       to: order.email,
@@ -35,6 +50,50 @@ export default async function customOrderPlacedEmailHandler({
     console.log(`✅ Order confirmation email sent for order ${order.id}`)
   } catch (error) {
     console.error('❌ Error sending order confirmation notification:', error)
+  }
+
+  // 2. Synchroniser avec Odoo
+  try {
+    // Vérifier si le module Odoo est actif
+    let odooService: OdooModuleService
+    try {
+      odooService = container.resolve(ODOO_MODULE)
+    } catch (e) {
+      console.log('ℹ️ Module Odoo non configuré, pas de sync commande.')
+      return
+    }
+
+    if (odooService) {
+      console.log(`🔄 Syncing order ${order.id} to Odoo...`)
+      
+      const items = order.items.map((item) => ({
+        sku: item.variant_sku || '',
+        quantity: item.quantity,
+        price: item.unit_price,
+        name: item.title // ou variant_title
+      })).filter(i => i.sku) // On ne peut envoyer que les items avec SKU
+
+      if (items.length > 0) {
+        const odooOrderId = await odooService.createOrder({
+          customerEmail: order.email,
+          customerName: shippingAddress ? `${shippingAddress.first_name} ${shippingAddress.last_name}` : 'Client Web',
+          items: items,
+          total: (order.summary as any)?.total || order.total || 0,
+          shippingAddress: shippingAddress ? {
+            address_1: shippingAddress.address_1,
+            city: shippingAddress.city,
+            postal_code: shippingAddress.postal_code,
+            country_code: shippingAddress.country_code
+          } : undefined
+        })
+        console.log(`✅ Order synced to Odoo successfully! Odoo ID: ${odooOrderId}`)
+      } else {
+        console.warn(`⚠️ Order ${order.id} has no items with SKU, skipping Odoo sync.`)
+      }
+    }
+  } catch (error: any) {
+    console.error('❌ Error syncing order to Odoo:', error.message)
+    // On ne throw pas pour ne pas bloquer le flow Medusa, mais on log l'erreur
   }
 }
 

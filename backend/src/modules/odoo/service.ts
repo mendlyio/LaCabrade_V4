@@ -23,6 +23,7 @@ export type OdooProduct = {
   image_512?: string | false
   weight?: number
   volume?: number
+  categ_id: any // [id, name]
   currency_id: any // Peut être [id, name] ou {id, display_name}
   product_variant_ids: OdooProductVariant[]
   product_variant_count: number
@@ -63,7 +64,61 @@ export type OdooProductVariant = {
   }[]
 }
 
+export type OdooCategory = {
+  id: number
+  name: string
+  parent_id: any // [id, name] ou false
+}
+
 export default class OdooModuleService {
+  // ... existing code ...
+
+  /**
+   * Récupérer toutes les catégories de produits internes
+   */
+  async fetchCategories(): Promise<OdooCategory[]> {
+    if (!this.uid) {
+      await this.login()
+    }
+
+    const categoryIds: number[] = await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid!,
+        this.options.apiKey,
+        "product.category", // Utiliser 'product.public.category' pour les catégories e-commerce si préféré
+        "search",
+        [[]], // Pas de filtre, tout récupérer
+      ],
+    })
+
+    if (!categoryIds.length) {
+      return []
+    }
+
+    const categories: OdooCategory[] = await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid!,
+        this.options.apiKey,
+        "product.category",
+        "read",
+        [categoryIds],
+        {
+          fields: ["name", "parent_id"],
+        },
+      ],
+    })
+
+    return categories
+  }
+
+  // ... rest of the class
+
   private options: Options
   private client: any
   private uid?: number
@@ -365,6 +420,25 @@ export default class OdooModuleService {
       ],
     })
 
+    // 4. Confirm sale.order (Réserve le stock)
+    try {
+      await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid,
+          this.options.apiKey,
+          "sale.order",
+          "action_confirm",
+          [[orderId]],
+        ],
+      })
+      console.log(`✅ [ODOO] Commande ${orderId} confirmée (Stock réservé)`)
+    } catch (e) {
+      console.warn(`⚠️ [ODOO] La commande ${orderId} a été créée mais la confirmation a échoué:`, e)
+    }
+
     return orderId
   }
 
@@ -420,6 +494,7 @@ export default class OdooModuleService {
             "product_variant_count",
             "attribute_line_ids",
             "qty_available",
+            "categ_id", // Ajout de la catégorie
           ],
         },
       ],
