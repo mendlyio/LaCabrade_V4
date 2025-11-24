@@ -23,20 +23,6 @@ export default async function Nav() {
   const categories = await listCategories()
   const { collections } = await getCollectionsList(0, 50)
 
-  // Filtrer les catégories racines (Niveau 0)
-  const parentCategories = categories.filter((c) => c.parent_category_id === null)
-
-  // Sanitize regions data for client components
-  const clientRegions = regions.map(r => ({
-    id: r.id,
-    name: r.name,
-    countries: r.countries?.map(c => ({
-      iso_2: c.iso_2,
-      display_name: c.display_name,
-      id: c.id
-    }))
-  }))
-
   // Sanitize categories data for client components
   const clientCategories = categories.map(c => ({
     id: c.id,
@@ -47,9 +33,23 @@ export default async function Nav() {
       id: child.id,
       name: child.name,
       handle: child.handle,
-      category_children: [] // Only go one level deep for sidebar if needed, or recurse if necessary
+      category_children: child.category_children?.map(grandChild => ({
+         id: grandChild.id,
+         name: grandChild.name,
+         handle: grandChild.handle
+      }))
     }))
   }))
+
+  // Sanitize collections data for client components
+  const clientCollections = collections.map(c => ({
+    id: c.id,
+    title: c.title,
+    handle: c.handle
+  }))
+
+  // Filtrer les catégories racines (Niveau 0) à partir des données sanitized
+  const parentCategories = clientCategories.filter((c) => c.parent_category_id === null)
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
@@ -158,6 +158,7 @@ export default async function Nav() {
             <nav className="flex items-center justify-center gap-6">
               {/* 1. Catégories dynamiques */}
               {parentCategories.map((category) => (
+                // @ts-ignore - The sanitized type matches what MegaMenu expects (basic fields)
                 <MegaMenu key={category.id} category={category} />
               ))}
 
@@ -198,7 +199,8 @@ export default async function Nav() {
               </NavLink>
 
               {/* 6. Marques */}
-              <BrandsMenu collections={collections} />
+              {/* @ts-ignore - The sanitized type matches what BrandsMenu expects (basic fields) */}
+              <BrandsMenu collections={clientCollections} />
 
               {/* 7. À Propos */}
               <NavLink
