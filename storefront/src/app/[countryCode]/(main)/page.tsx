@@ -138,7 +138,11 @@ export default async function Home({
             </h2>
           </div>
           
-          <CategoryCarousel categories={mainCategories} />
+          <CategoryCarousel categories={mainCategories.map(c => ({
+            id: c.id,
+            handle: c.handle,
+            name: c.name,
+          }))} />
         </div>
       </section>
 
