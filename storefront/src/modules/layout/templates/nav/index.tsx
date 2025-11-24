@@ -26,6 +26,17 @@ export default async function Nav() {
   // Filtrer les catégories racines (Niveau 0)
   const parentCategories = categories.filter((c) => c.parent_category_id === null)
 
+  // Sanitize regions data for client components
+  const clientRegions = regions.map(r => ({
+    id: r.id,
+    name: r.name,
+    countries: r.countries?.map(c => ({
+      iso_2: c.iso_2,
+      display_name: c.display_name,
+      id: c.id
+    }))
+  }))
+
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
       {/* Annonce promotionnelle */}
@@ -41,7 +52,7 @@ export default async function Nav() {
         <div className="bg-gray-50 border-b border-gray-200 hidden lg:block">
           <div className="content-container">
             <div className="flex items-center justify-end h-8 text-xs">
-              <TopBar regions={regions} />
+              <TopBar regions={clientRegions} />
             </div>
           </div>
         </div>
@@ -53,7 +64,7 @@ export default async function Nav() {
             <div className="flex items-center gap-4">
               {/* Mobile Menu Button */}
               <div className="lg:hidden">
-                <SideMenu regions={regions} categories={categories} />
+                <SideMenu regions={clientRegions} categories={categories} />
               </div>
 
               <LocalizedClientLink
