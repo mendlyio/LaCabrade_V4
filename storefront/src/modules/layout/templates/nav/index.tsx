@@ -37,19 +37,25 @@ export default async function Nav() {
 
       {/* Header principal */}
       <header className="relative bg-white border-b border-ui-border-base shadow-sm transition-all duration-300 hover:shadow-md">
-        {/* Top Bar - Simplifié avec langue */}
-        <TopBar regions={regions} />
+        {/* Top Bar - Langue/Région uniquement à droite */}
+        <div className="bg-gray-50 border-b border-gray-200 hidden lg:block">
+          <div className="content-container">
+            <div className="flex items-center justify-end h-8 text-xs">
+              <TopBar regions={regions} />
+            </div>
+          </div>
+        </div>
 
-        {/* Main Navigation */}
-        <nav className="content-container">
-          <div className="flex items-center justify-between h-20 gap-8">
-            {/* Mobile Menu + Logo */}
-            <div className="flex items-center gap-4 lg:flex-1">
+        {/* Main Header: Logo - Search - Icons */}
+        <div className="content-container py-4">
+          <div className="flex items-center justify-between gap-8">
+            {/* Logo (Left) */}
+            <div className="flex items-center gap-4">
+              {/* Mobile Menu Button */}
               <div className="lg:hidden">
                 <SideMenu regions={regions} categories={categories} />
               </div>
 
-              {/* Logo */}
               <LocalizedClientLink
                 href="/"
                 className="flex items-center gap-3 group/logo"
@@ -69,63 +75,14 @@ export default async function Nav() {
               </LocalizedClientLink>
             </div>
 
-            {/* Desktop Navigation - Menu Dynamique */}
-            <div className="hidden lg:flex items-center gap-1 justify-center">
-              {/* 1. Catégories dynamiques (Backoffice) */}
-              {parentCategories.map((category) => (
-                <MegaMenu key={category.id} category={category} />
-              ))}
-
-              {/* 2. Nouveautés */}
-              <NavLink
-                href="/nouveautes"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
-                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
-              >
-                Nouveautés
-              </NavLink>
-
-              {/* 3. Outlet */}
-              <NavLink
-                href="/outlet"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
-                activeClassName="bg-red-100 text-red-800 shadow-sm"
-              >
-                Outlet
-              </NavLink>
-
-              {/* 4. Bon cadeau */}
-              <NavLink
-                href="/produits/bon-cadeau"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
-                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
-              >
-                Bon cadeau
-              </NavLink>
-
-              {/* 5. Marques (Dropdown dynamique) */}
-              <BrandsMenu collections={collections} />
-
-              {/* 6. À Propos */}
-              <NavLink
-                href="/a-propos"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
-                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
-              >
-                À Propos
-              </NavLink>
+            {/* Search Bar (Center) */}
+            <div className="hidden lg:block flex-1 max-w-2xl mx-auto">
+              <SearchBar />
             </div>
 
-            {/* Actions de droite */}
-            <div className="flex items-center gap-3 flex-[2] justify-end">
-              {/* Recherche Desktop - Ultra visible */}
-              <div className="hidden xl:block w-full max-w-xl">
-                <div className="relative">
-                  <SearchBar />
-                </div>
-              </div>
-
-              {/* Icône recherche mobile */}
+            {/* Icons (Right) */}
+            <div className="flex items-center gap-3 justify-end">
+              {/* Mobile Search Icon */}
               {process.env.NEXT_PUBLIC_FEATURE_SEARCH_ENABLED && (
                 <LocalizedClientLink
                   className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -138,10 +95,8 @@ export default async function Nav() {
                 </LocalizedClientLink>
               )}
 
-              {/* Wishlist */}
               <WishlistButton />
 
-              {/* Compte */}
               <LocalizedClientLink
                 href="/account"
                 className="hidden sm:flex p-2 rounded-lg hover:bg-gray-100 transition-colors group"
@@ -151,7 +106,6 @@ export default async function Nav() {
                 <User className="w-5 h-5 text-gray-600 group-hover:text-amber-600 transition-colors" />
               </LocalizedClientLink>
 
-              {/* Panier */}
               <Suspense
                 fallback={
                   <LocalizedClientLink
@@ -171,12 +125,72 @@ export default async function Nav() {
               </Suspense>
             </div>
           </div>
+        </div>
 
-          {/* Barre de recherche mobile sous le header */}
-          <div className="xl:hidden pb-4">
-            <SearchBar />
+        {/* Menu Navigation (Below) */}
+        <div className="hidden lg:block border-t border-gray-100 py-3">
+          <div className="content-container">
+            <nav className="flex items-center justify-center gap-6">
+              {/* 1. Catégories dynamiques */}
+              {parentCategories.map((category) => (
+                <MegaMenu key={category.id} category={category} />
+              ))}
+
+              {/* 2. Nouveautés */}
+              <NavLink
+                href="/nouveautes"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
+                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
+              >
+                Nouveautés
+              </NavLink>
+
+              {/* 3. LC Equestrian */}
+               <NavLink
+                href="/categories/lc-equestrian"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
+                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
+              >
+                LC Equestrian
+              </NavLink>
+
+              {/* 4. Outlet */}
+              <NavLink
+                href="/outlet"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
+                activeClassName="bg-red-100 text-red-800 shadow-sm"
+              >
+                Outlet
+              </NavLink>
+
+              {/* 5. Bon cadeau */}
+              <NavLink
+                href="/produits/bon-cadeau"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
+                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
+              >
+                Bon cadeau
+              </NavLink>
+
+              {/* 6. Marques */}
+              <BrandsMenu collections={collections} />
+
+              {/* 7. À Propos */}
+              <NavLink
+                href="/a-propos"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
+                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
+              >
+                À Propos
+              </NavLink>
+            </nav>
           </div>
-        </nav>
+        </div>
+
+        {/* Barre de recherche mobile sous le header */}
+        <div className="lg:hidden pb-4 content-container">
+          <SearchBar />
+        </div>
       </header>
     </div>
   )

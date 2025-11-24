@@ -148,6 +148,7 @@ export default async function CategoryTemplateModern({
               <PaginatedProductsModern
                 searchParams={searchParamsWithCategory}
                 countryCode={countryCode}
+                categoryId={category.id}
               />
             </Suspense>
           </main>

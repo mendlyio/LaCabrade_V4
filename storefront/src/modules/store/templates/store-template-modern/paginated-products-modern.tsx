@@ -20,9 +20,11 @@ type SearchParams = {
 export default async function PaginatedProductsModern({
   searchParams,
   countryCode,
+  categoryId,
 }: {
   searchParams: SearchParams
   countryCode: string
+  categoryId?: string
 }) {
   const region = await getRegion(countryCode)
   
@@ -54,11 +56,23 @@ export default async function PaginatedProductsModern({
     queryParams.q = searchParams.q
   }
 
-  // Catégorie - convertir handle en ID
-  if (searchParams.category) {
+  // Catégorie - Utiliser l'ID passé en prop ou convertir handle en ID
+  if (categoryId) {
+    queryParams.category_id = [categoryId]
+  } else if (searchParams.category) {
     const category = categories?.find(cat => cat.handle === searchParams.category)
     if (category) {
       queryParams.category_id = [category.id]
+    } else {
+      // Si une catégorie est demandée mais non trouvée, on force un résultat vide pour éviter d'afficher tout le catalogue
+      return (
+         <div className="text-center py-24 bg-gray-50 rounded-2xl">
+          <h3 className="text-2xl font-bold text-gray-800 mb-3">Aucun produit trouvé</h3>
+          <p className="text-gray-600 mb-6">
+            La catégorie demandée semble introuvable ou vide.
+          </p>
+        </div>
+      )
     }
   }
 

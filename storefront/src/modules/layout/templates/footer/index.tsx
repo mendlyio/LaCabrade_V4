@@ -1,256 +1,274 @@
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import NewsletterForm from "@modules/layout/components/newsletter-form"
 
 export default async function Footer() {
   return (
-    <footer className="bg-white border-t border-gray-200">
-      {/* Main Footer Content - Style épuré inspiré de selleriegilbert.com */}
-      <div className="content-container py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-          
-          {/* COLONNE 1 : LOGO + RÉSEAUX SOCIAUX */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-2xl font-bold text-gray-900">La Cabrade</h3>
-              <p className="text-sm text-gray-600 font-medium tracking-wide">LC•EQUESTRIAN</p>
+    <footer>
+      {/* Newsletter Banner */}
+      <div className="bg-amber-900 py-12">
+        <div className="content-container">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="text-white text-center md:text-left">
+              <h3 className="text-2xl font-bold mb-2">Inscris-toi à notre newsletter</h3>
+              <p className="text-amber-100">
+                Profitez de <span className="font-bold text-white">5% sur votre prochaine commande</span>
+              </p>
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              Sellerie - Magasin d&apos;équitation à Fléron, près de Liège
-            </p>
-            
-            {/* Réseaux sociaux */}
-            <div className="flex gap-2 pt-2">
-              <a
-                href="https://facebook.com/lacabrade"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full bg-gray-100 hover:bg-amber-500 flex items-center justify-center text-gray-600 hover:text-white transition-all duration-200"
-                aria-label="Facebook"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-              </a>
-              <a
-                href="https://instagram.com/lacabrade"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full bg-gray-100 hover:bg-amber-500 flex items-center justify-center text-gray-600 hover:text-white transition-all duration-200"
-                aria-label="Instagram"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                </svg>
-              </a>
-              <a
-                href="https://tiktok.com/@lacabrade"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full bg-gray-100 hover:bg-amber-500 flex items-center justify-center text-gray-600 hover:text-white transition-all duration-200"
-                aria-label="TikTok"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
-                </svg>
-              </a>
+            <div className="w-full max-w-md">
+               {/* Newsletter Input Form (Simplified for UI, functionality requires backend) */}
+               <form className="flex gap-2">
+                 <input 
+                    type="email" 
+                    placeholder="Votre adresse email"
+                    className="flex-1 px-4 py-3 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                 />
+                 <button 
+                    type="button" // Changed to button to avoid form submission refreshing page
+                    className="px-6 py-3 bg-white text-amber-900 font-bold rounded-lg hover:bg-amber-50 transition-colors"
+                 >
+                   S'inscrire
+                 </button>
+               </form>
             </div>
-          </div>
-
-          {/* COLONNE 2 : INFOS LÉGALES */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
-              Informations
-            </h3>
-            <ul className="space-y-2">
-              <li>
-                <LocalizedClientLink
-                  href="/mentions-legales"
-                  className="text-sm text-gray-600 hover:text-amber-600 transition-colors"
-                >
-                  Mentions légales
-                </LocalizedClientLink>
-              </li>
-              <li>
-                <LocalizedClientLink
-                  href="/cgv"
-                  className="text-sm text-gray-600 hover:text-amber-600 transition-colors"
-                >
-                  Conditions générales (CGV)
-                </LocalizedClientLink>
-              </li>
-              <li>
-                <LocalizedClientLink
-                  href="/protection-donnees"
-                  className="text-sm text-gray-600 hover:text-amber-600 transition-colors"
-                >
-                  Protection des données
-                </LocalizedClientLink>
-              </li>
-              <li>
-                <LocalizedClientLink
-                  href="/conditions-paiement"
-                  className="text-sm text-gray-600 hover:text-amber-600 transition-colors"
-                >
-                  Conditions de paiement
-                </LocalizedClientLink>
-              </li>
-              <li>
-                <LocalizedClientLink
-                  href="/conditions-livraison"
-                  className="text-sm text-gray-600 hover:text-amber-600 transition-colors"
-                >
-                  Conditions de livraison
-                </LocalizedClientLink>
-              </li>
-              <li>
-                <LocalizedClientLink
-                  href="/faq"
-                  className="text-sm text-gray-600 hover:text-amber-600 transition-colors"
-                >
-                  FAQ
-                </LocalizedClientLink>
-              </li>
-            </ul>
-          </div>
-
-          {/* COLONNE 3 : CONTACT */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
-              Contact
-            </h3>
-            <ul className="space-y-2">
-              <li>
-                <a
-                  href="tel:+3243586099"
-                  className="text-sm text-gray-600 hover:text-amber-600 transition-colors flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
-                  </svg>
-                  +32 (0)4/358.60.99
-                </a>
-              </li>
-              <li>
-                <a
-                  href="mailto:info@lacabrade.be"
-                  className="text-sm text-gray-600 hover:text-amber-600 transition-colors flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
-                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
-                  </svg>
-                  info@lacabrade.be
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://www.google.com/maps/search/?api=1&query=Rue+de+la+Clef+96+4620+Fléron+Belgique"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-gray-600 hover:text-amber-600 transition-colors flex items-start gap-2"
-                >
-                  <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
-                  </svg>
-                  <span>Rue de la Clef, 96<br/>B-4620 Fléron</span>
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* COLONNE 4 : HEURES D'OUVERTURE */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
-              Heures d&apos;ouverture
-            </h3>
-            <ul className="space-y-1.5 text-sm text-gray-600">
-              <li className="flex justify-between">
-                <span>Lundi</span>
-                <span className="font-medium text-gray-900">Fermé</span>
-              </li>
-              <li className="flex justify-between">
-                <span>Mardi - Vendredi</span>
-                <span className="font-medium text-gray-900">10h - 18h</span>
-              </li>
-              <li className="flex justify-between">
-                <span>Samedi</span>
-                <span className="font-medium text-gray-900">10h - 17h</span>
-              </li>
-              <li className="flex justify-between">
-                <span>Dimanche</span>
-                <span className="font-medium text-gray-900">Fermé</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* COLONNE 5 : LIENS UTILES */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">
-              Navigation
-            </h3>
-            <ul className="space-y-2">
-              <li>
-                <LocalizedClientLink
-                  href="/a-propos"
-                  className="text-sm text-gray-600 hover:text-amber-600 transition-colors"
-                >
-                  À propos
-                </LocalizedClientLink>
-              </li>
-              <li>
-                <LocalizedClientLink
-                  href="/store"
-                  className="text-sm text-gray-600 hover:text-amber-600 transition-colors"
-                >
-                  Boutique
-                </LocalizedClientLink>
-              </li>
-              <li>
-                <LocalizedClientLink
-                  href="/contact"
-                  className="text-sm text-gray-600 hover:text-amber-600 transition-colors"
-                >
-                  Nous contacter
-                </LocalizedClientLink>
-              </li>
-              <li>
-                <LocalizedClientLink
-                  href="/account"
-                  className="text-sm text-gray-600 hover:text-amber-600 transition-colors"
-                >
-                  Mon compte
-                </LocalizedClientLink>
-              </li>
-            </ul>
           </div>
         </div>
+      </div>
 
-        {/* Séparateur minimaliste */}
-        <div className="border-t border-gray-200 my-8"></div>
+      {/* Main Footer Content - Dark Theme */}
+      <div className="bg-gray-900 text-gray-300 border-t border-gray-800">
+        <div className="content-container py-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12">
+            
+            {/* COLONNE 1 : LOGO + RÉSEAUX SOCIAUX */}
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-2xl font-bold text-white">La Cabrade</h3>
+                <p className="text-xs text-amber-500 font-bold tracking-widest uppercase mt-1">LC•EQUESTRIAN</p>
+              </div>
+              <p className="text-sm leading-relaxed text-gray-400">
+                Sellerie - Magasin d&apos;équitation à Fléron, près de Liège. L'expertise au service de votre passion.
+              </p>
+              
+              {/* Réseaux sociaux */}
+              <div className="flex gap-4 pt-2">
+                <a
+                  href="https://facebook.com/lacabrade"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-gray-800 hover:bg-amber-600 flex items-center justify-center text-white transition-all duration-300"
+                  aria-label="Facebook"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                </a>
+                <a
+                  href="https://instagram.com/lacabrade"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-gray-800 hover:bg-amber-600 flex items-center justify-center text-white transition-all duration-300"
+                  aria-label="Instagram"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                  </svg>
+                </a>
+                <a
+                  href="https://tiktok.com/@lacabrade"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-gray-800 hover:bg-amber-600 flex items-center justify-center text-white transition-all duration-300"
+                  aria-label="TikTok"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+                  </svg>
+                </a>
+              </div>
+            </div>
 
-        {/* Copyright et liens légaux */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
-          <p>© {new Date().getFullYear()} La Cabrade. Tous droits réservés.</p>
-          <div className="flex items-center gap-4">
-            <LocalizedClientLink
-              href="/mentions-legales"
-              className="hover:text-amber-600 transition-colors"
-            >
-              Mentions légales
-            </LocalizedClientLink>
-            <span className="text-gray-300">|</span>
-            <LocalizedClientLink
-              href="/cgv"
-              className="hover:text-amber-600 transition-colors"
-            >
-              CGV
-            </LocalizedClientLink>
-            <span className="text-gray-300">|</span>
-            <LocalizedClientLink
-              href="/protection-donnees"
-              className="hover:text-amber-600 transition-colors"
-            >
-              Données personnelles
-            </LocalizedClientLink>
+            {/* COLONNE 2 : INFOS LÉGALES */}
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-6">
+                Informations
+              </h3>
+              <ul className="space-y-3">
+                <li>
+                  <LocalizedClientLink
+                    href="/mentions-legales"
+                    className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block"
+                  >
+                    Mentions légales
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
+                    href="/cgv"
+                    className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block"
+                  >
+                    Conditions générales
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
+                    href="/protection-donnees"
+                    className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block"
+                  >
+                    Protection des données
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
+                    href="/conditions-livraison"
+                    className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block"
+                  >
+                    Livraison et Retours
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
+                    href="/faq"
+                    className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block"
+                  >
+                    FAQ
+                  </LocalizedClientLink>
+                </li>
+              </ul>
+            </div>
+
+            {/* COLONNE 3 : CONTACT */}
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-6">
+                Contact
+              </h3>
+              <ul className="space-y-4">
+                <li>
+                  <a
+                    href="tel:+3243586099"
+                    className="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-3 group"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center group-hover:bg-amber-600 transition-colors">
+                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+                      </svg>
+                    </div>
+                    +32 (0)4/358.60.99
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="mailto:info@lacabrade.be"
+                    className="text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-3 group"
+                  >
+                     <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center group-hover:bg-amber-600 transition-colors">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                        <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                      </svg>
+                    </div>
+                    info@lacabrade.be
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://www.google.com/maps/search/?api=1&query=Rue+de+la+Clef+96+4620+Fléron+Belgique"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-gray-400 hover:text-white transition-colors flex items-start gap-3 group"
+                  >
+                     <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center group-hover:bg-amber-600 transition-colors flex-shrink-0">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
+                      </svg>
+                    </div>
+                    <span>Rue de la Clef, 96<br/>B-4620 Fléron</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* COLONNE 4 : HEURES D'OUVERTURE */}
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-6">
+                Horaires
+              </h3>
+              <ul className="space-y-3 text-sm text-gray-400">
+                <li className="flex justify-between border-b border-gray-800 pb-2">
+                  <span>Lundi</span>
+                  <span className="text-gray-500 font-medium">Fermé</span>
+                </li>
+                <li className="flex justify-between border-b border-gray-800 pb-2">
+                  <span>Mardi - Vendredi</span>
+                  <span className="text-white font-medium">10h - 18h</span>
+                </li>
+                <li className="flex justify-between border-b border-gray-800 pb-2">
+                  <span>Samedi</span>
+                  <span className="text-white font-medium">10h - 17h</span>
+                </li>
+                <li className="flex justify-between">
+                  <span>Dimanche</span>
+                  <span className="text-gray-500 font-medium">Fermé</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* COLONNE 5 : NAVIGATION */}
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-6">
+                Explorer
+              </h3>
+              <ul className="space-y-3">
+                <li>
+                  <LocalizedClientLink
+                    href="/store"
+                    className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block"
+                  >
+                    Boutique
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
+                    href="/nouveautes"
+                    className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block"
+                  >
+                    Nouveautés
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
+                    href="/outlet"
+                    className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block"
+                  >
+                    Outlet
+                  </LocalizedClientLink>
+                </li>
+                <li>
+                  <LocalizedClientLink
+                    href="/contact"
+                    className="text-sm text-gray-400 hover:text-white hover:translate-x-1 transition-all duration-200 inline-block"
+                  >
+                    Contact
+                  </LocalizedClientLink>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Séparateur */}
+          <div className="border-t border-gray-800 my-12"></div>
+
+          {/* Copyright et liens légaux */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-500">
+            <p>© {new Date().getFullYear()} La Cabrade. Tous droits réservés.</p>
+            
+            <div className="flex items-center gap-2">
+               {/* Payment Icons (Mock) */}
+               <div className="flex gap-2 opacity-50 grayscale hover:grayscale-0 transition-all">
+                 <div className="h-6 w-10 bg-gray-700 rounded"></div>
+                 <div className="h-6 w-10 bg-gray-700 rounded"></div>
+                 <div className="h-6 w-10 bg-gray-700 rounded"></div>
+               </div>
+            </div>
           </div>
         </div>
       </div>
