@@ -1,0 +1,88 @@
+
+> medusa-next@1.0.3 build
+> next build
+
+  ▲ Next.js 14.2.33
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+
+warn - The class `duration-[2000ms]` is ambiguous and matches multiple utilities.
+warn - If this is content and not a class, replace it with `duration-&lsqb;2000ms&rsqb;` to silence this warning.
+ ✓ Compiled successfully
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+   Generating static pages (0/64) ...
+   Generating static pages (16/64) 
+   Generating static pages (32/64) 
+   Generating static pages (48/64) 
+ ✓ Generating static pages (64/64)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                     Size     First Load JS
+┌ ○ /_not-found                                 203 B          87.8 kB
+├ ƒ /[countryCode]                              4.43 kB         109 kB
+├ ƒ /[countryCode]/a-propos                     203 B          87.8 kB
+├ ƒ /[countryCode]/account                      5.24 kB         109 kB
+├ ƒ /[countryCode]/account/addresses            14.8 kB         119 kB
+├ ƒ /[countryCode]/account/orders               3.83 kB         113 kB
+├ ƒ /[countryCode]/account/orders/details/[id]  7.13 kB         117 kB
+├ ƒ /[countryCode]/account/profile              11.9 kB         107 kB
+├ ƒ /[countryCode]/blog                         203 B          87.8 kB
+├ ƒ /[countryCode]/bon-cadeau                   445 B          96.7 kB
+├ ƒ /[countryCode]/cart                         4.21 kB         329 kB
+├ ● /[countryCode]/categories/[...category]     153 B           323 kB
+├   ├ /dk/categories/shirts
+├   ├ /dk/categories/sweatshirts
+├   ├ /dk/categories/pants
+├   └ [+25 more paths]
+├ ƒ /[countryCode]/cgv                          203 B          87.8 kB
+├ ƒ /[countryCode]/checkout                     27.9 kB         373 kB
+├ ● /[countryCode]/collections/[handle]         153 B           323 kB
+├ ƒ /[countryCode]/commandes                    203 B          87.8 kB
+├ ƒ /[countryCode]/conditions-livraison         203 B          87.8 kB
+├ ƒ /[countryCode]/conditions-paiement          203 B          87.8 kB
+├ ƒ /[countryCode]/confidentialite              203 B          87.8 kB
+├ ƒ /[countryCode]/contact                      4.6 kB          100 kB
+├ ƒ /[countryCode]/cookies                      203 B          87.8 kB
+├ ƒ /[countryCode]/faq                          445 B          96.7 kB
+├ ƒ /[countryCode]/garanties                    203 B          87.8 kB
+├ ƒ /[countryCode]/livraison                    202 B          87.8 kB
+├ ƒ /[countryCode]/magasins                     203 B          87.8 kB
+├ ƒ /[countryCode]/marques                      445 B          96.7 kB
+├ ƒ /[countryCode]/mentions-legales             202 B          87.8 kB
+├ ƒ /[countryCode]/nouveautes                   1.97 kB         104 kB
+├ ƒ /[countryCode]/order/confirmed/[id]         1.87 kB         321 kB
+├ ● /[countryCode]/products/[handle]            8.16 kB         332 kB
+├   ├ /dk/products/sweatshirt
+├   ├ /dk/products/t-shirt
+├   ├ /dk/products/sweatpants
+├   └ [+25 more paths]
+├ ƒ /[countryCode]/promotions                   203 B          87.8 kB
+├ ƒ /[countryCode]/protection-donnees           203 B          87.8 kB
+├ ƒ /[countryCode]/qui-sommes-nous              203 B          87.8 kB
+├ ƒ /[countryCode]/recrutement                  203 B          87.8 kB
+├ ƒ /[countryCode]/results/[query]              3.29 kB         322 kB
+├ ƒ /[countryCode]/retours                      445 B          96.7 kB
+├ ƒ /[countryCode]/search                       55.2 kB         165 kB
+├ ƒ /[countryCode]/store                        152 B           323 kB
+├ ƒ /[countryCode]/wishlist                     5.83 kB         107 kB
+├ ○ /api/healthcheck                            0 B                0 B
+├ ƒ /api/stock-notification                     0 B                0 B
+├ ƒ /api/wishlist                               0 B                0 B
+├ ○ /opengraph-image.jpg                        0 B                0 B
+└ ○ /twitter-image.jpg                          0 B                0 B
++ First Load JS shared by all                   87.6 kB
+  ├ chunks/2117-d3a3c6502d940abf.js             31.9 kB
+  ├ chunks/fd9d1056-79548072e30eaee9.js         53.6 kB
+  └ other shared chunks (total)                 2.04 kB
+
+
+ƒ Middleware                                    27.3 kB
+
+○  (Static)   prerendered as static content
+●  (SSG)      prerendered as static HTML (uses getStaticProps)
+ƒ  (Dynamic)  server-rendered on demand
+

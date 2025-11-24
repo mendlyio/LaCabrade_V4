@@ -37,6 +37,20 @@ export default async function Nav() {
     }))
   }))
 
+  // Sanitize categories data for client components
+  const clientCategories = categories.map(c => ({
+    id: c.id,
+    name: c.name,
+    handle: c.handle,
+    parent_category_id: c.parent_category_id,
+    category_children: c.category_children?.map(child => ({
+      id: child.id,
+      name: child.name,
+      handle: child.handle,
+      category_children: [] // Only go one level deep for sidebar if needed, or recurse if necessary
+    }))
+  }))
+
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
       {/* Annonce promotionnelle */}
@@ -64,7 +78,7 @@ export default async function Nav() {
             <div className="flex items-center gap-4">
               {/* Mobile Menu Button */}
               <div className="lg:hidden">
-                <SideMenu regions={clientRegions} categories={categories} />
+                <SideMenu regions={clientRegions} categories={clientCategories} />
               </div>
 
               <LocalizedClientLink
