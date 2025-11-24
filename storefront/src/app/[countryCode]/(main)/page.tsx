@@ -107,7 +107,16 @@ export default async function Home({
             </p>
           </div>
           
-          <ProductCarousel products={lcEquestrianProducts} region={region} />
+          <ProductCarousel>
+            {lcEquestrianProducts.map((product) => (
+              <div
+                key={product.id}
+                className="w-[45%] sm:w-[40%] md:w-[30%] lg:w-[20%] flex-shrink-0 snap-center"
+              >
+                <ProductPreview region={region} product={product} isFeatured />
+              </div>
+            ))}
+          </ProductCarousel>
           
           <div className="text-center mt-8">
             <LocalizedClientLink
@@ -156,7 +165,16 @@ export default async function Home({
             </LocalizedClientLink>
           </div>
           
-          <ProductCarousel products={outletProducts} region={region} />
+          <ProductCarousel>
+            {outletProducts.map((product) => (
+              <div
+                key={product.id}
+                className="w-[45%] sm:w-[40%] md:w-[30%] lg:w-[20%] flex-shrink-0 snap-center"
+              >
+                <ProductPreview region={region} product={product} isFeatured />
+              </div>
+            ))}
+          </ProductCarousel>
           
           <div className="md:hidden text-center mt-8">
             <LocalizedClientLink
