@@ -14,6 +14,8 @@ const OdooConfigurationWidget = () => {
   const [offset, setOffset] = useState<number>(0)
   const [search, setSearch] = useState<string>("")
   const [searchInput, setSearchInput] = useState<string>("")
+  const [categories, setCategories] = useState<any[]>([])
+  const [selectedCategory, setSelectedCategory] = useState<string>("")
   const [importProgress, setImportProgress] = useState<{
     show: boolean
     processed: number
@@ -27,7 +29,18 @@ const OdooConfigurationWidget = () => {
 
   useEffect(() => {
     fetchStatus()
+    fetchCategories()
   }, [])
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/admin/odoo/categories", { credentials: "include" })
+      const data = await res.json()
+      setCategories(data.categories || [])
+    } catch (e) {
+      console.error("Error fetching categories", e)
+    }
+  }
 
   const fetchStatus = async () => {
     setIsLoadingStatus(true)
@@ -47,13 +60,14 @@ const OdooConfigurationWidget = () => {
     }
   }
 
-  const fetchProducts = async (params?: { offset?: number; limit?: number; q?: string }) => {
+  const fetchProducts = async (params?: { offset?: number; limit?: number; q?: string; categoryId?: string }) => {
     setIsLoadingProducts(true)
     try {
       const off = params?.offset ?? offset
       const lim = params?.limit ?? limit
       const qParam = params?.q ?? search
-      const qs = `/admin/odoo/products?offset=${off}&limit=${lim}${qParam ? `&q=${encodeURIComponent(qParam)}` : ""}`
+      const catParam = params?.categoryId ?? selectedCategory
+      const qs = `/admin/odoo/products?offset=${off}&limit=${lim}${qParam ? `&q=${encodeURIComponent(qParam)}` : ""}${catParam ? `&categoryId=${catParam}` : ""}`
       const response = await fetch(qs, {
         credentials: "include",
       })
@@ -372,6 +386,100 @@ const OdooConfigurationWidget = () => {
     }
   }
 
+  const syncCategory = async () => {
+    if (!selectedCategory) return
+    const catName = categories.find(c => c.id == selectedCategory)?.name || "cette catégorie"
+    if (!confirm(`🔄 Importer tous les produits de la catégorie "${catName}" ?\n\nCela peut prendre du temps selon le nombre de produits.`)) {
+      return
+    }
+
+    setIsSyncing(true)
+    setImportProgress({
+      show: true,
+      processed: 0,
+      total: 0,
+      created: 0,
+      updated: 0,
+      errors: 0,
+      currentBatch: 0,
+      totalBatches: 0,
+    })
+
+    try {
+      const response = await fetch("/admin/odoo/sync-category", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryId: selectedCategory }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de la connexion au serveur")
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error("Impossible de lire la réponse du serveur")
+      }
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const event = JSON.parse(line.substring(6))
+
+              if (event.type === 'batch_start') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  currentBatch: (prev.currentBatch || 0) + 1,
+                } : null)
+              } else if (event.type === 'batch_complete') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  processed: (prev.processed || 0) + event.processed,
+                  created: prev.created + event.created,
+                  updated: prev.updated + event.updated,
+                } : null)
+              } else if (event.type === 'complete') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  processed: event.total,
+                  created: event.created,
+                  updated: event.updated,
+                  errors: event.errors,
+                } : null)
+
+                setTimeout(() => {
+                  setImportProgress(null)
+                  fetchProducts({ categoryId: selectedCategory, offset: 0 })
+                  alert(`✅ Import terminé:\n${event.created} créés, ${event.updated} mis à jour`)
+                }, 1000)
+              } else if (event.type === 'error') {
+                throw new Error(event.message)
+              }
+            } catch (parseError) {
+              console.error("Erreur parsing SSE:", parseError)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Erreur import catégorie:", error)
+      alert("❌ Erreur lors de l'importation")
+      setImportProgress(null)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const allProductsSelected = products.length > 0 && products.every((p) => selectedProducts.has(p.id))
   const isConfigured = status?.configured
   const isConnected = status?.connected
@@ -535,6 +643,31 @@ const OdooConfigurationWidget = () => {
                   <p className="text-xs text-gray-800 dark:text-gray-300 mt-1">Sélectionnez les produits que vous souhaitez importer dans Medusa</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setSelectedCategory(val)
+                      setOffset(0)
+                      fetchProducts({ offset: 0, q: searchInput, categoryId: val })
+                    }}
+                    className="px-2 py-1 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded text-gray-900 dark:text-gray-100 max-w-[200px]"
+                  >
+                    <option value="">Toutes les catégories</option>
+                    {categories.map((c: any) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                  {selectedCategory && (
+                     <button
+                      onClick={syncCategory}
+                      disabled={isSyncing || !isConnected}
+                      className="px-2.5 py-1.5 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:bg-gray-500 disabled:cursor-not-allowed text-xs"
+                      title="Importer tous les produits de cette catégorie"
+                    >
+                      📥 Importer Catégorie
+                    </button>
+                  )}
                   <input
                     type="text"
                     value={searchInput}

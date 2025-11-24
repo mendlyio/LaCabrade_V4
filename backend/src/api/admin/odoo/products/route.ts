@@ -26,9 +26,10 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     const limit = Math.min(parseInt((req.query.limit as string) || "25"), 100)
     const offset = parseInt((req.query.offset as string) || "0")
     const q = (req.query.q as string) || ""
+    const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined
 
     // Récupérer page de produits Odoo avec total + recherche
-    const { products: odooProducts, total } = await odooService.fetchProductsPaged({ limit, offset, q })
+    const { products: odooProducts, total } = await odooService.fetchProductsPaged({ limit, offset, q, categoryId })
 
     // Si aucun produit Odoo, retourner immédiatement
     if (odooProducts.length === 0) {
