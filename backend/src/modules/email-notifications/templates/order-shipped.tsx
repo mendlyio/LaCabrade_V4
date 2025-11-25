@@ -7,13 +7,13 @@ export const ORDER_SHIPPED = 'order-shipped'
 
 interface OrderShippedPreviewProps {
   order: OrderDTO & { display_id: string }
-  fulfillment: FulfillmentDTO & { tracking_numbers?: string[] }
+  fulfillment: FulfillmentDTO & { tracking_numbers?: string[], data?: { public_tracking_url?: string } }
   shippingAddress: OrderAddressDTO
 }
 
 export interface OrderShippedTemplateProps {
   order: OrderDTO & { display_id: string }
-  fulfillment: FulfillmentDTO & { tracking_numbers?: string[] }
+  fulfillment: FulfillmentDTO & { tracking_numbers?: string[], data?: { public_tracking_url?: string } }
   shippingAddress: OrderAddressDTO
   preview?: string
 }
@@ -27,6 +27,12 @@ export const OrderShippedTemplate: React.FC<OrderShippedTemplateProps> & {
   const trackingNumber = fulfillment.tracking_numbers && fulfillment.tracking_numbers.length > 0 
     ? fulfillment.tracking_numbers[0] 
     : null
+
+  // URL prioritaire fournie par le backend (incluant code postal etc)
+  const trackingUrl = fulfillment.data?.public_tracking_url || 
+    (trackingNumber 
+      ? `https://track.bpost.be/btr/web/#/search?itemCode=${trackingNumber}&lang=fr&postalCode=${shippingAddress.postal_code}` 
+      : '#')
 
   return (
     <Base preview={preview}>
@@ -58,7 +64,7 @@ export const OrderShippedTemplate: React.FC<OrderShippedTemplateProps> & {
                 {trackingNumber}
               </Text>
               <Button
-                href={`https://track.bpost.be/btr/web/#/search?itemCode=${trackingNumber}`}
+                href={trackingUrl}
                 style={{
                   backgroundColor: '#D97706',
                   color: '#ffffff',

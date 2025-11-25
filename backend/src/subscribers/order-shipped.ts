@@ -30,6 +30,11 @@ export default async function orderShippedEmailHandler({
     
     const shippingAddress = await (orderModuleService as any).orderAddressService_.retrieve(order.shipping_address.id)
 
+    // Extraire les infos de suivi enrichies (ajoutées par notre BpostFulfillmentProvider)
+    const fulfillmentData = (fulfillment as any).data || {}
+    const publicTrackingUrl = fulfillmentData.public_tracking_url
+    const labelUrl = fulfillmentData.label_url
+
     // Envoyer l'email
     await notificationModuleService.createNotifications({
       to: order.email,
@@ -44,7 +49,15 @@ export default async function orderShippedEmailHandler({
           ...order,
           display_id: (order as any).display_id || order.id
         },
-        fulfillment,
+        fulfillment: {
+            ...fulfillment,
+            // On injecte les données personnalisées ici pour le template
+            data: {
+                ...fulfillmentData,
+                public_tracking_url: publicTrackingUrl,
+                label_url: labelUrl
+            }
+        },
         shippingAddress,
         preview: 'Votre commande a été expédiée !'
       }
