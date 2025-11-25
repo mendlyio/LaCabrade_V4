@@ -3,7 +3,7 @@ import NewsletterBanner from "@modules/layout/components/newsletter-banner"
 
 export default async function Footer() {
   return (
-    <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border-t border-gray-700">
+    <footer className="bg-black border-t border-gray-800">
       {/* Bandeau Newsletter */}
       <NewsletterBanner />
       
