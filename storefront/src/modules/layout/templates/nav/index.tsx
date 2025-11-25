@@ -23,64 +23,26 @@ export default async function Nav() {
   const categories = await listCategories()
   const { collections } = await getCollectionsList(0, 50)
 
-  // Sanitize categories data for client components
-  const clientCategories = categories.map(c => ({
-    id: c.id,
-    name: c.name,
-    handle: c.handle,
-    parent_category_id: c.parent_category_id,
-    category_children: c.category_children?.map(child => ({
-      id: child.id,
-      name: child.name,
-      handle: child.handle,
-      category_children: child.category_children?.map(grandChild => ({
-         id: grandChild.id,
-         name: grandChild.name,
-         handle: grandChild.handle
-      }))
-    }))
-  }))
-
-  // Sanitize collections data for client components
-  const clientCollections = collections.map(c => ({
-    id: c.id,
-    title: c.title,
-    handle: c.handle
-  }))
-
-  // Filtrer les catégories racines (Niveau 0) à partir des données sanitized
-  const parentCategories = clientCategories.filter((c) => c.parent_category_id === null)
+  // Filtrer les catégories racines (Niveau 0)
+  const parentCategories = categories.filter((c) => c.parent_category_id === null)
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
-      {/* Annonce promotionnelle */}
-      <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-white text-center py-2 text-sm font-medium">
-        <p className="animate-fade-in">
-          -10% pour les nouveaux clients avec le code BIENVENUE10 | Livraison gratuite dès 100€
-        </p>
-      </div>
-
       {/* Header principal */}
       <header className="relative bg-white border-b border-ui-border-base shadow-sm transition-all duration-300 hover:shadow-md">
-        {/* Top Bar - Langue/Région uniquement à droite */}
-        <div className="bg-gray-50 border-b border-gray-200 hidden lg:block">
-          <div className="content-container">
-            <div className="flex items-center justify-end h-8 text-xs">
-              <TopBar regions={clientRegions} />
-            </div>
-          </div>
-        </div>
+        {/* Top Bar - Call to action + Langue */}
+        <TopBar regions={regions} />
 
-        {/* Main Header: Logo - Search - Icons */}
-        <div className="content-container py-4">
-          <div className="flex items-center justify-between gap-8">
-            {/* Logo (Left) */}
+        {/* Niveau 1 : Logo + Recherche + Icons + Panier */}
+        <div className="content-container">
+          <div className="flex items-center justify-between h-20 gap-8">
+            {/* Mobile Menu + Logo */}
             <div className="flex items-center gap-4">
-              {/* Mobile Menu Button */}
               <div className="lg:hidden">
-                <SideMenu regions={clientRegions} categories={clientCategories} />
+                <SideMenu regions={regions} categories={categories} />
               </div>
 
+              {/* Logo */}
               <LocalizedClientLink
                 href="/"
                 className="flex items-center gap-3 group/logo"
@@ -100,14 +62,16 @@ export default async function Nav() {
               </LocalizedClientLink>
             </div>
 
-            {/* Search Bar (Center) */}
-            <div className="hidden lg:block flex-1 max-w-2xl mx-auto">
-              <SearchBar />
-            </div>
+            {/* Actions de droite : Recherche + Icons + Panier */}
+            <div className="flex items-center gap-3 flex-1 justify-end">
+              {/* Recherche Desktop - Ultra visible */}
+              <div className="hidden xl:block w-full max-w-xl">
+                <div className="relative">
+                  <SearchBar />
+                </div>
+              </div>
 
-            {/* Icons (Right) */}
-            <div className="flex items-center gap-3 justify-end">
-              {/* Mobile Search Icon */}
+              {/* Icône recherche mobile */}
               {process.env.NEXT_PUBLIC_FEATURE_SEARCH_ENABLED && (
                 <LocalizedClientLink
                   className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -120,8 +84,10 @@ export default async function Nav() {
                 </LocalizedClientLink>
               )}
 
+              {/* Wishlist */}
               <WishlistButton />
 
+              {/* Compte */}
               <LocalizedClientLink
                 href="/account"
                 className="hidden sm:flex p-2 rounded-lg hover:bg-gray-100 transition-colors group"
@@ -131,6 +97,7 @@ export default async function Nav() {
                 <User className="w-5 h-5 text-gray-600 group-hover:text-amber-600 transition-colors" />
               </LocalizedClientLink>
 
+              {/* Panier */}
               <Suspense
                 fallback={
                   <LocalizedClientLink
@@ -150,15 +117,19 @@ export default async function Nav() {
               </Suspense>
             </div>
           </div>
+
+          {/* Barre de recherche mobile */}
+          <div className="xl:hidden pb-4">
+            <SearchBar />
+          </div>
         </div>
 
-        {/* Menu Navigation (Below) */}
-        <div className="hidden lg:block border-t border-gray-100 py-3">
+        {/* Niveau 2 : Menu Navigation Centré (Desktop uniquement) */}
+        <nav className="hidden lg:block border-t border-gray-100 bg-white">
           <div className="content-container">
-            <nav className="flex items-center justify-center gap-6">
-              {/* 1. Catégories dynamiques */}
+            <div className="flex items-center gap-1 justify-center py-3">
+              {/* 1. Catégories dynamiques (Backoffice) */}
               {parentCategories.map((category) => (
-                // @ts-ignore - The sanitized type matches what MegaMenu expects (basic fields)
                 <MegaMenu key={category.id} category={category} />
               ))}
 
@@ -171,16 +142,7 @@ export default async function Nav() {
                 Nouveautés
               </NavLink>
 
-              {/* 3. LC Equestrian */}
-               <NavLink
-                href="/categories/lc-equestrian"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
-                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
-              >
-                LC Equestrian
-              </NavLink>
-
-              {/* 4. Outlet */}
+              {/* 3. Outlet */}
               <NavLink
                 href="/outlet"
                 className="px-4 py-2 rounded-lg text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
@@ -189,7 +151,7 @@ export default async function Nav() {
                 Outlet
               </NavLink>
 
-              {/* 5. Bon cadeau */}
+              {/* 4. Bon cadeau */}
               <NavLink
                 href="/produits/bon-cadeau"
                 className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
@@ -198,11 +160,10 @@ export default async function Nav() {
                 Bon cadeau
               </NavLink>
 
-              {/* 6. Marques */}
-              {/* @ts-ignore - The sanitized type matches what BrandsMenu expects (basic fields) */}
-              <BrandsMenu collections={clientCollections} />
+              {/* 5. Marques (Dropdown dynamique) */}
+              <BrandsMenu collections={collections} />
 
-              {/* 7. À Propos */}
+              {/* 6. À Propos */}
               <NavLink
                 href="/a-propos"
                 className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
@@ -210,14 +171,9 @@ export default async function Nav() {
               >
                 À Propos
               </NavLink>
-            </nav>
+            </div>
           </div>
-        </div>
-
-        {/* Barre de recherche mobile sous le header */}
-        <div className="lg:hidden pb-4 content-container">
-          <SearchBar />
-        </div>
+        </nav>
       </header>
     </div>
   )

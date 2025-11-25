@@ -20,11 +20,5 @@ const fetchCart = async () => {
 export default async function CartButton() {
   const cart = await fetchCart()
 
-  // Sanitize cart to avoid serialization errors if dates are present
-  let sanitizedCart = null
-  if (cart) {
-     sanitizedCart = JSON.parse(JSON.stringify(cart))
-  }
-
-  return <CartDropdown cart={sanitizedCart} />
+  return <CartDropdown cart={cart} />
 }

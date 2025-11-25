@@ -20,11 +20,9 @@ type SearchParams = {
 export default async function PaginatedProductsModern({
   searchParams,
   countryCode,
-  categoryId,
 }: {
   searchParams: SearchParams
   countryCode: string
-  categoryId?: string
 }) {
   const region = await getRegion(countryCode)
   
@@ -56,21 +54,34 @@ export default async function PaginatedProductsModern({
     queryParams.q = searchParams.q
   }
 
-  // Catégorie - Utiliser l'ID passé en prop ou convertir handle en ID
-  if (categoryId) {
-    queryParams.category_id = [categoryId]
-  } else if (searchParams.category) {
+  // Catégorie - convertir handle en ID
+  if (searchParams.category) {
     const category = categories?.find(cat => cat.handle === searchParams.category)
     if (category) {
       queryParams.category_id = [category.id]
     } else {
-      // Si une catégorie est demandée mais non trouvée, on force un résultat vide pour éviter d'afficher tout le catalogue
+      // Si la catégorie n'existe pas, retourner un résultat vide au lieu de tous les produits
+      console.warn(`⚠️ Catégorie non trouvée pour le handle: ${searchParams.category}`)
       return (
-         <div className="text-center py-24 bg-gray-50 rounded-2xl">
-          <h3 className="text-2xl font-bold text-gray-800 mb-3">Aucun produit trouvé</h3>
+        <div className="text-center py-24 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
+          <div className="mb-6">
+            <svg className="w-24 h-24 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-800 mb-3">Catégorie non trouvée</h3>
           <p className="text-gray-600 mb-6">
-            La catégorie demandée semble introuvable ou vide.
+            Cette catégorie n'existe pas ou a été supprimée.
           </p>
+          <LocalizedClientLink
+            href="/store"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
+          >
+            Voir tous les produits
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </LocalizedClientLink>
         </div>
       )
     }
