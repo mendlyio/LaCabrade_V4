@@ -2,6 +2,7 @@ import { getBaseURL } from "@lib/util/env"
 import { Metadata } from "next"
 import "styles/globals.css"
 import { Providers } from "@lib/context/providers"
+import CookieBanner from "@modules/layout/components/cookie-banner"
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
@@ -13,6 +14,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
       <body>
         <Providers>
           <main className="relative">{props.children}</main>
+          <CookieBanner />
         </Providers>
       </body>
     </html>
