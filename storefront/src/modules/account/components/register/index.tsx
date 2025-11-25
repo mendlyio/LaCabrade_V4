@@ -17,19 +17,19 @@ const Register = ({ setCurrentView }: Props) => {
   const [message, formAction] = useFormState(signup, null)
 
   return (
-    <div
-      className="max-w-md flex flex-col items-center bg-white rounded-xl shadow-lg border border-gray-200 p-8"
-      data-testid="register-page"
-    >
-      <div className="mb-6 text-5xl">✨</div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">
-        Créer un compte
-      </h1>
-      <p className="text-center text-base text-gray-600 mb-6">
-        Rejoignez La Cabrade et profitez d'avantages exclusifs : commandes rapides, suivi de vos achats et plus encore.
-      </p>
-      <form className="w-full flex flex-col" action={formAction}>
-        <div className="flex flex-col w-full gap-y-4">
+    <div className="w-full" data-testid="register-page">
+      <div className="mb-6 text-center">
+        <div className="text-5xl mb-3">✨</div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Créer un compte
+        </h2>
+        <p className="text-sm text-gray-600">
+          Rejoignez-nous et profitez d'avantages exclusifs
+        </p>
+      </div>
+      
+      <form className="w-full space-y-4" action={formAction}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             label="Prénom"
             name="first_name"
@@ -44,53 +44,63 @@ const Register = ({ setCurrentView }: Props) => {
             autoComplete="family-name"
             data-testid="last-name-input"
           />
-          <Input
-            label="Email"
-            name="email"
-            required
-            type="email"
-            autoComplete="email"
-            data-testid="email-input"
-          />
-          <Input
-            label="Téléphone"
-            name="phone"
-            type="tel"
-            autoComplete="tel"
-            data-testid="phone-input"
-          />
-          <Input
-            label="Mot de passe"
-            name="password"
-            required
-            type="password"
-            autoComplete="new-password"
-            data-testid="password-input"
-          />
         </div>
+        
+        <Input
+          label="Email"
+          name="email"
+          required
+          type="email"
+          autoComplete="email"
+          data-testid="email-input"
+        />
+        
+        <Input
+          label="Téléphone"
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          data-testid="phone-input"
+        />
+        
+        <Input
+          label="Mot de passe"
+          name="password"
+          required
+          type="password"
+          autoComplete="new-password"
+          data-testid="password-input"
+        />
+        
         <ErrorMessage error={message} data-testid="register-error" />
-        <span className="text-center text-gray-600 text-xs mt-6">
-          En créant un compte, vous acceptez notre{" "}
+        
+        <p className="text-center text-gray-600 text-xs mt-4">
+          En créant un compte, vous acceptez nos{" "}
           <LocalizedClientLink
-            href="/content/privacy-policy"
+            href="/cgv"
+            className="text-amber-600 hover:text-amber-700 underline"
+          >
+            CGV
+          </LocalizedClientLink>{" "}
+          et notre{" "}
+          <LocalizedClientLink
+            href="/protection-donnees"
             className="text-amber-600 hover:text-amber-700 underline"
           >
             Politique de Confidentialité
-          </LocalizedClientLink>{" "}
-          et nos{" "}
-          <LocalizedClientLink
-            href="/content/terms-of-use"
-            className="text-amber-600 hover:text-amber-700 underline"
-          >
-            Conditions d'Utilisation
           </LocalizedClientLink>
           .
-        </span>
-        <SubmitButton className="w-full mt-6 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors" data-testid="register-button">
+        </p>
+        
+        <SubmitButton 
+          className="w-full mt-6 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg" 
+          data-testid="register-button"
+        >
           Créer mon compte
         </SubmitButton>
       </form>
-      <span className="text-center text-gray-600 text-sm mt-6">
+      
+      <p className="text-center text-gray-600 text-sm mt-6">
         Déjà membre ?{" "}
         <button
           onClick={() => setCurrentView(LOGIN_VIEW.SIGN_IN)}
@@ -98,7 +108,7 @@ const Register = ({ setCurrentView }: Props) => {
         >
           Se connecter
         </button>
-      </span>
+      </p>
     </div>
   )
 }

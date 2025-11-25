@@ -14,41 +14,45 @@ const Login = ({ setCurrentView }: Props) => {
   const [message, formAction] = useFormState(login, null)
 
   return (
-    <div
-      className="max-w-md w-full flex flex-col items-center bg-white rounded-xl shadow-lg border border-gray-200 p-8"
-      data-testid="login-page"
-    >
-      <div className="mb-6 text-5xl">👤</div>
-      <h1 className="text-3xl font-bold text-gray-900 mb-2">Bon retour !</h1>
-      <p className="text-center text-base text-gray-600 mb-8">
-        Connectez-vous pour accéder à votre compte et profiter d'une expérience d'achat personnalisée.
-      </p>
-      <form className="w-full" action={formAction}>
-        <div className="flex flex-col w-full gap-y-4">
-          <Input
-            label="Email"
-            name="email"
-            type="email"
-            title="Entrez une adresse email valide."
-            autoComplete="email"
-            required
-            data-testid="email-input"
-          />
-          <Input
-            label="Mot de passe"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            data-testid="password-input"
-          />
-        </div>
+    <div className="w-full" data-testid="login-page">
+      <div className="mb-6 text-center">
+        <div className="text-5xl mb-3">👤</div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Bon retour !</h2>
+        <p className="text-sm text-gray-600">
+          Accédez à votre compte et à vos commandes
+        </p>
+      </div>
+      
+      <form className="w-full space-y-4" action={formAction}>
+        <Input
+          label="Email"
+          name="email"
+          type="email"
+          title="Entrez une adresse email valide."
+          autoComplete="email"
+          required
+          data-testid="email-input"
+        />
+        <Input
+          label="Mot de passe"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          data-testid="password-input"
+        />
+        
         <ErrorMessage error={message} data-testid="login-error-message" />
-        <SubmitButton data-testid="sign-in-button" className="w-full mt-6 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
+        
+        <SubmitButton 
+          data-testid="sign-in-button" 
+          className="w-full mt-6 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
+        >
           Se connecter
         </SubmitButton>
       </form>
-      <span className="text-center text-gray-600 text-sm mt-6">
+      
+      <p className="text-center text-gray-600 text-sm mt-6">
         Pas encore membre ?{" "}
         <button
           onClick={() => setCurrentView(LOGIN_VIEW.REGISTER)}
@@ -57,7 +61,7 @@ const Login = ({ setCurrentView }: Props) => {
         >
           Créer un compte
         </button>
-      </span>
+      </p>
     </div>
   )
 }
