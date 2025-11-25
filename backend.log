@@ -154,3 +154,4 @@
 [32mhttp[39m:    GET /key-exchange ← - (200) - 321.142 ms
 🔄 [JOB] Démarrage synchronisation produits Odoo modifiés
 ⏭️  [JOB] Odoo non configuré, job ignoré
+Connection Error: Connection ended unexpectedly
