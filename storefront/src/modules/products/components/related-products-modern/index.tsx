@@ -1,6 +1,8 @@
 import { HttpTypes } from "@medusajs/types"
 import { getProductsList } from "@lib/data/products"
 import ProductCardModern from "@modules/products/components/product-card-modern"
+import ScrollCarousel from "@modules/common/components/scroll-carousel"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 type RelatedProductsModernProps = {
   product: HttpTypes.StoreProduct
@@ -15,7 +17,7 @@ export default async function RelatedProductsModern({
 }: RelatedProductsModernProps) {
   // Récupérer les produits liés (même collection ou même catégorie)
   const queryParams: any = {
-    limit: 8,
+    limit: 12,
     fields: "*variants.calculated_price,+variants.inventory_quantity",
   }
 
@@ -38,40 +40,41 @@ export default async function RelatedProductsModern({
 
   return (
     <div>
-      <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-          Vous aimerez aussi
+      <div className="text-center mb-10">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+          Articles similaires
         </h2>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+        <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
           Découvrez notre sélection de produits complémentaires
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {relatedProducts.slice(0, 4).map((relatedProduct) => (
-          <div
+      {/* Carrousel de produits similaires */}
+      <ScrollCarousel 
+        itemWidth="w-64 md:w-72" 
+        gap="gap-4 md:gap-6"
+        className="px-4 md:px-0"
+      >
+        {relatedProducts.map((relatedProduct) => (
+          <ProductCardModern
             key={relatedProduct.id}
-            className="group animate-fade-in"
-          >
-            <ProductCardModern
-              product={relatedProduct}
-              region={region}
-            />
-          </div>
+            product={relatedProduct}
+            region={region}
+          />
         ))}
-      </div>
+      </ScrollCarousel>
 
       {relatedProducts.length > 4 && (
-        <div className="mt-12 text-center">
-          <a
+        <div className="mt-10 text-center">
+          <LocalizedClientLink
             href={product.collection ? `/collections/${product.collection.handle}` : '/store'}
-            className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+            className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 text-sm md:text-base"
           >
             <span>Voir plus de produits</span>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
-          </a>
+          </LocalizedClientLink>
         </div>
       )}
     </div>
