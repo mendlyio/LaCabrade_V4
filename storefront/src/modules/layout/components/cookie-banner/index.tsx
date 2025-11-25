@@ -11,18 +11,35 @@ export default function CookieBanner() {
     const consent = getCookie("cookie_consent")
     if (!consent) {
       setShowBanner(true)
+    } else if (consent === "true") {
+      // Si déjà accepté au chargement, on réaffirme le consentement à Google
+      updateGoogleConsent(true)
     }
   }, [])
 
   const acceptCookies = () => {
     setCookie("cookie_consent", "true", 365)
+    updateGoogleConsent(true)
     setShowBanner(false)
-    // Here you would trigger Google Analytics or other scripts
   }
 
   const declineCookies = () => {
     setCookie("cookie_consent", "false", 365)
+    updateGoogleConsent(false)
     setShowBanner(false)
+  }
+
+  // Fonction pour communiquer avec Google Consent Mode v2
+  const updateGoogleConsent = (granted: boolean) => {
+    if (typeof window !== "undefined" && (window as any).gtag) {
+      const status = granted ? 'granted' : 'denied'
+      ;(window as any).gtag('consent', 'update', {
+        'ad_storage': status,
+        'analytics_storage': status,
+        'ad_user_data': status,
+        'ad_personalization': status
+      })
+    }
   }
 
   if (!showBanner) return null

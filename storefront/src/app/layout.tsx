@@ -3,6 +3,7 @@ import { Metadata } from "next"
 import "styles/globals.css"
 import { Providers } from "@lib/context/providers"
 import CookieBanner from "@modules/layout/components/cookie-banner"
+import { GoogleConsentMode } from "@modules/common/components/google-analytics/consent-mode"
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
@@ -13,6 +14,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
     <html lang="en" data-mode="light">
       <body>
         <Providers>
+          <GoogleConsentMode />
           <main className="relative">{props.children}</main>
           <CookieBanner />
         </Providers>
