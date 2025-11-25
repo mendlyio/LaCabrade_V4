@@ -152,3 +152,5 @@
 [32minfo[39m:    Admin URL → http://localhost:9000/app
 [32mhttp[39m:    GET /key-exchange ← - (200) - 311.825 ms
 [32mhttp[39m:    GET /key-exchange ← - (200) - 321.142 ms
+🔄 [JOB] Démarrage synchronisation produits Odoo modifiés
+⏭️  [JOB] Odoo non configuré, job ignoré
