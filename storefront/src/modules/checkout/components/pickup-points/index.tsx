@@ -1,202 +1,160 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { Button, Input, Text } from "@medusajs/ui"
-import { HttpTypes } from "@medusajs/types"
+import { useEffect, useState } from "react"
+import { Button, Input, Text, Heading, clx } from "@medusajs/ui"
+import { StoreCart } from "@medusajs/types"
+import { getBaseURL } from "@lib/util/env"
+import { MapPin, CheckCircleSolid } from "@medusajs/icons"
+
+type PickupPointsProps = {
+  cart: StoreCart
+}
 
 type PickupPoint = {
-  Id?: string
-  id?: string
-  Name?: string
-  name?: string
-  Address?: {
-    Streetname1?: string
-    PostalCode?: string
-    City?: string
-    Country?: string
+  Id: string
+  Name: string
+  Address: {
+    Streetname1: string
+    Streetname2?: string
+    PostalCode: string
+    City: string
+    Country: string
+  }
+  Location?: {
+    Latitude: string
+    Longitude: string
   }
 }
 
-type Props = {
-  cart: HttpTypes.StoreCart
-}
-
-const PickupPoints: React.FC<Props> = ({ cart }) => {
-  const [postalCode, setPostalCode] = useState<string>(cart?.shipping_address?.postal_code || "")
-  const [countryCode] = useState<string>((cart?.shipping_address?.country_code || "BE").toUpperCase())
+const PickupPoints = ({ cart }: PickupPointsProps) => {
+  const [postalCode, setPostalCode] = useState(cart.shipping_address?.postal_code || "")
   const [points, setPoints] = useState<PickupPoint[]>([])
-  const [total, setTotal] = useState<number>(0)
-  const [limit, setLimit] = useState<number>(10)
-  const [offset, setOffset] = useState<number>(0)
-  const [loading, setLoading] = useState<boolean>(false)
-  const [saving, setSaving] = useState<boolean>(false)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(
-    (cart.metadata as any)?.bpost_pickup_point?.Id || (cart.metadata as any)?.bpost_pickup_point?.id || null
+  const [loading, setLoading] = useState(false)
+  const [selectedPointId, setSelectedPointId] = useState<string | null>(
+    (cart.metadata?.bpost_pickup_point as any)?.Id || null
   )
+  const [error, setError] = useState<string | null>(null)
 
-  const hasPrev = offset > 0
-  const hasNext = offset + points.length < total
+  // Charger les points initiaux si code postal présent
+  useEffect(() => {
+    if (postalCode && !points.length) {
+      searchPoints()
+    }
+  }, [])
 
-  const currentFrom = useMemo(() => (total === 0 ? 0 : offset + 1), [total, offset])
-  const currentTo = useMemo(() => Math.min(offset + points.length, total), [offset, points.length, total])
-
-  const loadPoints = async (nextOffset?: number, nextLimit?: number) => {
+  const searchPoints = async () => {
+    if (!postalCode) return
     setLoading(true)
     setError(null)
     try {
-      const pc = (postalCode || "").trim()
-      if (!pc) {
-        setPoints([])
-        setTotal(0)
-        setOffset(0)
-        setLoading(false)
-        return
-      }
-      if (countryCode === "BE" && !/^\d{4}$/.test(pc)) {
-        setError("Code postal invalide (format BE: 4 chiffres)")
-        setLoading(false)
-        return
-      }
-      const off = typeof nextOffset === "number" ? nextOffset : offset
-      const lim = typeof nextLimit === "number" ? nextLimit : limit
-      const url = `/store/bpost/pickup-points?postal_code=${encodeURIComponent(pc)}&country=${encodeURIComponent(countryCode)}&offset=${off}&limit=${lim}`
-      const res = await fetch(url)
+      const res = await fetch(`${getBaseURL()}/store/bpost/pickup-points?postalCode=${postalCode}&country=${cart.shipping_address?.country_code || "BE"}`)
+      if (!res.ok) throw new Error("Erreur lors de la recherche")
       const data = await res.json()
       setPoints(data.points || [])
-      setTotal(data.total || 0)
-      setLimit(data.limit || lim)
-      setOffset(data.offset || off)
-    } catch (e: any) {
-      setError(e.message || "Erreur lors du chargement des points relais")
+    } catch (e) {
+      console.error(e)
+      setError("Impossible de charger les points relais. Veuillez réessayer.")
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    if (postalCode && postalCode.length >= 3) {
-      loadPoints(0, limit)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   const selectPoint = async (point: PickupPoint) => {
-    if (!cart?.id) return
-    setSaving(true)
-    setError(null)
+    setLoading(true)
     try {
-      const res = await fetch("/store/bpost/select-pickup-point", {
+      // Sauvegarder le choix dans le backend (Cart Metadata)
+      const res = await fetch(`${getBaseURL()}/store/bpost/select-pickup-point`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cart_id: cart.id, pickup_point: point }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cartId: cart.id,
+          pickupPoint: point
+        }),
       })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err?.message || `Erreur ${res.status}`)
-      }
-      setSelectedId((point.Id || point.id) as string)
-    } catch (e: any) {
-      setError(e.message || "Erreur lors de la sélection du point relais")
+
+      if (!res.ok) throw new Error("Erreur sauvegarde")
+      
+      setSelectedPointId(point.Id)
+    } catch (e) {
+      setError("Impossible de sélectionner ce point relais.")
     } finally {
-      setSaving(false)
+      setLoading(false)
     }
   }
 
   return (
-    <div className="mt-6 p-4 border border-ui-border-base rounded-rounded bg-ui-bg-subtle">
-      <div className="mb-2">
-        <Text className="txt-medium-plus">Point relais (Bpost) — optionnel</Text>
-        <Text className="text-ui-fg-subtle text-small-regular">Vous pouvez choisir un point relais ou continuer avec la livraison à domicile.</Text>
-      </div>
-      {selectedId && (
-        <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded text-small-regular text-green-800">
-          ✓ Point relais sélectionné
+    <div className="mt-6 p-6 border border-gray-200 rounded-lg bg-gray-50">
+      <div className="flex flex-col gap-4">
+        <Heading level="h3" className="text-lg text-gray-900 flex items-center gap-2">
+          <MapPin className="text-amber-600" />
+          Choisir un point relais Bpost
+        </Heading>
+
+        <div className="flex gap-2">
+          <div className="w-full max-w-[200px]">
+            <Input 
+              placeholder="Code postal" 
+              value={postalCode}
+              onChange={(e) => setPostalCode(e.target.value)}
+            />
+          </div>
+          <Button onClick={searchPoints} isLoading={loading} variant="secondary">
+            Rechercher
+          </Button>
         </div>
-      )}
-      <div className="flex items-center gap-2 mb-3">
-        <Input
-          placeholder="Code postal"
-          value={postalCode}
-          onChange={(e) => setPostalCode(e.target.value)}
-        />
-        <Button
-          size="small"
-          onClick={() => loadPoints(0, limit)}
-          isLoading={loading}
-          disabled={!postalCode || postalCode.length < 3}
-        >
-          Rechercher
-        </Button>
-      </div>
-      {error && (
-        <div className="text-red-600 text-small-regular mb-2">{error}</div>
-      )}
-      {!loading && points.length === 0 && postalCode && (
-        <div className="text-ui-fg-subtle text-small-regular">Aucun point trouvé.</div>
-      )}
-      <ul className="divide-y rounded-rounded border">
-        {points.map((p) => {
-          const pid = (p.Id || p.id) as string
-          const name = p.Name || p.name || "Point relais"
-          const a = p.Address || {}
-          const addressLine = [a.Streetname1, a.PostalCode, a.City].filter(Boolean).join(", ")
-          const isSelected = selectedId === pid
-          return (
-            <li key={pid} className="p-3 flex items-center justify-between">
-              <div>
-                <div className="text-base-regular">{name}</div>
-                <div className="text-ui-fg-subtle text-small-regular">{addressLine}</div>
-              </div>
-              <Button
-                variant={isSelected ? "secondary" : "primary"}
-                onClick={() => selectPoint(p)}
-                isLoading={saving && selectedId === pid}
+
+        {error && (
+          <Text className="text-red-600 text-small-regular">{error}</Text>
+        )}
+
+        <div className="grid grid-cols-1 gap-3 mt-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+          {points.map((point) => {
+            const isSelected = selectedPointId === point.Id
+            return (
+              <div 
+                key={point.Id}
+                onClick={() => !loading && selectPoint(point)}
+                className={clx(
+                  "p-4 border rounded-md cursor-pointer transition-all hover:shadow-md",
+                  isSelected 
+                    ? "border-amber-600 bg-amber-50 ring-1 ring-amber-600" 
+                    : "border-gray-200 bg-white hover:border-amber-300"
+                )}
               >
-                {isSelected ? "Sélectionné" : "Sélectionner"}
-              </Button>
-            </li>
-          )
-        })}
-      </ul>
-      {total > 0 && (
-        <div className="flex items-center gap-2 justify-between mt-3">
-          <div className="text-small-regular text-ui-fg-subtle">
-            {currentFrom}-{currentTo} sur {total}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="small"
-              variant="secondary"
-              onClick={() => loadPoints(Math.max(offset - limit, 0), limit)}
-              disabled={!hasPrev || loading}
-            >
-              Précédent
-            </Button>
-            <Button
-              size="small"
-              variant="secondary"
-              onClick={() => loadPoints(offset + limit, limit)}
-              disabled={!hasNext || loading}
-            >
-              Suivant
-            </Button>
-            <select
-              value={limit}
-              onChange={(e) => loadPoints(0, parseInt(e.target.value))}
-              className="text-small-regular border rounded-rounded px-2 py-1"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
+                <div className="flex items-start justify-between">
+                  <div className="flex flex-col">
+                    <Text className="font-bold text-gray-900 flex items-center gap-2">
+                      {point.Name}
+                      {isSelected && <CheckCircleSolid className="text-amber-600" />}
+                    </Text>
+                    <Text className="text-small-regular text-gray-600 mt-1">
+                      {point.Address.Streetname1} {point.Address.Streetname2}
+                    </Text>
+                    <Text className="text-small-regular text-gray-500">
+                      {point.Address.PostalCode} {point.Address.City}
+                    </Text>
+                  </div>
+                  {isSelected && (
+                    <span className="text-xs font-bold text-amber-600 bg-white px-2 py-1 rounded border border-amber-200">
+                      Sélectionné
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+          
+          {points.length === 0 && !loading && postalCode && (
+            <Text className="text-gray-500 text-center py-4 italic">
+              Aucun point relais trouvé pour ce code postal.
+            </Text>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
 
 export default PickupPoints
-
-

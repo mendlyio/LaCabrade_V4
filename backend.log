@@ -402,3 +402,6 @@ Connection Error: Connection ended unexpectedly
 [32minfo[39m:    No subscriber to load from /Users/valentinbronfort/Documents/LaCabrade_V4/backend/node_modules/@medusajs/draft-order/.medusa/server/src/subscribers. skipped.
 [32minfo[39m:    No job to load from /Users/valentinbronfort/Documents/LaCabrade_V4/backend/node_modules/@medusajs/medusa/dist/jobs. skipped.
 [32minfo[39m:    No job to load from /Users/valentinbronfort/Documents/LaCabrade_V4/backend/node_modules/@medusajs/draft-order/.medusa/server/src/jobs. skipped.
+- Creating server
+✔ Server is ready on port: 9000 – 2ms
+[32minfo[39m:    Admin URL → http://localhost:9000/app
