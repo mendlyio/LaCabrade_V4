@@ -7,7 +7,19 @@
 > await-backend
 
 Waiting for a medusajs backend to be available on http://localhost:9000/key-exchange... Elapsed time: 0 seconds
-Waiting for a medusajs backend to be available on http://localhost:9000/key-exchange... Elapsed time: 5 seconds
-Waiting for a medusajs backend to be available on http://localhost:9000/key-exchange... Elapsed time: 10 seconds
-Waiting for a medusajs backend to be available on http://localhost:9000/key-exchange... Elapsed time: 15 seconds
-sh: line 1: 68133 Terminated: 15          npm run wait
+Backend is ready!
+Backend is ready
+
+> medusa-next@1.0.3 launcher
+> launch-storefront dev
+
+Initial NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: pk_ba1bde2fc8a3409651025ec07c3124faa5e589d3c0f276b579d34e3b48a83657
+NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY is already set.
+Initial NEXT_PUBLIC_SEARCH_API_KEY: undefined
+Running command: next dev -p 8000
+  ▲ Next.js 14.2.33
+  - Local:        http://localhost:8000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.2s
