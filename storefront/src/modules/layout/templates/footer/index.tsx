@@ -3,21 +3,21 @@ import NewsletterBanner from "@modules/layout/components/newsletter-banner"
 
 export default async function Footer() {
   return (
-    <footer className="bg-gradient-to-br from-amber-50 to-orange-50 border-t border-amber-100">
+    <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 border-t border-gray-700">
       {/* Bandeau Newsletter */}
       <NewsletterBanner />
       
-      {/* Main Footer Content - Style épuré inspiré de selleriegilbert.com */}
+      {/* Main Footer Content - Version Dark */}
       <div className="content-container py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           
           {/* COLONNE 1 : LOGO + RÉSEAUX SOCIAUX */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-amber-700 to-orange-700 bg-clip-text text-transparent">La Cabrade</h3>
-              <p className="text-sm text-amber-700 font-medium tracking-wide">LC•EQUESTRIAN</p>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">La Cabrade</h3>
+              <p className="text-sm text-amber-400 font-medium tracking-wide">LC•EQUESTRIAN</p>
             </div>
-            <p className="text-sm text-gray-700 leading-relaxed">
+            <p className="text-sm text-gray-300 leading-relaxed">
               Sellerie - Magasin d&apos;équitation à Fléron, près de Liège
             </p>
             
@@ -27,7 +27,7 @@ export default async function Footer() {
                 href="https://facebook.com/lacabrade"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full bg-white hover:bg-amber-600 flex items-center justify-center text-amber-600 hover:text-white transition-all duration-200 shadow-sm"
+                className="w-9 h-9 rounded-full bg-gray-800 hover:bg-amber-600 flex items-center justify-center text-amber-400 hover:text-white transition-all duration-200 shadow-sm border border-gray-700"
                 aria-label="Facebook"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -38,7 +38,7 @@ export default async function Footer() {
                 href="https://instagram.com/lacabrade"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full bg-white hover:bg-amber-600 flex items-center justify-center text-amber-600 hover:text-white transition-all duration-200 shadow-sm"
+                className="w-9 h-9 rounded-full bg-gray-800 hover:bg-amber-600 flex items-center justify-center text-amber-400 hover:text-white transition-all duration-200 shadow-sm border border-gray-700"
                 aria-label="Instagram"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -49,7 +49,7 @@ export default async function Footer() {
                 href="https://tiktok.com/@lacabrade"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full bg-white hover:bg-amber-600 flex items-center justify-center text-amber-600 hover:text-white transition-all duration-200 shadow-sm"
+                className="w-9 h-9 rounded-full bg-gray-800 hover:bg-amber-600 flex items-center justify-center text-amber-400 hover:text-white transition-all duration-200 shadow-sm border border-gray-700"
                 aria-label="TikTok"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -61,14 +61,14 @@ export default async function Footer() {
 
           {/* COLONNE 2 : INFOS LÉGALES */}
           <div>
-            <h3 className="text-sm font-semibold text-amber-900 uppercase tracking-wider mb-4">
+            <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-4">
               Informations
             </h3>
             <ul className="space-y-2">
               <li>
                 <LocalizedClientLink
                   href="/mentions-legales"
-                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors"
+                  className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
                   Mentions légales
                 </LocalizedClientLink>
@@ -76,7 +76,7 @@ export default async function Footer() {
               <li>
                 <LocalizedClientLink
                   href="/cgv"
-                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors"
+                  className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
                   Conditions générales (CGV)
                 </LocalizedClientLink>
@@ -84,7 +84,7 @@ export default async function Footer() {
               <li>
                 <LocalizedClientLink
                   href="/protection-donnees"
-                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors"
+                  className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
                   Protection des données
                 </LocalizedClientLink>
@@ -92,7 +92,7 @@ export default async function Footer() {
               <li>
                 <LocalizedClientLink
                   href="/conditions-paiement"
-                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors"
+                  className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
                   Conditions de paiement
                 </LocalizedClientLink>
@@ -100,7 +100,7 @@ export default async function Footer() {
               <li>
                 <LocalizedClientLink
                   href="/conditions-livraison"
-                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors"
+                  className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
                   Conditions de livraison
                 </LocalizedClientLink>
@@ -108,7 +108,7 @@ export default async function Footer() {
               <li>
                 <LocalizedClientLink
                   href="/faq"
-                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors"
+                  className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
                   FAQ
                 </LocalizedClientLink>
@@ -118,14 +118,14 @@ export default async function Footer() {
 
           {/* COLONNE 3 : CONTACT */}
           <div>
-            <h3 className="text-sm font-semibold text-amber-900 uppercase tracking-wider mb-4">
+            <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-4">
               Contact
             </h3>
             <ul className="space-y-2">
               <li>
                 <a
                   href="tel:+3243586099"
-                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors flex items-center gap-2"
+                  className="text-sm text-gray-300 hover:text-amber-400 transition-colors flex items-center gap-2"
                 >
                   <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
@@ -136,7 +136,7 @@ export default async function Footer() {
               <li>
                 <a
                   href="mailto:info@lacabrade.be"
-                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors flex items-center gap-2"
+                  className="text-sm text-gray-300 hover:text-amber-400 transition-colors flex items-center gap-2"
                 >
                   <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
@@ -150,7 +150,7 @@ export default async function Footer() {
                   href="https://www.google.com/maps/search/?api=1&query=Rue+de+la+Clef+96+4620+Fléron+Belgique"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors flex items-start gap-2"
+                  className="text-sm text-gray-300 hover:text-amber-400 transition-colors flex items-start gap-2"
                 >
                   <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
@@ -163,39 +163,39 @@ export default async function Footer() {
 
           {/* COLONNE 4 : HEURES D'OUVERTURE */}
           <div>
-            <h3 className="text-sm font-semibold text-amber-900 uppercase tracking-wider mb-4">
+            <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-4">
               Heures d&apos;ouverture
             </h3>
-            <ul className="space-y-1.5 text-sm text-gray-700">
+            <ul className="space-y-1.5 text-sm text-gray-300">
               <li className="flex justify-between">
                 <span>Lundi</span>
-                <span className="font-medium text-amber-900">Fermé</span>
+                <span className="font-medium text-gray-100">Fermé</span>
               </li>
               <li className="flex justify-between">
                 <span>Mardi - Vendredi</span>
-                <span className="font-medium text-amber-900">10h - 18h</span>
+                <span className="font-medium text-gray-100">10h - 18h</span>
               </li>
               <li className="flex justify-between">
                 <span>Samedi</span>
-                <span className="font-medium text-amber-900">10h - 17h</span>
+                <span className="font-medium text-gray-100">10h - 17h</span>
               </li>
               <li className="flex justify-between">
                 <span>Dimanche</span>
-                <span className="font-medium text-amber-900">Fermé</span>
+                <span className="font-medium text-gray-100">Fermé</span>
               </li>
             </ul>
           </div>
 
           {/* COLONNE 5 : LIENS UTILES */}
           <div>
-            <h3 className="text-sm font-semibold text-amber-900 uppercase tracking-wider mb-4">
+            <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-4">
               Navigation
             </h3>
             <ul className="space-y-2">
               <li>
                 <LocalizedClientLink
                   href="/a-propos"
-                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors"
+                  className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
                   À propos
                 </LocalizedClientLink>
@@ -203,7 +203,7 @@ export default async function Footer() {
               <li>
                 <LocalizedClientLink
                   href="/store"
-                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors"
+                  className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
                   Boutique
                 </LocalizedClientLink>
@@ -211,7 +211,7 @@ export default async function Footer() {
               <li>
                 <LocalizedClientLink
                   href="/contact"
-                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors"
+                  className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
                   Nous contacter
                 </LocalizedClientLink>
@@ -219,7 +219,7 @@ export default async function Footer() {
               <li>
                 <LocalizedClientLink
                   href="/account"
-                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors"
+                  className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
                   Mon compte
                 </LocalizedClientLink>
@@ -229,29 +229,29 @@ export default async function Footer() {
         </div>
 
         {/* Séparateur minimaliste */}
-        <div className="border-t border-amber-200 my-8"></div>
+        <div className="border-t border-gray-700 my-8"></div>
 
         {/* Copyright et liens légaux */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-600">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-400">
           <p>© {new Date().getFullYear()} La Cabrade. Tous droits réservés.</p>
           <div className="flex items-center gap-4">
             <LocalizedClientLink
               href="/mentions-legales"
-              className="hover:text-amber-700 transition-colors"
+              className="hover:text-amber-400 transition-colors"
             >
               Mentions légales
             </LocalizedClientLink>
-            <span className="text-amber-300">|</span>
+            <span className="text-gray-600">|</span>
             <LocalizedClientLink
               href="/cgv"
-              className="hover:text-amber-700 transition-colors"
+              className="hover:text-amber-400 transition-colors"
             >
               CGV
             </LocalizedClientLink>
-            <span className="text-amber-300">|</span>
+            <span className="text-gray-600">|</span>
             <LocalizedClientLink
               href="/protection-donnees"
-              className="hover:text-amber-700 transition-colors"
+              className="hover:text-amber-400 transition-colors"
             >
               Données personnelles
             </LocalizedClientLink>

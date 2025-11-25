@@ -9,20 +9,13 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import CountrySelect from "../country-select"
 import { HttpTypes } from "@medusajs/types"
 
+// Items principaux (non catégories)
 const SideMenuItems = [
   { name: "Accueil", href: "/" },
   { name: "Nouveautés", href: "/nouveautes", badge: "NEW" },
-  { name: "LC Equestrian", href: "/categories/lc-equestrian" },
-  { name: "Cavalier", href: "/categories/cavalier" },
-  { name: "Cheval", href: "/categories/cheval" },
-  { name: "Ecurie", href: "/categories/ecurie" },
-  { name: "Soins et alimentation", href: "/categories/soins-alimentation" },
   { name: "Outlet", href: "/outlet", badge: "PROMO" },
   { name: "Bon cadeau", href: "/produits/bon-cadeau" },
   { name: "À Propos", href: "/a-propos" },
-  { name: "Recherche", href: "/search" },
-  { name: "Mon Compte", href: "/account" },
-  { name: "Panier", href: "/cart" },
 ]
 
 type SideMenuProps = {
