@@ -3,6 +3,7 @@ import { getProductsList } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import { listCategories } from "@lib/data/categories"
 import HeroCarousel from "@modules/home/components/hero-carousel"
+import ScrollCarousel from "@modules/common/components/scroll-carousel"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ProductPreview from "@modules/products/components/product-preview"
 
@@ -84,7 +85,7 @@ export default async function Home({
           </div>
           {lcEquestrianProducts.length > 0 ? (
             <>
-              <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+              <ScrollCarousel className="-mx-4 px-4">
                 <div className="flex gap-4 pb-4">
                   {lcEquestrianProducts.map((product) => (
                     <div 
@@ -99,7 +100,7 @@ export default async function Home({
                     </div>
                   ))}
                 </div>
-              </div>
+              </ScrollCarousel>
               <div className="text-center mt-8">
                 <LocalizedClientLink
                   href="/categories/LC-Equestrian"
@@ -141,7 +142,7 @@ export default async function Home({
             </p>
           </div>
           {mainCategories.length > 0 ? (
-            <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+            <ScrollCarousel className="-mx-4 px-4">
               <div className="flex gap-6 pb-4">
                 {mainCategories.map((category) => (
                   <LocalizedClientLink
@@ -164,10 +165,10 @@ export default async function Home({
                         Découvrir →
                       </p>
                     </div>
-                  </LocalizedClientLink>
-                ))}
-              </div>
+                </LocalizedClientLink>
+              ))}
             </div>
+          </ScrollCarousel>
           ) : (
             <div className="text-center py-12 bg-white rounded-xl">
               <p className="text-gray-600">
@@ -232,7 +233,7 @@ export default async function Home({
           </div>
           {outletProducts.length > 0 ? (
             <>
-              <div className="overflow-x-auto scrollbar-hide -mx-4 px-4">
+              <ScrollCarousel className="-mx-4 px-4">
                 <div className="flex gap-4 pb-4">
                   {outletProducts.map((product) => (
                     <div 
@@ -247,7 +248,7 @@ export default async function Home({
                     </div>
                   ))}
                 </div>
-              </div>
+              </ScrollCarousel>
               <div className="text-center mt-8">
                 <LocalizedClientLink
                   href="/outlet"
