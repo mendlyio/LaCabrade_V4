@@ -1,6 +1,18 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { Button, Container, Heading, Text, clx } from "@medusajs/ui"
-import { Truck } from "@medusajs/icons"
+
+// Icône SVG inline pour éviter les problèmes d'import
+const LabelIcon = (props: React.SVGAttributes<SVGElement>) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    fill="currentColor" 
+    aria-hidden="true"
+    {...props}
+  >
+    <path fillRule="evenodd" d="M5.25 2.25a3 3 0 00-3 3v4.318a3 3 0 00.879 2.121l9.58 9.581c.92.92 2.409.92 3.328 0l5.318-5.318a2.25 2.25 0 000-3.182l-9.58-9.58A3 3 0 0014.682 2.25H5.25zM11.25 8.25a1.125 1.125 0 11-2.25 0 1.125 1.125 0 012.25 0z" clipRule="evenodd" />
+  </svg>
+)
 
 // Ce widget s'affiche sur la page de détail d'une commande
 const BpostFulfillmentWidget = ({ 
@@ -21,7 +33,7 @@ const BpostFulfillmentWidget = ({
     <Container className="divide-y divide-gray-200 dark:divide-gray-700 p-0">
       <div className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-x-2">
-            <Truck className="text-gray-500" />
+            <LabelIcon className="text-gray-500 w-5 h-5" />
             <Heading level="h2" className="text-base-semi">Étiquettes Bpost</Heading>
         </div>
       </div>
