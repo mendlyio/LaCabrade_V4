@@ -128,8 +128,26 @@ export default class BpostFulfillmentProviderService extends AbstractFulfillment
         reference: data?.reference || order?.id,
       })
 
+      // Récupérer l'étiquette immédiatement après la création
+      let labelUrl = ""
+      try {
+        if (result.shipmentId) {
+            const labelResult = await bpost.getLabel(result.shipmentId)
+            labelUrl = labelResult.labelUrl
+        }
+      } catch (e) {
+        console.warn("Bpost: Impossible de récupérer l'étiquette immédiatement", e)
+      }
+
       return {
-        data: result,
+        data: {
+            ...result,
+            label_url: labelUrl,
+            // URL de suivi publique Bpost
+            public_tracking_url: result.trackingNumber 
+                ? `https://track.bpost.cloud/btr/web/#/search?itemCode=${result.trackingNumber}&lang=fr&postalCode=${order.shipping_address?.postal_code}`
+                : undefined
+        },
       }
     } catch (error) {
       console.error("Bpost createFulfillment error:", error)

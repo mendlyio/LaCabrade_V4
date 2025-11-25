@@ -158,3 +158,85 @@ Connection Error: Connection ended unexpectedly
 Connection Error: Connection ended unexpectedly
 🔄 [JOB] Démarrage synchronisation produits Odoo modifiés
 ⏭️  [JOB] Odoo non configuré, job ignoré
+[32minfo[39m:    src/modules/bpost-fulfillment/service.ts modified: Restarting dev server
+[32minfo[39m:    Gracefully shutting down server
+{
+  "projectConfig": {
+    "databaseUrl": "postgresql://postgres:YIKujyFPHKidnMJIKJpXVpwyvRYCxCVV@shuttle.proxy.rlwy.net:52325/railway",
+    "databaseLogging": false,
+    "databaseDriverOptions": {
+      "connection": {
+        "ssl": {
+          "rejectUnauthorized": false
+        }
+      },
+      "pool": {
+        "min": 2,
+        "max": 10,
+        "acquireTimeoutMillis": 30000,
+        "idleTimeoutMillis": 30000
+      }
+    },
+    "workerMode": "shared",
+    "http": {
+      "jwtSecret": "shl360wn4c77k4qb7bkagiwi1tficdah",
+      "cookieSecret": "ouqwemjikp1zow69r79d17aemdxzibqr"
+    },
+    "build": {
+      "rollupOptions": {
+        "external": [
+          "@medusajs/dashboard"
+        ]
+      }
+    }
+  },
+  "admin": {
+    "backendUrl": "http://localhost:9000",
+    "disable": false
+  },
+  "modules": [
+    {
+      "key": "file",
+      "resolve": "@medusajs/file",
+      "options": {
+        "providers": [
+          {
+            "resolve": "@medusajs/file-local",
+            "id": "local",
+            "options": {
+              "upload_dir": "static",
+              "backend_url": "http://localhost:9000/static"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "key": "fulfillment",
+      "resolve": "@medusajs/fulfillment",
+      "options": {
+        "providers": [
+          {
+            "resolve": "@medusajs/fulfillment-manual",
+            "id": "manual"
+          }
+        ]
+      }
+    }
+  ],
+  "plugins": []
+}
+[32minfo[39m:    redisUrl not found. A fake redis instance will be used.
+[32minfo[39m:    redisUrl not found. A fake redis instance will be used.
+[32minfo[39m:    redisUrl not found. A fake redis instance will be used.
+[32minfo[39m:    No link to load from /Users/valentinbronfort/Documents/LaCabrade_V4/backend/node_modules/@medusajs/draft-order/.medusa/server/src/links. skipped.
+[32minfo[39m:    No link to load from /Users/valentinbronfort/Documents/LaCabrade_V4/backend/src/links. skipped.
+[33mwarn[39m:    Local Event Bus installed. This is not recommended for production.
+[32minfo[39m:    Locking module: Using "in-memory" as default.
+[32minfo[39m:    No workflow to load from /Users/valentinbronfort/Documents/LaCabrade_V4/backend/node_modules/@medusajs/draft-order/.medusa/server/src/workflows. skipped.
+[32minfo[39m:    No subscriber to load from /Users/valentinbronfort/Documents/LaCabrade_V4/backend/node_modules/@medusajs/draft-order/.medusa/server/src/subscribers. skipped.
+[32minfo[39m:    No job to load from /Users/valentinbronfort/Documents/LaCabrade_V4/backend/node_modules/@medusajs/medusa/dist/jobs. skipped.
+[32minfo[39m:    No job to load from /Users/valentinbronfort/Documents/LaCabrade_V4/backend/node_modules/@medusajs/draft-order/.medusa/server/src/jobs. skipped.
+- Creating server
+✔ Server is ready on port: 9000 – 1ms
+[32minfo[39m:    Admin URL → http://localhost:9000/app
