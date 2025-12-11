@@ -169,8 +169,8 @@ export const syncFromErpWorkflow = createWorkflow(
 
     // Préparer les produits
     const { productsToCreate, productsToUpdate } = transform(
-      { odooProducts, existingProducts, categoryMap },
-      ({ odooProducts, existingProducts, categoryMap }) => {
+      { odooProducts, existingProducts },
+      ({ odooProducts, existingProducts }) => {
         console.log(`🔄 [WORKFLOW] Transformation des produits...`)
         
         const productsToCreate: CreateProductWorkflowInputDTO[] = []
