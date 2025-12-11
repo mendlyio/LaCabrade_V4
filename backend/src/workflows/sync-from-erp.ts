@@ -333,11 +333,29 @@ export const syncFromErpWorkflow = createWorkflow(
 
         const createdProducts = []
         for (const productData of productsToCreate) {
-            // ... Logique création (identique)
-            // Incluant nettoyage MinIO
+            // 🧹 Nettoyer les inventory items orphelins AVANT de créer le produit
+            // (nécessaire si le produit a été supprimé mais l'inventory item est resté)
+            if (productData.variants?.length) {
+                for (const variant of productData.variants) {
+                    if (variant.sku) {
+                        try {
+                            const existingItems = await inventoryService.listInventoryItems({ sku: [variant.sku] })
+                            if (existingItems.length > 0) {
+                                console.log(`🧹 [WORKFLOW] Suppression inventory item orphelin SKU: ${variant.sku}`)
+                                for (const item of existingItems) {
+                                    await inventoryService.deleteInventoryItems([item.id])
+                                }
+                            }
+                        } catch (e: any) {
+                            console.warn(`⚠️ Nettoyage inventory ${variant.sku}:`, e.message)
+                        }
+                    }
+                }
+            }
+            
             const productPayload = { ...productData, sales_channels: [{ id: lacabradeChannel.id }] }
             
-            // Hack workflow creation (simplifié pour tenir dans le fichier)
+            // Workflow creation
             const workflow = createProductsWorkflow(container)
             const { result } = await workflow.run({ input: { products: [productPayload] } })
             const created = result[0]
@@ -362,8 +380,7 @@ export const syncFromErpWorkflow = createWorkflow(
                 } catch (e) { console.error(e) }
             }
             
-            // Init Stock (Odoo)
-            // ... (Logique stock reprise)
+            // Init Stock (Odoo) - Récupérer ou créer les inventory items
             if (created) {
                 const full = await productService.retrieveProduct(created.id, { relations: ["variants"] })
                 if (full.variants && productData.variants) {
@@ -373,13 +390,47 @@ export const syncFromErpWorkflow = createWorkflow(
                         const loc = locs[0]
                         for (let i = 0; i < full.variants.length; i++) {
                             const v = full.variants[i]
-                            const odooStock = productData.variants[i].metadata?.odoo_qty_available || 0
-                            // ... Création inventory item + level (simplifié)
-                            const invItems = await inventoryService.createInventoryItems({ sku: v.sku })
-                            const item = invItems[0]
-                            const link = container.resolve("remoteLink")
-                            await link.create([{ [Modules.PRODUCT]: { variant_id: v.id }, [Modules.INVENTORY]: { inventory_item_id: item.id } }])
-                            await inventoryService.createInventoryLevels({ inventory_item_id: item.id, location_id: loc.id, stocked_quantity: odooStock })
+                            const odooStock = productData.variants[i]?.metadata?.odoo_qty_available || 0
+                            
+                            try {
+                                // Chercher si un inventory item existe déjà (créé par createProductsWorkflow)
+                                let existingItems = await inventoryService.listInventoryItems({ sku: [v.sku] })
+                                let item = existingItems[0]
+                                
+                                // Si pas d'item, le créer
+                                if (!item) {
+                                    const invItems = await inventoryService.createInventoryItems({ sku: v.sku })
+                                    item = invItems[0]
+                                    // Lier au variant
+                                    const link = container.resolve("remoteLink")
+                                    await link.create([{ [Modules.PRODUCT]: { variant_id: v.id }, [Modules.INVENTORY]: { inventory_item_id: item.id } }])
+                                }
+                                
+                                // Créer le niveau de stock (si pas déjà existant)
+                                const existingLevels = await inventoryService.listInventoryLevels({ 
+                                    inventory_item_id: [item.id], 
+                                    location_id: [loc.id] 
+                                })
+                                
+                                if (existingLevels.length === 0) {
+                                    await inventoryService.createInventoryLevels({ 
+                                        inventory_item_id: item.id, 
+                                        location_id: loc.id, 
+                                        stocked_quantity: odooStock 
+                                    })
+                                } else {
+                                    // Mettre à jour le stock existant
+                                    await inventoryService.updateInventoryLevels({
+                                        inventory_item_id: item.id,
+                                        location_id: loc.id,
+                                        stocked_quantity: odooStock
+                                    })
+                                }
+                                
+                                console.log(`📦 [WORKFLOW] Stock ${v.sku}: ${odooStock}`)
+                            } catch (stockError: any) {
+                                console.warn(`⚠️ [WORKFLOW] Erreur stock ${v.sku}:`, stockError.message)
+                            }
                         }
                     }
                 }
