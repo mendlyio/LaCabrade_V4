@@ -242,13 +242,14 @@ export const syncFromErpWorkflow = createWorkflow(
 
               const weightInGrams = variant.weight ? Math.round(variant.weight * 1000) : undefined
               const priceAmount = Math.round(variant.list_price)
-              const variantSku = variant.code || `ODOO-${variant.id}`
+              // Utiliser default_code (référence interne Odoo) au lieu de code (champ calculé souvent vide)
+              const variantSku = variant.default_code || `ODOO-${variant.id}`
 
               return {
                 id: existingProduct 
-                  ? existingProduct.variants.find((v) => v.sku === variantSku || v.sku === variant.code)?.id 
+                  ? existingProduct.variants.find((v) => v.sku === variantSku || v.sku === variant.default_code)?.id 
                   : undefined,
-                title: (variant.display_name || variant.name || "Variante").replace(variant.code ? `[${variant.code}] ` : "", ""),
+                title: (variant.display_name || variant.name || "Variante").replace(variant.default_code ? `[${variant.default_code}] ` : "", ""),
                 sku: variantSku,
                 barcode: variant.barcode || undefined,
                 weight: weightInGrams,
@@ -264,7 +265,7 @@ export const syncFromErpWorkflow = createWorkflow(
                   odoo_weight_kg: variant.weight,
                   odoo_volume: variant.volume,
                   odoo_qty_available: variant.qty_available || 0,
-                  generated_sku: !variant.code,
+                  generated_sku: !variant.default_code, // true si pas de référence interne Odoo
                 },
               }
             })

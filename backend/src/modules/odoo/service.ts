@@ -46,7 +46,7 @@ export type OdooProductVariant = {
   name?: string
   display_name?: string
   list_price: number
-  code?: string
+  default_code?: string // Référence interne Odoo (Internal Reference)
   weight?: number
   volume?: number
   barcode?: string
@@ -373,32 +373,63 @@ export default class OdooModuleService {
     // 2. Create order lines
     const orderLines = []
     for (const item of orderData.items) {
-      // Find product by SKU
-      const productIds: number[] = await this.client.request("call", {
-        service: "object",
-        method: "execute_kw",
-        args: [
-          this.options.dbName,
-          this.uid,
-          this.options.apiKey,
-          "product.product",
-          "search",
-          [[["default_code", "=", item.sku]]],
-          { limit: 1 },
-        ],
-      })
+      let productId: number | null = null
+      
+      // Gérer les SKUs générés au format ODOO-{id}
+      if (item.sku.startsWith('ODOO-')) {
+        const odooId = parseInt(item.sku.replace('ODOO-', ''))
+        if (!isNaN(odooId)) {
+          // Vérifier que le produit existe dans Odoo
+          const exists: number[] = await this.client.request("call", {
+            service: "object",
+            method: "execute_kw",
+            args: [
+              this.options.dbName,
+              this.uid,
+              this.options.apiKey,
+              "product.product",
+              "search",
+              [[["id", "=", odooId]]],
+              { limit: 1 },
+            ],
+          })
+          if (exists.length > 0) {
+            productId = odooId
+          }
+        }
+      } else {
+        // Recherche par default_code (référence interne)
+        const productIds: number[] = await this.client.request("call", {
+          service: "object",
+          method: "execute_kw",
+          args: [
+            this.options.dbName,
+            this.uid,
+            this.options.apiKey,
+            "product.product",
+            "search",
+            [[["default_code", "=", item.sku]]],
+            { limit: 1 },
+          ],
+        })
+        if (productIds.length > 0) {
+          productId = productIds[0]
+        }
+      }
 
-      if (productIds.length > 0) {
+      if (productId) {
         orderLines.push([
           0,
           0,
           {
-            product_id: productIds[0],
+            product_id: productId,
             product_uom_qty: item.quantity,
             price_unit: item.price / 100, // Medusa uses cents
             name: item.name,
           },
         ])
+      } else {
+        console.warn(`[ODOO] Produit non trouvé pour SKU: ${item.sku}`)
       }
     }
 
@@ -555,7 +586,7 @@ export default class OdooModuleService {
                 fields: [
                   "display_name",
                   "list_price",
-                  "code",
+                  "default_code", // Référence interne (était "code" - champ calculé souvent vide)
                   "currency_id",
                   "product_template_variant_value_ids",
                   "weight",
@@ -657,7 +688,7 @@ export default class OdooModuleService {
                 fields: [
                   "display_name",
                   "list_price",
-                  "code",
+                  "default_code", // Référence interne (était "code" - champ calculé souvent vide)
                   "currency_id",
                   "product_template_variant_value_ids",
                   "weight",
@@ -857,7 +888,7 @@ export default class OdooModuleService {
                 fields: [
                   "display_name",
                   "list_price",
-                  "code",
+                  "default_code", // Référence interne (était "code" - champ calculé souvent vide)
                   "currency_id",
                   "product_template_variant_value_ids",
                   "weight",
