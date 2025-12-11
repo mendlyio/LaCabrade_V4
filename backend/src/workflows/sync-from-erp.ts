@@ -158,11 +158,12 @@ const fetchExistingProductsStep = createStep(
 export const syncFromErpWorkflow = createWorkflow(
   "sync-from-erp",
   function (input: SyncFromErpInput) {
-    // 1. Sync Catégories
-    const odooCategories = fetchOdooCategoriesStep()
-    const categoryMap = syncCategoriesStep(odooCategories)
+    // NOTE: Les catégories Odoo servent UNIQUEMENT à filtrer dans le module admin
+    // Elles ne sont PAS créées dans Medusa (désactivé volontairement)
+    // const odooCategories = fetchOdooCategoriesStep()
+    // const categoryMap = syncCategoriesStep(odooCategories)
 
-    // 2. Sync Produits
+    // Sync Produits
     const odooProducts = fetchOdooProductsStep(input)
     const existingProducts = fetchExistingProductsStep({ odooProducts })
 
@@ -181,15 +182,8 @@ export const syncFromErpWorkflow = createWorkflow(
               (p) => p.metadata?.external_id === `${odooProduct.id}`
             )
 
-            // Gestion de la catégorie
-            let categories = []
-            if (odooProduct.categ_id && Array.isArray(odooProduct.categ_id)) {
-              const odooCatId = odooProduct.categ_id[0]
-              const medusaCatId = categoryMap.get(odooCatId)
-              if (medusaCatId) {
-                categories.push({ id: medusaCatId })
-              }
-            }
+            // NOTE: Les catégories ne sont pas synchronisées dans Medusa
+            // Elles servent uniquement à filtrer dans le module admin Odoo
 
             const product: any = {
               id: existingProduct?.id,
@@ -202,10 +196,11 @@ export const syncFromErpWorkflow = createWorkflow(
               status: "published",
               metadata: {
                 external_id: `${odooProduct.id}`,
+                odoo_category: odooProduct.categ_id ? odooProduct.categ_id[1] : null, // Juste pour info
               },
               options: [],
               variants: [],
-              categories, // Assigner la catégorie
+              // categories: [], // Pas de catégories Medusa depuis Odoo
               odoo_image_base64: (odooProduct.image_512 && typeof odooProduct.image_512 === 'string') 
                 ? odooProduct.image_512 
                 : undefined,
