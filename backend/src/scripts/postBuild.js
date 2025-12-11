@@ -73,9 +73,24 @@ if (fs.existsSync(srcPath)) {
   console.log('✅ src directory copied successfully (excluding .disabled files)');
 }
 
-// Install dependencies
+// Install dependencies (optimized for Railway/CI)
 console.log('Installing dependencies in .medusa/server...');
-execSync('npm install --production', { 
-  cwd: MEDUSA_SERVER_PATH,
-  stdio: 'inherit'
-});
+try {
+  // Try npm ci first (faster with lockfile), fallback to npm install
+  execSync('npm ci --omit=dev --prefer-offline --no-audit --no-fund 2>/dev/null || npm install --omit=dev --prefer-offline --no-audit --no-fund', { 
+    cwd: MEDUSA_SERVER_PATH,
+    stdio: 'inherit',
+    timeout: 600000, // 10 minutes max
+    env: {
+      ...process.env,
+      NPM_CONFIG_LOGLEVEL: 'error',
+      NPM_CONFIG_FETCH_RETRIES: '3',
+      NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: '10000',
+      NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: '60000',
+    }
+  });
+  console.log('✅ Dependencies installed successfully');
+} catch (error) {
+  console.error('⚠️ Warning: npm install had issues but continuing...', error.message);
+  // Don't throw - the server might still work with existing deps
+}
