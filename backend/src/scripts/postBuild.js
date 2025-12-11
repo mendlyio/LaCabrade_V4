@@ -73,24 +73,31 @@ if (fs.existsSync(srcPath)) {
   console.log('✅ src directory copied successfully (excluding .disabled files)');
 }
 
-// Install dependencies (optimized for Railway/CI)
-console.log('Installing dependencies in .medusa/server...');
+// Link node_modules from parent (MUCH faster than npm install)
+console.log('Linking node_modules to .medusa/server...');
+const parentNodeModules = path.join(process.cwd(), 'node_modules');
+const serverNodeModules = path.join(MEDUSA_SERVER_PATH, 'node_modules');
+
 try {
-  // Try npm ci first (faster with lockfile), fallback to npm install
-  execSync('npm ci --omit=dev --prefer-offline --no-audit --no-fund 2>/dev/null || npm install --omit=dev --prefer-offline --no-audit --no-fund', { 
-    cwd: MEDUSA_SERVER_PATH,
-    stdio: 'inherit',
-    timeout: 600000, // 10 minutes max
-    env: {
-      ...process.env,
-      NPM_CONFIG_LOGLEVEL: 'error',
-      NPM_CONFIG_FETCH_RETRIES: '3',
-      NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: '10000',
-      NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: '60000',
-    }
-  });
-  console.log('✅ Dependencies installed successfully');
-} catch (error) {
-  console.error('⚠️ Warning: npm install had issues but continuing...', error.message);
-  // Don't throw - the server might still work with existing deps
+  // Remove existing node_modules in server if any
+  if (fs.existsSync(serverNodeModules)) {
+    fs.rmSync(serverNodeModules, { recursive: true, force: true });
+  }
+  
+  // Create symlink to parent's node_modules (instant, no download needed)
+  fs.symlinkSync(parentNodeModules, serverNodeModules, 'dir');
+  console.log('✅ node_modules linked successfully (symlink)');
+} catch (symlinkError) {
+  console.log('Symlink failed, trying copy instead...');
+  try {
+    // Fallback: copy node_modules (slower but works on all systems)
+    execSync(`cp -r "${parentNodeModules}" "${serverNodeModules}"`, { 
+      stdio: 'inherit',
+      timeout: 300000 // 5 minutes max
+    });
+    console.log('✅ node_modules copied successfully');
+  } catch (copyError) {
+    console.error('⚠️ Warning: Could not link/copy node_modules:', copyError.message);
+    // Don't throw - try to continue anyway
+  }
 }
