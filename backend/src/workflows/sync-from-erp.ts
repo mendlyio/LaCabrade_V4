@@ -212,19 +212,24 @@ export const syncFromErpWorkflow = createWorkflow(
             }
 
             // ... (Reste de la logique Variantes identique à l'original) ...
-            // Pour ne pas tout copier-coller et dépasser la limite, je reprends la logique existante simplifiée
             // Gérer les options et variantes
-          if (odooProduct.product_variant_count > 1) {
-            if (odooProduct.attribute_line_ids?.length) {
-              const validOptions = odooProduct.attribute_line_ids
-                .filter((line) => line.attribute_id && line.value_ids?.length)
-                .map((line) => ({
-                  title: line.attribute_id.display_name || line.attribute_id.name || 'Attribut',
-                  values: line.value_ids.map((v) => v.name || 'Valeur'),
-                }))
-              if (validOptions.length > 0) product.options = validOptions
+          // Vérifier si le produit a des attributs valides pour les variantes
+          let hasValidOptions = false
+          if (odooProduct.product_variant_count > 1 && odooProduct.attribute_line_ids?.length) {
+            const validOptions = odooProduct.attribute_line_ids
+              .filter((line) => line.attribute_id && line.value_ids?.length)
+              .map((line) => ({
+                title: line.attribute_id.display_name || line.attribute_id.name || 'Attribut',
+                values: line.value_ids.map((v) => v.name || 'Valeur'),
+              }))
+            if (validOptions.length > 0) {
+              product.options = validOptions
+              hasValidOptions = true
             }
+          }
 
+          // Traiter comme produit avec variantes SEULEMENT si on a des options valides
+          if (odooProduct.product_variant_count > 1 && hasValidOptions) {
             product.variants = odooProduct.product_variant_ids.map((variant) => {
               const options: Record<string, string> = {}
               if (variant.product_template_variant_value_ids?.length) {
@@ -270,17 +275,27 @@ export const syncFromErpWorkflow = createWorkflow(
               }
             })
           } else {
-            // Produit simple
-            const weightInGrams = odooProduct.weight ? Math.round(odooProduct.weight * 1000) : undefined
-            const priceAmount = Math.round(odooProduct.list_price)
-            const productSku = odooProduct.default_code || `ODOO-${odooProduct.id}`
+            // Produit sans attributs valides → traiter comme produit simple
+            // Utiliser la première variante si disponible (pour avoir le bon SKU)
+            const firstVariant = Array.isArray(odooProduct.product_variant_ids) 
+              ? odooProduct.product_variant_ids[0] 
+              : null
+            
+            const weightInGrams = (firstVariant?.weight || odooProduct.weight) 
+              ? Math.round((firstVariant?.weight || odooProduct.weight) * 1000) 
+              : undefined
+            const priceAmount = Math.round(firstVariant?.list_price || odooProduct.list_price)
+            // Utiliser le SKU de la variante en priorité
+            const productSku = firstVariant?.default_code || odooProduct.default_code || `ODOO-${firstVariant?.id || odooProduct.id}`
+            const variantId = firstVariant?.id || odooProduct.id
+            const stockQty = firstVariant?.qty_available || odooProduct.qty_available || 0
             
             product.options = [{ title: "Default", values: ["Default"] }]
             product.variants.push({
-              id: existingProduct ? existingProduct.variants[0].id : undefined,
+              id: existingProduct ? existingProduct.variants[0]?.id : undefined,
               title: "Default",
               sku: productSku,
-              barcode: odooProduct.default_code || undefined,
+              barcode: firstVariant?.barcode || odooProduct.default_code || undefined,
               weight: weightInGrams,
               options: { Default: "Default" },
               prices: [{
@@ -288,10 +303,11 @@ export const syncFromErpWorkflow = createWorkflow(
                   currency_code: (Array.isArray(odooProduct.currency_id) ? odooProduct.currency_id[1] : "eur")?.toLowerCase() || "eur",
               }],
               metadata: {
-                external_id: `${odooProduct.id}`,
+                external_id: `${variantId}`,
                 odoo_product_id: odooProduct.id,
-                odoo_qty_available: odooProduct.qty_available || 0,
-                generated_sku: !odooProduct.default_code,
+                odoo_variant_id: variantId,
+                odoo_qty_available: stockQty,
+                generated_sku: !productSku.includes('ODOO-') ? false : true,
               },
               manage_inventory: true,
             })
