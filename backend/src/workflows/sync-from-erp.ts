@@ -416,7 +416,7 @@ export const syncFromErpWorkflow = createWorkflow(
                 } catch (e) { console.error(e) }
             }
             
-            // Init Stock (Odoo) - Récupérer ou créer les inventory items
+            // Init Stock (Odoo) - Récupérer ou créer les inventory items pour CHAQUE variante
             if (created) {
                 const full = await productService.retrieveProduct(created.id, { relations: ["variants"] })
                 if (full.variants && productData.variants) {
@@ -424,9 +424,19 @@ export const syncFromErpWorkflow = createWorkflow(
                     const locs = await stockLocationService.listStockLocations({})
                     if (locs.length) {
                         const loc = locs[0]
-                        for (let i = 0; i < full.variants.length; i++) {
-                            const v = full.variants[i]
-                            const odooStock = productData.variants[i]?.metadata?.odoo_qty_available || 0
+                        
+                        // Créer une map SKU -> stock Odoo pour matcher correctement
+                        const odooStockBySku = new Map<string, number>()
+                        for (const odooVariant of productData.variants) {
+                            if (odooVariant.sku) {
+                                odooStockBySku.set(odooVariant.sku, odooVariant.metadata?.odoo_qty_available || 0)
+                            }
+                        }
+                        
+                        // Traiter chaque variante Medusa
+                        for (const v of full.variants) {
+                            // Récupérer le stock Odoo correspondant par SKU
+                            const odooStock = odooStockBySku.get(v.sku) || 0
                             
                             try {
                                 // Chercher si un inventory item existe déjà (créé par createProductsWorkflow)
