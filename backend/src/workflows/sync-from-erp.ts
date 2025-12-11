@@ -211,27 +211,45 @@ export const syncFromErpWorkflow = createWorkflow(
                 : undefined,
             }
 
-            // ... (Reste de la logique Variantes identique à l'original) ...
             // Gérer les options et variantes
-          // Vérifier si le produit a des attributs valides pour les variantes
-          let hasValidOptions = false
-          if (odooProduct.product_variant_count > 1 && odooProduct.attribute_line_ids?.length) {
-            const validOptions = odooProduct.attribute_line_ids
+          const hasMultipleVariants = odooProduct.product_variant_count > 1 && 
+            Array.isArray(odooProduct.product_variant_ids) && 
+            odooProduct.product_variant_ids.length > 1
+
+          // Vérifier si le produit a des attributs valides
+          let validOptions: any[] = []
+          if (hasMultipleVariants && odooProduct.attribute_line_ids?.length) {
+            validOptions = odooProduct.attribute_line_ids
               .filter((line) => line.attribute_id && line.value_ids?.length)
               .map((line) => ({
                 title: line.attribute_id.display_name || line.attribute_id.name || 'Attribut',
                 values: line.value_ids.map((v) => v.name || 'Valeur'),
               }))
-            if (validOptions.length > 0) {
-              product.options = validOptions
-              hasValidOptions = true
-            }
           }
 
-          // Traiter comme produit avec variantes SEULEMENT si on a des options valides
-          if (odooProduct.product_variant_count > 1 && hasValidOptions) {
-            product.variants = odooProduct.product_variant_ids.map((variant) => {
+          // Si plusieurs variantes mais pas d'attributs → créer un attribut "Variante" automatiquement
+          if (hasMultipleVariants && validOptions.length === 0) {
+            console.log(`🔧 [WORKFLOW] Création attribut automatique pour ${odooProduct.display_name} (${odooProduct.product_variant_ids.length} variantes sans attributs)`)
+            // Extraire les noms de variantes pour créer les valeurs
+            const variantNames = odooProduct.product_variant_ids.map((v, idx) => {
+              // Essayer d'extraire un nom significatif de la variante
+              const name = v.display_name || v.name || ''
+              // Retirer le nom du produit parent si présent
+              const cleanName = name.replace(odooProduct.display_name || '', '').replace(odooProduct.name || '', '').trim()
+              // Si pas de nom significatif, utiliser le SKU ou un index
+              return cleanName || v.default_code || `Variante ${idx + 1}`
+            })
+            validOptions = [{ title: "Variante", values: variantNames }]
+          }
+
+          // Traiter comme produit avec variantes si on a des variantes ET des options
+          if (hasMultipleVariants && validOptions.length > 0) {
+            product.options = validOptions
+            
+            product.variants = odooProduct.product_variant_ids.map((variant, variantIndex) => {
               const options: Record<string, string> = {}
+              
+              // Utiliser les attributs Odoo si disponibles
               if (variant.product_template_variant_value_ids?.length) {
                 variant.product_template_variant_value_ids.forEach((value) => {
                   if (value.attribute_id && value.name) {
@@ -239,22 +257,24 @@ export const syncFromErpWorkflow = createWorkflow(
                     options[attrName] = value.name
                   }
                 })
-              } else {
-                product.options?.forEach((option: any) => {
-                  options[option.title] = option.values[0]
-                })
+              }
+              
+              // Si pas d'options définies, utiliser l'option automatique
+              if (Object.keys(options).length === 0) {
+                const optionTitle = validOptions[0]?.title || 'Variante'
+                const optionValue = validOptions[0]?.values?.[variantIndex] || `Variante ${variantIndex + 1}`
+                options[optionTitle] = optionValue
               }
 
               const weightInGrams = variant.weight ? Math.round(variant.weight * 1000) : undefined
               const priceAmount = Math.round(variant.list_price)
-              // Utiliser default_code (référence interne Odoo) au lieu de code (champ calculé souvent vide)
               const variantSku = variant.default_code || `ODOO-${variant.id}`
 
               return {
                 id: existingProduct 
                   ? existingProduct.variants.find((v) => v.sku === variantSku || v.sku === variant.default_code)?.id 
                   : undefined,
-                title: (variant.display_name || variant.name || "Variante").replace(variant.default_code ? `[${variant.default_code}] ` : "", ""),
+                title: (variant.display_name || variant.name || "Variante").replace(variant.default_code ? `[${variant.default_code}] ` : "", "").replace(odooProduct.display_name || '', '').trim() || `Variante ${variantIndex + 1}`,
                 sku: variantSku,
                 barcode: variant.barcode || undefined,
                 weight: weightInGrams,
@@ -270,7 +290,7 @@ export const syncFromErpWorkflow = createWorkflow(
                   odoo_weight_kg: variant.weight,
                   odoo_volume: variant.volume,
                   odoo_qty_available: variant.qty_available || 0,
-                  generated_sku: !variant.default_code, // true si pas de référence interne Odoo
+                  generated_sku: !variant.default_code,
                 },
               }
             })
