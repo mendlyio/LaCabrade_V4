@@ -23,7 +23,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     const cartIdToUse = cart_id || cartId
     if (cartIdToUse) {
       try {
-        const cart = await cartService.retrieve(cartIdToUse)
+        const cart = await cartService.retrieveCart(cartIdToUse)
         cityFromCart = cart?.shipping_address?.city || cityFromCart
         streetFromCart = cart?.shipping_address?.address_1 || streetFromCart
       } catch (e) {
