@@ -47,24 +47,35 @@ export default class BpostModuleService {
     const baseHeaders = this.buildHeaders(body)
 
     console.log(`[Bpost] ${method} ${url}`)
+    console.log(`[Bpost] Body:`, body || "(empty)")
 
-    const res = await fetch(url, {
+    const fetchOptions: RequestInit = {
       method,
       headers: { ...baseHeaders, ...(headers || {}) },
-      body: body || undefined,
-    })
+    }
+    
+    // Seulement ajouter body si on a des données et si ce n'est pas GET
+    if (body && method !== "GET") {
+      fetchOptions.body = body
+    }
+
+    const res = await fetch(url, fetchOptions)
 
     const httpCode = res.status
     let response: any = null
+    const responseText = await res.text()
+    
     try {
-      response = await res.json()
+      response = JSON.parse(responseText)
     } catch {
-      response = null
+      response = responseText
     }
 
+    console.log(`[Bpost] Réponse ${httpCode}:`, typeof response === 'object' ? JSON.stringify(response).slice(0, 500) : response?.slice?.(0, 500))
+
     if (!res.ok) {
-      const message = (response && (response.Error?.Info || response.message)) || `Bpost API ${httpCode}`
-      console.error(`[Bpost] Erreur ${httpCode}: ${message}`, response)
+      const message = (response && (response.Error?.Info || response.error || response.message)) || `Bpost API ${httpCode}`
+      console.error(`[Bpost] Erreur ${httpCode}: ${message}`)
       throw new Error(message)
     }
     return { httpCode, response }
