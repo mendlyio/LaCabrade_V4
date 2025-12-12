@@ -228,13 +228,49 @@ export default class BpostModuleService {
         let parsedResponse = response
         if (typeof response === 'string') {
           try {
-            // Extraire le JSON avant "Status:" si présent
-            const jsonMatch = response.match(/^(\{.*\})(?:Status:|$)/s)
-            parsedResponse = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(response)
-            console.log(`[Bpost] Response parsée depuis string`)
+            // Bpost renvoie parfois 2 JSONs séparés par "Status: 200 OK"
+            // On cherche le JSON qui contient "Point" ou "Count"
+            const parts = response.split(/Status: \d+ [A-Z]+/);
+            let foundJson = false;
+            
+            for (const part of parts) {
+              const trimmed = part.trim();
+              // Ignorer les headers HTTP
+              if (trimmed.startsWith('Content-') || trimmed.startsWith('Date:') || !trimmed.startsWith('{')) {
+                continue;
+              }
+              // Extraire le JSON (première accolade jusqu'à la dernière)
+              const jsonStart = trimmed.indexOf('{');
+              const jsonEnd = trimmed.lastIndexOf('}');
+              if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                const jsonStr = trimmed.substring(jsonStart, jsonEnd + 1);
+                if (jsonStr.includes('"Point"') || jsonStr.includes('"Count"')) {
+                  parsedResponse = JSON.parse(jsonStr);
+                  console.log(`[Bpost] Response parsée (trouvé JSON avec Point/Count)`);
+                  foundJson = true;
+                  break;
+                }
+              }
+            }
+            
+            if (!foundJson) {
+              // Fallback: prendre le premier JSON valide
+              for (const part of parts) {
+                const trimmed = part.trim();
+                if (trimmed.startsWith('{')) {
+                  const jsonStart = trimmed.indexOf('{');
+                  const jsonEnd = trimmed.lastIndexOf('}');
+                  if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                    parsedResponse = JSON.parse(trimmed.substring(jsonStart, jsonEnd + 1));
+                    console.log(`[Bpost] Response parsée (fallback premier JSON)`);
+                    break;
+                  }
+                }
+              }
+            }
           } catch (e) {
-            console.error(`[Bpost] Impossible de parser response:`, e)
-            parsedResponse = {}
+            console.error(`[Bpost] Impossible de parser response:`, e);
+            parsedResponse = {};
           }
         }
         
