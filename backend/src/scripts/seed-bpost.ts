@@ -249,7 +249,7 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
   if (belgiumZone) {
     shippingOptions.push({
       name: "Bpost - Livraison à domicile (Belgique)",
-      price_type: "calculated",
+      price_type: "flat",
       provider_id: bpostProvider.id,
       service_zone_id: belgiumZone.id,
       shipping_profile_id: shippingProfile.id,
@@ -261,8 +261,10 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
       data: {
         id: "bpost-home-be",
         mode: "home",
-        bpost_amount: FIXED_PRICE,
       },
+      prices: [
+        { currency_code: "eur", amount: FIXED_PRICE },
+      ],
       rules: [
         { attribute: "enabled_in_store", value: "true", operator: "eq" },
         { attribute: "is_return", value: "false", operator: "eq" },
@@ -274,7 +276,7 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
   if (belgiumZone) {
     shippingOptions.push({
       name: "Bpost - Point relais (Belgique)",
-      price_type: "calculated",
+      price_type: "flat",
       provider_id: bpostProvider.id,
       service_zone_id: belgiumZone.id,
       shipping_profile_id: shippingProfile.id,
@@ -286,8 +288,10 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
       data: {
         id: "bpost-pickup-be",
         mode: "pickup",
-        bpost_amount: FIXED_PRICE,
       },
+      prices: [
+        { currency_code: "eur", amount: FIXED_PRICE },
+      ],
       rules: [
         { attribute: "enabled_in_store", value: "true", operator: "eq" },
         { attribute: "is_return", value: "false", operator: "eq" },
@@ -299,7 +303,7 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
   if (europeZone) {
     shippingOptions.push({
       name: "Bpost - Livraison internationale (Europe)",
-      price_type: "calculated",
+      price_type: "flat",
       provider_id: bpostProvider.id,
       service_zone_id: europeZone.id,
       shipping_profile_id: shippingProfile.id,
@@ -311,8 +315,10 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
       data: {
         id: "bpost-home-eu",
         mode: "home",
-        bpost_amount: FIXED_PRICE,
       },
+      prices: [
+        { currency_code: "eur", amount: FIXED_PRICE },
+      ],
       rules: [
         { attribute: "enabled_in_store", value: "true", operator: "eq" },
         { attribute: "is_return", value: "false", operator: "eq" },
