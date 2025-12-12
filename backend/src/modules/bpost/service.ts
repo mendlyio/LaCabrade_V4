@@ -225,9 +225,13 @@ export default class BpostModuleService {
           data: payload,
         })
         // Bpost peut renvoyer des points même avec une erreur Lat/Long
+        console.log(`[Bpost] Type de response: ${typeof response}, Keys: ${Object.keys(response || {}).join(', ')}`)
+        console.log(`[Bpost] response.Point existe? ${!!response?.Point}, response.PickupPoint existe? ${!!response?.PickupPoint}`)
+        console.log(`[Bpost] response.Count: ${response?.Count}`)
+        
         const rawPoints = (response as any)?.Point || (response as any)?.PickupPoint || []
         const points = Array.isArray(rawPoints) ? rawPoints : []
-        console.log(`[Bpost] ${points.length} points trouvés (raw: ${JSON.stringify(response).slice(0, 200)})`)
+        console.log(`[Bpost] ${points.length} points trouvés`)
         return { points, raw: response }
       }
 
