@@ -107,9 +107,8 @@ export default async function bpostCreateShipmentHandler({
         // Données standardisées pour le template email
         public_tracking_url: publicTrackingUrl,
         label_url: labelUrl,
+        tracking_numbers: shipmentResult.trackingNumber ? [shipmentResult.trackingNumber] : [],
       },
-      // Ajouter le tracking number au tableau tracking_numbers pour compatibilité
-      tracking_numbers: shipmentResult.trackingNumber ? [shipmentResult.trackingNumber] : [],
     })
     
     console.log(`[BpostShipment] ✅ Fulfillment ${fulfillmentId} mis à jour avec tracking:`, shipmentResult.trackingNumber)

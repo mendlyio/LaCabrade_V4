@@ -27,11 +27,14 @@ export default async function enableTaxInclusivePricing({ container }: ExecArgs)
       console.log(`     Avant: tax_inclusive = ${(region as any).automatic_taxes || false}`)
       
       // Mettre à jour la région pour activer les prix TTC
-      await regionModuleService.updateRegions(region.id, {
-        automatic_taxes: true,
-        // @ts-ignore - tax_inclusive_pricing existe mais pas dans les types
-        tax_inclusive_pricing: true,
-      })
+      await regionModuleService.updateRegions([{
+        selector: { id: region.id },
+        update: { 
+          automatic_taxes: true,
+          // @ts-ignore - tax_inclusive_pricing existe mais pas dans les types
+          tax_inclusive_pricing: true,
+        },
+      }])
       
       console.log(`     ✅ Après: tax_inclusive = true\n`)
     }
