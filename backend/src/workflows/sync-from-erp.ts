@@ -262,7 +262,8 @@ export const syncFromErpWorkflow = createWorkflow(
               }
 
               const weightInGrams = variant.weight ? Math.round(variant.weight * 1000) : undefined
-              const priceAmount = Math.round(variant.list_price)
+              // Convertir le prix Odoo (euros) en centimes pour Medusa
+              const priceAmount = Math.round(variant.list_price * 100)
               const variantSku = variant.default_code || `ODOO-${variant.id}`
 
               return {
