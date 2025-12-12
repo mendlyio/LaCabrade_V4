@@ -86,25 +86,76 @@ export default class BpostModuleService {
   }
 
   async listPickupPoints(params: { postalCode: string; country: string; limit?: number; offset?: number; q?: string }) {
-    // Le v3 attend une adresse; CarrierId peut être optionnel selon contrat
     const { postalCode, country } = params
-    const payload = {
-      Address: {
-        City: "",
-        Country: country || "BE",
-        PostalCode: postalCode,
-        Streetname1: "",
-        Lat: "",
-        Long: "",
-      },
-      // Language: fr|nl basé sur country/localisation
-      Language: country === "BE" ? "fr" : "en",
+    
+    // Utiliser l'API publique de géolocalisation Bpost (ne nécessite pas d'auth)
+    const geoUrl = `https://taxipost.bpost.be/pickup/geo?postalCode=${encodeURIComponent(postalCode)}&country=${encodeURIComponent(country || "BE")}&language=FR`
+    
+    console.log(`[Bpost] GET ${geoUrl}`)
+    
+    try {
+      const res = await fetch(geoUrl, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+        },
+      })
+      
+      if (!res.ok) {
+        console.error(`[Bpost] Erreur géolocalisation ${res.status}`)
+        throw new Error(`Bpost géolocalisation erreur ${res.status}`)
+      }
+      
+      const data = await res.json()
+      console.log(`[Bpost] Résultat: ${data?.length || 0} points trouvés`)
+      
+      // Transformer le format de réponse
+      const points = (data || []).map((p: any) => ({
+        Id: p.id || p.Id,
+        Name: p.name || p.Name || p.office,
+        Address: {
+          Streetname1: p.street || p.address || "",
+          Streetname2: "",
+          PostalCode: p.postalCode || p.zip || postalCode,
+          City: p.city || p.municipality || "",
+          Country: country || "BE",
+        },
+        Location: p.latitude && p.longitude ? {
+          Latitude: String(p.latitude),
+          Longitude: String(p.longitude),
+        } : undefined,
+      }))
+      
+      return { points, total: points.length }
+    } catch (e: any) {
+      console.error(`[Bpost] Erreur listPickupPoints:`, e.message)
+      
+      // Fallback: essayer l'API Shipping Manager
+      try {
+        const payload = {
+          Address: {
+            City: "",
+            Country: country || "BE",
+            PostalCode: postalCode,
+            Streetname1: "",
+            Lat: "",
+            Long: "",
+          },
+          Language: country === "BE" ? "fr" : "en",
+        }
+        
+        const { response } = await this.sendToApi<{ PickupPoint?: any[]; total?: number }>({ 
+          method: "POST", 
+          endpoint: "/pickuppoints", 
+          data: payload 
+        })
+        const points = (response as any)?.PickupPoint || response || []
+        return { points, total: Array.isArray(points) ? points.length : 0 }
+      } catch (e2: any) {
+        console.error(`[Bpost] Fallback aussi échoué:`, e2.message)
+        throw new Error(`Impossible de trouver des points relais: ${e.message}`)
+      }
     }
-
-    const { response } = await this.sendToApi<{ PickupPoint?: any[]; total?: number }>({ method: "POST", endpoint: "/pickuppoints", data: payload })
-    const points = (response as any)?.PickupPoint || response || []
-    // La pagination serveur n’est pas garantie; appliquer côté client si besoin
-    return { points, total: Array.isArray(points) ? points.length : 0 }
   }
 
   async createShipment(input: {
