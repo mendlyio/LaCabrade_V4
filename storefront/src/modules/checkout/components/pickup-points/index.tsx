@@ -50,16 +50,21 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
     setError(null)
     try {
       const countryCode = (cart.shipping_address?.country_code || "BE").toUpperCase()
-      const res = await fetch(`${BACKEND_URL}/store/bpost/pickup-points?postal_code=${postalCode}&country=${countryCode}`)
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || "Erreur lors de la recherche")
-      }
+      const url = `${BACKEND_URL}/store/bpost/pickup-points?postal_code=${encodeURIComponent(postalCode.trim())}&country=${encodeURIComponent(countryCode)}`
+      console.log("[PickupPoints] Appel:", url)
+      
+      const res = await fetch(url)
       const data = await res.json()
-      console.log("[PickupPoints] Résultat:", data)
+      
+      console.log("[PickupPoints] Réponse:", res.status, data)
+      
+      if (!res.ok) {
+        throw new Error(data.error || `Erreur ${res.status}`)
+      }
+      
       setPoints(data.points || [])
-      if (data.points?.length === 0) {
-        setError("Aucun point relais trouvé. Vérifiez le code postal.")
+      if ((data.points || []).length === 0) {
+        setError(data.error || "Aucun point relais trouvé pour ce code postal.")
       }
     } catch (e: any) {
       console.error("[PickupPoints] Erreur:", e)
