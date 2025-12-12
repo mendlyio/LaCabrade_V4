@@ -132,9 +132,17 @@ export default class BpostModuleService {
       }
     }
 
-    const shopUrl = process.env.BACKEND_URL || process.env.BACKEND_PUBLIC_URL || "https://localhost:9000"
+    // Envoyer l'URL du STOREFRONT (shop public), pas du backend
+    const shopUrl = 
+      process.env.BPOST_SHOP_URL || 
+      process.env.STOREFRONT_URL || 
+      process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL?.replace('backend', 'storefront') ||
+      "https://storefront-production-03a4.up.railway.app"
+    
     const pluginVersion = this.options.pluginVersion || "3.2.1"
-    const platformVersion = this.options.platformVersion || "medusa"
+    const platformVersion = this.options.platformVersion || "medusa-2.0"
+
+    console.log(`[Bpost] Appel /keys avec ShopUrl: ${shopUrl}`)
 
     const body = {
       PluginVersion: pluginVersion,
