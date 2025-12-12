@@ -130,7 +130,13 @@ export default class BpostModuleService {
       
       return { points, total: points.length }
     } catch (e: any) {
-      const msg = e?.message || e?.toString?.() || "Erreur inconnue"
+      const msg =
+        e?.message ||
+        (typeof e === "string" ? e : "") ||
+        e?.response ||
+        e?.stack ||
+        JSON.stringify(e) ||
+        "Erreur inconnue"
       console.error(`[Bpost] Erreur API:`, msg)
       
       // Retourner une liste vide avec message d'erreur explicite
