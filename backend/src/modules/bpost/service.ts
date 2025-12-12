@@ -177,7 +177,7 @@ export default class BpostModuleService {
   }) {
     const { postalCode, country, city, street } = params
     
-    console.log(`[Bpost] Recherche points relais - postalCode: ${postalCode}, country: ${country}`)
+    console.log(`[Bpost] Recherche points relais - postalCode: ${postalCode}, country: ${country}, city: ${city}, street: ${street}`)
     
     // Essayer l'API Shipping Manager avec authentification
     try {
@@ -191,12 +191,24 @@ export default class BpostModuleService {
           ? (carriers as any).Carrier[0]?.Id || (carriers as any).Carrier[0]?.id
           : (carriers as any)?.[0]?.Id || (carriers as any)?.[0]?.id
       
+      // Fallback city basé sur code postal belge si non fourni
+      let cityToUse = city || ""
+      if (!cityToUse && country === "BE") {
+        const pc = postalCode.substring(0, 2)
+        const cityMap: Record<string, string> = {
+          "10": "Bruxelles", "11": "Bruxelles", "12": "Bruxelles",
+          "20": "Anvers", "30": "Louvain", "40": "Liège", "50": "Namur",
+          "60": "Charleroi", "70": "Mons", "80": "Tournai", "90": "Gand"
+        }
+        cityToUse = cityMap[pc] || "Bruxelles"
+      }
+      
       const basePayload = {
         Address: {
-          City: city || "",
+          City: cityToUse || "Bruxelles",
           Country: country || "BE",
           PostalCode: postalCode,
-          Streetname1: street || " ",
+          Streetname1: street || "Rue de la Station",
         },
         // D'après le plugin WP : pas de CarrierId si non nécessaire, Language fr/nl
         Language: country === "BE" ? "fr" : "en",
