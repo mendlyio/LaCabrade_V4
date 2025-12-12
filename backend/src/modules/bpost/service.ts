@@ -169,45 +169,57 @@ export default class BpostModuleService {
       await this.ensureToken()
       // Récupérer un CarrierId
       const carriers = await this.getCarriers()
+      console.log("[Bpost] Carriers:", JSON.stringify(carriers)?.slice(0, 500))
       const carrierId =
         Array.isArray((carriers as any)?.Carrier) && (carriers as any).Carrier.length > 0
           ? (carriers as any).Carrier[0]?.Id || (carriers as any).Carrier[0]?.id
           : (carriers as any)?.[0]?.Id || (carriers as any)?.[0]?.id
       
-      const payload = {
+      const basePayload = {
         Address: {
           City: "",
           Country: country || "BE",
           PostalCode: postalCode,
-          Streetname1: "",
+          Streetname1: " ",
         },
         // D'après le plugin WP : pas de CarrierId si non nécessaire, Language fr/nl
         Language: country === "BE" ? "fr" : "en",
-        ...(carrierId ? { CarrierId: carrierId } : {}),
       }
       
       console.log(`[Bpost] Appel API Shipping Manager /pickuppoints`)
       
-      const { response } = await this.sendToApi<any>({ 
-        method: "POST", 
-        endpoint: "/pickuppoints", 
-        data: payload 
-      })
-      
-      const rawPoints = (response as any)?.PickupPoint || response || []
-      const points = Array.isArray(rawPoints) ? rawPoints : []
-      
-      console.log(`[Bpost] ${points.length} points trouvés`)
-      
-      if (!points.length) {
+      // Essai 1 : avec CarrierId si disponible
+      let attemptPayload = { ...basePayload, ...(carrierId ? { CarrierId: carrierId } : {}) }
+      const doCall = async (payload: any) => {
+        const { response } = await this.sendToApi<any>({
+          method: "POST",
+          endpoint: "/pickuppoints",
+          data: payload,
+        })
+        const rawPoints = (response as any)?.PickupPoint || response || []
+        const points = Array.isArray(rawPoints) ? rawPoints : []
+        console.log(`[Bpost] ${points.length} points trouvés`)
+        return { points, raw: response }
+      }
+
+      let result = await doCall(attemptPayload)
+
+      // Si rien trouvé et CarrierId existait, retenter sans CarrierId
+      if (!result.points.length && carrierId) {
+        console.warn("[Bpost] Aucun point avec CarrierId, nouvel essai sans CarrierId")
+        result = await doCall(basePayload)
+      }
+
+      if (!result.points.length) {
         return {
           points: [],
           total: 0,
           error: "Bpost n'a renvoyé aucun point. Vérifiez le contrat/credentials ou le code postal.",
+          raw: result.raw,
         }
       }
 
-      return { points, total: points.length }
+      return { points: result.points, total: result.points.length }
     } catch (e: any) {
       const msg =
         e?.message ||
