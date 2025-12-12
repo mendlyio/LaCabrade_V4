@@ -60,9 +60,28 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     })
     console.log("[Bpost API] Résultat:", result.points?.length || 0, "points trouvés")
     
+    // Transformer les points au format attendu par le frontend
+    const transformedPoints = (result.points || []).map((point: any) => ({
+      Id: point.PointId || point.Id,
+      Name: point.Information?.Name || point.Name || "Point relais",
+      Address: {
+        Streetname1: point.Information?.Address || point.Address?.Streetname1 || "",
+        Streetname2: point.Address?.Streetname2 || "",
+        PostalCode: point.Information?.ZipCode || point.Address?.PostalCode || "",
+        City: point.Information?.City || point.Address?.City || "",
+        Country: point.Information?.Country || point.Address?.Country || cc,
+      },
+      Location: {
+        Latitude: point.Lat || point.Location?.Latitude || "",
+        Longitude: point.Long || point.Location?.Longitude || "",
+      },
+      Distance: point.Distance || "",
+      Type: point.Type || 1,
+    }))
+    
     // Toujours retourner 200 avec les données ou l'erreur
     return res.status(200).json({ 
-      points: result.points || [], 
+      points: transformedPoints, 
       total: result.total || 0, 
       limit: lim, 
       offset: off, 
