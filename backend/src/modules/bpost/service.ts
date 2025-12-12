@@ -132,11 +132,11 @@ export default class BpostModuleService {
     } catch (e: any) {
       console.error(`[Bpost] Erreur API:`, e.message)
       
-      // Retourner une liste vide avec message d'erreur
+      // Retourner une liste vide avec message d'erreur explicite
       return { 
         points: [], 
         total: 0, 
-        error: "Service points relais temporairement indisponible. Votre colis sera livré à l'adresse indiquée." 
+        error: e.message || "Service points relais temporairement indisponible. Votre colis sera livré à l'adresse indiquée." 
       }
     }
   }
