@@ -53,11 +53,9 @@ export default async function bpostCreateShipmentHandler({
     const pickupPoint = (order.metadata as any)?.bpost_pickup_point
     const pickupPointId = pickupPoint?.Id || pickupPoint?.PointId
     
-    // Calculer le poids total (en grammes)
-    const totalWeightGrams = (order.items || []).reduce((sum: number, item: any) => {
-      const weight = item.variant?.weight || 500 // 500g par défaut
-      return sum + (weight * (item.quantity || 1))
-    }, 0)
+    // Poids forfaitaire (pas de calcul basé sur les produits)
+    // Bpost recommande 1000g (1kg) pour un colis standard
+    const totalWeightGrams = 1000 // 1kg forfaitaire
     
     // Créer le shipment Bpost
     const shipmentResult = await bpostService.createShipment({
