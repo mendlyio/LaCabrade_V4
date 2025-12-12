@@ -228,41 +228,47 @@ export default class BpostModuleService {
         let parsedResponse = response
         if (typeof response === 'string') {
           try {
-            // Bpost renvoie parfois 2 JSONs séparés par "Status: 200 OK"
-            // Approche simple : chercher le JSON qui contient "Point" directement dans la string
-            if (response.includes('"Point"')) {
-              // Trouver le début du JSON qui contient "Point"
-              const pointIndex = response.indexOf('"Point"');
-              // Remonter jusqu'à la première accolade ouvrante avant "Point"
-              let jsonStart = response.lastIndexOf('{', pointIndex);
-              // Compter les accolades pour trouver la fin
+            // Bpost renvoie 2 JSONs séparés par "Status: XXX" : ErrorList puis Point
+            // Stratégie : extraire tous les JSONs valides et prendre celui avec "Point"
+            const jsonObjects: any[] = [];
+            let pos = 0;
+            
+            while (pos < response.length) {
+              const start = response.indexOf('{', pos);
+              if (start === -1) break;
+              
+              // Compter les accolades pour extraire le JSON complet
               let braceCount = 1;
-              let jsonEnd = jsonStart + 1;
-              while (braceCount > 0 && jsonEnd < response.length) {
-                if (response[jsonEnd] === '{') braceCount++;
-                if (response[jsonEnd] === '}') braceCount--;
-                jsonEnd++;
+              let end = start + 1;
+              while (braceCount > 0 && end < response.length) {
+                if (response[end] === '{') braceCount++;
+                else if (response[end] === '}') braceCount--;
+                end++;
               }
-              const jsonStr = response.substring(jsonStart, jsonEnd);
-              parsedResponse = JSON.parse(jsonStr);
-              console.log(`[Bpost] Response parsée (trouvé JSON avec Point, taille: ${jsonStr.length} chars)`);
-            } else {
-              // Fallback: prendre le premier JSON valide
-              const jsonStart = response.indexOf('{');
-              if (jsonStart >= 0) {
-                let braceCount = 1;
-                let jsonEnd = jsonStart + 1;
-                while (braceCount > 0 && jsonEnd < response.length) {
-                  if (response[jsonEnd] === '{') braceCount++;
-                  if (response[jsonEnd] === '}') braceCount--;
-                  jsonEnd++;
-                }
-                parsedResponse = JSON.parse(response.substring(jsonStart, jsonEnd));
-                console.log(`[Bpost] Response parsée (fallback premier JSON)`);
+              
+              try {
+                const jsonStr = response.substring(start, end);
+                const parsed = JSON.parse(jsonStr);
+                jsonObjects.push(parsed);
+                console.log(`[Bpost] JSON extrait (${jsonStr.length} chars, has Point: ${!!parsed.Point})`);
+              } catch (e) {
+                // JSON invalide, continuer
               }
+              
+              pos = end;
+            }
+            
+            // Prendre le JSON qui contient "Point"
+            const jsonWithPoint = jsonObjects.find(obj => obj.Point);
+            if (jsonWithPoint) {
+              parsedResponse = jsonWithPoint;
+              console.log(`[Bpost] ✅ JSON avec Point trouvé: ${jsonWithPoint.Point?.length || 0} points`);
+            } else if (jsonObjects.length > 0) {
+              parsedResponse = jsonObjects[0];
+              console.log(`[Bpost] ⚠️ Fallback: premier JSON (pas de Point trouvé)`);
             }
           } catch (e) {
-            console.error(`[Bpost] Impossible de parser response:`, e);
+            console.error(`[Bpost] Erreur parsing:`, e);
             parsedResponse = {};
           }
         }
