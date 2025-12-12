@@ -6,10 +6,13 @@ type BpostOptions = {
   webhookSecret?: string
   appId?: string
   apiUrl?: string
+  pluginVersion?: string
+  platformVersion?: string
 }
 
 export default class BpostModuleService {
   private options: BpostOptions
+  private static tokenCache: { token: string; expires?: string } | null = null
 
   constructor({}, options: BpostOptions) {
     this.options = options
@@ -108,6 +111,47 @@ export default class BpostModuleService {
     return response
   }
 
+  /**
+   * Récupère / rafraîchit un token temporaire (endpoint /keys)
+   * Comme dans le plugin WP : Basic auth avec public/private, X-APPID et payload plugin/platform.
+   */
+  private async ensureToken(): Promise<string> {
+    const now = Date.now()
+    if (BpostModuleService.tokenCache?.token && BpostModuleService.tokenCache?.expires) {
+      const exp = new Date(BpostModuleService.tokenCache.expires).getTime()
+      if (exp > now) {
+        // injecte le token en tant que publicKey pour les appels suivants
+        this.options.publicKey = BpostModuleService.tokenCache.token
+        return BpostModuleService.tokenCache.token
+      }
+    }
+
+    const shopUrl = process.env.BACKEND_URL || process.env.BACKEND_PUBLIC_URL || "https://localhost:9000"
+    const pluginVersion = this.options.pluginVersion || "3.2.1"
+    const platformVersion = this.options.platformVersion || "medusa"
+
+    const body = {
+      PluginVersion: pluginVersion,
+      ShopUrl: shopUrl,
+      PlatformVersion: platformVersion,
+    }
+
+    const { response } = await this.sendToApi<any>({
+      method: "POST",
+      endpoint: "/keys",
+      data: body,
+    })
+
+    const token = response?.Key || response?.key
+    const expire = response?.Expire || response?.expire
+    if (!token) {
+      throw new Error("Bpost: impossible d'obtenir un token (/keys)")
+    }
+    BpostModuleService.tokenCache = { token, expires: expire }
+    this.options.publicKey = token // utilisé par buildHeaders
+    return token
+  }
+
   async listPickupPoints(params: { postalCode: string; country: string; limit?: number; offset?: number; q?: string }) {
     const { postalCode, country } = params
     
@@ -116,6 +160,13 @@ export default class BpostModuleService {
     // Essayer l'API Shipping Manager avec authentification
     try {
       this.ensureKeys()
+      await this.ensureToken()
+      // Récupérer un CarrierId
+      const carriers = await this.getCarriers()
+      const carrierId =
+        Array.isArray((carriers as any)?.Carrier) && (carriers as any).Carrier.length > 0
+          ? (carriers as any).Carrier[0]?.Id || (carriers as any).Carrier[0]?.id
+          : (carriers as any)?.[0]?.Id || (carriers as any)?.[0]?.id
       
       const payload = {
         Address: {
@@ -126,6 +177,7 @@ export default class BpostModuleService {
         },
         // D'après le plugin WP : pas de CarrierId si non nécessaire, Language fr/nl
         Language: country === "BE" ? "fr" : "en",
+        ...(carrierId ? { CarrierId: carrierId } : {}),
       }
       
       console.log(`[Bpost] Appel API Shipping Manager /pickuppoints`)
