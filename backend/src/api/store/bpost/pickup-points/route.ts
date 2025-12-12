@@ -10,25 +10,39 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     const lim = parseInt(limit)
     const off = parseInt(offset)
 
-    // Validation minimale pour éviter les erreurs de l'API Bpost
+    // Validation minimale
     const cc = String(country || "BE").toUpperCase()
     const pc = String(postal_code || postalCode || "").trim()
     
     console.log("[Bpost API] Recherche points relais - postal_code:", pc, "country:", cc)
     
     if (!pc) {
-      return res.json({ points: [], total: 0, limit: lim, offset: off, q, error: "Code postal requis" })
+      return res.status(200).json({ points: [], total: 0, limit: lim, offset: off, q, error: "Code postal requis" })
     }
     if (cc === "BE" && !/^\d{4}$/.test(pc)) {
-      return res.json({ points: [], total: 0, limit: lim, offset: off, q, error: "Code postal belge invalide (4 chiffres requis)" })
+      return res.status(200).json({ points: [], total: 0, limit: lim, offset: off, q, error: "Code postal belge invalide (4 chiffres requis)" })
     }
 
-    const { points, total } = await svc.listPickupPoints({ postalCode: pc, country: cc, limit: lim, offset: off, q })
-    console.log("[Bpost API] Résultat:", points?.length || 0, "points trouvés")
-    return res.json({ points, total, limit: parseInt(limit), offset: parseInt(offset), q })
+    const result = await svc.listPickupPoints({ postalCode: pc, country: cc, limit: lim, offset: off, q })
+    console.log("[Bpost API] Résultat:", result.points?.length || 0, "points trouvés")
+    
+    // Toujours retourner 200 avec les données ou l'erreur
+    return res.status(200).json({ 
+      points: result.points || [], 
+      total: result.total || 0, 
+      limit: lim, 
+      offset: off, 
+      q,
+      error: (result as any).error || null
+    })
   } catch (e: any) {
     console.error("[Bpost API] Erreur:", e.message)
-    return res.status(500).json({ error: e.message, points: [], total: 0 })
+    // Retourner 200 avec message d'erreur pour éviter les erreurs frontend
+    return res.status(200).json({ 
+      error: e.message || "Erreur lors de la recherche de points relais", 
+      points: [], 
+      total: 0 
+    })
   }
 }
 
