@@ -128,6 +128,14 @@ export default class BpostModuleService {
       
       console.log(`[Bpost] ${points.length} points trouvés`)
       
+      if (!points.length) {
+        return {
+          points: [],
+          total: 0,
+          error: "Bpost n'a renvoyé aucun point. Vérifiez le contrat/credentials ou le code postal.",
+        }
+      }
+
       return { points, total: points.length }
     } catch (e: any) {
       const msg =
