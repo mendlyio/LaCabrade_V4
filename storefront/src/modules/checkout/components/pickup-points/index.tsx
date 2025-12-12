@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react"
 import { Button, Input, Text, Heading, clx } from "@medusajs/ui"
 import { StoreCart } from "@medusajs/types"
-import { getBaseURL } from "@lib/util/env"
 import { MapPin, CheckCircleSolid } from "@medusajs/icons"
+
+// URL du backend Medusa
+const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
 
 type PickupPointsProps = {
   cart: StoreCart
@@ -48,7 +50,7 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
     setError(null)
     try {
       const countryCode = (cart.shipping_address?.country_code || "BE").toUpperCase()
-      const res = await fetch(`${getBaseURL()}/store/bpost/pickup-points?postal_code=${postalCode}&country=${countryCode}`)
+      const res = await fetch(`${BACKEND_URL}/store/bpost/pickup-points?postal_code=${postalCode}&country=${countryCode}`)
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
         throw new Error(errData.error || "Erreur lors de la recherche")
@@ -71,7 +73,7 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
     setLoading(true)
     try {
       // Sauvegarder le choix dans le backend (Cart Metadata)
-      const res = await fetch(`${getBaseURL()}/store/bpost/select-pickup-point`, {
+      const res = await fetch(`${BACKEND_URL}/store/bpost/select-pickup-point`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
