@@ -21,8 +21,8 @@ import {
   createStockLocationsWorkflow,
 } from "@medusajs/medusa/core-flows"
 
-// Prix fixe pour toutes les options (en centimes) = 5€
-const FIXED_PRICE = 500
+// Prix fixe pour toutes les options (en euros) = 5€
+const FIXED_PRICE = 5
 
 export default async function seedBpostShipping({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -355,9 +355,8 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
   logger.info("Résumé des options créées:")
   for (const opt of finalOptions) {
     const optData = (opt as any).data || {}
-    const price = (optData.bpost_amount || FIXED_PRICE) / 100
-    logger.info(`  📦 ${opt.name} — ${price}€`)
-    logger.info(`     Mode: ${optData.mode || "non défini"}`)
+    logger.info(`  📦 ${opt.name} — ${FIXED_PRICE}€`)
+    logger.info(`     Mode: ${optData.mode || "home"}`)
   }
   logger.info("")
   logger.info("📋 Prix configurés: 5€ pour toutes les options")
