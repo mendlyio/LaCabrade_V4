@@ -226,10 +226,11 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
     logger.warn("⚠️ Pas de zone Europe trouvée - seules les options Belgique seront créées")
   }
 
-  // Vérifier les options existantes
-  const existingOptions = await fulfillmentModuleService.listShippingOptions({
-    provider_id: bpostProvider.id
-  })
+  // Vérifier les options existantes (filtrer par provider bpost)
+  const allOptions = await fulfillmentModuleService.listShippingOptions({})
+  const existingOptions = allOptions.filter((opt: any) => 
+    opt.provider_id === bpostProvider.id || opt.provider_id?.includes("bpost")
+  )
   
   if (existingOptions.length > 0) {
     logger.info(`ℹ️  ${existingOptions.length} option(s) Bpost existante(s):`)
@@ -257,10 +258,10 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
         description: "Livraison à domicile en Belgique via Bpost (2-3 jours ouvrables)",
         code: "bpost-home-be",
       },
-      // Les métadonnées pour le calcul de prix
       data: {
         id: "bpost-home-be",
         mode: "home",
+        bpost_amount: FIXED_PRICE,
       },
       rules: [
         { attribute: "enabled_in_store", value: "true", operator: "eq" },
@@ -285,6 +286,7 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
       data: {
         id: "bpost-pickup-be",
         mode: "pickup",
+        bpost_amount: FIXED_PRICE,
       },
       rules: [
         { attribute: "enabled_in_store", value: "true", operator: "eq" },
@@ -309,6 +311,7 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
       data: {
         id: "bpost-home-eu",
         mode: "home",
+        bpost_amount: FIXED_PRICE,
       },
       rules: [
         { attribute: "enabled_in_store", value: "true", operator: "eq" },
@@ -334,60 +337,23 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
     throw e
   }
 
-  // Mettre à jour les métadonnées des options créées (pour les règles de pricing)
-  const newOptions = await fulfillmentModuleService.listShippingOptions({
-    provider_id: bpostProvider.id
-  })
-
-  // Mapping des codes vers les métadonnées (prix fixe 5€)
-  const metadataByCode: Record<string, any> = {
-    "bpost-home-be": {
-      mode: "home",
-      bpost_amount: FIXED_PRICE,
-    },
-    "bpost-pickup-be": {
-      mode: "pickup",
-      bpost_amount: FIXED_PRICE,
-    },
-    "bpost-home-eu": {
-      mode: "home",
-      bpost_amount: FIXED_PRICE,
-    },
-  }
-
-  for (const option of newOptions) {
-    const optionData = (option as any).data
-    const code = optionData?.id || (option as any).type?.code
-    const metadata = metadataByCode[code]
-    
-    if (metadata) {
-      await fulfillmentModuleService.updateShippingOptions(option.id, {
-        metadata: metadata
-      })
-      logger.info(`   ✓ Métadonnées ajoutées pour: ${option.name}`)
-    }
-  }
-
-  // Recharger les options pour afficher le résumé final
-  const finalOptions = await fulfillmentModuleService.listShippingOptions({
-    provider_id: bpostProvider.id
-  })
+  // Récupérer les options créées pour affichage
+  const allCreatedOptions = await fulfillmentModuleService.listShippingOptions({})
+  const finalOptions = allCreatedOptions.filter((opt: any) => 
+    opt.provider_id === bpostProvider.id || opt.provider_id?.includes("bpost")
+  )
 
   logger.info("")
   logger.info("🎉 Configuration Bpost terminée!")
   logger.info("")
   logger.info("Résumé des options créées:")
   for (const opt of finalOptions) {
-    const meta = (opt as any).metadata || {}
-    const price = (meta.bpost_amount || FIXED_PRICE) / 100
+    const optData = (opt as any).data || {}
+    const price = (optData.bpost_amount || FIXED_PRICE) / 100
     logger.info(`  📦 ${opt.name} — ${price}€`)
-    logger.info(`     Mode: ${meta.mode || "non défini"}`)
+    logger.info(`     Mode: ${optData.mode || "non défini"}`)
   }
   logger.info("")
   logger.info("📋 Prix configurés: 5€ pour toutes les options")
-  logger.info("")
-  logger.info("✅ Prochaine étape: Ajoutez vos vraies clés Bpost sur Railway:")
-  logger.info("   BPOST_PUBLIC_KEY=votre_cle_publique")
-  logger.info("   BPOST_PRIVATE_KEY=votre_cle_privee")
 }
 

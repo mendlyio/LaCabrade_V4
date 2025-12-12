@@ -1,21 +1,7 @@
 import { AbstractFulfillmentProviderService } from "@medusajs/framework/utils"
 import type { MedusaContainer } from "@medusajs/framework/types"
 
-type BpostPricingRule = {
-  country_code: string
-  mode: "home" | "pickup"
-  min_weight_g?: number
-  max_weight_g?: number
-  amount: number
-  currency_code: string
-}
-
-type CalculateContext = {
-  cart?: any
-  option?: any
-}
-
-// Provider minimal pour prix calculé: lit des règles depuis metadata de l'option
+// Provider Bpost pour livraison avec prix fixe
 export default class BpostFulfillmentProviderService extends AbstractFulfillmentProviderService {
   static identifier = "bpost"
 
@@ -65,34 +51,14 @@ export default class BpostFulfillmentProviderService extends AbstractFulfillment
     data: Record<string, unknown>,
     context: any
   ): Promise<any> {
-    const cart = context?.cart
     const shippingOption = context?.option || optionData
-
-    const country = cart?.shipping_address?.country_code?.toUpperCase?.() || "BE"
-    const totalWeight = (cart?.items || []).reduce((sum: number, it: any) => {
-      const weight = (it?.variant?.weight || it?.weight || 0) * (it?.quantity || 1)
-      return sum + (Number.isFinite(weight) ? weight : 0)
-    }, 0)
-
-    const metadata = shippingOption?.metadata || {}
-    const mode: "home" | "pickup" = (metadata?.mode === "pickup" ? "pickup" : "home")
-
-    const rules: BpostPricingRule[] = Array.isArray(metadata?.bpost_pricing_rules)
-      ? metadata.bpost_pricing_rules
-      : []
-
-    // Cherche une règle qui correspond au pays, mode et plage de poids
-    const matched = rules.find((r) => {
-      if (r.country_code?.toUpperCase() !== country) return false
-      if ((r.mode || "home") !== mode) return false
-      const min = r.min_weight_g ?? 0
-      const max = r.max_weight_g ?? Number.MAX_SAFE_INTEGER
-      return totalWeight >= min && totalWeight <= max
-    })
-
-    const calculatedAmount = matched 
-      ? matched.amount 
-      : (Number(metadata?.bpost_amount ?? 0) || 0)
+    
+    // Lire depuis data (stocké lors de la création) ou metadata
+    const optData = (shippingOption as any)?.data || {}
+    const metadata = (shippingOption as any)?.metadata || {}
+    
+    // Prix fixe depuis data.bpost_amount ou metadata.bpost_amount
+    const calculatedAmount = Number(optData?.bpost_amount ?? metadata?.bpost_amount ?? 0) || 0
 
     // Retourne un objet CalculatedShippingOptionPrice
     return {
