@@ -53,10 +53,16 @@ export default class BpostModuleService {
   private async sendToApi<T = any>({ method, endpoint, data, headers }: { method: string; endpoint: string; data?: any; headers?: Record<string, string> }): Promise<{ httpCode: number; response: T }> {
     this.ensureKeys()
     // Aligné sur le plugin WP : pluginsapi.bpost.be/v3 (SHM v3)
-    const baseUrl =
-      this.options.apiUrl ||
-      process.env.BPOST_API_URL ||
-      "https://pluginsapi.bpost.be/v3"
+    // Si l'ENV pointe vers api.bpost.cloud/shm/v3, on force pluginsapi (sinon pickup/shipments échouent)
+    const envUrl = process.env.BPOST_API_URL || this.options.apiUrl
+    const resolvedBase =
+      envUrl && envUrl.includes("api.bpost.cloud")
+        ? "https://pluginsapi.bpost.be/v3"
+        : envUrl || "https://pluginsapi.bpost.be/v3"
+    if (envUrl && envUrl.includes("api.bpost.cloud")) {
+      console.warn("[Bpost] BPOST_API_URL redirigé vers pluginsapi.bpost.be/v3 pour compatibilité plugin")
+    }
+    const baseUrl = resolvedBase
     const url = `${baseUrl.replace(/\/$/, "")}${endpoint.startsWith("/") ? endpoint : "/" + endpoint}`
     const body = data ? JSON.stringify(data) : ""
     const baseHeaders = this.buildHeaders(body)
