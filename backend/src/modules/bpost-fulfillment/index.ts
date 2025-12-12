@@ -1,4 +1,7 @@
-import BpostFulfillmentService from "./service"
+import BpostFulfillmentProviderService from "./service"
+import { ModuleProvider, Modules } from "@medusajs/framework/utils"
 
-export default BpostFulfillmentService
+export default ModuleProvider(Modules.FULFILLMENT, {
+  services: [BpostFulfillmentProviderService],
+})
 

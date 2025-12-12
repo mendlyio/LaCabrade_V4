@@ -1,6 +1,41 @@
-# Custom CLI Script
+# Custom CLI Scripts
 
 A custom CLI script is a function to execute through Medusa's CLI tool. This is useful when creating custom Medusa tooling to run as a CLI tool.
+
+---
+
+## Scripts disponibles
+
+### 🚚 seed-bpost.ts - Configuration des options de livraison Bpost
+
+Ce script configure automatiquement les options de livraison Bpost avec les zones de service et les règles de pricing.
+
+**Prérequis:**
+- Variables d'environnement `BPOST_PUBLIC_KEY` et `BPOST_PRIVATE_KEY` configurées
+
+**Exécution:**
+```bash
+npx medusa exec src/scripts/seed-bpost.ts
+```
+
+**Ce que fait le script:**
+1. ✅ Vérifie que le provider Bpost est disponible
+2. 📍 Crée ou utilise le stock location existant
+3. 🌍 Crée les zones de service:
+   - **Belgique** (BE)
+   - **Europe** (FR, NL, DE, LU)
+4. 📦 Crée les options de livraison:
+   - **Bpost - Livraison à domicile (Belgique)** : 5.95€ - 9.95€
+   - **Bpost - Point relais (Belgique)** : 3.95€
+   - **Bpost - Livraison internationale (Europe)** : 8.95€ - 21.95€
+
+**Modifier les prix:**
+Les prix sont définis dans les métadonnées `bpost_pricing_rules` de chaque option.
+Vous pouvez les modifier:
+- Via l'admin Medusa → Paramètres → Bpost
+- Directement dans le script avant exécution
+
+---
 
 ## How to Create a Custom CLI Script?
 
