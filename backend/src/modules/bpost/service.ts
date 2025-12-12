@@ -224,15 +224,27 @@ export default class BpostModuleService {
           endpoint: "/pickuppoints",
           data: payload,
         })
-        // Bpost peut renvoyer des points même avec une erreur Lat/Long
-        console.log(`[Bpost] Type de response: ${typeof response}, Keys: ${Object.keys(response || {}).join(', ')}`)
-        console.log(`[Bpost] response.Point existe? ${!!response?.Point}, response.PickupPoint existe? ${!!response?.PickupPoint}`)
-        console.log(`[Bpost] response.Count: ${response?.Count}`)
+        // Parser si c'est une string
+        let parsedResponse = response
+        if (typeof response === 'string') {
+          try {
+            // Extraire le JSON avant "Status:" si présent
+            const jsonMatch = response.match(/^(\{.*\})(?:Status:|$)/s)
+            parsedResponse = jsonMatch ? JSON.parse(jsonMatch[1]) : JSON.parse(response)
+            console.log(`[Bpost] Response parsée depuis string`)
+          } catch (e) {
+            console.error(`[Bpost] Impossible de parser response:`, e)
+            parsedResponse = {}
+          }
+        }
         
-        const rawPoints = (response as any)?.Point || (response as any)?.PickupPoint || []
+        console.log(`[Bpost] Type de parsedResponse: ${typeof parsedResponse}`)
+        console.log(`[Bpost] parsedResponse.Point existe? ${!!parsedResponse?.Point}, Count: ${parsedResponse?.Count}`)
+        
+        const rawPoints = parsedResponse?.Point || parsedResponse?.PickupPoint || []
         const points = Array.isArray(rawPoints) ? rawPoints : []
         console.log(`[Bpost] ${points.length} points trouvés`)
-        return { points, raw: response }
+        return { points, raw: parsedResponse }
       }
 
       let result = await doCall(attemptPayload)
