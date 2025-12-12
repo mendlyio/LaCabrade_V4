@@ -5,8 +5,9 @@ import { Button, Input, Text, Heading, clx } from "@medusajs/ui"
 import { StoreCart } from "@medusajs/types"
 import { MapPin, CheckCircleSolid } from "@medusajs/icons"
 
-// URL du backend Medusa
+// URL du backend Medusa + clé publishable (obligatoire pour les endpoints store)
 const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
+const PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
 
 type PickupPointsProps = {
   cart: StoreCart
@@ -53,7 +54,11 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
       const url = `${BACKEND_URL}/store/bpost/pickup-points?postal_code=${encodeURIComponent(postalCode.trim())}&country=${encodeURIComponent(countryCode)}`
       console.log("[PickupPoints] Appel:", url)
       
-      const res = await fetch(url)
+      const res = await fetch(url, {
+        headers: PUBLISHABLE_KEY
+          ? { "x-publishable-api-key": PUBLISHABLE_KEY }
+          : undefined,
+      })
       const data = await res.json()
       
       console.log("[PickupPoints] Réponse:", res.status, data)
@@ -82,6 +87,7 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(PUBLISHABLE_KEY ? { "x-publishable-api-key": PUBLISHABLE_KEY } : {}),
         },
         body: JSON.stringify({
           cartId: cart.id,
