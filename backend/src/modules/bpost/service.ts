@@ -4,6 +4,8 @@ type BpostOptions = {
   publicKey?: string
   privateKey?: string
   webhookSecret?: string
+  appId?: string
+  apiUrl?: string
 }
 
 export default class BpostModuleService {
@@ -32,16 +34,26 @@ export default class BpostModuleService {
     const username = this.authUsername(jsonBody)
     const password = this.hmacBase64(username + jsonBody)
 
+    const appId =
+      this.options.appId ||
+      process.env.BPOST_APP_KEY || // permet override via env
+      "C6D32390-F48C-3D20-81F8-91932E7E4DE1" // valeur issue du plugin WP
+
     return {
       "Content-Type": "application/json",
       Accept: "application/json",
       Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`,
+      "X-APPID": appId,
     }
   }
 
   private async sendToApi<T = any>({ method, endpoint, data, headers }: { method: string; endpoint: string; data?: any; headers?: Record<string, string> }): Promise<{ httpCode: number; response: T }> {
     this.ensureKeys()
-    const baseUrl = process.env.BPOST_API_URL || "https://api.bpost.cloud/shm/v3"
+    // Aligné sur le plugin WP : pluginsapi.bpost.be/v3 (SHM v3)
+    const baseUrl =
+      this.options.apiUrl ||
+      process.env.BPOST_API_URL ||
+      "https://pluginsapi.bpost.be/v3"
     const url = `${baseUrl.replace(/\/$/, "")}${endpoint.startsWith("/") ? endpoint : "/" + endpoint}`
     const body = data ? JSON.stringify(data) : ""
     const baseHeaders = this.buildHeaders(body)
@@ -112,6 +124,7 @@ export default class BpostModuleService {
           PostalCode: postalCode,
           Streetname1: "",
         },
+        // D'après le plugin WP : pas de CarrierId si non nécessaire, Language fr/nl
         Language: country === "BE" ? "fr" : "en",
       }
       
