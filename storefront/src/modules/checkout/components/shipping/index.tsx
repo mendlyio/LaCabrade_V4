@@ -119,10 +119,13 @@ const Shipping: React.FC<ShippingProps> = ({
                       <span className="text-base-regular">{option.name}</span>
                     </div>
                     <span className="justify-self-end text-ui-fg-base">
-                      {convertToLocale({
-                        amount: option.amount!,
-                        currency_code: cart?.currency_code,
-                      })}
+                      {option.amount != null && !isNaN(option.amount) 
+                        ? convertToLocale({
+                            amount: option.amount,
+                            currency_code: cart?.currency_code,
+                          })
+                        : "5,00 €"
+                      }
                     </span>
                   </RadioGroup.Option>
                 )
@@ -130,7 +133,8 @@ const Shipping: React.FC<ShippingProps> = ({
             </RadioGroup>
           </div>
           {selectedShippingMethod?.provider_id?.toLowerCase?.().includes("bpost") &&
-            (selectedShippingMethod as any)?.metadata?.mode === "pickup" && (
+            ((selectedShippingMethod as any)?.metadata?.mode === "pickup" || 
+             (selectedShippingMethod as any)?.data?.mode === "pickup") && (
             <PickupPoints cart={cart} />
           )}
 
@@ -160,10 +164,13 @@ const Shipping: React.FC<ShippingProps> = ({
                 </Text>
                 <Text className="txt-medium text-ui-fg-subtle">
                   {selectedShippingMethod?.name}{" "}
-                  {convertToLocale({
-                    amount: selectedShippingMethod?.amount!,
-                    currency_code: cart?.currency_code,
-                  })}
+                  {selectedShippingMethod?.amount != null && !isNaN(selectedShippingMethod.amount)
+                    ? convertToLocale({
+                        amount: selectedShippingMethod.amount,
+                        currency_code: cart?.currency_code,
+                      })
+                    : "5,00 €"
+                  }
                 </Text>
               </div>
             )}
