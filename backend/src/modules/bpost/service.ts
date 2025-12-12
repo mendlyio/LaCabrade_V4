@@ -158,8 +158,16 @@ export default class BpostModuleService {
     return token
   }
 
-  async listPickupPoints(params: { postalCode: string; country: string; limit?: number; offset?: number; q?: string }) {
-    const { postalCode, country } = params
+  async listPickupPoints(params: {
+    postalCode: string
+    country: string
+    limit?: number
+    offset?: number
+    q?: string
+    city?: string
+    street?: string
+  }) {
+    const { postalCode, country, city, street } = params
     
     console.log(`[Bpost] Recherche points relais - postalCode: ${postalCode}, country: ${country}`)
     
@@ -177,10 +185,10 @@ export default class BpostModuleService {
       
       const basePayload = {
         Address: {
-          City: "",
+          City: city || "",
           Country: country || "BE",
           PostalCode: postalCode,
-          Streetname1: " ",
+          Streetname1: street || " ",
         },
         // D'après le plugin WP : pas de CarrierId si non nécessaire, Language fr/nl
         Language: country === "BE" ? "fr" : "en",

@@ -51,7 +51,13 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
     setError(null)
     try {
       const countryCode = (cart.shipping_address?.country_code || "BE").toUpperCase()
-      const url = `${BACKEND_URL}/store/bpost/pickup-points?postal_code=${encodeURIComponent(postalCode.trim())}&country=${encodeURIComponent(countryCode)}`
+      const city = cart.shipping_address?.city || ""
+      const street = cart.shipping_address?.address_1 || ""
+      const url = `${BACKEND_URL}/store/bpost/pickup-points?postal_code=${encodeURIComponent(
+        postalCode.trim()
+      )}&country=${encodeURIComponent(countryCode)}&city=${encodeURIComponent(city)}&street=${encodeURIComponent(
+        street
+      )}&cart_id=${encodeURIComponent(cart.id)}`
       console.log("[PickupPoints] Appel:", url)
       
       const res = await fetch(url, {
