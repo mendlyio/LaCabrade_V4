@@ -89,17 +89,31 @@ export default async function bpostCreateShipmentHandler({
       console.error('[BpostShipment] ⚠️ Erreur génération étiquette:', labelError)
     }
     
+    // Construire l'URL de tracking publique Bpost
+    const publicTrackingUrl = shipmentResult.trackingNumber
+      ? `https://track.bpost.be/btr/web/#/search?itemCode=${shipmentResult.trackingNumber}&lang=fr&postalCode=${shippingAddress.postal_code}`
+      : ''
+    
     // Mettre à jour le fulfillment avec les infos de tracking
+    // Format compatible avec order-shipped.tsx
     await fulfillmentModuleService.updateFulfillment(fulfillmentId, {
       data: {
+        // Données Bpost spécifiques
         bpost_shipment_id: shipmentResult.shipmentId,
         bpost_tracking_number: shipmentResult.trackingNumber,
         bpost_label_url: labelUrl,
         bpost_pickup_point: pickupPoint,
-      }
+        
+        // Données standardisées pour le template email
+        public_tracking_url: publicTrackingUrl,
+        label_url: labelUrl,
+      },
+      // Ajouter le tracking number au tableau tracking_numbers pour compatibilité
+      tracking_numbers: shipmentResult.trackingNumber ? [shipmentResult.trackingNumber] : [],
     })
     
     console.log(`[BpostShipment] ✅ Fulfillment ${fulfillmentId} mis à jour avec tracking:`, shipmentResult.trackingNumber)
+    console.log(`[BpostShipment] ✅ Email de suivi sera envoyé avec URL:`, publicTrackingUrl)
     
   } catch (error) {
     console.error('[BpostShipment] ❌ Erreur création shipment:', error)
