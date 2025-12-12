@@ -51,18 +51,27 @@ export default class BpostFulfillmentProviderService extends AbstractFulfillment
     data: Record<string, unknown>,
     context: any
   ): Promise<any> {
-    const shippingOption = context?.option || optionData
+    // optionData = les données "data" stockées sur l'option de livraison
+    // data = données additionnelles de la requête
+    // context.option = l'option de livraison complète
     
-    // Lire depuis data (stocké lors de la création) ou metadata
-    const optData = (shippingOption as any)?.data || {}
-    const metadata = (shippingOption as any)?.metadata || {}
+    const shippingOption = context?.option
+    const metadata = shippingOption?.metadata || {}
     
-    // Prix fixe depuis data.bpost_amount ou metadata.bpost_amount
-    const calculatedAmount = Number(optData?.bpost_amount ?? metadata?.bpost_amount ?? 0) || 0
+    // Prix fixe : chercher dans optionData (data de l'option), puis metadata, puis défaut 500 (5€)
+    let amount = 500 // Défaut: 5€
+    
+    if (optionData?.bpost_amount !== undefined) {
+      amount = Number(optionData.bpost_amount) || 500
+    } else if (metadata?.bpost_amount !== undefined) {
+      amount = Number(metadata.bpost_amount) || 500
+    }
+
+    console.log("[Bpost] calculatePrice - amount:", amount, "optionData:", optionData)
 
     // Retourne un objet CalculatedShippingOptionPrice
     return {
-      calculated_amount: calculatedAmount,
+      calculated_amount: amount,
       is_calculated_price_tax_inclusive: false,
     }
   }
