@@ -3,13 +3,39 @@ import { Modules } from "@medusajs/framework/utils"
 
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   try {
-    const { cart_id, pickup_point } = req.body as { cart_id: string; pickup_point: any }
+    // Accepter snake_case et camelCase
+    const body = req.body as any
+    const cartId = body.cart_id || body.cartId
+    const pickupPoint = body.pickup_point || body.pickupPoint
+    
+    if (!cartId || !pickupPoint) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "cart_id and pickup_point are required" 
+      })
+    }
+    
     const cartService = req.scope.resolve(Modules.CART)
-    const cart = await cartService.retrieveCart(cart_id)
-    const updated = await cartService.updateCarts([{ id: cart_id, metadata: { ...cart.metadata, bpost_pickup_point: pickup_point } }])
-    return res.json({ success: true, cart: updated })
+    const cart = await cartService.retrieveCart(cartId)
+    
+    // Mettre à jour le cart avec le point relais sélectionné
+    const updated = await cartService.updateCarts([{ 
+      id: cartId, 
+      metadata: { 
+        ...cart.metadata, 
+        bpost_pickup_point: pickupPoint 
+      } 
+    }])
+    
+    console.log(`[Bpost] Point relais sélectionné pour cart ${cartId}: ${pickupPoint.Name || pickupPoint.Id}`)
+    
+    return res.json({ success: true, cart: updated[0] })
   } catch (e: any) {
-    return res.status(500).json({ success: false, message: e.message })
+    console.error("[Bpost] Erreur sélection point relais:", e)
+    return res.status(500).json({ 
+      success: false, 
+      message: e.message || "Erreur lors de la sélection du point relais" 
+    })
   }
 }
 
