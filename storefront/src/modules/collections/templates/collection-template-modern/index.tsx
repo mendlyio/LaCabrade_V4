@@ -43,7 +43,7 @@ export default async function CollectionTemplateModern({
   return (
     <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-amber-600 to-amber-600 text-white py-12 mb-8">
+      <div className="bg-[#ac2948] text-white py-12 mb-8">
         <div className="content-container">
           <div className="max-w-3xl">
             {/* Breadcrumbs */}

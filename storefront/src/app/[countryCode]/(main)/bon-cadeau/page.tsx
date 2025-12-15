@@ -11,7 +11,7 @@ export default function BonCadeauPage() {
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-amber-50 via-white to-orange-50 py-20 border-b border-gray-200">
+      <section className="relative bg-white py-20 border-b border-gray-200">
         <div className="content-container">
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-block bg-amber-100 text-amber-800 px-4 py-2 rounded-full text-sm font-semibold mb-6">

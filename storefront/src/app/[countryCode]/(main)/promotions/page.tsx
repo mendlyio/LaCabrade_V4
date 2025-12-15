@@ -13,7 +13,7 @@ export default async function PromotionsPage() {
         <p className="text-gray-600">Profitez de nos promotions sur une sélection de produits équestres</p>
       </div>
 
-      <div className="bg-gradient-to-r from-red-50 to-amber-50 rounded-xl p-8 mb-8">
+      <div className="bg-red-50 rounded-xl p-8 mb-8">
         <h2 className="text-2xl font-bold mb-4">Articles à prix réduits</h2>
         <p className="text-gray-700 mb-4">
           Retrouvez nos meilleures affaires sur une sélection de produits équestres de qualité.

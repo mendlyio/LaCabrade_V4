@@ -10,7 +10,7 @@ export default function AProposPage() {
   return (
     <div className="w-full">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-amber-50 via-white to-orange-50 py-20 border-b border-gray-200">
+      <section className="relative bg-white py-20 border-b border-gray-200">
         <div className="content-container">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
