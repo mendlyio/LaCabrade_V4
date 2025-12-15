@@ -24,7 +24,7 @@ const CartTemplateModern = ({
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white">
+      <div className="bg-amber-600 text-white">
         <div className="content-container py-12">
           <div className="flex items-center justify-between">
             <div>
@@ -80,7 +80,7 @@ const CartTemplateModern = ({
                 )}
 
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50">
+                  <div className="p-6 border-b border-gray-200 bg-amber-600">
                     <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                       <ShoppingBag className="w-6 h-6 text-amber-600" />
                       Articles ({itemCount})

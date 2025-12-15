@@ -29,7 +29,7 @@ const SummaryModern = ({ cart, customer }: SummaryProps) => {
   return (
     <div className="flex flex-col">
       {/* Header */}
-      <div className="p-6 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200">
+      <div className="p-6 bg-amber-600 border-b border-gray-200">
         <h2 className="text-xl font-bold text-gray-900">
           Récapitulatif
         </h2>
@@ -52,7 +52,7 @@ const SummaryModern = ({ cart, customer }: SummaryProps) => {
           data-testid="checkout-button"
           className="block"
         >
-          <button className="w-full py-4 px-6 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 group">
+          <button className="w-full py-4 px-6 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 group">
             <span>Passer la commande</span>
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </button>

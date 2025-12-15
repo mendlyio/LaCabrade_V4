@@ -139,7 +139,7 @@ export default function RetoursPage() {
         </div>
 
         {/* CTA */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-200 p-8 text-center">
+        <div className="bg-pink-50 rounded-xl border-2 border-amber-200 p-8 text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-3">
             Besoin d'aide pour un retour ?
           </h2>

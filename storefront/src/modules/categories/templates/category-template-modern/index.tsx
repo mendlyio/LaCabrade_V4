@@ -49,7 +49,7 @@ export default async function CategoryTemplateModern({
   return (
     <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 text-white py-12 mb-8">
+      <div className="bg-gradient-to-r from-amber-600 to-amber-600 text-white py-12 mb-8">
         <div className="content-container">
           <div className="max-w-3xl">
             {/* Breadcrumbs */}
@@ -155,7 +155,7 @@ export default async function CategoryTemplateModern({
       </div>
 
       {/* Trust Badges */}
-      <div className="bg-gradient-to-r from-gray-50 to-amber-50 py-8 mt-16 border-t border-gray-200">
+      <div className="bg-gradient-to-r bg-gray-50 py-8 mt-16 border-t border-gray-200">
         <div className="content-container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="text-center">

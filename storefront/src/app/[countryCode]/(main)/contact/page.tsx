@@ -11,7 +11,7 @@ export default function ContactPage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-12">
       <div className="content-container">
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-2xl shadow-xl p-8 mb-12">
+        <div className="bg-amber-600 text-white rounded-2xl shadow-xl p-8 mb-12">
           <div className="max-w-3xl">
             <div className="inline-block bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full mb-4">
               <span className="text-sm font-semibold flex items-center gap-2">
@@ -32,7 +32,7 @@ export default function ContactPage() {
           <div className="lg:col-span-1 space-y-6">
             {/* Téléphone */}
             <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 bg-gradient-to-br from-amber-100 to-amber-200 rounded-full flex items-center justify-center mb-4">
+              <div className="w-12 h-12 bg-amber-600 rounded-full flex items-center justify-center mb-4">
                 <svg className="w-6 h-6 text-amber-700" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
                 </svg>
@@ -84,7 +84,7 @@ export default function ContactPage() {
             </div>
 
             {/* Réseaux sociaux */}
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-200 p-6">
+            <div className="bg-pink-50 rounded-xl border-2 border-amber-200 p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Suivez-nous</h3>
               <div className="flex gap-3">
                 <a
@@ -129,7 +129,7 @@ export default function ContactPage() {
         </div>
 
         {/* FAQ rapide */}
-        <div className="mt-12 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-8">
+        <div className="mt-12 bg-pink-50 rounded-xl border border-amber-200 p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             ❓ Questions fréquentes
           </h2>

@@ -40,7 +40,7 @@ export default async function Checkout() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white">
+      <div className="bg-[#ac2948] text-white">
         <div className="content-container py-6 sm:py-8 md:py-12">
           <div className="max-w-3xl">
             <div className="inline-block bg-white/20 backdrop-blur-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full mb-3 sm:mb-4">
@@ -104,7 +104,7 @@ export default async function Checkout() {
           <div className="space-y-4 sm:space-y-6">
             <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               {/* En-tête du formulaire */}
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 p-4 sm:p-6">
+              <div className="bg-pink-50 border-b border-gray-200 p-4 sm:p-6">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
                   <span className="w-7 h-7 sm:w-8 sm:h-8 bg-amber-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                     1
@@ -139,7 +139,7 @@ export default async function Checkout() {
             </div>
 
             {/* Trust badges */}
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-200">
+            <div className="bg-pink-50 rounded-xl p-6 border border-amber-200">
               <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-amber-600" />
                 Paiement 100% sécurisé

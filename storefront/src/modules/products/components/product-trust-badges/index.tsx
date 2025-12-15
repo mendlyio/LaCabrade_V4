@@ -45,7 +45,7 @@ export default function ProductTrustBadges() {
         {badges.map((badge, index) => (
           <div
             key={index}
-            className="flex items-start gap-3 p-3 bg-gradient-to-br from-gray-50 to-amber-50 rounded-lg border border-gray-200"
+            className="flex items-start gap-3 p-3 bg-gradient-to-br bg-gray-50 rounded-lg border border-gray-200"
           >
             <div className="flex-shrink-0 w-10 h-10 bg-white rounded-full flex items-center justify-center text-amber-600 shadow-sm">
               {badge.icon}

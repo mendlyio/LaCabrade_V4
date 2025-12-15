@@ -10,7 +10,7 @@ export default function QuiSommesNousPage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-12">
       <div className="content-container">
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-2xl shadow-xl p-8 mb-12">
+        <div className="bg-amber-600 text-white rounded-2xl shadow-xl p-8 mb-12">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
               La Cabrade
@@ -43,7 +43,7 @@ export default function QuiSommesNousPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Nos Valeurs</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow">
-              <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 rounded-full flex items-center justify-center mb-4 mx-auto">
+              <div className="w-16 h-16 bg-amber-600 rounded-full flex items-center justify-center mb-4 mx-auto">
                 <span className="text-3xl">🏇</span>
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3 text-center">Passion</h3>
@@ -75,7 +75,7 @@ export default function QuiSommesNousPage() {
         </div>
 
         {/* Notre engagement */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-8 mb-12">
+        <div className="bg-pink-50 rounded-xl border border-amber-200 p-8 mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Notre Engagement</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex items-start gap-3">
@@ -168,7 +168,7 @@ export default function QuiSommesNousPage() {
                 </a>
               </div>
 
-              <div className="mt-6 bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg p-4 border border-amber-200">
+              <div className="mt-6 bg-pink-50 rounded-lg p-4 border border-amber-200">
                 <p className="text-sm text-gray-700">
                   <strong>💡 Astuce :</strong> Appelez-nous avant de venir pour vous assurer de la disponibilité d'un produit spécifique.
                 </p>

@@ -93,7 +93,7 @@ const Register = ({ setCurrentView }: Props) => {
         </p>
         
         <SubmitButton 
-          className="w-full mt-6 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg" 
+          className="w-full mt-6 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg" 
           data-testid="register-button"
         >
           Créer mon compte

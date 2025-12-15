@@ -30,7 +30,7 @@ export default async function MarquesPage() {
         <p className="text-gray-600">Découvrez notre sélection de marques équestres de qualité</p>
       </div>
 
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-8 mb-8">
+      <div className="bg-amber-600 rounded-xl p-8 mb-8">
         <h2 className="text-2xl font-bold mb-4">Des marques renommées</h2>
         <p className="text-gray-700 mb-6">
           Dans notre sellerie à Fléron, près de Liège, nous collaborons avec les meilleurs fournisseurs

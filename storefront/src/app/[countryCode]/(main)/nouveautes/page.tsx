@@ -23,7 +23,7 @@ export default async function NouveautesPage({ params, searchParams }: Props) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white">
+      <div className="bg-amber-600 text-white">
         <div className="content-container py-16">
           <div className="max-w-3xl">
             <div className="inline-block bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full mb-4">

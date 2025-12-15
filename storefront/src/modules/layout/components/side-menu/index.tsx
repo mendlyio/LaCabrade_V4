@@ -82,9 +82,9 @@ const SideMenu = ({ regions, categories = [] }: SideMenuProps) => {
                   <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-sm bg-white shadow-2xl animate-slide-in-left">
                     <div className="flex flex-col h-full">
                       {/* Header */}
-                      <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50">
+                      <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-pink-50">
                         <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-amber-800 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-lg">
+                          <div className="w-12 h-12 bg-amber-600 rounded-full flex items-center justify-center text-white text-xl font-bold shadow-lg">
                             LC
                           </div>
                           <div>

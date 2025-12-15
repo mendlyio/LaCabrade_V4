@@ -35,7 +35,7 @@ const ImageGallery = ({ images, productId }: ImageGalleryProps) => {
                 setIsZoomed(false)
               }}
               className={`
-                flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-amber-50 
+                flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden bg-gradient-to-br bg-gray-50 
                 transition-all duration-300 hover:scale-105 border-2
                 ${
                   selectedImage === index
@@ -59,7 +59,7 @@ const ImageGallery = ({ images, productId }: ImageGalleryProps) => {
       {/* Grande image principale */}
       <div className="order-1 md:order-2 flex-1 relative group">
         <div 
-          className={`relative aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-amber-50 shadow-lg ${
+          className={`relative aspect-square rounded-2xl overflow-hidden bg-gradient-to-br bg-gray-50 shadow-lg ${
             isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'
           }`}
           onClick={() => setIsZoomed(!isZoomed)}

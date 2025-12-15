@@ -13,7 +13,7 @@ const CheckoutSummary = ({ cart, customer }: { cart: any; customer?: HttpTypes.S
     <div className="sticky top-0 flex flex-col-reverse small:flex-col gap-y-8 py-8 small:py-0">
       <div className="w-full bg-white flex flex-col">
         {/* En-tête du récapitulatif */}
-        <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-6 rounded-t-xl -mt-8 -mx-6 mb-6 small:mt-0 small:mx-0 small:rounded-t-none">
+        <div className="bg-amber-600 p-6 rounded-t-xl -mt-8 -mx-6 mb-6 small:mt-0 small:mx-0 small:rounded-t-none">
           <Heading
             level="h2"
             className="text-xl font-bold text-gray-900 flex items-center gap-2"

@@ -89,7 +89,7 @@ export default function RecrutementPage() {
         </div>
 
         {/* Pas d'offres actuellement */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-8 mb-12 text-center">
+        <div className="bg-pink-50 rounded-xl border border-amber-200 p-8 mb-12 text-center">
           <div className="text-5xl mb-4">📋</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-3">
             Aucune offre en cours actuellement
@@ -128,7 +128,7 @@ export default function RecrutementPage() {
               </ul>
             </div>
 
-            <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl p-6 text-center">
+            <div className="bg-amber-600 text-white rounded-xl p-6 text-center">
               <h4 className="text-xl font-bold mb-3">Envoyez-nous votre candidature</h4>
               <p className="mb-4 text-white/90">
                 CV + Lettre de motivation par email

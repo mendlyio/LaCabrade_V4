@@ -87,7 +87,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
       </div>
 
       {/* Bannière infos livraison */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-y border-amber-200">
+      <div className="bg-amber-600 border-y border-amber-200">
         <div className="content-container py-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
             <div className="flex flex-col items-center gap-2">

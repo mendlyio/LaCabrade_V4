@@ -68,7 +68,7 @@ export default async function RelatedProductsModern({
         <div className="mt-10 text-center">
           <LocalizedClientLink
             href={product.collection ? `/collections/${product.collection.handle}` : '/store'}
-            className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 text-sm md:text-base"
+            className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 text-sm md:text-base"
           >
             <span>Voir plus de produits</span>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -76,7 +76,7 @@ export default function AProposPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {/* Membre 1 */}
               <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow">
-                <div className="relative h-64 bg-gradient-to-br from-amber-100 to-orange-100">
+                <div className="relative h-64 bg-pink-50">
                   <div className="absolute inset-0 flex items-center justify-center text-gray-400">
                     <svg className="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -205,7 +205,7 @@ export default function AProposPage() {
 
               {/* Valeur 4 : Qualité */}
               <div className="text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-amber-200 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+                <div className="w-20 h-20 bg-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
                   <svg className="w-10 h-10 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                   </svg>
@@ -223,7 +223,7 @@ export default function AProposPage() {
       </section>
 
       {/* Section Contact / Visite */}
-      <section className="py-16 bg-gradient-to-br from-amber-50 to-orange-50 border-t border-gray-200">
+      <section className="py-16 bg-pink-50 border-t border-gray-200">
         <div className="content-container">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl font-bold text-gray-900 mb-6">

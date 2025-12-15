@@ -47,7 +47,7 @@ export default async function ProductCardModern({
     >
       <div className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-amber-300 h-full flex flex-col">
         {/* Image Container - Carré */}
-        <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-50 to-amber-50">
+        <div className="relative aspect-square overflow-hidden bg-gradient-to-br bg-gray-50">
           {product.thumbnail ? (
             <Image
               src={product.thumbnail}

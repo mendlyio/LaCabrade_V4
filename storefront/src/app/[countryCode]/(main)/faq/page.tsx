@@ -86,7 +86,7 @@ export default function FAQPage() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 py-12">
       <div className="content-container">
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-2xl shadow-xl p-8 mb-12">
+        <div className="bg-amber-600 text-white rounded-2xl shadow-xl p-8 mb-12">
           <div className="max-w-3xl">
             <div className="inline-block bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full mb-4">
               <span className="text-sm font-semibold flex items-center gap-2">
@@ -120,7 +120,7 @@ export default function FAQPage() {
         <div className="space-y-8">
           {faqs.map((category, idx) => (
             <div key={idx} className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200 p-6">
+              <div className="bg-amber-600 border-b border-amber-200 p-6">
                 <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
                   <span className="text-3xl">{category.icon}</span>
                   {category.category}
@@ -144,7 +144,7 @@ export default function FAQPage() {
         </div>
 
         {/* Contact CTA */}
-        <div className="mt-12 bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-200 p-8 text-center">
+        <div className="mt-12 bg-pink-50 rounded-xl border-2 border-amber-200 p-8 text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-3">
             Vous ne trouvez pas votre réponse ?
           </h2>

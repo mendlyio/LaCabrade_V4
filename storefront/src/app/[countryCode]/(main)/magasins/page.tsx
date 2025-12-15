@@ -120,7 +120,7 @@ export default function MagasinsPage() {
             </div>
 
             {/* Map placeholder */}
-            <div className="bg-gradient-to-br from-amber-100 to-orange-100 p-8 flex items-center justify-center">
+            <div className="bg-pink-50 p-8 flex items-center justify-center">
               <div className="text-center">
                 <div className="text-6xl mb-4">🗺️</div>
                 <p className="text-gray-700 font-semibold mb-4">Plan d'accès</p>
@@ -174,7 +174,7 @@ export default function MagasinsPage() {
         </div>
 
         {/* Services */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-8">
+        <div className="bg-pink-50 rounded-xl border border-amber-200 p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Nos Services en Magasin</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center gap-3">

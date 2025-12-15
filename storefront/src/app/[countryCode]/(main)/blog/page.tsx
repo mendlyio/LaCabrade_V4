@@ -38,7 +38,7 @@ export default function BlogPage() {
             </p>
 
             {/* Preview des futurs contenus */}
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-6 mb-8">
+            <div className="bg-pink-50 rounded-xl border border-amber-200 p-6 mb-8">
               <h3 className="text-xl font-bold text-gray-900 mb-4">Bientôt disponible :</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                 <div className="flex items-start gap-2">
@@ -69,7 +69,7 @@ export default function BlogPage() {
             </div>
 
             {/* Newsletter CTA */}
-            <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl p-6">
+            <div className="bg-amber-600 text-white rounded-xl p-6">
               <h4 className="text-xl font-bold mb-2">Soyez informé du lancement !</h4>
               <p className="mb-4 text-white/90">
                 Inscrivez-vous à notre newsletter pour être parmi les premiers à découvrir nos articles.

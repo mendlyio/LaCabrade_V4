@@ -155,7 +155,7 @@ const ProductTemplateModern: React.FC<ProductTemplateModernProps> = ({
 
             {/* Product Specifications */}
             {(product.material || product.weight || product.origin_country || product.type) && (
-              <div className="mt-10 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 md:p-8">
+              <div className="mt-10 bg-pink-50 rounded-2xl p-6 md:p-8">
                 <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2 justify-center md:justify-start">
                   <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />

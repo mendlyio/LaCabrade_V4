@@ -75,7 +75,7 @@ export default async function Home({
         <div className="content-container">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              <span className="bg-gradient-to-r from-amber-700 to-orange-600 bg-clip-text text-transparent">
+              <span className="text-amber-600">
                 LC Equestrian
               </span>
             </h2>
@@ -148,10 +148,10 @@ export default async function Home({
                   <LocalizedClientLink
                     key={category.id}
                     href={`/categories/${category.handle}`}
-                    className="flex-none w-[calc(100%-32px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] group relative block overflow-hidden rounded-xl aspect-square bg-gradient-to-br from-amber-100 to-orange-100 hover:shadow-2xl transition-all duration-300"
+                    className="flex-none w-[calc(100%-32px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] group relative block overflow-hidden rounded-xl aspect-square bg-pink-50 hover:shadow-2xl transition-all duration-300"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-br from-amber-100 via-orange-100 to-amber-50 transition-transform duration-500 group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-amber-900/60 via-amber-900/20 to-transparent group-hover:from-amber-900/70 transition-all duration-300" />
+                    <div className="absolute inset-0 bg-pink-100 transition-transform duration-500 group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#ac2948]/60 via-[#ac2948]/20 to-transparent group-hover:from-[#ac2948]/70 transition-all duration-300" />
                     <div className="absolute inset-0 flex items-center justify-center opacity-20 group-hover:opacity-30 transition-opacity">
                       <svg className="w-32 h-32 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
@@ -218,7 +218,7 @@ export default async function Home({
       </section>
 
       {/* Section Prix Mini / Outlet */}
-      <section className="py-16 bg-gradient-to-br from-red-50 to-orange-50">
+      <section className="py-16 bg-red-50">
         <div className="content-container">
           <div className="text-center mb-12">
             <div className="inline-block mb-4">

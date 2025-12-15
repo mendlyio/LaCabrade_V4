@@ -115,7 +115,7 @@ export default function GarantiesPage() {
         </div>
 
         {/* Notre engagement */}
-        <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl p-8 mb-8">
+        <div className="bg-amber-600 text-white rounded-xl p-8 mb-8">
           <h2 className="text-2xl font-bold mb-4">Notre engagement qualité</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="flex items-start gap-3">

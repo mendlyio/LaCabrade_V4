@@ -13,14 +13,14 @@ const LoginTemplate = () => {
   const [currentView, setCurrentView] = useState("sign-in")
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-amber-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md mx-auto">
         {/* Logo et titre */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-600 to-amber-800 rounded-full mb-4 shadow-lg">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-amber-600 rounded-full mb-4 shadow-lg">
             <span className="text-white text-2xl font-bold">LC</span>
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-700 to-orange-700 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-amber-600 bg-clip-text text-transparent">
             La Cabrade
           </h1>
           <p className="text-gray-600 mt-2">

@@ -57,7 +57,7 @@ export default function BonCadeauPage() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Bon 25€ */}
-              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-amber-200 hover:scale-105">
+              <div className="bg-pink-50 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-amber-200 hover:scale-105">
                 <div className="p-8 text-center">
                   <div className="w-16 h-16 bg-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-2xl text-white">🎁</span>
@@ -74,7 +74,7 @@ export default function BonCadeauPage() {
               </div>
 
               {/* Bon 50€ */}
-              <div className="bg-gradient-to-br from-amber-100 to-orange-100 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 border-4 border-amber-400 hover:scale-110 relative">
+              <div className="bg-pink-50 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 border-4 border-amber-400 hover:scale-110 relative">
                 <div className="absolute top-0 right-0 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
                   POPULAIRE
                 </div>
@@ -94,7 +94,7 @@ export default function BonCadeauPage() {
               </div>
 
               {/* Bon 100€ */}
-              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-amber-200 hover:scale-105">
+              <div className="bg-pink-50 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-amber-200 hover:scale-105">
                 <div className="p-8 text-center">
                   <div className="w-16 h-16 bg-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
                     <span className="text-2xl text-white">💎</span>
@@ -227,7 +227,7 @@ export default function BonCadeauPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 bg-gradient-to-r from-amber-600 to-orange-600 text-white">
+      <section className="py-16 bg-amber-600 text-white">
         <div className="content-container text-center">
           <h2 className="text-3xl font-bold mb-4">
             Prêt à faire plaisir ?

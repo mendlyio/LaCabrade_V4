@@ -62,7 +62,7 @@ const HeroCarousel = () => {
       <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 drop-shadow-2xl">
-            <span className="bg-gradient-to-r from-amber-300 to-orange-300 bg-clip-text text-transparent">
+            <span className="bg-amber-600 bg-clip-text text-transparent">
               La Cabrade
             </span>
           </h1>
@@ -74,7 +74,7 @@ const HeroCarousel = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <LocalizedClientLink
               href="/nouveautes"
-              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-semibold rounded-lg hover:from-amber-700 hover:to-orange-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="w-full sm:w-auto px-8 py-4 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               Nouveautés
             </LocalizedClientLink>

@@ -106,7 +106,7 @@ const CartDropdown = ({
             className="hidden small:block absolute top-[calc(100%+0.75rem)] right-0 bg-white rounded-xl shadow-2xl border border-gray-200 w-[440px] text-ui-fg-base overflow-hidden"
             data-testid="nav-cart-dropdown"
           >
-            <div className="p-6 flex items-center justify-between bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200">
+            <div className="p-6 flex items-center justify-between bg-amber-600 border-b border-gray-200">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">Mon Panier</h3>
                 <p className="text-sm text-gray-600">{totalItems} article{totalItems > 1 ? 's' : ''}</p>

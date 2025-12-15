@@ -5,19 +5,19 @@ import { useState, useEffect } from "react"
 const promoBanners = [
   {
     text: "🏇 Livraison gratuite dès 100€ d'achat",
-    bgColor: "from-amber-600 via-amber-500 to-amber-600",
+    bgColor: "from-amber-600 to-amber-600",
   },
   {
     text: "✨ Nouveautés équestres disponibles - Découvrez notre collection",
-    bgColor: "from-orange-600 via-orange-500 to-orange-600",
+    bgColor: "from-orange-600 to-orange-600",
   },
   {
     text: "🎁 -10% sur votre première commande avec le code BIENVENUE",
-    bgColor: "from-amber-700 via-amber-600 to-amber-700",
+    bgColor: "from-amber-700 to-amber-700",
   },
   {
     text: "📦 Expédition sous 24h pour toutes les commandes",
-    bgColor: "from-amber-500 via-orange-500 to-amber-500",
+    bgColor: "from-amber-500 to-amber-500",
   },
 ]
 

@@ -25,7 +25,7 @@ export default function ImageGalleryModern({ images }: ImageGalleryModernProps) 
       {/* Main Image */}
       <div className="relative group">
         <div 
-          className={`aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-amber-50 shadow-lg ${
+          className={`aspect-square rounded-2xl overflow-hidden bg-gradient-to-br bg-gray-50 shadow-lg ${
             isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'
           }`}
           onClick={() => setIsZoomed(!isZoomed)}
@@ -90,7 +90,7 @@ export default function ImageGalleryModern({ images }: ImageGalleryModernProps) 
                 setIsZoomed(false)
               }}
               className={`
-                aspect-square rounded-lg overflow-hidden bg-gradient-to-br from-gray-50 to-amber-50 
+                aspect-square rounded-lg overflow-hidden bg-gradient-to-br bg-gray-50 
                 transition-all duration-300 hover:scale-105
                 ${
                   selectedImage === index

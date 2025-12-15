@@ -246,7 +246,7 @@ export default function ProductActionsModern({
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : addedToCart
                 ? 'bg-green-600 text-white'
-                : 'bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-700 hover:to-orange-700 hover:shadow-xl hover:scale-105'
+                : 'bg-amber-600 text-white hover:bg-amber-700 hover:shadow-xl hover:scale-105'
             }
           `}
         >

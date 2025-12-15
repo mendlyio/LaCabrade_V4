@@ -14,7 +14,7 @@ export default async function Footer() {
           {/* COLONNE 1 : LOGO + RÉSEAUX SOCIAUX */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">La Cabrade</h3>
+              <h3 className="text-2xl font-bold text-amber-600">La Cabrade</h3>
               <p className="text-sm text-amber-400 font-medium tracking-wide">LC•EQUESTRIAN</p>
             </div>
             <p className="text-sm text-gray-300 leading-relaxed">
