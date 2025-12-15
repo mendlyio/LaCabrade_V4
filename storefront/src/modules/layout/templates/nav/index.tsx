@@ -35,9 +35,9 @@ export default async function Nav() {
 
         {/* Niveau 1 : Logo + Recherche + Icons + Panier */}
         <div className="content-container">
-          <div className="flex items-center justify-between h-20 gap-8">
+          <div className="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-8">
             {/* Mobile Menu + Logo */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <div className="lg:hidden">
                 <SideMenu regions={regions} categories={categories} />
               </div>
@@ -45,25 +45,19 @@ export default async function Nav() {
               {/* Logo */}
               <LocalizedClientLink
                 href="/"
-                className="flex items-center gap-3 group/logo"
+                className="flex items-center group/logo"
                 data-testid="nav-store-link"
               >
-                <div className="hidden sm:block">
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-700 to-amber-900 bg-clip-text text-transparent">
-                    La Cabrade
-                  </h1>
-                  <p className="text-xs text-gray-500 -mt-1">LC•EQUESTRIAN</p>
-                </div>
-                <div className="sm:hidden">
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-amber-700 to-amber-900 bg-clip-text text-transparent">
-                    LC•EQUESTRIAN
-                  </h1>
-                </div>
+                <img 
+                  src="https://ik.imagekit.io/kodt9cn6f/Cabrade/Logo-cabrade.webp" 
+                  alt="La Cabrade" 
+                  className="h-10 sm:h-12 lg:h-14 w-auto object-contain"
+                />
               </LocalizedClientLink>
             </div>
 
             {/* Actions de droite : Recherche + Icons + Panier */}
-            <div className="flex items-center gap-3 flex-1 justify-end">
+            <div className="flex items-center gap-1 sm:gap-3 flex-1 justify-end">
               {/* Recherche Desktop - Ultra visible */}
               <div className="hidden xl:block w-full max-w-xl">
                 <div className="relative">
@@ -74,7 +68,7 @@ export default async function Nav() {
               {/* Icône recherche mobile */}
               {process.env.NEXT_PUBLIC_FEATURE_SEARCH_ENABLED && (
                 <LocalizedClientLink
-                  className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="xl:hidden p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors"
                   href="/search"
                   scroll={false}
                   data-testid="nav-search-link"
@@ -84,13 +78,15 @@ export default async function Nav() {
                 </LocalizedClientLink>
               )}
 
-              {/* Wishlist */}
-              <WishlistButton />
+              {/* Wishlist - masqué sur très petit écran */}
+              <div className="hidden xs:block">
+                <WishlistButton />
+              </div>
 
-              {/* Compte */}
+              {/* Compte - visible uniquement sur tablette+ */}
               <LocalizedClientLink
                 href="/account"
-                className="hidden sm:flex p-2 rounded-lg hover:bg-gray-100 transition-colors group"
+                className="hidden md:flex p-2 rounded-lg hover:bg-gray-100 transition-colors group"
                 data-testid="nav-account-link"
                 aria-label="Mon compte"
               >
@@ -101,13 +97,13 @@ export default async function Nav() {
               <Suspense
                 fallback={
                   <LocalizedClientLink
-                    className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors font-medium"
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors font-medium text-sm"
                     href="/cart"
                     data-testid="nav-cart-link"
                   >
-                    <ShoppingBag className="w-5 h-5" />
+                    <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="hidden sm:inline">Panier</span>
-                    <span className="bg-white text-amber-600 text-xs px-2 py-0.5 rounded-full font-bold">
+                    <span className="bg-white text-amber-600 text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-bold">
                       0
                     </span>
                   </LocalizedClientLink>
@@ -119,7 +115,7 @@ export default async function Nav() {
           </div>
 
           {/* Barre de recherche mobile */}
-          <div className="xl:hidden pb-4">
+          <div className="xl:hidden pb-3 sm:pb-4">
             <SearchBar />
           </div>
         </div>

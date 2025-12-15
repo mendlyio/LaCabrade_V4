@@ -8,14 +8,15 @@ import { Fragment, useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CountrySelect from "../country-select"
 import { HttpTypes } from "@medusajs/types"
+import { useTranslate } from "@lib/context/language-context"
 
-// Items principaux (non catégories)
-const SideMenuItems = [
-  { name: "Accueil", href: "/" },
-  { name: "Nouveautés", href: "/nouveautes", badge: "NEW" },
-  { name: "Outlet", href: "/outlet", badge: "PROMO" },
-  { name: "Bon cadeau", href: "/produits/bon-cadeau" },
-  { name: "À Propos", href: "/a-propos" },
+// Items principaux (non catégories) - les clés de traduction
+const SideMenuItemsKeys = [
+  { key: "nav.accueil", href: "/" },
+  { key: "nav.nouveautes", href: "/nouveautes", badge: "NEW" },
+  { key: "nav.outlet", href: "/outlet", badge: "PROMO" },
+  { key: "nav.bon_cadeau", href: "/produits/bon-cadeau" },
+  { key: "nav.a_propos", href: "/a-propos" },
 ]
 
 type SideMenuProps = {
@@ -26,6 +27,7 @@ type SideMenuProps = {
 const SideMenu = ({ regions, categories = [] }: SideMenuProps) => {
   const toggleState = useToggleState()
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  const t = useTranslate()
   
   const parentCategories = categories?.filter(cat => !cat.parent_category) || []
 
@@ -55,7 +57,7 @@ const SideMenu = ({ regions, categories = [] }: SideMenuProps) => {
                     <span className={`w-5 h-0.5 bg-current transition-all duration-300 ${open ? 'opacity-0' : ''}`}></span>
                     <span className={`w-5 h-0.5 bg-current transition-all duration-300 ${open ? '-rotate-45 -translate-y-1.5' : ''}`}></span>
                   </div>
-                  <span className="text-sm font-medium">Menu</span>
+                  <span className="text-sm font-medium">{t("nav.menu")}</span>
                 </Popover.Button>
               </div>
 
@@ -103,16 +105,16 @@ const SideMenu = ({ regions, categories = [] }: SideMenuProps) => {
                       {/* Menu Items */}
                       <nav className="flex-1 overflow-y-auto custom-scrollbar p-6">
                         <ul className="space-y-2">
-                          {SideMenuItems.map((item) => (
-                            <li key={item.name}>
+                          {SideMenuItemsKeys.map((item) => (
+                            <li key={item.key}>
                               <LocalizedClientLink
                                 href={item.href}
                                 className="flex items-center gap-4 px-4 py-3 rounded-xl text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-all duration-200 group relative"
                                 onClick={close}
-                                data-testid={`${item.name.toLowerCase()}-link`}
+                                data-testid={`${item.key.toLowerCase()}-link`}
                               >
                                 <span className="text-base font-medium flex-1">
-                                  {item.name}
+                                  {t(item.key as any)}
                                 </span>
                                 {item.badge && (
                                   <span className="px-2 py-1 bg-red-500 text-white text-xs rounded-full font-bold">

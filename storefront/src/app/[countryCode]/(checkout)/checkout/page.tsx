@@ -41,46 +41,49 @@ export default async function Checkout() {
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white">
-        <div className="content-container py-12">
+        <div className="content-container py-6 sm:py-8 md:py-12">
           <div className="max-w-3xl">
-            <div className="inline-block bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full mb-4">
-              <span className="text-sm font-semibold flex items-center gap-2">
-                <CreditCard className="w-4 h-4" />
+            <div className="inline-block bg-white/20 backdrop-blur-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full mb-3 sm:mb-4">
+              <span className="text-xs sm:text-sm font-semibold flex items-center gap-2">
+                <CreditCard className="w-3 h-3 sm:w-4 sm:h-4" />
                 Paiement Sécurisé
               </span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold mb-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2">
               Finalisation de votre commande
             </h1>
-            <p className="text-white/90 mb-4">
+            <p className="text-white/90 mb-3 sm:mb-4 text-sm sm:text-base">
               {itemCount > 0 
                 ? `${itemCount} article${itemCount > 1 ? 's' : ''} • Dernière étape avant de recevoir votre commande`
                 : "Complétez vos informations pour finaliser votre achat"}
             </p>
             
             {/* Étapes de checkout */}
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg">
-                <LockClosedSolid className="w-4 h-4" />
-                <span>SSL Sécurisé</span>
+            <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-white/10 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg">
+                <LockClosedSolid className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">SSL Sécurisé</span>
+                <span className="xs:hidden">SSL</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg">
-                <ShieldCheck className="w-4 h-4" />
-                <span>Données protégées</span>
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-white/10 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg">
+                <ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">Données protégées</span>
+                <span className="xs:hidden">Protégé</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-2 rounded-lg">
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-white/10 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg">
                 <span>🚚</span>
-                <span>Livraison rapide</span>
+                <span className="hidden xs:inline">Livraison rapide</span>
+                <span className="xs:hidden">Rapide</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Breadcrumb */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="content-container py-4">
-          <nav className="flex items-center gap-2 text-sm text-gray-600">
+      {/* Breadcrumb - masqué sur très petit écran */}
+      <div className="hidden sm:block bg-white border-b border-gray-200">
+        <div className="content-container py-3 sm:py-4">
+          <nav className="flex items-center gap-2 text-xs sm:text-sm text-gray-600">
             <LocalizedClientLink href="/" className="hover:text-amber-600 transition-colors">
               Accueil
             </LocalizedClientLink>
@@ -95,22 +98,22 @@ export default async function Checkout() {
       </div>
 
       {/* Main Content */}
-      <div className="content-container py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-8">
+      <div className="content-container py-6 sm:py-8 md:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-6 sm:gap-8">
           {/* Formulaire de checkout */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               {/* En-tête du formulaire */}
-              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 p-6">
-                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                  <span className="w-8 h-8 bg-amber-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-gray-200 p-4 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <span className="w-7 h-7 sm:w-8 sm:h-8 bg-amber-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                     1
                   </span>
                   Informations de commande
                 </h2>
               </div>
 
-              <div className="p-6 md:p-8">
+              <div className="p-4 sm:p-6 md:p-8">
             <Wrapper cart={cart}>
               <CheckoutForm cart={cart} customer={customer} />
             </Wrapper>
@@ -120,9 +123,9 @@ export default async function Checkout() {
             {/* Retour au panier */}
             <LocalizedClientLink
               href="/cart"
-              className="flex items-center justify-center gap-2 px-6 py-3 text-amber-600 hover:text-amber-700 font-medium transition-colors"
+              className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base text-amber-600 hover:text-amber-700 font-medium transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
               <span>Retour au panier</span>
@@ -130,8 +133,8 @@ export default async function Checkout() {
           </div>
 
           {/* Résumé de la commande */}
-          <div className="lg:sticky lg:top-24 h-fit space-y-6">
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+          <div className="lg:sticky lg:top-24 h-fit space-y-4 sm:space-y-6">
+            <div className="bg-white rounded-lg sm:rounded-xl shadow-lg border border-gray-200 overflow-hidden">
               <CheckoutSummary cart={cart} customer={customer} />
             </div>
 

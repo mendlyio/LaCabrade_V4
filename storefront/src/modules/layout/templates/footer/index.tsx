@@ -24,7 +24,7 @@ export default async function Footer() {
             {/* Réseaux sociaux */}
             <div className="flex gap-2 pt-2">
               <a
-                href="https://facebook.com/lacabrade"
+                href="https://www.facebook.com/SellerieLaCabrade/?locale=fr_FR"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 rounded-full bg-gray-800 hover:bg-amber-600 flex items-center justify-center text-amber-400 hover:text-white transition-all duration-200 shadow-sm border border-gray-700"
@@ -35,7 +35,7 @@ export default async function Footer() {
                 </svg>
               </a>
               <a
-                href="https://instagram.com/lacabrade"
+                href="https://www.instagram.com/lacabrade/?hl=fr"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 rounded-full bg-gray-800 hover:bg-amber-600 flex items-center justify-center text-amber-400 hover:text-white transition-all duration-200 shadow-sm border border-gray-700"
@@ -46,7 +46,7 @@ export default async function Footer() {
                 </svg>
               </a>
               <a
-                href="https://tiktok.com/@lacabrade"
+                href="https://www.tiktok.com/@selleriela.cabrade"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 rounded-full bg-gray-800 hover:bg-amber-600 flex items-center justify-center text-amber-400 hover:text-white transition-all duration-200 shadow-sm border border-gray-700"
@@ -135,14 +135,14 @@ export default async function Footer() {
               </li>
               <li>
                 <a
-                  href="mailto:info@lacabrade.be"
+                  href="mailto:contact@sellerielacabrade.be"
                   className="text-sm text-gray-300 hover:text-amber-400 transition-colors flex items-center gap-2"
                 >
                   <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
                     <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
                   </svg>
-                  info@lacabrade.be
+                  contact@sellerielacabrade.be
                 </a>
               </li>
               <li>
