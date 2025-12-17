@@ -492,22 +492,65 @@ export const syncFromErpWorkflow = createWorkflow(
 
     const createResult = createProductsStep({ productsToCreate, dryRun: input.dryRun })
 
-    // Update Step (similaire mais avec update)
+    // Update Step - utilise le workflow officiel Medusa pour mettre à jour produits ET prix
     const updateProductsStep = createStep(
         "update-products",
         async ({ productsToUpdate, dryRun }: { productsToUpdate: any[]; dryRun: boolean }, { container }) => {
             if (dryRun || !productsToUpdate.length) return new StepResponse({ updated: 0 })
-            const productService = container.resolve(Modules.PRODUCT)
+            
+            let updatedCount = 0
+            
             for (const p of productsToUpdate) {
-                await productService.updateProducts(p.id, { 
-                    title: p.title, description: p.description, handle: p.handle, 
-                    status: p.status, metadata: p.metadata, 
-                    // Update category!
-                    category_ids: p.categories?.map((c: any) => c.id)
-                })
-                // Update image logic (MinIO) ...
+                try {
+                    // Préparer le payload pour le workflow update officiel
+                    const updatePayload = {
+                        id: p.id,
+                        title: p.title,
+                        description: p.description,
+                        handle: p.handle,
+                        status: p.status,
+                        metadata: p.metadata,
+                        // Inclure les variantes avec leurs prix pour mise à jour
+                        variants: p.variants?.map((v: any) => ({
+                            id: v.id, // ID existant pour update
+                            title: v.title,
+                            sku: v.sku,
+                            barcode: v.barcode,
+                            weight: v.weight,
+                            metadata: v.metadata,
+                            options: v.options,
+                            prices: v.prices, // Prix mis à jour depuis Odoo
+                        })),
+                    }
+                    
+                    // Utiliser le workflow officiel Medusa qui gère les prix correctement
+                    const workflow = updateProductsWorkflow(container)
+                    await workflow.run({ input: { products: [updatePayload] } })
+                    
+                    console.log(`✅ [WORKFLOW] Produit ${p.title} (${p.id}) mis à jour avec prix`)
+                    updatedCount++
+                } catch (updateError: any) {
+                    console.warn(`⚠️ [WORKFLOW] Erreur mise à jour produit ${p.id}:`, updateError.message)
+                    
+                    // Fallback: mise à jour basique sans les prix
+                    try {
+                        const productService = container.resolve(Modules.PRODUCT)
+                        await productService.updateProducts(p.id, { 
+                            title: p.title, 
+                            description: p.description, 
+                            handle: p.handle, 
+                            status: p.status, 
+                            metadata: p.metadata, 
+                        })
+                        console.log(`⚠️ [WORKFLOW] Produit ${p.id} mis à jour (sans prix - fallback)`)
+                        updatedCount++
+                    } catch (fallbackError: any) {
+                        console.error(`❌ [WORKFLOW] Échec total mise à jour ${p.id}:`, fallbackError.message)
+                    }
+                }
             }
-            return new StepResponse({ updated: productsToUpdate.length })
+            
+            return new StepResponse({ updated: updatedCount })
         }
     )
     
