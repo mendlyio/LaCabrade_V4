@@ -54,6 +54,41 @@ function odooPriceToMedusaAmount(price: unknown): number {
   return priceIsInCents ? Math.round(raw) : Math.round(raw * 100)
 }
 
+function uniq<T>(arr: T[]): T[] {
+  return Array.from(new Set(arr))
+}
+
+/**
+ * Déduit les options (ex: Couleur/Taille) depuis les variantes Odoo
+ * même si `attribute_line_ids.value_ids` est vide/inexploitable.
+ */
+function buildOptionsFromVariants(variants: any[]): { title: string; values: string[] }[] {
+  const map = new Map<string, Set<string>>()
+
+  for (const variant of variants || []) {
+    const values = variant?.product_template_variant_value_ids
+    if (!Array.isArray(values)) continue
+
+    for (const v of values) {
+      const attrName =
+        v?.attribute_id?.display_name ||
+        v?.attribute_id?.name ||
+        (Array.isArray(v?.attribute_id) ? v.attribute_id[1] : null) ||
+        null
+      const valName = v?.name || null
+      if (!attrName || !valName) continue
+
+      if (!map.has(attrName)) map.set(attrName, new Set())
+      map.get(attrName)!.add(valName)
+    }
+  }
+
+  return Array.from(map.entries()).map(([title, values]) => ({
+    title,
+    values: Array.from(values),
+  }))
+}
+
 // Step 1: Récupérer les catégories Odoo
 const fetchOdooCategoriesStep = createStep(
   "fetch-odoo-categories",
@@ -298,6 +333,15 @@ export const syncFromErpWorkflow = createWorkflow(
               }))
           }
 
+          // Si Odoo ne renvoie pas correctement `attribute_line_ids.value_ids`,
+          // on reconstruit les options depuis les variantes (robuste).
+          if (hasMultipleVariants && validOptions.length === 0) {
+            const fromVariants = buildOptionsFromVariants(odooProduct.product_variant_ids as any[])
+            if (fromVariants.length) {
+              validOptions = fromVariants
+            }
+          }
+
           // Si plusieurs variantes mais pas d'attributs → créer un attribut "Variante" automatiquement
           if (hasMultipleVariants && validOptions.length === 0) {
             console.log(`🔧 [WORKFLOW] Création attribut automatique pour ${odooProduct.display_name} (${odooProduct.product_variant_ids.length} variantes sans attributs)`)
@@ -315,7 +359,11 @@ export const syncFromErpWorkflow = createWorkflow(
 
           // Traiter comme produit avec variantes si on a des variantes ET des options
           if (hasMultipleVariants && validOptions.length > 0) {
-            product.options = validOptions
+            // normaliser: unique + ordre stable
+            product.options = validOptions.map((o: any) => ({
+              title: o.title,
+              values: uniq((o.values || []).filter(Boolean)),
+            }))
             
             product.variants = odooProduct.product_variant_ids.map((variant, variantIndex) => {
               const options: Record<string, string> = {}
@@ -618,7 +666,7 @@ export const syncFromErpWorkflow = createWorkflow(
                       )
                     }
 
-                    // Préparer le payload pour le workflow update officiel
+                    // 1) Mettre à jour le produit + options (sans variantes, pour éviter les DTO incompatibles)
                     const updatePayload = {
                         id: p.id,
                         title: p.title,
@@ -626,22 +674,29 @@ export const syncFromErpWorkflow = createWorkflow(
                         handle: p.handle,
                         status: p.status,
                         metadata: p.metadata,
-                        // Inclure les variantes avec leurs prix pour mise à jour
-                        variants: p.variants?.map((v: any) => ({
-                            id: v.id, // ID existant pour update
-                            title: v.title,
-                            sku: v.sku,
-                            barcode: v.barcode,
-                            weight: v.weight,
-                            metadata: v.metadata,
-                            options: v.options,
-                            prices: v.prices, // Prix mis à jour depuis Odoo
-                        })),
+                        options: p.options,
                     }
                     
                     // Utiliser le workflow officiel Medusa qui gère les prix correctement
                     const workflow = updateProductsWorkflow(container)
                     await workflow.run({ input: { products: [updatePayload] } })
+
+                    // 2) Upsert variantes (création + update) — overwrite SKU/options/title/etc.
+                    if (Array.isArray(p.variants) && p.variants.length) {
+                      await productService.upsertProductVariants(
+                        p.variants.map((v: any) => ({
+                          id: v.id,
+                          product_id: p.id,
+                          title: v.title,
+                          sku: v.sku,
+                          barcode: v.barcode,
+                          weight: v.weight,
+                          manage_inventory: v.manage_inventory,
+                          metadata: v.metadata,
+                          options: v.options,
+                        }))
+                      )
+                    }
 
                     // 🔁 Forcer la mise à jour des prix via le workflow Pricing (robuste)
                     // Certains payloads "updateProductsWorkflow" peuvent ignorer les prix selon la forme des DTO.
