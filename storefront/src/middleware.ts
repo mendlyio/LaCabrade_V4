@@ -132,6 +132,17 @@ async function getCountryCode(
  * Middleware to handle region selection and onboarding status.
  */
 export async function middleware(request: NextRequest) {
+  // IMPORTANT: Ne jamais rediriger les routes internes Next.js (ex: /_next/image)
+  // sinon l'optimiseur d'images et les assets Next cassent (404).
+  const pathname = request.nextUrl.pathname
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname === "/favicon.ico"
+  ) {
+    return NextResponse.next()
+  }
+
   const searchParams = request.nextUrl.searchParams
   const isOnboarding = searchParams.get("onboarding") === "true"
   const cartId = searchParams.get("cart_id")
@@ -186,5 +197,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|favicon.ico|.*\\.png|.*\\.jpg|.*\\.gif|.*\\.svg).*)"], // prevents redirecting on static files
+  // Exclure toutes les routes internes Next.js (/ _next /...), et l'API
+  // Sinon /_next/image est redirigé vers /{country}/_next/image et renvoie 404.
+  matcher: ["/((?!api|_next|favicon.ico).*)"],
 }
