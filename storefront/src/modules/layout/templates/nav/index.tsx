@@ -138,16 +138,7 @@ export default async function Nav() {
                 Nouveautés
               </NavLink>
 
-              {/* 3. Outlet */}
-              <NavLink
-                href="/outlet"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
-                activeClassName="bg-red-100 text-red-800 shadow-sm"
-              >
-                Outlet
-              </NavLink>
-
-              {/* 4. Bon cadeau */}
+              {/* 3. Bon cadeau */}
               <NavLink
                 href="/produits/bon-cadeau"
                 className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
@@ -156,10 +147,10 @@ export default async function Nav() {
                 Bon cadeau
               </NavLink>
 
-              {/* 5. Marques (Dropdown dynamique) */}
+              {/* 4. Marques (Dropdown dynamique) */}
               <BrandsMenu collections={collections} />
 
-              {/* 6. À Propos */}
+              {/* 5. À Propos */}
               <NavLink
                 href="/a-propos"
                 className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
