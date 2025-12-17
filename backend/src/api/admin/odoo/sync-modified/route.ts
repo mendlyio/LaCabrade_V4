@@ -8,14 +8,21 @@ import odooSyncProductsJob from "../../../../jobs/odoo-sync-products"
  */
 export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
   try {
-    console.log(`🔄 [ADMIN] Synchronisation manuelle des produits modifiés dans Odoo`)
+    const force = (req.query.force as string) === "true"
+    console.log(
+      `🔄 [ADMIN] Synchronisation manuelle des produits ${
+        force ? "(FORCE / overwrite)" : "modifiés"
+      } dans Odoo`
+    )
 
     // Exécuter le job de synchronisation
-    await odooSyncProductsJob(req.scope)
+    await odooSyncProductsJob(req.scope, { force })
 
     return res.json({
       success: true,
-      message: "Synchronisation des produits modifiés terminée",
+      message: force
+        ? "Synchronisation FORCÉE terminée (overwrite)"
+        : "Synchronisation des produits modifiés terminée",
     })
   } catch (error: any) {
     console.error("❌ [ADMIN] Erreur synchronisation produits modifiés:", error)

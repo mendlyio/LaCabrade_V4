@@ -10,8 +10,16 @@ import { odooSyncCache } from "../lib/odoo-cache"
  * S'exécute toutes les 2 heures
  * Compare write_date Odoo vs updated_at Medusa
  */
-export default async function odooSyncProductsJob(container: MedusaContainer) {
-  console.log(`🔄 [JOB] Démarrage synchronisation produits Odoo modifiés`)
+export default async function odooSyncProductsJob(
+  container: MedusaContainer,
+  options: { force?: boolean } = {}
+) {
+  const force = !!options.force
+  console.log(
+    `🔄 [JOB] Démarrage synchronisation produits Odoo ${
+      force ? "(FORCE / overwrite)" : "modifiés"
+    }`
+  )
 
   try {
     // Vérifier si Odoo est configuré
@@ -58,20 +66,28 @@ export default async function odooSyncProductsJob(container: MedusaContainer) {
     const odooProductsInfo = await odooService.fetchProductsWithDates(odooProductIds)
 
     // Filtrer les produits modifiés dans Odoo depuis leur dernière sync
+    // En mode "force", on resynchronise TOUT (overwrite), même si la date n'a pas bougé.
     const modifiedProductIds: number[] = []
-    
-    for (const odooProduct of odooProductsInfo) {
-      const medusaProduct = productsMap.get(odooProduct.id.toString())
-      if (!medusaProduct) continue
 
-      // Comparer les dates (Odoo write_date vs Medusa updated_at)
-      const odooDate = new Date(odooProduct.write_date)
-      const medusaDate = medusaProduct.updated_at
+    if (force) {
+      modifiedProductIds.push(...odooProductIds)
+      console.log(`⚡ [JOB] Mode FORCE: ${modifiedProductIds.length} produit(s) à resynchroniser`)
+    } else {
+      for (const odooProduct of odooProductsInfo) {
+        const medusaProduct = productsMap.get(odooProduct.id.toString())
+        if (!medusaProduct) continue
 
-      // Si Odoo plus récent, ajouter à la liste
-      if (odooDate > medusaDate) {
-        console.log(`  📝 Produit ${odooProduct.id} modifié dans Odoo: ${odooDate.toISOString()} > ${medusaDate.toISOString()}`)
-        modifiedProductIds.push(odooProduct.id)
+        // Comparer les dates (Odoo write_date vs Medusa updated_at)
+        const odooDate = new Date(odooProduct.write_date)
+        const medusaDate = medusaProduct.updated_at
+
+        // Si Odoo plus récent, ajouter à la liste
+        if (odooDate > medusaDate) {
+          console.log(
+            `  📝 Produit ${odooProduct.id} modifié dans Odoo: ${odooDate.toISOString()} > ${medusaDate.toISOString()}`
+          )
+          modifiedProductIds.push(odooProduct.id)
+        }
       }
     }
 

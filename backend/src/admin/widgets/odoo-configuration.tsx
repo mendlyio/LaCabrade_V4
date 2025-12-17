@@ -367,13 +367,13 @@ const OdooConfigurationWidget = () => {
   }
 
   const syncModified = async () => {
-    if (!confirm("🔄 Synchroniser uniquement les produits modifiés dans Odoo ?\n\nCette action compare les dates de modification et met à jour uniquement les produits changés.")) {
+    if (!confirm("⚡ Synchroniser les produits Odoo (FORCE / overwrite) ?\n\nCette action va re-synchroniser et écraser les données (prix, variantes, etc.) même si Odoo ne détecte pas de modification.\n\n⚠️ Peut prendre plusieurs minutes.")) {
       return
     }
 
     setIsSyncing(true)
     try {
-      const response = await fetch("/admin/odoo/sync-modified", {
+      const response = await fetch("/admin/odoo/sync-modified?force=true", {
         method: "POST",
         credentials: "include",
       })
