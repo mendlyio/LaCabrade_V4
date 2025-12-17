@@ -105,7 +105,15 @@ export default class OdooModuleService {
         ],
       })
     } catch (error: any) {
-      const msg = `${error?.message || error}`.toLowerCase()
+      // json-rpc-2.0 remonte souvent le détail dans `error.data.message` / `error.data.debug`
+      const msg = `${[
+        error?.message,
+        error?.data?.message,
+        error?.data?.debug,
+        error,
+      ]
+        .filter(Boolean)
+        .join(" | ")}`.toLowerCase()
       const brandField = this.getBrandField()
 
       // Retry 1x si le champ de marque est inconnu dans cet Odoo
