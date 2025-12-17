@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { Button, Input, Text, Heading, clx } from "@medusajs/ui"
 import { StoreCart } from "@medusajs/types"
 import { MapPin, CheckCircleSolid } from "@medusajs/icons"
-import { useTranslate } from "@lib/context/language-context"
 
 // URL du backend Medusa + clé publishable (obligatoire pour les endpoints store)
 const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
@@ -31,7 +30,6 @@ type PickupPoint = {
 }
 
 const PickupPoints = ({ cart }: PickupPointsProps) => {
-  const t = useTranslate()
   const [postalCode, setPostalCode] = useState(cart.shipping_address?.postal_code || "")
   const [points, setPoints] = useState<PickupPoint[]>([])
   const [loading, setLoading] = useState(false)
@@ -39,7 +37,6 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
     (cart.metadata?.bpost_pickup_point as any)?.Id || null
   )
   const [error, setError] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState("")
 
   // Charger les points initiaux si code postal présent
   useEffect(() => {
@@ -54,13 +51,7 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
     setError(null)
     try {
       const countryCode = (cart.shipping_address?.country_code || "BE").toUpperCase()
-      const city = cart.shipping_address?.city || ""
-      const street = cart.shipping_address?.address_1 || ""
-      const url = `${BACKEND_URL}/store/bpost/pickup-points?postal_code=${encodeURIComponent(
-        postalCode.trim()
-      )}&country=${encodeURIComponent(countryCode)}&city=${encodeURIComponent(city)}&street=${encodeURIComponent(
-        street
-      )}&cart_id=${encodeURIComponent(cart.id)}`
+      const url = `${BACKEND_URL}/store/bpost/pickup-points?postal_code=${encodeURIComponent(postalCode.trim())}&country=${encodeURIComponent(countryCode)}`
       console.log("[PickupPoints] Appel:", url)
       
       const res = await fetch(url, {
@@ -78,11 +69,11 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
       
       setPoints(data.points || [])
       if ((data.points || []).length === 0) {
-        setError(data.error || t("bpost.no_results" as any))
+        setError(data.error || "Aucun point relais trouvé pour ce code postal.")
       }
     } catch (e: any) {
       console.error("[PickupPoints] Erreur:", e)
-      setError(e.message || t("bpost.no_results" as any))
+      setError(e.message || "Impossible de charger les points relais.")
     } finally {
       setLoading(false)
     }
@@ -108,7 +99,7 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
       
       setSelectedPointId(point.Id)
     } catch (e) {
-      setError(t("bpost.no_results" as any))
+      setError("Impossible de sélectionner ce point relais.")
     } finally {
       setLoading(false)
     }
@@ -119,19 +110,19 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
       <div className="flex flex-col gap-4">
         <Heading level="h3" className="text-lg text-gray-900 flex items-center gap-2">
           <MapPin className="text-amber-600" />
-          {t("bpost.title" as any)}
+          Choisir un point relais Bpost
         </Heading>
 
         <div className="flex gap-2">
           <div className="w-full max-w-[200px]">
             <Input 
-              placeholder={t("bpost.postal_code" as any)} 
+              placeholder="Code postal" 
               value={postalCode}
               onChange={(e) => setPostalCode(e.target.value)}
             />
           </div>
           <Button onClick={searchPoints} isLoading={loading} variant="secondary">
-            {t("bpost.search" as any)}
+            Rechercher
           </Button>
         </div>
 
@@ -139,31 +130,8 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
           <Text className="text-red-600 text-small-regular">{error}</Text>
         )}
 
-        {/* Barre de recherche pour filtrer les points */}
-        {points.length > 0 && (
-          <div className="mt-2">
-            <Input 
-              placeholder={t("bpost.search_placeholder" as any)} 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full"
-            />
-          </div>
-        )}
-
         <div className="grid grid-cols-1 gap-3 mt-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-          {points
-            .filter((point) => {
-              if (!searchQuery.trim()) return true
-              const query = searchQuery.toLowerCase()
-              return (
-                point.Name.toLowerCase().includes(query) ||
-                point.Address.Streetname1.toLowerCase().includes(query) ||
-                point.Address.City.toLowerCase().includes(query) ||
-                point.Address.PostalCode.includes(query)
-              )
-            })
-            .map((point) => {
+          {points.map((point) => {
             const isSelected = selectedPointId === point.Id
             return (
               <div 
@@ -191,7 +159,7 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
                   </div>
                   {isSelected && (
                     <span className="text-xs font-bold text-amber-600 bg-white px-2 py-1 rounded border border-amber-200">
-                      {t("bpost.selected" as any)}
+                      Sélectionné
                     </span>
                   )}
                 </div>
@@ -199,24 +167,9 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
             )
           })}
           
-          {points.filter((point) => {
-            if (!searchQuery.trim()) return true
-            const query = searchQuery.toLowerCase()
-            return (
-              point.Name.toLowerCase().includes(query) ||
-              point.Address.Streetname1.toLowerCase().includes(query) ||
-              point.Address.City.toLowerCase().includes(query) ||
-              point.Address.PostalCode.includes(query)
-            )
-          }).length === 0 && points.length > 0 && searchQuery && (
-            <Text className="text-gray-500 text-center py-4 italic">
-              {t("bpost.no_search_results" as any)}
-            </Text>
-          )}
-          
           {points.length === 0 && !loading && postalCode && (
             <Text className="text-gray-500 text-center py-4 italic">
-              {t("bpost.no_results" as any)}
+              Aucun point relais trouvé pour ce code postal.
             </Text>
           )}
         </div>

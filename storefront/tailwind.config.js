@@ -34,20 +34,6 @@ module.exports = {
           80: "#1F2937",
           90: "#111827",
         },
-        // Remplacement d'amber par la couleur brand #ac2948
-        amber: {
-          50: "#fdf2f4",
-          100: "#fce7eb",
-          200: "#f9d0d9",
-          300: "#f4a8ba",
-          400: "#ed7593",
-          500: "#e3456f",
-          600: "#d1295a",
-          700: "#ac2948",
-          800: "#8e243e",
-          900: "#792239",
-          950: "#430f1e",
-        },
       },
       borderRadius: {
         none: "0px",

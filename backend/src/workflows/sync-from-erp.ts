@@ -402,21 +402,38 @@ export const syncFromErpWorkflow = createWorkflow(
             // Image Upload (MinIO)
             if (productData.odoo_image_base64 && created) {
                 try {
-                    const { Client } = await import('minio')
-                    const rawEndpoint = process.env.MINIO_ENDPOINT || 'bucket-production-de72.up.railway.app'
-                    const endpoint = rawEndpoint.replace(/^https?:\/\//, '')
-                    const client = new Client({
-                        endPoint: endpoint,
-                        port: 443, useSSL: true,
-                        accessKey: process.env.MINIO_ACCESS_KEY || 'jrkw3qd9t17ftl',
-                        secretKey: process.env.MINIO_SECRET_KEY || '9lmslk6nfmjhaph24v5qov71u43doz8x'
-                    })
-                    const filename = `odoo/products/${created.id}/${Date.now()}.png`
-                    const buffer = Buffer.from(productData.odoo_image_base64, 'base64')
-                    await client.putObject(process.env.MINIO_BUCKET || 'medusa-media', filename, buffer, buffer.length, { 'Content-Type': 'image/png', 'x-amz-acl': 'public-read' })
-                    const url = `https://${endpoint}/${process.env.MINIO_BUCKET || 'medusa-media'}/${filename}`
-                    await productService.updateProducts(created.id, { images: [{ url }], thumbnail: url })
-                } catch (e) { console.error(e) }
+                    // Vérifier que les variables MinIO sont définies
+                    if (!process.env.MINIO_ENDPOINT || !process.env.MINIO_ACCESS_KEY || !process.env.MINIO_SECRET_KEY) {
+                        console.warn(`⚠️ [WORKFLOW] Variables MinIO non définies, upload d'image ignoré pour produit ${created.id}`)
+                    } else {
+                        const { Client } = await import('minio')
+                        const rawEndpoint = process.env.MINIO_ENDPOINT
+                        const endpoint = rawEndpoint.replace(/^https?:\/\//, '')
+                        const bucket = process.env.MINIO_BUCKET || 'medusa-media'
+                        
+                        const client = new Client({
+                            endPoint: endpoint,
+                            port: 443, 
+                            useSSL: true,
+                            accessKey: process.env.MINIO_ACCESS_KEY,
+                            secretKey: process.env.MINIO_SECRET_KEY
+                        })
+                        
+                        const filename = `odoo/products/${created.id}/${Date.now()}.png`
+                        const buffer = Buffer.from(productData.odoo_image_base64, 'base64')
+                        
+                        await client.putObject(bucket, filename, buffer, buffer.length, { 
+                            'Content-Type': 'image/png', 
+                            'x-amz-acl': 'public-read' 
+                        })
+                        
+                        const url = `https://${endpoint}/${bucket}/${filename}`
+                        await productService.updateProducts(created.id, { images: [{ url }], thumbnail: url })
+                        console.log(`📷 [WORKFLOW] Image uploadée: ${url}`)
+                    }
+                } catch (e: any) { 
+                    console.error(`❌ [WORKFLOW] Erreur upload image MinIO:`, e.message) 
+                }
             }
             
             // Init Stock (Odoo) - Récupérer ou créer les inventory items pour CHAQUE variante

@@ -7,9 +7,6 @@ import { GoogleConsentMode } from "@modules/common/components/google-analytics/c
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
-  icons: {
-    icon: "https://ik.imagekit.io/kodt9cn6f/Cabrade/favicon.ico",
-  },
 }
 
 export default function RootLayout(props: { children: React.ReactNode }) {
