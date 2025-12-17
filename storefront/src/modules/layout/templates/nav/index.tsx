@@ -141,8 +141,8 @@ export default async function Nav() {
               {/* 3. Outlet */}
               <NavLink
                 href="/outlet"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-amber-700 hover:text-amber-800 hover:bg-amber-50 transition-all duration-200"
-                activeClassName="bg-amber-50 text-amber-900 shadow-sm"
+                className="px-4 py-2 rounded-lg text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200"
+                activeClassName="bg-red-100 text-red-800 shadow-sm"
               >
                 Outlet
               </NavLink>
