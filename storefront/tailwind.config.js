@@ -34,7 +34,7 @@ module.exports = {
           80: "#1F2937",
           90: "#111827",
         },
-        // Couleur brand La Cabrade #ac2948 (remplace amber)
+        // Remplacement d'amber par la couleur brand #ac2948
         amber: {
           50: "#fdf2f4",
           100: "#fce7eb",

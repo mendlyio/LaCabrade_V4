@@ -1,93 +1,50 @@
 "use client"
 
-import { createContext, useContext, ReactNode } from "react"
-
-// Traductions françaises pour le site La Cabrade
-const translations: Record<string, string> = {
-  // Navigation
-  "nav.menu": "Menu",
-  "nav.accueil": "Accueil",
-  "nav.nouveautes": "Nouveautés",
-  "nav.outlet": "Outlet",
-  "nav.bon_cadeau": "Bon cadeau",
-  "nav.a_propos": "À propos",
-  "nav.boutique": "Boutique",
-  "nav.marques": "Marques",
-  "nav.contact": "Contact",
-  
-  // Produits
-  "product.add_to_cart": "Ajouter au panier",
-  "product.out_of_stock": "Rupture de stock",
-  "product.in_stock": "En stock",
-  "product.select_options": "Sélectionnez les options",
-  
-  // Panier
-  "cart.title": "Panier",
-  "cart.empty": "Votre panier est vide",
-  "cart.checkout": "Commander",
-  
-  // Compte
-  "account.login": "Connexion",
-  "account.register": "Créer un compte",
-  "account.logout": "Déconnexion",
-  "account.my_account": "Mon compte",
-}
-
-type TranslationKey = keyof typeof translations
+import React, { createContext, useContext, useState, useEffect } from "react"
+import { Language } from "@lib/translations"
 
 type LanguageContextType = {
-  locale: string
-  t: (key: TranslationKey | string) => string
+  language: Language
+  setLanguage: (lang: Language) => void
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
-/**
- * Provider pour le contexte de langue
- */
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const contextValue: LanguageContextType = {
-    locale: "fr",
-    t: (key: TranslationKey | string): string => {
-      return translations[key] || key
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  const [language, setLanguageState] = useState<Language>("fr")
+
+  // Charger la langue depuis localStorage au montage
+  useEffect(() => {
+    const savedLang = localStorage.getItem("language") as Language
+    if (savedLang && (savedLang === "fr" || savedLang === "nl")) {
+      setLanguageState(savedLang)
     }
+  }, [])
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang)
+    localStorage.setItem("language", lang)
   }
 
   return (
-    <LanguageContext.Provider value={contextValue}>
+    <LanguageContext.Provider value={{ language, setLanguage }}>
       {children}
     </LanguageContext.Provider>
   )
 }
 
-/**
- * Hook pour utiliser le contexte de langue
- */
 export function useLanguage() {
   const context = useContext(LanguageContext)
-  if (!context) {
-    // Fallback si utilisé hors du Provider
-    return {
-      locale: "fr",
-      t: (key: string) => translations[key] || key
-    }
+  if (context === undefined) {
+    throw new Error("useLanguage must be used within a LanguageProvider")
   }
   return context
 }
 
-/**
- * Hook pour obtenir une fonction de traduction
- * Retourne la traduction française ou la clé si non trouvée
- */
 export function useTranslate() {
-  const { t } = useLanguage()
-  return t
-}
-
-/**
- * Fonction utilitaire pour traduire directement (côté serveur)
- */
-export function t(key: TranslationKey | string): string {
-  return translations[key] || key
+  const { language } = useLanguage()
+  const { getTranslation } = require("@lib/translations")
+  
+  return (key: string) => getTranslation(language, key)
 }
 
