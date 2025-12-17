@@ -237,23 +237,25 @@ const fetchExistingProductsStep = createStep(
   }
 )
 
-// Step: restaurer les produits soft-deleted avant de les mettre à jour
-const restoreDeletedProductsStep = createStep(
-  "restore-deleted-products",
+// Step: si un produit est soft-deleted, on le supprime définitivement avant ré-import.
+// Raison: la restauration peut échouer si des variantes (SKU) entrent en conflit ("already exists").
+// Le hard-delete libère les contraintes uniques, puis le produit est recréé proprement depuis Odoo.
+const hardDeleteSoftDeletedProductsStep = createStep(
+  "hard-delete-soft-deleted-products",
   async (
-    { productIdsToRestore, dryRun }: { productIdsToRestore: string[]; dryRun: boolean },
+    { productIdsToHardDelete, dryRun }: { productIdsToHardDelete: string[]; dryRun: boolean },
     { container }
   ) => {
-    if (dryRun || !productIdsToRestore?.length) {
-      return new StepResponse({ restored: 0 })
+    if (dryRun || !productIdsToHardDelete?.length) {
+      return new StepResponse({ deleted: 0 })
     }
 
     const productService = container.resolve(Modules.PRODUCT)
     console.log(
-      `♻️ [WORKFLOW] Restauration de ${productIdsToRestore.length} produit(s) supprimé(s) (soft-delete)`
+      `🗑️ [WORKFLOW] Hard-delete de ${productIdsToHardDelete.length} produit(s) soft-deleted avant ré-import`
     )
-    await productService.restoreProducts(productIdsToRestore)
-    return new StepResponse({ restored: productIdsToRestore.length })
+    await productService.deleteProducts(productIdsToHardDelete)
+    return new StepResponse({ deleted: productIdsToHardDelete.length })
   }
 )
 
@@ -270,14 +272,14 @@ export const syncFromErpWorkflow = createWorkflow(
     const existingProducts = fetchExistingProductsStep({ odooProducts })
 
     // Préparer les produits
-    const { productsToCreate, productsToUpdate, productIdsToRestore } = transform(
+    const { productsToCreate, productsToUpdate, productIdsToHardDelete } = transform(
       { odooProducts, existingProducts },
       ({ odooProducts, existingProducts }) => {
         console.log(`🔄 [WORKFLOW] Transformation des produits...`)
         
         const productsToCreate: CreateProductWorkflowInputDTO[] = []
         const productsToUpdate: UpdateProductWorkflowInputDTO[] = []
-        const productIdsToRestore: string[] = []
+        const productIdsToHardDelete: string[] = []
 
         odooProducts.forEach((odooProduct: OdooProduct) => {
           try {
@@ -455,10 +457,16 @@ export const syncFromErpWorkflow = createWorkflow(
           }
 
           if (existingProduct) {
+            // Si le produit a été supprimé dans l'admin (soft-delete), on le hard-delete
+            // puis on le recrée depuis Odoo (évite les conflits SKU à la restauration).
             if ((existingProduct as any).deleted_at) {
-              productIdsToRestore.push(existingProduct.id)
+              productIdsToHardDelete.push(existingProduct.id)
+              // IMPORTANT: ne pas conserver l'id, sinon on retombe sur un update sur un record supprimé
+              delete (product as any).id
+              productsToCreate.push(product as CreateProductWorkflowInputDTO)
+            } else {
+              productsToUpdate.push(product as UpdateProductWorkflowInputDTO)
             }
-            productsToUpdate.push(product as UpdateProductWorkflowInputDTO)
           } else {
             productsToCreate.push(product as CreateProductWorkflowInputDTO)
           }
@@ -467,12 +475,15 @@ export const syncFromErpWorkflow = createWorkflow(
           }
         })
 
-        return { productsToCreate, productsToUpdate, productIdsToRestore }
+        return { productsToCreate, productsToUpdate, productIdsToHardDelete }
       }
     )
 
-    // Restaurer avant les create/update (sinon recréation → contraintes uniques)
-    restoreDeletedProductsStep({ productIdsToRestore, dryRun: !!input.dryRun })
+    // Hard-delete avant create, pour libérer les contraintes uniques (SKU, handle, etc.)
+    hardDeleteSoftDeletedProductsStep({
+      productIdsToHardDelete,
+      dryRun: !!input.dryRun,
+    })
 
     // Create & Update Steps (identiques à avant, mais je dois réinclure le code complet pour que ça compile)
     // J'abrège ici pour la lisibilité mais je vais remettre le code complet dans le fichier.
@@ -645,26 +656,8 @@ export const syncFromErpWorkflow = createWorkflow(
                 try {
                     const productService = container.resolve(Modules.PRODUCT)
 
-                    // ✅ Cas ré-import après suppression (soft-delete):
-                    // si le produit existe mais est supprimé, il faut le restaurer AVANT l'update.
-                    // Sinon l'update (workflow/service) peut échouer et le produit reste invisible dans la liste.
-                    try {
-                      const current: any = await productService.retrieveProduct(
-                        p.id,
-                        { select: ["id", "deleted_at"], withDeleted: true } as any
-                      )
-                      if (current?.deleted_at) {
-                        console.log(
-                          `♻️ [WORKFLOW] Produit ${p.id} est soft-deleted, restauration avant mise à jour`
-                        )
-                        await productService.restoreProducts([p.id])
-                      }
-                    } catch (restoreCheckError: any) {
-                      console.warn(
-                        `⚠️ [WORKFLOW] Impossible de vérifier/restaurer ${p.id} avant update:`,
-                        restoreCheckError?.message || restoreCheckError
-                      )
-                    }
+                    // NOTE: les produits soft-deleted sont maintenant hard-delete + recréés
+                    // en amont (transform), pour éviter les conflits SKU à la restauration.
 
                     // 1) Mettre à jour le produit + options (sans variantes, pour éviter les DTO incompatibles)
                     const updatePayload = {
