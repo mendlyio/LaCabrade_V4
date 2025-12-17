@@ -597,6 +597,27 @@ export const syncFromErpWorkflow = createWorkflow(
                 try {
                     const productService = container.resolve(Modules.PRODUCT)
 
+                    // ✅ Cas ré-import après suppression (soft-delete):
+                    // si le produit existe mais est supprimé, il faut le restaurer AVANT l'update.
+                    // Sinon l'update (workflow/service) peut échouer et le produit reste invisible dans la liste.
+                    try {
+                      const current: any = await productService.retrieveProduct(
+                        p.id,
+                        { select: ["id", "deleted_at"], withDeleted: true } as any
+                      )
+                      if (current?.deleted_at) {
+                        console.log(
+                          `♻️ [WORKFLOW] Produit ${p.id} est soft-deleted, restauration avant mise à jour`
+                        )
+                        await productService.restoreProducts([p.id])
+                      }
+                    } catch (restoreCheckError: any) {
+                      console.warn(
+                        `⚠️ [WORKFLOW] Impossible de vérifier/restaurer ${p.id} avant update:`,
+                        restoreCheckError?.message || restoreCheckError
+                      )
+                    }
+
                     // Préparer le payload pour le workflow update officiel
                     const updatePayload = {
                         id: p.id,
