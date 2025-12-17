@@ -151,11 +151,16 @@ const fetchExistingProductsStep = createStep(
     // IMPORTANT: listProducts() est paginé par défaut. Sans `take`, on ne récupère
     // qu'une petite partie des produits, ce qui empêche la re-sync de mettre à jour
     // les produits existants (ils sont alors traités comme "à créer").
+    // Inclure aussi les produits soft-deleted: si un produit a été "supprimé" dans l'admin,
+    // un ré-import doit le restaurer puis l'updater (sinon on tente de recréer et on peut
+    // se heurter à des contraintes uniques: handle/sku/etc.).
     const products = await productService.listProducts(
       {},
       {
-        select: ["id", "metadata"],
+        select: ["id", "metadata", "deleted_at"],
+        relations: ["variants"],
         take: 10000,
+        withDeleted: true,
       }
     )
     // external_id peut être stocké en number ou string selon les imports précédents
@@ -165,6 +170,26 @@ const fetchExistingProductsStep = createStep(
       return externalIds.includes(String(ext))
     })
     return new StepResponse(activeProducts)
+  }
+)
+
+// Step: restaurer les produits soft-deleted avant de les mettre à jour
+const restoreDeletedProductsStep = createStep(
+  "restore-deleted-products",
+  async (
+    { productIdsToRestore, dryRun }: { productIdsToRestore: string[]; dryRun: boolean },
+    { container }
+  ) => {
+    if (dryRun || !productIdsToRestore?.length) {
+      return new StepResponse({ restored: 0 })
+    }
+
+    const productService = container.resolve(Modules.PRODUCT)
+    console.log(
+      `♻️ [WORKFLOW] Restauration de ${productIdsToRestore.length} produit(s) supprimé(s) (soft-delete)`
+    )
+    await productService.restoreProducts(productIdsToRestore)
+    return new StepResponse({ restored: productIdsToRestore.length })
   }
 )
 
@@ -181,18 +206,19 @@ export const syncFromErpWorkflow = createWorkflow(
     const existingProducts = fetchExistingProductsStep({ odooProducts })
 
     // Préparer les produits
-    const { productsToCreate, productsToUpdate } = transform(
+    const { productsToCreate, productsToUpdate, productIdsToRestore } = transform(
       { odooProducts, existingProducts },
       ({ odooProducts, existingProducts }) => {
         console.log(`🔄 [WORKFLOW] Transformation des produits...`)
         
         const productsToCreate: CreateProductWorkflowInputDTO[] = []
         const productsToUpdate: UpdateProductWorkflowInputDTO[] = []
+        const productIdsToRestore: string[] = []
 
         odooProducts.forEach((odooProduct: OdooProduct) => {
           try {
             const existingProduct = existingProducts.find(
-              (p) => p.metadata?.external_id === `${odooProduct.id}`
+              (p: any) => String(p?.metadata?.external_id) === `${odooProduct.id}`
             )
 
             // NOTE: Les catégories ne sont pas synchronisées dans Medusa
@@ -352,6 +378,9 @@ export const syncFromErpWorkflow = createWorkflow(
           }
 
           if (existingProduct) {
+            if ((existingProduct as any).deleted_at) {
+              productIdsToRestore.push(existingProduct.id)
+            }
             productsToUpdate.push(product as UpdateProductWorkflowInputDTO)
           } else {
             productsToCreate.push(product as CreateProductWorkflowInputDTO)
@@ -361,9 +390,12 @@ export const syncFromErpWorkflow = createWorkflow(
           }
         })
 
-        return { productsToCreate, productsToUpdate }
+        return { productsToCreate, productsToUpdate, productIdsToRestore }
       }
     )
+
+    // Restaurer avant les create/update (sinon recréation → contraintes uniques)
+    restoreDeletedProductsStep({ productIdsToRestore, dryRun: !!input.dryRun })
 
     // Create & Update Steps (identiques à avant, mais je dois réinclure le code complet pour que ça compile)
     // J'abrège ici pour la lisibilité mais je vais remettre le code complet dans le fichier.
