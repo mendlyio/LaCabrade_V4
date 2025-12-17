@@ -36,7 +36,7 @@ export default async function StoreTemplateModern({
   return (
     <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen">
       {/* Hero Section */}
-      <div className="bg-[#ac2948] text-white py-12 mb-8">
+      <div className="bg-[#9e354a] text-white py-12 mb-8">
         <div className="content-container">
           <div className="max-w-3xl">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 flex items-center gap-3">

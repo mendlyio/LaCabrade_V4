@@ -151,7 +151,7 @@ export default async function Home({
                     className="flex-none w-[calc(100%-32px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] group relative block overflow-hidden rounded-xl aspect-square bg-pink-50 hover:shadow-2xl transition-all duration-300"
                   >
                     <div className="absolute inset-0 bg-pink-100 transition-transform duration-500 group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#ac2948]/60 via-[#ac2948]/20 to-transparent group-hover:from-[#ac2948]/70 transition-all duration-300" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#9e354a]/60 via-[#9e354a]/20 to-transparent group-hover:from-[#9e354a]/70 transition-all duration-300" />
                     <div className="absolute inset-0 flex items-center justify-center opacity-20 group-hover:opacity-30 transition-opacity">
                       <svg className="w-32 h-32 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 6h16M4 10h16M4 14h16M4 18h16" />

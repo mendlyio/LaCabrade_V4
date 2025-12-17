@@ -14,7 +14,6 @@ import { useTranslate } from "@lib/context/language-context"
 const SideMenuItemsKeys = [
   { key: "nav.accueil", href: "/" },
   { key: "nav.nouveautes", href: "/nouveautes", badge: "NEW" },
-  { key: "nav.outlet", href: "/outlet", badge: "PROMO" },
   { key: "nav.bon_cadeau", href: "/produits/bon-cadeau" },
   { key: "nav.a_propos", href: "/a-propos" },
 ]

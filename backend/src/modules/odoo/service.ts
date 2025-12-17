@@ -158,22 +158,57 @@ export default class OdooModuleService {
 
     if (allValueIds.length === 0) return
 
-    // Récupérer les détails des valeurs d'attributs
-    const valueDetails = await this.client.request("call", {
-      service: "object",
-      method: "execute_kw",
-      args: [
-        this.options.dbName,
-        this.uid!,
-        this.options.apiKey,
-        "product.template.attribute.value",
-        "read",
-        [[...new Set(allValueIds)]], // Dédupliquer
-        {
-          fields: ["name", "attribute_id", "product_attribute_value_id"],
-        },
-      ],
-    })
+    const ids = [...new Set(allValueIds)]
+
+    // Récupérer les détails des valeurs d'attributs (robuste selon version Odoo)
+    // Certaines instances n'ont pas `product_attribute_value_id` => retry sans ce champ.
+    let valueDetails: any[]
+    try {
+      valueDetails = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid!,
+          this.options.apiKey,
+          "product.template.attribute.value",
+          "read",
+          [ids],
+          {
+            fields: ["name", "attribute_id", "product_attribute_value_id"],
+          },
+        ],
+      })
+    } catch (error: any) {
+      const msg = `${error?.message || error}`.toLowerCase()
+      if (
+        msg.includes("unknown field") ||
+        msg.includes("invalid field") ||
+        msg.includes("does not exist") ||
+        msg.includes("product_attribute_value_id")
+      ) {
+        console.warn(
+          "⚠️ [ODOO] Champ product_attribute_value_id indisponible, retry sans ce champ"
+        )
+        valueDetails = await this.client.request("call", {
+          service: "object",
+          method: "execute_kw",
+          args: [
+            this.options.dbName,
+            this.uid!,
+            this.options.apiKey,
+            "product.template.attribute.value",
+            "read",
+            [ids],
+            {
+              fields: ["name", "attribute_id"],
+            },
+          ],
+        })
+      } else {
+        throw error
+      }
+    }
 
     // Créer une map pour accès rapide
     const valueMap = new Map<number, any>()

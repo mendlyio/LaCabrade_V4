@@ -40,7 +40,7 @@ export default async function Checkout() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero Section */}
-      <div className="bg-[#ac2948] text-white">
+      <div className="bg-[#9e354a] text-white">
         <div className="content-container py-6 sm:py-8 md:py-12">
           <div className="max-w-3xl">
             <div className="inline-block bg-white/20 backdrop-blur-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-full mb-3 sm:mb-4">

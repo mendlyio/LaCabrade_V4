@@ -15,6 +15,7 @@ import BillingAddress from "../billing_address"
 import ErrorMessage from "../error-message"
 import ShippingAddress from "../shipping-address"
 import { SubmitButton } from "../submit-button"
+import { useTranslate } from "@lib/context/language-context"
 
 const Addresses = ({
   cart,
@@ -23,6 +24,7 @@ const Addresses = ({
   cart: HttpTypes.StoreCart | null
   customer: HttpTypes.StoreCustomer | null
 }) => {
+  const t = useTranslate()
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
@@ -49,7 +51,7 @@ const Addresses = ({
           className="flex flex-row text-xl font-bold text-gray-900 gap-x-2 items-center"
         >
           <span className="text-2xl">📍</span>
-          Adresse de livraison
+          {t("checkout.shipping_address" as any)}
           {!isOpen && <CheckCircleSolid className="text-green-600" />}
         </Heading>
         {!isOpen && cart?.shipping_address && (
@@ -59,7 +61,7 @@ const Addresses = ({
               className="text-amber-600 hover:text-amber-700 font-medium transition-colors"
               data-testid="edit-address-button"
             >
-              Modifier
+              {t("checkout.edit" as any)}
             </button>
           </Text>
         )}
@@ -81,14 +83,14 @@ const Addresses = ({
                   className="text-xl font-bold text-gray-900 gap-x-4 pb-6 pt-8 flex items-center gap-2"
                 >
                   <span className="text-2xl">💳</span>
-                  Adresse de facturation
+                  {t("checkout.billing_address" as any)}
                 </Heading>
 
                 <BillingAddress cart={cart} />
               </div>
             )}
             <SubmitButton className="mt-6 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors" data-testid="submit-address-button">
-              Continuer vers la livraison →
+              {t("checkout.continue_to_delivery" as any)}
             </SubmitButton>
             <ErrorMessage error={message} data-testid="address-error-message" />
           </div>
