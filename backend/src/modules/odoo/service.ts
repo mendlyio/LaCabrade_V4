@@ -27,6 +27,7 @@ export type OdooProduct = {
   currency_id: any // Peut être [id, name] ou {id, display_name}
   product_variant_ids: OdooProductVariant[]
   product_variant_count: number
+  product_brand_id?: [number, string] | false // [id, name] ou false si pas de marque
   attribute_line_ids: {
     id: number
     attribute_id: {
@@ -71,7 +72,69 @@ export type OdooCategory = {
 }
 
 export default class OdooModuleService {
-  // ... existing code ...
+  /**
+   * Enrichit les product_template_variant_value_ids de chaque variante avec les détails des attributs
+   * Transforme les IDs en objets {id, name, attribute_id: {id, name, display_name}}
+   */
+  private async enrichVariantAttributeValues(variants: OdooProductVariant[]): Promise<void> {
+    // Collecter tous les IDs de valeurs d'attributs
+    const allValueIds: number[] = []
+    for (const variant of variants) {
+      if (Array.isArray(variant.product_template_variant_value_ids)) {
+        // Si ce sont des IDs (nombres), on les collecte
+        const ids = variant.product_template_variant_value_ids.filter(
+          (v: any) => typeof v === 'number'
+        ) as unknown as number[]
+        allValueIds.push(...ids)
+      }
+    }
+
+    if (allValueIds.length === 0) return
+
+    // Récupérer les détails des valeurs d'attributs
+    const valueDetails = await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid!,
+        this.options.apiKey,
+        "product.template.attribute.value",
+        "read",
+        [[...new Set(allValueIds)]], // Dédupliquer
+        {
+          fields: ["name", "attribute_id", "product_attribute_value_id"],
+        },
+      ],
+    })
+
+    // Créer une map pour accès rapide
+    const valueMap = new Map<number, any>()
+    for (const value of valueDetails) {
+      valueMap.set(value.id, {
+        id: value.id,
+        name: value.product_attribute_value_id?.[1] || value.name || 'Valeur',
+        attribute_id: {
+          id: value.attribute_id?.[0] || 0,
+          name: value.attribute_id?.[1] || 'Attribut',
+          display_name: value.attribute_id?.[1] || 'Attribut',
+        }
+      })
+    }
+
+    // Remplacer les IDs par les objets enrichis dans chaque variante
+    for (const variant of variants) {
+      if (Array.isArray(variant.product_template_variant_value_ids)) {
+        variant.product_template_variant_value_ids = variant.product_template_variant_value_ids
+          .map((v: any) => {
+            if (typeof v === 'number') {
+              return valueMap.get(v) || { id: v, name: 'Valeur', attribute_id: { id: 0, name: 'Attribut', display_name: 'Attribut' } }
+            }
+            return v
+          })
+      }
+    }
+  }
 
   /**
    * Récupérer toutes les catégories de produits internes
@@ -563,6 +626,7 @@ export default class OdooModuleService {
             "attribute_line_ids",
             "qty_available",
             "categ_id", // Ajout de la catégorie
+            "product_brand_id", // Marque du produit
           ],
         },
       ],
@@ -600,6 +664,8 @@ export default class OdooModuleService {
           }
         )
 
+        // Enrichir les attributs des variantes
+        await this.enrichVariantAttributeValues(variants)
         product.product_variant_ids = variants
       }
 
@@ -664,6 +730,8 @@ export default class OdooModuleService {
             "image_512",
             "weight",
             "volume",
+            "categ_id",
+            "product_brand_id", // Marque du produit
           ],
         },
       ],
@@ -702,6 +770,8 @@ export default class OdooModuleService {
           }
         )
 
+        // Enrichir les attributs des variantes
+        await this.enrichVariantAttributeValues(variants)
         product.product_variant_ids = variants
       }
 
@@ -865,6 +935,8 @@ export default class OdooModuleService {
             "image_512",
             "weight",
             "volume",
+            "categ_id",
+            "product_brand_id", // Marque du produit
           ],
         },
       ],
@@ -902,6 +974,8 @@ export default class OdooModuleService {
           }
         )
 
+        // Enrichir les attributs des variantes
+        await this.enrichVariantAttributeValues(variants)
         product.product_variant_ids = variants
       }
 

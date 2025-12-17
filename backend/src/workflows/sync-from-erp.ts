@@ -185,6 +185,11 @@ export const syncFromErpWorkflow = createWorkflow(
             // NOTE: Les catégories ne sont pas synchronisées dans Medusa
             // Elles servent uniquement à filtrer dans le module admin Odoo
 
+            // Extraire la marque du produit si disponible
+            const brandName = odooProduct.product_brand_id 
+              ? (Array.isArray(odooProduct.product_brand_id) ? odooProduct.product_brand_id[1] : null)
+              : null
+
             const product: any = {
               id: existingProduct?.id,
               title: odooProduct.display_name || odooProduct.name || `Produit ${odooProduct.id}`,
@@ -197,6 +202,7 @@ export const syncFromErpWorkflow = createWorkflow(
               metadata: {
                 external_id: `${odooProduct.id}`,
                 odoo_category: odooProduct.categ_id ? odooProduct.categ_id[1] : null, // Juste pour info
+                brand: brandName, // Marque du produit depuis Odoo
               },
               options: [],
               variants: [],
@@ -300,7 +306,8 @@ export const syncFromErpWorkflow = createWorkflow(
             const weightInGrams = (firstVariant?.weight || odooProduct.weight) 
               ? Math.round((firstVariant?.weight || odooProduct.weight) * 1000) 
               : undefined
-            const priceAmount = Math.round(firstVariant?.list_price || odooProduct.list_price)
+            // Convertir le prix Odoo (euros) en centimes pour Medusa
+            const priceAmount = Math.round((firstVariant?.list_price || odooProduct.list_price) * 100)
             // Utiliser le SKU de la variante en priorité
             const productSku = firstVariant?.default_code || odooProduct.default_code || `ODOO-${firstVariant?.id || odooProduct.id}`
             const variantId = firstVariant?.id || odooProduct.id
