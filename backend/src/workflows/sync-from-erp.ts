@@ -9,6 +9,7 @@ import {
   createProductsWorkflow,
   updateProductsWorkflow,
 } from "@medusajs/medusa/core-flows"
+import { upsertVariantPricesWorkflow } from "@medusajs/core-flows"
 import {
   CreateProductWorkflowInputDTO,
   UpdateProductWorkflowInputDTO,
@@ -521,6 +522,8 @@ export const syncFromErpWorkflow = createWorkflow(
             
             for (const p of productsToUpdate) {
                 try {
+                    const productService = container.resolve(Modules.PRODUCT)
+
                     // Préparer le payload pour le workflow update officiel
                     const updatePayload = {
                         id: p.id,
@@ -545,6 +548,39 @@ export const syncFromErpWorkflow = createWorkflow(
                     // Utiliser le workflow officiel Medusa qui gère les prix correctement
                     const workflow = updateProductsWorkflow(container)
                     await workflow.run({ input: { products: [updatePayload] } })
+
+                    // 🔁 Forcer la mise à jour des prix via le workflow Pricing (robuste)
+                    // Certains payloads "updateProductsWorkflow" peuvent ignorer les prix selon la forme des DTO.
+                    if (Array.isArray(p.variants) && p.variants.length) {
+                      const fresh = await productService.retrieveProduct(p.id, {
+                        relations: ["variants"],
+                      })
+
+                      const previousVariantIds = (fresh.variants || []).map((v: any) => v.id)
+                      const variantPrices = p.variants
+                        .map((v: any) => {
+                          const match = (fresh.variants || []).find(
+                            (fv: any) => fv.id === v.id || (fv.sku && v.sku && fv.sku === v.sku)
+                          )
+                          if (!match || !v.prices?.length) return null
+                          return {
+                            variant_id: match.id,
+                            product_id: p.id,
+                            prices: v.prices,
+                          }
+                        })
+                        .filter(Boolean)
+
+                      if (variantPrices.length) {
+                        const pricingWf = upsertVariantPricesWorkflow(container)
+                        await pricingWf.run({
+                          input: {
+                            variantPrices,
+                            previousVariantIds,
+                          },
+                        })
+                      }
+                    }
                     
                     console.log(`✅ [WORKFLOW] Produit ${p.title} (${p.id}) mis à jour avec prix`)
                     updatedCount++
