@@ -56,8 +56,8 @@ export default function WishlistToggleButton({
           ${buttonPaddingClasses[size]}
           rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2
           ${inWishlist
-            ? "bg-red-500 text-white hover:bg-red-600"
-            : "bg-white border border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-500 hover:text-red-500"
+            ? "bg-amber-600 text-white hover:bg-amber-700"
+            : "bg-white border border-gray-300 text-gray-700 hover:bg-amber-50 hover:border-amber-600 hover:text-amber-700"
           }
           ${isAnimating ? "scale-110" : "scale-100"}
         `}
@@ -81,7 +81,7 @@ export default function WishlistToggleButton({
       className={`
         ${buttonSizeClasses[size]}
         rounded-full bg-white/90 backdrop-blur-sm hover:bg-white border border-gray-200
-        hover:border-red-500 transition-all duration-200 group shadow-sm hover:shadow-md
+        hover:border-amber-600 transition-all duration-200 group shadow-sm hover:shadow-md
         flex items-center justify-center flex-shrink-0
         ${isAnimating ? "scale-110" : "scale-100"}
       `}
@@ -90,8 +90,8 @@ export default function WishlistToggleButton({
       <Heart
         className={`${iconSizeClasses[size]} flex-shrink-0 transition-all ${
           inWishlist
-            ? "fill-red-500 text-red-500"
-            : "text-gray-600 group-hover:text-red-500"
+            ? "fill-amber-600 text-amber-600"
+            : "text-gray-600 group-hover:text-amber-600"
         } ${isAnimating ? "animate-bounce" : ""}`}
       />
     </button>
