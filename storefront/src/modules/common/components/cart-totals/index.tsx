@@ -13,6 +13,11 @@ type CartTotalsProps = {
     discount_total?: number | null
     gift_card_total?: number | null
     currency_code: string
+    items?: Array<{
+      quantity?: number | null
+      subtotal?: number | null
+      unit_price?: number | null
+    }>
   }
 }
 
@@ -25,7 +30,25 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
     shipping_total,
     discount_total,
     gift_card_total,
+    items,
   } = totals
+
+  // Medusa peut renvoyer un `cart.subtotal` qui inclut des ajustements/arrondis selon la config taxes.
+  // Pour afficher un "Sous-total articles" fiable, on privilégie la somme des lignes si disponible.
+  const itemsSubtotal =
+    Array.isArray(items) && items.length
+      ? items.reduce((acc, item) => {
+          const lineSubtotal =
+            typeof item.subtotal === "number"
+              ? item.subtotal
+              : typeof item.unit_price === "number"
+                ? (item.unit_price || 0) * (item.quantity || 0)
+                : 0
+          return acc + (lineSubtotal || 0)
+        }, 0)
+      : null
+
+  const displayedSubtotal = itemsSubtotal ?? subtotal ?? 0
 
   return (
     <div>
@@ -34,8 +57,8 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
           <span className="flex gap-x-1 items-center">
             Subtotal (excl. shipping and taxes)
           </span>
-          <span data-testid="cart-subtotal" data-value={subtotal || 0}>
-            {convertToLocale({ amount: subtotal ?? 0, currency_code })}
+          <span data-testid="cart-subtotal" data-value={displayedSubtotal || 0}>
+            {convertToLocale({ amount: displayedSubtotal, currency_code })}
           </span>
         </div>
         {!!discount_total && (
