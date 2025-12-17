@@ -148,7 +148,16 @@ const fetchExistingProductsStep = createStep(
   async ({ odooProducts }: { odooProducts: OdooProduct[] }, { container }) => {
     const productService = container.resolve(Modules.PRODUCT)
     const externalIds = odooProducts.map((p: OdooProduct) => `${p.id}`)
-    const products = await productService.listProducts({})
+    // IMPORTANT: listProducts() est paginé par défaut. Sans `take`, on ne récupère
+    // qu'une petite partie des produits, ce qui empêche la re-sync de mettre à jour
+    // les produits existants (ils sont alors traités comme "à créer").
+    const products = await productService.listProducts(
+      {},
+      {
+        select: ["id", "metadata"],
+        take: 10000,
+      }
+    )
     const activeProducts = products.filter((p: any) => 
       externalIds.includes(p.metadata?.external_id)
     )
