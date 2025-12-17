@@ -34,7 +34,7 @@ type SyncFromErpInput = Pagination & {
  * - Si ODOO_PRICE_IN_CENTS=true: on considère que la valeur reçue est déjà en centimes.
  * - Sinon, heuristique: si le prix est un entier >= 1000, on le traite comme des centimes.
  */
-function odooPriceToMedusaAmount(price: unknown): number {
+function odooPriceToMedusaAmount(price: unknown, debugSku?: string): number {
   const raw =
     typeof price === "number"
       ? price
@@ -45,13 +45,24 @@ function odooPriceToMedusaAmount(price: unknown): number {
   if (!Number.isFinite(raw)) return 0
 
   const flag = (process.env.ODOO_PRICE_IN_CENTS || "").toLowerCase()
-  const priceIsInCents =
-    flag === "true" ||
-    flag === "1" ||
-    // Heuristique "safe enough" pour des catalogues EUR classiques
-    (Number.isInteger(raw) && raw >= 1000)
-
-  return priceIsInCents ? Math.round(raw) : Math.round(raw * 100)
+  const forceCents = flag === "true" || flag === "1"
+  
+  // Heuristique améliorée pour détecter les centimes:
+  // - Si entier >= 1000 ET (se termine par 00, 50, 90): probablement déjà en centimes
+  // - Ex: 18690 (186.90€), 2050 (20.50€), 3990 (39.90€)
+  // - Mais 186.90 reste un float → on multiplie par 100
+  const likelyCents = Number.isInteger(raw) && raw >= 1000
+  const priceIsInCents = forceCents || likelyCents
+  
+  const amount = priceIsInCents ? Math.round(raw) : Math.round(raw * 100)
+  
+  // Log détaillé pour diagnostic (visible dans les logs Railway/Medusa)
+  console.log(
+    `💰 [PRICE] ${debugSku || "?"} | Odoo: ${raw} → Medusa: ${amount} (${(amount/100).toFixed(2)}€) | ` +
+    `cents=${priceIsInCents} (force=${forceCents}, likely=${likelyCents})`
+  )
+  
+  return amount
 }
 
 function uniq<T>(arr: T[]): T[] {
@@ -388,9 +399,9 @@ export const syncFromErpWorkflow = createWorkflow(
               }
 
               const weightInGrams = variant.weight ? Math.round(variant.weight * 1000) : undefined
-              // Convertir le prix Odoo vers Medusa (centimes)
-              const priceAmount = odooPriceToMedusaAmount(variant.list_price)
               const variantSku = variant.default_code || `ODOO-${variant.id}`
+              // Convertir le prix Odoo vers Medusa (centimes)
+              const priceAmount = odooPriceToMedusaAmount(variant.list_price, variantSku)
 
               return {
                 id: existingProduct 
@@ -426,10 +437,10 @@ export const syncFromErpWorkflow = createWorkflow(
             const weightInGrams = (firstVariant?.weight || odooProduct.weight) 
               ? Math.round((firstVariant?.weight || odooProduct.weight) * 1000) 
               : undefined
-            // Convertir le prix Odoo vers Medusa (centimes)
-            const priceAmount = odooPriceToMedusaAmount(firstVariant?.list_price ?? odooProduct.list_price)
             // Utiliser le SKU de la variante en priorité
             const productSku = firstVariant?.default_code || odooProduct.default_code || `ODOO-${firstVariant?.id || odooProduct.id}`
+            // Convertir le prix Odoo vers Medusa (centimes)
+            const priceAmount = odooPriceToMedusaAmount(firstVariant?.list_price ?? odooProduct.list_price, productSku)
             const variantId = firstVariant?.id || odooProduct.id
             const stockQty = firstVariant?.qty_available || odooProduct.qty_available || 0
             
@@ -721,6 +732,72 @@ export const syncFromErpWorkflow = createWorkflow(
                             previousVariantIds,
                           },
                         })
+                      }
+                    }
+
+                    // 3) Mettre à jour le stock Odoo sur les inventory levels (overwrite)
+                    const stockLocationService = container.resolve(Modules.STOCK_LOCATION)
+                    const inventoryService = container.resolve(Modules.INVENTORY)
+                    const locs = await stockLocationService.listStockLocations({})
+                    if (locs.length && Array.isArray(p.variants) && p.variants.length) {
+                      const loc = locs[0]
+                      
+                      // Récupérer le produit complet avec les variantes pour avoir les IDs à jour
+                      const fullProduct = await productService.retrieveProduct(p.id, { relations: ["variants"] })
+                      
+                      for (const odooVariant of p.variants) {
+                        if (!odooVariant.sku) continue
+                        
+                        // Trouver la variante Medusa correspondante
+                        const medusaVariant = (fullProduct.variants || []).find(
+                          (v: any) => v.sku === odooVariant.sku
+                        )
+                        if (!medusaVariant) continue
+                        
+                        const odooStock = odooVariant.metadata?.odoo_qty_available ?? 0
+                        
+                        try {
+                          // Chercher/créer l'inventory item
+                          let items = await inventoryService.listInventoryItems({ sku: [odooVariant.sku] })
+                          let item = items[0]
+                          
+                          if (!item) {
+                            const created = await inventoryService.createInventoryItems({ sku: odooVariant.sku })
+                            item = created[0]
+                            // Lier au variant
+                            const link = container.resolve("remoteLink")
+                            await link.create([
+                              { 
+                                [Modules.PRODUCT]: { variant_id: medusaVariant.id }, 
+                                [Modules.INVENTORY]: { inventory_item_id: item.id } 
+                              }
+                            ])
+                          }
+                          
+                          // Mettre à jour ou créer le niveau de stock
+                          const levels = await inventoryService.listInventoryLevels({
+                            inventory_item_id: [item.id],
+                            location_id: [loc.id],
+                          })
+                          
+                          if (levels.length === 0) {
+                            await inventoryService.createInventoryLevels({
+                              inventory_item_id: item.id,
+                              location_id: loc.id,
+                              stocked_quantity: odooStock,
+                            })
+                          } else {
+                            await inventoryService.updateInventoryLevels({
+                              inventory_item_id: item.id,
+                              location_id: loc.id,
+                              stocked_quantity: odooStock,
+                            })
+                          }
+                          
+                          console.log(`📦 [WORKFLOW] Stock ${odooVariant.sku}: ${odooStock}`)
+                        } catch (stockErr: any) {
+                          console.warn(`⚠️ [WORKFLOW] Stock update ${odooVariant.sku}:`, stockErr?.message || stockErr)
+                        }
                       }
                     }
                     
