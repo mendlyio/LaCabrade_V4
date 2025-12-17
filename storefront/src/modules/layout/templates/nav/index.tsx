@@ -49,13 +49,13 @@ export default async function Nav() {
                 data-testid="nav-store-link"
               >
                 <div className="hidden sm:block">
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-700 to-amber-900 bg-clip-text text-transparent">
+                  <h1 className="text-2xl font-bold text-amber-700">
                     La Cabrade
                   </h1>
                   <p className="text-xs text-gray-500 -mt-1">LC•EQUESTRIAN</p>
                 </div>
                 <div className="sm:hidden">
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-amber-700 to-amber-900 bg-clip-text text-transparent">
+                  <h1 className="text-xl font-bold text-amber-700">
                     LC•EQUESTRIAN
                   </h1>
                 </div>
