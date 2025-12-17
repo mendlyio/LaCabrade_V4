@@ -158,9 +158,12 @@ const fetchExistingProductsStep = createStep(
         take: 10000,
       }
     )
-    const activeProducts = products.filter((p: any) => 
-      externalIds.includes(p.metadata?.external_id)
-    )
+    // external_id peut être stocké en number ou string selon les imports précédents
+    const activeProducts = products.filter((p: any) => {
+      const ext = p?.metadata?.external_id
+      if (ext === null || ext === undefined) return false
+      return externalIds.includes(String(ext))
+    })
     return new StepResponse(activeProducts)
   }
 )

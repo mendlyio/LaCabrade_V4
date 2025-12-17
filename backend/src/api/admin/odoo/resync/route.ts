@@ -38,7 +38,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
     const odooProductIds = medusaProducts
       .filter((p: any) => p.metadata?.external_id)
-      .map((p: any) => parseInt(p.metadata.external_id))
+      .map((p: any) => parseInt(String(p.metadata.external_id)))
       .filter((id: number) => !isNaN(id))
 
     if (odooProductIds.length === 0) {
