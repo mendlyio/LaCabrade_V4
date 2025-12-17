@@ -72,6 +72,14 @@ const OdooConfigurationWidget = () => {
         credentials: "include",
       })
       const data = await response.json()
+
+      if (!response.ok) {
+        console.error("Erreur produits Odoo:", data)
+        alert(`❌ ${data.message || data.error || "Erreur lors du chargement des produits Odoo"}`)
+        // Ne pas écraser la liste avec un faux "Aucun produit"
+        return
+      }
+
       setProducts(data.products || [])
       setTotal(data.total || 0)
       setLimit(data.limit ?? lim)

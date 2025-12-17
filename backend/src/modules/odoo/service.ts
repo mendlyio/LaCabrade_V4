@@ -73,6 +73,73 @@ export type OdooCategory = {
 
 export default class OdooModuleService {
   /**
+   * Champ "marque" Odoo configurable.
+   * IMPORTANT: certains Odoo n'ont pas `product_brand_id` → si le champ n'existe pas,
+   * on doit éviter de casser la liste des produits.
+   */
+  private getBrandField(): string | null {
+    const field = process.env.ODOO_BRAND_FIELD || "product_brand_id"
+    return field?.trim() ? field.trim() : null
+  }
+
+  /**
+   * Lecture robuste de product.template: si un champ est inconnu (ex: product_brand_id),
+   * on retente sans ce champ au lieu d'échouer (sinon l'admin affiche "Aucun produit").
+   */
+  private async safeReadProductTemplates(
+    productIds: number[],
+    fields: string[]
+  ): Promise<OdooProduct[]> {
+    try {
+      return await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid!,
+          this.options.apiKey,
+          "product.template",
+          "read",
+          [productIds],
+          { fields },
+        ],
+      })
+    } catch (error: any) {
+      const msg = `${error?.message || error}`.toLowerCase()
+      const brandField = this.getBrandField()
+
+      // Retry 1x si le champ de marque est inconnu dans cet Odoo
+      if (
+        brandField &&
+        fields.includes(brandField) &&
+        (msg.includes("unknown field") ||
+          msg.includes("invalid field") ||
+          msg.includes("field") && msg.includes("does not exist") ||
+          msg.includes(brandField.toLowerCase()))
+      ) {
+        const retryFields = fields.filter((f) => f !== brandField)
+        console.warn(
+          `⚠️ [ODOO] Champ marque '${brandField}' indisponible, retry sans ce champ`
+        )
+        return await this.client.request("call", {
+          service: "object",
+          method: "execute_kw",
+          args: [
+            this.options.dbName,
+            this.uid!,
+            this.options.apiKey,
+            "product.template",
+            "read",
+            [productIds],
+            { fields: retryFields },
+          ],
+        })
+      }
+
+      throw error
+    }
+  }
+  /**
    * Enrichit les product_template_variant_value_ids de chaque variante avec les détails des attributs
    * Transforme les IDs en objets {id, name, attribute_id: {id, name, display_name}}
    */
@@ -603,34 +670,22 @@ export default class OdooModuleService {
       return []
     }
 
-    const products: OdooProduct[] = await this.client.request("call", {
-      service: "object",
-      method: "execute_kw",
-      args: [
-        this.options.dbName,
-        this.uid,
-        this.options.apiKey,
-        "product.template",
-        "read",
-        [productIds],
-        {
-          fields: [
-            "name",
-            "display_name",
-            "list_price",
-            "default_code",
-            "description_sale",
-            "currency_id",
-            "product_variant_ids",
-            "product_variant_count",
-            "attribute_line_ids",
-            "qty_available",
-            "categ_id", // Ajout de la catégorie
-            "product_brand_id", // Marque du produit
-          ],
-        },
-      ],
-    })
+    const brandField = this.getBrandField()
+    const fields = [
+      "name",
+      "display_name",
+      "list_price",
+      "default_code",
+      "description_sale",
+      "currency_id",
+      "product_variant_ids",
+      "product_variant_count",
+      "attribute_line_ids",
+      "qty_available",
+      "categ_id",
+      ...(brandField ? [brandField] : []),
+    ]
+    const products: OdooProduct[] = await this.safeReadProductTemplates(productIds, fields)
 
     for (const product of products) {
       if (product.product_variant_count > 1) {
@@ -705,37 +760,25 @@ export default class OdooModuleService {
       return []
     }
 
-    const products: OdooProduct[] = await this.client.request("call", {
-      service: "object",
-      method: "execute_kw",
-      args: [
-        this.options.dbName,
-        this.uid!,
-        this.options.apiKey,
-        "product.template",
-        "read",
-        [productIds],
-        {
-          fields: [
-            "name",
-            "display_name",
-            "list_price",
-            "default_code",
-            "description_sale",
-            "currency_id",
-            "product_variant_ids",
-            "product_variant_count",
-            "attribute_line_ids",
-            "qty_available",
-            "image_512",
-            "weight",
-            "volume",
-            "categ_id",
-            "product_brand_id", // Marque du produit
-          ],
-        },
-      ],
-    })
+    const brandField = this.getBrandField()
+    const fields = [
+      "name",
+      "display_name",
+      "list_price",
+      "default_code",
+      "description_sale",
+      "currency_id",
+      "product_variant_ids",
+      "product_variant_count",
+      "attribute_line_ids",
+      "qty_available",
+      "image_512",
+      "weight",
+      "volume",
+      "categ_id",
+      ...(brandField ? [brandField] : []),
+    ]
+    const products: OdooProduct[] = await this.safeReadProductTemplates(productIds, fields)
 
     // Enrichir les produits avec les variantes et attributs (même logique que fetchProductsPaged)
     for (const product of products) {
@@ -910,37 +953,25 @@ export default class OdooModuleService {
       return { products: [], total }
     }
 
-    const products: OdooProduct[] = await this.client.request("call", {
-      service: "object",
-      method: "execute_kw",
-      args: [
-        this.options.dbName,
-        this.uid!,
-        this.options.apiKey,
-        "product.template",
-        "read",
-        [productIds],
-        {
-          fields: [
-            "name",
-            "display_name",
-            "list_price",
-            "default_code",
-            "description_sale",
-            "currency_id",
-            "product_variant_ids",
-            "product_variant_count",
-            "attribute_line_ids",
-            "qty_available",
-            "image_512",
-            "weight",
-            "volume",
-            "categ_id",
-            "product_brand_id", // Marque du produit
-          ],
-        },
-      ],
-    })
+    const brandField = this.getBrandField()
+    const fields = [
+      "name",
+      "display_name",
+      "list_price",
+      "default_code",
+      "description_sale",
+      "currency_id",
+      "product_variant_ids",
+      "product_variant_count",
+      "attribute_line_ids",
+      "qty_available",
+      "image_512",
+      "weight",
+      "volume",
+      "categ_id",
+      ...(brandField ? [brandField] : []),
+    ]
+    const products: OdooProduct[] = await this.safeReadProductTemplates(productIds, fields)
 
     for (const product of products) {
       if (product.product_variant_count > 1) {
