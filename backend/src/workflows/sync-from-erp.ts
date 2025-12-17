@@ -25,6 +25,35 @@ type SyncFromErpInput = Pagination & {
   filterCategoryId?: number // Import par catégorie
 }
 
+/**
+ * Convertit un prix Odoo vers le format Medusa (minor units, ex: centimes).
+ *
+ * Problème rencontré: certaines instances Odoo renvoient déjà des montants "en centimes"
+ * (ex: 2050 pour 20,50€). Dans ce cas, multiplier par 100 provoque un x100 (→ 2 050,00€).
+ *
+ * - Si ODOO_PRICE_IN_CENTS=true: on considère que la valeur reçue est déjà en centimes.
+ * - Sinon, heuristique: si le prix est un entier >= 1000, on le traite comme des centimes.
+ */
+function odooPriceToMedusaAmount(price: unknown): number {
+  const raw =
+    typeof price === "number"
+      ? price
+      : typeof price === "string"
+        ? Number(price.replace(",", "."))
+        : Number(price)
+
+  if (!Number.isFinite(raw)) return 0
+
+  const flag = (process.env.ODOO_PRICE_IN_CENTS || "").toLowerCase()
+  const priceIsInCents =
+    flag === "true" ||
+    flag === "1" ||
+    // Heuristique "safe enough" pour des catalogues EUR classiques
+    (Number.isInteger(raw) && raw >= 1000)
+
+  return priceIsInCents ? Math.round(raw) : Math.round(raw * 100)
+}
+
 // Step 1: Récupérer les catégories Odoo
 const fetchOdooCategoriesStep = createStep(
   "fetch-odoo-categories",
@@ -309,8 +338,8 @@ export const syncFromErpWorkflow = createWorkflow(
               }
 
               const weightInGrams = variant.weight ? Math.round(variant.weight * 1000) : undefined
-              // Convertir le prix Odoo (euros) en centimes pour Medusa
-              const priceAmount = Math.round(variant.list_price * 100)
+              // Convertir le prix Odoo vers Medusa (centimes)
+              const priceAmount = odooPriceToMedusaAmount(variant.list_price)
               const variantSku = variant.default_code || `ODOO-${variant.id}`
 
               return {
@@ -347,8 +376,8 @@ export const syncFromErpWorkflow = createWorkflow(
             const weightInGrams = (firstVariant?.weight || odooProduct.weight) 
               ? Math.round((firstVariant?.weight || odooProduct.weight) * 1000) 
               : undefined
-            // Convertir le prix Odoo (euros) en centimes pour Medusa
-            const priceAmount = Math.round((firstVariant?.list_price || odooProduct.list_price) * 100)
+            // Convertir le prix Odoo vers Medusa (centimes)
+            const priceAmount = odooPriceToMedusaAmount(firstVariant?.list_price ?? odooProduct.list_price)
             // Utiliser le SKU de la variante en priorité
             const productSku = firstVariant?.default_code || odooProduct.default_code || `ODOO-${firstVariant?.id || odooProduct.id}`
             const variantId = firstVariant?.id || odooProduct.id
