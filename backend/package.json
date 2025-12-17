@@ -20,8 +20,7 @@
     "start:simple": "init-backend && cd .medusa/server && medusa start --verbose",
     "dev": "medusa develop",
     "email:dev": "email dev --dir=./src/modules/email-notifications/templates --port=3002",
-    "odoo:ping": "tsx src/scripts/odoo-ping.ts",
-    "minio:setup": "tsx src/scripts/setup-minio-bucket.ts"
+    "odoo:ping": "tsx src/scripts/odoo-ping.ts"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.10.3",
