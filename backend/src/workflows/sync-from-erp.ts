@@ -284,8 +284,8 @@ export const syncFromErpWorkflow = createWorkflow(
 
     // Préparer les produits
     const { productsToCreate, productsToUpdate } = transform(
-      { odooProducts, existingProducts },
-      ({ odooProducts, existingProducts }) => {
+      { odooProducts, existingProducts, input },
+      ({ odooProducts, existingProducts, input }) => {
         console.log(`🔄 [WORKFLOW] Transformation des produits...`)
         
         const productsToCreate: CreateProductWorkflowInputDTO[] = []
@@ -476,9 +476,22 @@ export const syncFromErpWorkflow = createWorkflow(
           }
 
           if (existingProduct) {
-            // Si le produit existe (même soft-deleted), on le met à jour
-            // Le step d'update restaurera les soft-deleted avant de les mettre à jour
-            productsToUpdate.push(product as UpdateProductWorkflowInputDTO)
+            // Si le produit est soft-deleted, on l'ignore (sauf si c'est un import manuel depuis Odoo)
+            if ((existingProduct as any).deleted_at) {
+              // Pour un import manuel, on restaure et met à jour
+              // Pour une re-sync, on ignore les produits supprimés
+              // On peut distinguer via filterProductIds (import manuel) vs pas de filtre (re-sync)
+              const isManualImport = input?.filterProductIds && input.filterProductIds.length > 0
+              if (isManualImport) {
+                console.log(`♻️ [WORKFLOW] Import manuel: restauration produit soft-deleted ${existingProduct.id}`)
+                productsToUpdate.push(product as UpdateProductWorkflowInputDTO)
+              } else {
+                console.log(`⏭️ [WORKFLOW] Re-sync: ignorer produit soft-deleted ${existingProduct.id}`)
+              }
+            } else {
+              // Produit actif, on le met à jour
+              productsToUpdate.push(product as UpdateProductWorkflowInputDTO)
+            }
           } else {
             productsToCreate.push(product as CreateProductWorkflowInputDTO)
           }
