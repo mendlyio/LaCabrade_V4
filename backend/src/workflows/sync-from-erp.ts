@@ -683,8 +683,6 @@ export const syncFromErpWorkflow = createWorkflow(
               lacabradeChannel = Array.isArray(createdChannels) ? createdChannels[0] : createdChannels
             }
             
-            console.log(`🔁 [WORKFLOW] Update batch: ${productsToUpdate.length} produit(s) à traiter`)
-
             for (const p of productsToUpdate) {
                 try {
                     const productService = container.resolve(Modules.PRODUCT)
@@ -707,7 +705,6 @@ export const syncFromErpWorkflow = createWorkflow(
                     // Utiliser le workflow officiel Medusa qui gère les prix correctement
                     const workflow = updateProductsWorkflow(container)
                     await workflow.run({ input: { products: [updatePayload] } })
-                    console.log(`✅ [WORKFLOW] Produit ${p.id} payload appliqué`)
 
                     // 2) Upsert variantes (création + update) — overwrite SKU/options/title/etc.
                     if (Array.isArray(p.variants) && p.variants.length) {
@@ -756,9 +753,6 @@ export const syncFromErpWorkflow = createWorkflow(
                               previousVariantIds,
                             },
                           })
-                          console.log(`✅ [WORKFLOW] Pricing appliqué pour ${variantPrices.length} variante(s) sur ${p.id}`)
-                        } else {
-                          console.log(`ℹ️ [WORKFLOW] Aucun prix à appliquer sur ${p.id}`)
                         }
                       } catch (pricingErr: any) {
                         console.warn(`⚠️ [WORKFLOW] Pricing update ${p.id}:`, pricingErr?.message || pricingErr)
@@ -839,7 +833,6 @@ export const syncFromErpWorkflow = createWorkflow(
                     updatedCount++
                 } catch (updateError: any) {
                     console.warn(`⚠️ [WORKFLOW] Erreur mise à jour produit ${p.id}:`, updateError.message)
-                    console.warn(`⚠️ [WORKFLOW] Stack ${p.id}:`, updateError.stack)
                     
                     // Fallback: mise à jour basique sans les prix
                     try {
@@ -864,10 +857,6 @@ export const syncFromErpWorkflow = createWorkflow(
     )
     
     const updateResult = updateProductsStep({ productsToUpdate, dryRun: input.dryRun })
-
-    console.log(`📊 [WORKFLOW] Résumé: toCreate=${productsToCreate.length}, toUpdate=${productsToUpdate.length}`)
-    console.log(`📊 [WORKFLOW] createResult: ${JSON.stringify(createResult)}`)
-    console.log(`📊 [WORKFLOW] updateResult: ${JSON.stringify(updateResult)}`)
 
     return new WorkflowResponse({
       odooProducts,
