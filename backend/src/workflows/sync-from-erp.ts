@@ -79,8 +79,21 @@ function buildOptionsFromVariants(variants: any[]): { title: string; values: str
         v?.attribute_id?.name ||
         (Array.isArray(v?.attribute_id) ? v.attribute_id[1] : null) ||
         null
-      const valName = v?.name || null
+      let valName = v?.name || null
       if (!attrName || !valName) continue
+
+      // Nettoyer la valeur : enlever le préfixe "AttributName: " si présent
+      const prefixPatterns = [
+        `${attrName}:`,
+        `${attrName} :`
+      ]
+      
+      for (const prefix of prefixPatterns) {
+        if (valName.startsWith(prefix)) {
+          valName = valName.substring(prefix.length).trim()
+          break
+        }
+      }
 
       if (!map.has(attrName)) map.set(attrName, new Set())
       map.get(attrName)!.add(valName)
@@ -332,10 +345,36 @@ export const syncFromErpWorkflow = createWorkflow(
           if (hasMultipleVariants && odooProduct.attribute_line_ids?.length) {
             validOptions = odooProduct.attribute_line_ids
               .filter((line) => line.attribute_id && line.value_ids?.length)
-              .map((line) => ({
-                title: line.attribute_id.display_name || line.attribute_id.name || 'Attribut',
-                values: line.value_ids.map((v) => v.name || 'Valeur'),
-              }))
+              .map((line) => {
+                const attrName = line.attribute_id.display_name || line.attribute_id.name || 'Attribut'
+                
+                // Nettoyer les valeurs : enlever les préfixes si présents
+                const cleanValues = line.value_ids.map((v) => {
+                  let cleanValue = v.name || 'Valeur'
+                  
+                  // Enlever les préfixes courants (AttributName:, ProductName:)
+                  const prefixPatterns = [
+                    `${attrName}:`,
+                    `${attrName} :`,
+                    `${odooProduct.display_name}:`,
+                    `${odooProduct.name}:`
+                  ]
+                  
+                  for (const prefix of prefixPatterns) {
+                    if (cleanValue.startsWith(prefix)) {
+                      cleanValue = cleanValue.substring(prefix.length).trim()
+                      break
+                    }
+                  }
+                  
+                  return cleanValue
+                })
+                
+                return {
+                  title: attrName,
+                  values: cleanValues,
+                }
+              })
           }
 
           // Si Odoo ne renvoie pas correctement `attribute_line_ids.value_ids`,
@@ -378,7 +417,27 @@ export const syncFromErpWorkflow = createWorkflow(
                 variant.product_template_variant_value_ids.forEach((value) => {
                   if (value.attribute_id && value.name) {
                     const attrName = value.attribute_id.display_name || value.attribute_id.name || 'Attribut'
-                    options[attrName] = value.name
+                    
+                    // Nettoyer la valeur : enlever le préfixe "AttributName: " si présent
+                    // Ex: "Couleur: NOIR" → "NOIR"
+                    let cleanValue = value.name
+                    
+                    // Si la valeur commence par "AttributName:" ou "ProductName:", on enlève
+                    const prefixPatterns = [
+                      `${attrName}:`,
+                      `${attrName} :`,
+                      `${odooProduct.display_name}:`,
+                      `${odooProduct.name}:`
+                    ]
+                    
+                    for (const prefix of prefixPatterns) {
+                      if (cleanValue.startsWith(prefix)) {
+                        cleanValue = cleanValue.substring(prefix.length).trim()
+                        break
+                      }
+                    }
+                    
+                    options[attrName] = cleanValue
                   }
                 })
               }
