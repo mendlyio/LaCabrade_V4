@@ -403,19 +403,28 @@ export const syncFromErpWorkflow = createWorkflow(
               // Convertir le prix Odoo vers Medusa (centimes)
               const priceAmount = odooPriceToMedusaAmount(variant.list_price, variantSku)
 
+              // Titre clair: uniquement les valeurs d'options (ex: "NOIR / 6.5")
+              const optionValues = Object.values(options).filter(Boolean)
+              const variantTitle =
+                optionValues.length > 0
+                  ? optionValues.join(" / ")
+                  : variant.default_code || `Variante ${variantIndex + 1}`
+
               return {
-                id: existingProduct 
-                  ? existingProduct.variants.find((v) => v.sku === variantSku || v.sku === variant.default_code)?.id 
+                id: existingProduct
+                  ? existingProduct.variants.find((v) => v.sku === variantSku || v.sku === variant.default_code)?.id
                   : undefined,
-                title: (variant.display_name || variant.name || "Variante").replace(variant.default_code ? `[${variant.default_code}] ` : "", "").replace(odooProduct.display_name || '', '').trim() || `Variante ${variantIndex + 1}`,
+                title: variantTitle,
                 sku: variantSku,
                 barcode: variant.barcode || undefined,
                 weight: weightInGrams,
                 options,
-                prices: [{
+                prices: [
+                  {
                     amount: priceAmount,
                     currency_code: (Array.isArray(variant.currency_id) ? variant.currency_id[1] : "eur")?.toLowerCase() || "eur",
-                }],
+                  },
+                ],
                 manage_inventory: true,
                 metadata: {
                   external_id: `${variant.id}`,
@@ -662,6 +671,17 @@ export const syncFromErpWorkflow = createWorkflow(
             if (dryRun || !productsToUpdate.length) return new StepResponse({ updated: 0 })
             
             let updatedCount = 0
+            const salesChannelService = container.resolve(Modules.SALES_CHANNEL)
+            // Garantir le canal LaCabrade sur update (sinon Medusa vide la liste)
+            let salesChannels = await salesChannelService.listSalesChannels({ name: "LaCabrade" })
+            let lacabradeChannel = salesChannels[0]
+            if (!lacabradeChannel) {
+              const createdChannels = await salesChannelService.createSalesChannels({
+                name: "LaCabrade",
+                description: "Canal principal",
+              })
+              lacabradeChannel = Array.isArray(createdChannels) ? createdChannels[0] : createdChannels
+            }
             
             for (const p of productsToUpdate) {
                 try {
@@ -679,6 +699,7 @@ export const syncFromErpWorkflow = createWorkflow(
                         status: p.status,
                         metadata: p.metadata,
                         options: p.options,
+                        sales_channels: [{ id: lacabradeChannel.id }],
                     }
                     
                     // Utiliser le workflow officiel Medusa qui gère les prix correctement
