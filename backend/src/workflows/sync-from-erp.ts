@@ -740,6 +740,7 @@ export const syncFromErpWorkflow = createWorkflow(
                     await workflow.run({ input: { products: [updatePayload] } })
 
                     // 2) Upsert variantes (création + update) — overwrite SKU/options/title/etc.
+                    console.log(`🔍 [UPDATE] Avant upsert ${p.id}: ${p.variants?.length || 0} variantes, première a des prix? ${!!p.variants?.[0]?.prices}`)
                     if (Array.isArray(p.variants) && p.variants.length) {
                       await productService.upsertProductVariants(
                         p.variants.map((v: any) => ({
@@ -754,9 +755,11 @@ export const syncFromErpWorkflow = createWorkflow(
                           options: v.options,
                         }))
                       )
+                      console.log(`✅ [UPDATE] Upsert variantes OK pour ${p.id}`)
                     }
 
                     // 3) Prix via pricing workflow (encapsulé pour ne pas bloquer le reste)
+                    console.log(`🔍 [UPDATE] Vérif pricing ${p.id}: hasVariants=${Array.isArray(p.variants)}, length=${p.variants?.length || 0}`)
                     if (Array.isArray(p.variants) && p.variants.length) {
                       try {
                         const fresh = await productService.retrieveProduct(p.id, {
@@ -890,7 +893,8 @@ export const syncFromErpWorkflow = createWorkflow(
                     console.log(`✅ [WORKFLOW] Produit ${p.title} (${p.id}) mis à jour avec prix`)
                     updatedCount++
                 } catch (updateError: any) {
-                    console.warn(`⚠️ [WORKFLOW] Erreur mise à jour produit ${p.id}:`, updateError.message)
+                    console.error(`❌ [WORKFLOW] Erreur mise à jour produit ${p.id}:`, updateError.message)
+                    console.error(`❌ [WORKFLOW] Stack:`, updateError.stack)
                     
                     // Fallback: mise à jour basique sans les prix
                     try {
