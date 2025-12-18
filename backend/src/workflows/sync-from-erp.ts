@@ -723,103 +723,110 @@ export const syncFromErpWorkflow = createWorkflow(
                       )
                     }
 
-                    // 🔁 Forcer la mise à jour des prix via le workflow Pricing (robuste)
-                    // Certains payloads "updateProductsWorkflow" peuvent ignorer les prix selon la forme des DTO.
+                    // 3) Prix via pricing workflow (encapsulé pour ne pas bloquer le reste)
                     if (Array.isArray(p.variants) && p.variants.length) {
-                      const fresh = await productService.retrieveProduct(p.id, {
-                        relations: ["variants"],
-                      })
-
-                      const previousVariantIds = (fresh.variants || []).map((v: any) => v.id)
-                      const variantPrices = p.variants
-                        .map((v: any) => {
-                          const match = (fresh.variants || []).find(
-                            (fv: any) => fv.id === v.id || (fv.sku && v.sku && fv.sku === v.sku)
-                          )
-                          if (!match || !v.prices?.length) return null
-                          return {
-                            variant_id: match.id,
-                            product_id: p.id,
-                            prices: v.prices,
-                          }
+                      try {
+                        const fresh = await productService.retrieveProduct(p.id, {
+                          relations: ["variants"],
                         })
-                        .filter(Boolean)
 
-                      if (variantPrices.length) {
-                        const pricingWf = upsertVariantPricesWorkflow(container)
-                        await pricingWf.run({
-                          input: {
-                            variantPrices,
-                            previousVariantIds,
-                          },
-                        })
+                        const previousVariantIds = (fresh.variants || []).map((v: any) => v.id)
+                        const variantPrices = p.variants
+                          .map((v: any) => {
+                            const match = (fresh.variants || []).find(
+                              (fv: any) => fv.id === v.id || (fv.sku && v.sku && fv.sku === v.sku)
+                            )
+                            if (!match || !v.prices?.length) return null
+                            return {
+                              variant_id: match.id,
+                              product_id: p.id,
+                              prices: v.prices,
+                            }
+                          })
+                          .filter(Boolean)
+
+                        if (variantPrices.length) {
+                          const pricingWf = upsertVariantPricesWorkflow(container)
+                          await pricingWf.run({
+                            input: {
+                              variantPrices,
+                              previousVariantIds,
+                            },
+                          })
+                        }
+                      } catch (pricingErr: any) {
+                        console.warn(`⚠️ [WORKFLOW] Pricing update ${p.id}:`, pricingErr?.message || pricingErr)
                       }
                     }
 
-                    // 3) Mettre à jour le stock Odoo sur les inventory levels (overwrite)
-                    const stockLocationService = container.resolve(Modules.STOCK_LOCATION)
-                    const inventoryService = container.resolve(Modules.INVENTORY)
-                    const locs = await stockLocationService.listStockLocations({})
-                    if (locs.length && Array.isArray(p.variants) && p.variants.length) {
-                      const loc = locs[0]
-                      
-                      // Récupérer le produit complet avec les variantes pour avoir les IDs à jour
-                      const fullProduct = await productService.retrieveProduct(p.id, { relations: ["variants"] })
-                      
-                      for (const odooVariant of p.variants) {
-                        if (!odooVariant.sku) continue
+                    // 4) Stock (encapsulé pour ne pas bloquer le reste)
+                    try {
+                      const stockLocationService = container.resolve(Modules.STOCK_LOCATION)
+                      const inventoryService = container.resolve(Modules.INVENTORY)
+                      const locs = await stockLocationService.listStockLocations({})
+                      if (locs.length && Array.isArray(p.variants) && p.variants.length) {
+                        const loc = locs[0]
                         
-                        // Trouver la variante Medusa correspondante
-                        const medusaVariant = (fullProduct.variants || []).find(
-                          (v: any) => v.sku === odooVariant.sku
-                        )
-                        if (!medusaVariant) continue
+                        // Récupérer le produit complet avec les variantes pour avoir les IDs à jour
+                        const fullProduct = await productService.retrieveProduct(p.id, { relations: ["variants"] })
                         
-                        const odooStock = odooVariant.metadata?.odoo_qty_available ?? 0
-                        
-                        try {
-                          // Chercher/créer l'inventory item
-                          let items = await inventoryService.listInventoryItems({ sku: [odooVariant.sku] })
-                          let item = items[0]
+                        for (const odooVariant of p.variants) {
+                          if (!odooVariant.sku) continue
                           
-                          if (!item) {
-                            const created = await inventoryService.createInventoryItems({ sku: odooVariant.sku })
-                            item = created[0]
-                            // Lier au variant
-                            const link = container.resolve("remoteLink")
-                            await link.create([
-                              { 
-                                [Modules.PRODUCT]: { variant_id: medusaVariant.id }, 
-                                [Modules.INVENTORY]: { inventory_item_id: item.id } 
-                              }
-                            ])
-                          }
+                          // Trouver la variante Medusa correspondante
+                          const medusaVariant = (fullProduct.variants || []).find(
+                            (v: any) => v.sku === odooVariant.sku
+                          )
+                          if (!medusaVariant) continue
                           
-                          // Mettre à jour ou créer le niveau de stock
-                          const levels = await inventoryService.listInventoryLevels({
-                            inventory_item_id: [item.id],
-                            location_id: [loc.id],
-                          })
+                          const odooStock = odooVariant.metadata?.odoo_qty_available ?? 0
                           
-                          if (levels.length === 0) {
-                            await inventoryService.createInventoryLevels({
-                              inventory_item_id: item.id,
-                              location_id: loc.id,
-                              stocked_quantity: odooStock,
+                          try {
+                            // Chercher/créer l'inventory item
+                            let items = await inventoryService.listInventoryItems({ sku: [odooVariant.sku] })
+                            let item = items[0]
+                            
+                            if (!item) {
+                              const created = await inventoryService.createInventoryItems({ sku: odooVariant.sku })
+                              item = created[0]
+                              // Lier au variant
+                              const link = container.resolve("remoteLink")
+                              await link.create([
+                                { 
+                                  [Modules.PRODUCT]: { variant_id: medusaVariant.id }, 
+                                  [Modules.INVENTORY]: { inventory_item_id: item.id } 
+                                }
+                              ])
+                            }
+                            
+                            // Mettre à jour ou créer le niveau de stock
+                            const levels = await inventoryService.listInventoryLevels({
+                              inventory_item_id: [item.id],
+                              location_id: [loc.id],
                             })
-                          } else {
-                            await inventoryService.updateInventoryLevels({
-                              inventory_item_id: item.id,
-                              location_id: loc.id,
-                              stocked_quantity: odooStock,
-                            })
+                            
+                            if (levels.length === 0) {
+                              await inventoryService.createInventoryLevels({
+                                inventory_item_id: item.id,
+                                location_id: loc.id,
+                                stocked_quantity: odooStock,
+                              })
+                            } else {
+                              await inventoryService.updateInventoryLevels({
+                                inventory_item_id: item.id,
+                                location_id: loc.id,
+                                stocked_quantity: odooStock,
+                              })
+                            }
+                            
+                            console.log(`📦 [WORKFLOW] Stock ${odooVariant.sku}: ${odooStock}`)
+                          } catch (stockErr: any) {
+                            console.warn(`⚠️ [WORKFLOW] Stock update ${odooVariant.sku}:`, stockErr?.message || stockErr)
                           }
-                          
-                          console.log(`📦 [WORKFLOW] Stock ${odooVariant.sku}: ${odooStock}`)
-                        } catch (stockErr: any) {
-                          console.warn(`⚠️ [WORKFLOW] Stock update ${odooVariant.sku}:`, stockErr?.message || stockErr)
                         }
                       }
+                    } catch (stockBlockErr: any) {
+                      console.warn(`⚠️ [WORKFLOW] Stock block ${p.id}:`, stockBlockErr?.message || stockBlockErr)
                     }
                     
                     console.log(`✅ [WORKFLOW] Produit ${p.title} (${p.id}) mis à jour avec prix`)
