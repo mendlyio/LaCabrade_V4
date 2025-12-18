@@ -683,6 +683,8 @@ export const syncFromErpWorkflow = createWorkflow(
               lacabradeChannel = Array.isArray(createdChannels) ? createdChannels[0] : createdChannels
             }
             
+            console.log(`🔁 [WORKFLOW] Update batch: ${productsToUpdate.length} produit(s) à traiter`)
+
             for (const p of productsToUpdate) {
                 try {
                     const productService = container.resolve(Modules.PRODUCT)
@@ -754,7 +756,7 @@ export const syncFromErpWorkflow = createWorkflow(
                               previousVariantIds,
                             },
                           })
-                          console.log(`✅ [WORKFLOW] Pricing appliqué pour ${variantPrices.length} variantes sur ${p.id}`)
+                          console.log(`✅ [WORKFLOW] Pricing appliqué pour ${variantPrices.length} variante(s) sur ${p.id}`)
                         } else {
                           console.log(`ℹ️ [WORKFLOW] Aucun prix à appliquer sur ${p.id}`)
                         }
@@ -862,6 +864,10 @@ export const syncFromErpWorkflow = createWorkflow(
     )
     
     const updateResult = updateProductsStep({ productsToUpdate, dryRun: input.dryRun })
+
+    console.log(`📊 [WORKFLOW] Résumé: toCreate=${productsToCreate.length}, toUpdate=${productsToUpdate.length}`)
+    console.log(`📊 [WORKFLOW] createResult: ${JSON.stringify(createResult)}`)
+    console.log(`📊 [WORKFLOW] updateResult: ${JSON.stringify(updateResult)}`)
 
     return new WorkflowResponse({
       odooProducts,
