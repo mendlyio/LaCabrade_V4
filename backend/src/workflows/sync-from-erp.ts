@@ -693,58 +693,11 @@ export const syncFromErpWorkflow = createWorkflow(
                       if (checkProduct.deleted_at) {
                         console.log(`♻️ [WORKFLOW] Restauration produit soft-deleted ${p.id} (import manuel)`)
                         
-                        // IMPORTANT: Nettoyer TOUS les inventory items pour tous les SKUs du produit
-                        // (y compris les orphelins/doublons) AVANT de restaurer pour éviter les conflits
-                        const inventoryService = container.resolve(Modules.INVENTORY)
+                        // IMPORTANT: Pour les produits soft-deleted, on supprime seulement les variants
+                        // On GARDE les inventory items car on ne peut pas les recréer facilement
+                        // Le workflow de stock les réutilisera et mettra à jour les quantités
                         
-                        // 1. Collecter tous les SKUs du produit (depuis Odoo ET depuis les variants existants)
-                        const allSkus = new Set<string>()
-                        
-                        // SKUs depuis les variants Odoo (p.variants)
-                        if (Array.isArray(p.variants)) {
-                          p.variants.forEach((v: any) => {
-                            if (v.sku) allSkus.add(v.sku)
-                          })
-                        }
-                        
-                        // SKUs depuis les variants Medusa existants (checkProduct.variants)
-                        if (Array.isArray(checkProduct.variants)) {
-                          checkProduct.variants.forEach((v: any) => {
-                            if (v.sku) allSkus.add(v.sku)
-                          })
-                        }
-                        
-                        console.log(`🧹 [WORKFLOW] Nettoyage de ${allSkus.size} SKUs pour ${p.id}`)
-                        
-                        // 2. Pour chaque SKU, supprimer TOUS les inventory items (même les doublons)
-                        for (const sku of allSkus) {
-                          try {
-                            const items = await inventoryService.listInventoryItems({ sku: [sku] })
-                            if (items.length > 0) {
-                              // Supprimer les niveaux de stock d'abord
-                              for (const item of items) {
-                                try {
-                                  const levels = await inventoryService.listInventoryLevels({ 
-                                    inventory_item_id: [item.id] 
-                                  })
-                                  if (levels.length > 0) {
-                                    await inventoryService.deleteInventoryLevels(levels.map((l: any) => l.id))
-                                  }
-                                } catch (e) {
-                                  // Continuer même si erreur
-                                }
-                              }
-                              
-                              // Puis supprimer les inventory items
-                              await inventoryService.deleteInventoryItems(items.map((i: any) => i.id))
-                              console.log(`🧹 [WORKFLOW] ${items.length} inventory item(s) supprimé(s) pour SKU ${sku}`)
-                            }
-                          } catch (cleanErr: any) {
-                            console.warn(`⚠️ [WORKFLOW] Erreur nettoyage inventory SKU ${sku}:`, cleanErr.message)
-                          }
-                        }
-                        
-                        // 3. Supprimer les variants soft-deleted
+                        // 1. Supprimer les variants soft-deleted (sinon conflit de SKU)
                         for (const variant of checkProduct.variants || []) {
                           try {
                             await productService.deleteProductVariants([variant.id])
@@ -754,9 +707,9 @@ export const syncFromErpWorkflow = createWorkflow(
                           }
                         }
                         
-                        // 4. Maintenant on peut restaurer sans conflit
+                        // 2. Restaurer le produit (les variants seront recréés par upsertProductVariants)
                         await productService.restoreProducts([p.id])
-                        console.log(`✅ [WORKFLOW] Produit ${p.id} restauré et nettoyé`)
+                        console.log(`✅ [WORKFLOW] Produit ${p.id} restauré (inventory items conservés)`)
                       }
                     } catch (restoreErr: any) {
                       console.warn(`⚠️ [WORKFLOW] Erreur restauration ${p.id}:`, restoreErr.message)
