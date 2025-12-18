@@ -44,22 +44,18 @@ function odooPriceToMedusaAmount(price: unknown, debugSku?: string): number {
 
   if (!Number.isFinite(raw)) return 0
 
+  // Par défaut, Odoo envoie des EUROS (1 = 1€, 20.5 = 20.50€)
+  // On multiplie par 100 pour obtenir des centimes (format Medusa)
+  // Seule exception: si ODOO_PRICE_IN_CENTS=true, on ne multiplie pas
   const flag = (process.env.ODOO_PRICE_IN_CENTS || "").toLowerCase()
-  const forceCents = flag === "true" || flag === "1"
-  
-  // Heuristique améliorée pour détecter les centimes:
-  // - Si entier >= 1000 ET (se termine par 00, 50, 90): probablement déjà en centimes
-  // - Ex: 18690 (186.90€), 2050 (20.50€), 3990 (39.90€)
-  // - Mais 186.90 reste un float → on multiplie par 100
-  const likelyCents = Number.isInteger(raw) && raw >= 1000
-  const priceIsInCents = forceCents || likelyCents
+  const priceIsInCents = flag === "true" || flag === "1"
   
   const amount = priceIsInCents ? Math.round(raw) : Math.round(raw * 100)
   
-  // Log détaillé pour diagnostic (visible dans les logs Railway/Medusa)
   console.log(
-    `💰 [PRICE] ${debugSku || "?"} | Odoo: ${raw} → Medusa: ${amount} (${(amount/100).toFixed(2)}€) | ` +
-    `cents=${priceIsInCents} (force=${forceCents}, likely=${likelyCents})`
+    `💰 [PRICE] SKU:${debugSku || "?"} | ` +
+    `Odoo: ${raw}${priceIsInCents ? ' centimes' : '€'} → ` +
+    `Medusa: ${amount} centimes (affichage: ${(amount/100).toFixed(2)}€)`
   )
   
   return amount
