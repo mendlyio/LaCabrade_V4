@@ -862,13 +862,18 @@ export const syncFromErpWorkflow = createWorkflow(
                             let item = items[0]
                             
                             if (!item) {
+                              console.log(`🔍 [WORKFLOW] Création inventory item pour SKU ${odooVariant.sku}...`)
                               const created = await inventoryService.createInventoryItems({ sku: odooVariant.sku })
+                              console.log(`🔍 [WORKFLOW] Résultat createInventoryItems:`, typeof created, Array.isArray(created) ? `Array(${created.length})` : created)
                               item = created?.[0]
                               
                               if (!item) {
                                 console.warn(`⚠️ [WORKFLOW] Impossible de créer inventory item pour SKU ${odooVariant.sku}`)
+                                console.warn(`⚠️ [WORKFLOW] Détails:`, JSON.stringify(created))
                                 continue
                               }
+                              
+                              console.log(`✅ [WORKFLOW] Inventory item créé: ${item.id}`)
                               
                               // Lier au variant
                               const link = container.resolve("remoteLink")
