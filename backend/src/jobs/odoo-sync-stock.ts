@@ -64,17 +64,72 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
           
           if (odooStock === null) {
             console.log(`⚠️  [STOCK SYNC] SKU ${variant.sku} non trouvé dans Odoo`)
+            skipped++
             continue
           }
 
-          // Récupérer l'inventory item via le SKU
-          const inventoryItems = await inventoryService.listInventoryItems({
+          // 🔍 Récupérer l'inventory item via le SKU (avec gestion des doublons)
+          let inventoryItems = await inventoryService.listInventoryItems({
             sku: [variant.sku],
           })
 
-          if (!inventoryItems.length) continue
+          // 🧹 Détecter et supprimer les doublons
+          if (inventoryItems.length > 1) {
+            console.warn(`⚠️  [STOCK SYNC] ${inventoryItems.length} doublons inventory_item pour SKU ${variant.sku}, nettoyage...`)
+            
+            const sorted = inventoryItems.sort((a: any, b: any) => 
+              new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+            )
+            const toKeep = sorted[0]
+            const toDelete = sorted.slice(1)
+            
+            for (const oldItem of toDelete) {
+              try {
+                const oldLevels = await inventoryService.listInventoryLevels({ 
+                  inventory_item_id: [oldItem.id] 
+                })
+                if (oldLevels.length > 0) {
+                  // Fusionner les stocks avant de supprimer
+                  const totalStock = oldLevels.reduce((sum: number, level: any) => sum + (level.stocked_quantity || 0), 0)
+                  if (totalStock > 0) {
+                    console.log(`  📦 Fusion stock ${variant.sku}: +${totalStock} vers item principal`)
+                  }
+                  await inventoryService.deleteInventoryLevels(oldLevels.map((l: any) => l.id))
+                }
+                
+                await inventoryService.deleteInventoryItems([oldItem.id])
+                console.log(`  🧹 Doublon inventory_item supprimé: ${oldItem.id}`)
+              } catch (deleteErr) {
+                // Continuer même si erreur
+              }
+            }
+            
+            inventoryItems = [toKeep]
+          }
+
+          if (!inventoryItems.length) {
+            console.log(`⚠️  [STOCK SYNC] Aucun inventory item trouvé pour SKU ${variant.sku}`)
+            skipped++
+            continue
+          }
 
           const inventoryItem = inventoryItems[0]
+
+          // 🔗 S'assurer que le lien variant↔inventory existe
+          try {
+            const remoteLink = container.resolve("remoteLink")
+            await remoteLink.create([
+              { 
+                [Modules.PRODUCT]: { variant_id: variant.id }, 
+                [Modules.INVENTORY]: { inventory_item_id: inventoryItem.id } 
+              }
+            ])
+          } catch (linkErr: any) {
+            // Lien existe déjà ou erreur non critique
+            if (!linkErr.message?.includes("already exists")) {
+              console.log(`  🔗 [STOCK SYNC] Lien variant↔inventory ${variant.sku}:`, linkErr.message)
+            }
+          }
 
           const levels = await inventoryService.listInventoryLevels({
             inventory_item_id: [inventoryItem.id],
@@ -99,6 +154,9 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
               // Stock identique, pas de mise à jour
               skipped++
             }
+          } else {
+            console.log(`⚠️  [STOCK SYNC] Aucun niveau de stock pour ${variant.sku}, création impossible ici`)
+            skipped++
           }
         } catch (error: any) {
           console.error(`❌ [STOCK SYNC] Erreur ${variant.sku}:`, error.message)
