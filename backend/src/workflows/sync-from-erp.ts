@@ -283,14 +283,13 @@ export const syncFromErpWorkflow = createWorkflow(
     const existingProducts = fetchExistingProductsStep({ odooProducts })
 
     // Préparer les produits
-    const { productsToCreate, productsToUpdate, productIdsToHardDelete } = transform(
+    const { productsToCreate, productsToUpdate } = transform(
       { odooProducts, existingProducts },
       ({ odooProducts, existingProducts }) => {
         console.log(`🔄 [WORKFLOW] Transformation des produits...`)
         
         const productsToCreate: CreateProductWorkflowInputDTO[] = []
         const productsToUpdate: UpdateProductWorkflowInputDTO[] = []
-        const productIdsToHardDelete: string[] = []
 
         odooProducts.forEach((odooProduct: OdooProduct) => {
           try {
@@ -477,16 +476,9 @@ export const syncFromErpWorkflow = createWorkflow(
           }
 
           if (existingProduct) {
-            // Si le produit a été supprimé dans l'admin (soft-delete), on le hard-delete
-            // puis on le recrée depuis Odoo (évite les conflits SKU à la restauration).
-            if ((existingProduct as any).deleted_at) {
-              productIdsToHardDelete.push(existingProduct.id)
-              // IMPORTANT: ne pas conserver l'id, sinon on retombe sur un update sur un record supprimé
-              delete (product as any).id
-              productsToCreate.push(product as CreateProductWorkflowInputDTO)
-            } else {
-              productsToUpdate.push(product as UpdateProductWorkflowInputDTO)
-            }
+            // Si le produit existe (même soft-deleted), on le met à jour
+            // Le step d'update restaurera les soft-deleted avant de les mettre à jour
+            productsToUpdate.push(product as UpdateProductWorkflowInputDTO)
           } else {
             productsToCreate.push(product as CreateProductWorkflowInputDTO)
           }
@@ -495,18 +487,12 @@ export const syncFromErpWorkflow = createWorkflow(
           }
         })
 
-        console.log(`📊 [WORKFLOW] Transform terminé: ${productsToCreate.length} à créer, ${productsToUpdate.length} à mettre à jour, ${productIdsToHardDelete.length} à supprimer`)
-        return { productsToCreate, productsToUpdate, productIdsToHardDelete }
+        console.log(`📊 [WORKFLOW] Transform terminé: ${productsToCreate.length} à créer, ${productsToUpdate.length} à mettre à jour`)
+        return { productsToCreate, productsToUpdate }
       }
     )
 
-    // Hard-delete avant create, pour libérer les contraintes uniques (SKU, handle, etc.)
-    hardDeleteSoftDeletedProductsStep({
-      productIdsToHardDelete,
-      dryRun: !!input.dryRun,
-    })
-
-    // Create & Update Steps (identiques à avant, mais je dois réinclure le code complet pour que ça compile)
+    // Create & Update Steps
     // J'abrège ici pour la lisibilité mais je vais remettre le code complet dans le fichier.
     // ... (Code complet Create/Update repris du fichier précédent avec nettoyage MinIO inclus) ...
     
@@ -690,8 +676,16 @@ export const syncFromErpWorkflow = createWorkflow(
                 try {
                     const productService = container.resolve(Modules.PRODUCT)
 
-                    // NOTE: les produits soft-deleted sont maintenant hard-delete + recréés
-                    // en amont (transform), pour éviter les conflits SKU à la restauration.
+                    // Restaurer le produit s'il est soft-deleted avant de le mettre à jour
+                    try {
+                      const checkProduct = await productService.retrieveProduct(p.id, { withDeleted: true })
+                      if (checkProduct.deleted_at) {
+                        console.log(`♻️ [WORKFLOW] Restauration produit soft-deleted ${p.id}`)
+                        await productService.restoreProducts([p.id])
+                      }
+                    } catch (restoreErr: any) {
+                      console.warn(`⚠️ [WORKFLOW] Erreur restauration ${p.id}:`, restoreErr.message)
+                    }
 
                     // 1) Mettre à jour le produit + options (sans variantes, pour éviter les DTO incompatibles)
                     const updatePayload = {
