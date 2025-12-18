@@ -941,7 +941,10 @@ export default class OdooModuleService {
   async fetchProductsPaged(
     params: Pagination & { q?: string; categoryId?: number }
   ): Promise<{ products: OdooProduct[]; total: number }> {
+    console.log(`[ODOO] fetchProductsPaged START: offset=${params?.offset}, limit=${params?.limit}, q=${params?.q}`)
+    
     if (!this.uid) {
+      console.log(`[ODOO] Logging in...`)
       await this.login()
     }
 
@@ -961,6 +964,7 @@ export default class OdooModuleService {
     }
 
     // Total count
+    console.log(`[ODOO] Fetching total count with domain:`, domain)
     const total: number = await this.client.request("call", {
       service: "object",
       method: "execute_kw",
@@ -973,8 +977,10 @@ export default class OdooModuleService {
         [domain],
       ],
     })
+    console.log(`[ODOO] Total count: ${total}`)
 
     // Page of IDs
+    console.log(`[ODOO] Fetching product IDs...`)
     const productIds: number[] = await this.client.request("call", {
       service: "object",
       method: "execute_kw",
@@ -991,11 +997,14 @@ export default class OdooModuleService {
         },
       ],
     })
+    console.log(`[ODOO] Found ${productIds.length} product IDs:`, productIds)
 
     if (!productIds.length) {
+      console.log(`[ODOO] No products found, returning empty`)
       return { products: [], total }
     }
 
+    console.log(`[ODOO] Reading product templates...`)
     const brandField = this.getBrandField()
     const fields = [
       "name",
@@ -1074,6 +1083,7 @@ export default class OdooModuleService {
       }
     }
 
+    console.log(`[ODOO] fetchProductsPaged COMPLETE: returning ${products.length} products`)
     return { products, total }
   }
 }
