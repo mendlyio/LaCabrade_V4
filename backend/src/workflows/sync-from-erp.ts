@@ -693,23 +693,10 @@ export const syncFromErpWorkflow = createWorkflow(
                       if (checkProduct.deleted_at) {
                         console.log(`♻️ [WORKFLOW] Restauration produit soft-deleted ${p.id} (import manuel)`)
                         
-                        // IMPORTANT: Pour les produits soft-deleted, on supprime seulement les variants
-                        // On GARDE les inventory items car on ne peut pas les recréer facilement
-                        // Le workflow de stock les réutilisera et mettra à jour les quantités
-                        
-                        // 1. Supprimer les variants soft-deleted (sinon conflit de SKU)
-                        for (const variant of checkProduct.variants || []) {
-                          try {
-                            await productService.deleteProductVariants([variant.id])
-                            console.log(`🧹 [WORKFLOW] Variant ${variant.sku} supprimé`)
-                          } catch (cleanErr: any) {
-                            console.warn(`⚠️ [WORKFLOW] Nettoyage variant ${variant.sku}:`, cleanErr.message)
-                          }
-                        }
-                        
-                        // 2. Restaurer le produit (les variants seront recréés par upsertProductVariants)
+                        // Restaurer directement le produit ET ses variants soft-deleted
+                        // Medusa restaure automatiquement les variants liés
                         await productService.restoreProducts([p.id])
-                        console.log(`✅ [WORKFLOW] Produit ${p.id} restauré (inventory items conservés)`)
+                        console.log(`✅ [WORKFLOW] Produit ${p.id} restauré (variants et inventory items conservés)`)
                       }
                     } catch (restoreErr: any) {
                       console.warn(`⚠️ [WORKFLOW] Erreur restauration ${p.id}:`, restoreErr.message)
@@ -824,14 +811,15 @@ export const syncFromErpWorkflow = createWorkflow(
                           const odooStock = odooVariant.metadata?.odoo_qty_available ?? 0
                           
                           try {
-                            // Chercher l'inventory item (et détecter les doublons)
+                            let item: any = null
+                            
+                            // 🔍 ÉTAPE 1: Chercher par SKU (avec gestion des doublons)
                             let items = await inventoryService.listInventoryItems({ sku: [odooVariant.sku] })
                             
-                            // 🔍 Détecter et supprimer les doublons d'inventory items
+                            // Détecter et supprimer les doublons d'inventory items
                             if (items.length > 1) {
                               console.warn(`⚠️ [WORKFLOW] ${items.length} doublons inventory_item pour SKU ${odooVariant.sku}, nettoyage...`)
                               
-                              // Garder le plus récent (basé sur created_at), supprimer les autres
                               const sorted = items.sort((a: any, b: any) => 
                                 new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
                               )
@@ -840,7 +828,6 @@ export const syncFromErpWorkflow = createWorkflow(
                               
                               for (const oldItem of toDelete) {
                                 try {
-                                  // Supprimer les niveaux de stock liés
                                   const oldLevels = await inventoryService.listInventoryLevels({ 
                                     inventory_item_id: [oldItem.id] 
                                   })
@@ -848,7 +835,6 @@ export const syncFromErpWorkflow = createWorkflow(
                                     await inventoryService.deleteInventoryLevels(oldLevels.map((l: any) => l.id))
                                   }
                                   
-                                  // Supprimer l'inventory item
                                   await inventoryService.deleteInventoryItems([oldItem.id])
                                   console.log(`🧹 [WORKFLOW] Doublon inventory_item supprimé: ${oldItem.id}`)
                                 } catch (deleteErr) {
@@ -859,17 +845,37 @@ export const syncFromErpWorkflow = createWorkflow(
                               items = [toKeep]
                             }
                             
-                            let item = items[0]
+                            if (items.length > 0) {
+                              item = items[0]
+                              console.log(`🔍 [WORKFLOW] Inventory item trouvé via SKU: ${item.id}`)
+                              
+                              // 🔗 ÉTAPE 2: S'assurer que le lien variant ↔ inventory existe
+                              try {
+                                const link = container.resolve("remoteLink")
+                                await link.create([
+                                  { 
+                                    [Modules.PRODUCT]: { variant_id: medusaVariant.id }, 
+                                    [Modules.INVENTORY]: { inventory_item_id: item.id } 
+                                  }
+                                ])
+                                console.log(`🔗 [WORKFLOW] Lien créé/vérifié: variant ${medusaVariant.id} ↔ inventory ${item.id}`)
+                              } catch (linkCreateErr: any) {
+                                // Le lien existe déjà ou erreur non critique
+                                if (!linkCreateErr.message?.includes("already exists")) {
+                                  console.log(`🔗 [WORKFLOW] Lien variant↔inventory:`, linkCreateErr.message)
+                                }
+                              }
+                            }
                             
+                            // 🔍 ÉTAPE 3: Si toujours pas trouvé, en créer un nouveau
                             if (!item) {
-                              console.log(`🔍 [WORKFLOW] Création inventory item pour SKU ${odooVariant.sku}...`)
+                              console.log(`🆕 [WORKFLOW] Création inventory item pour SKU ${odooVariant.sku}...`)
                               const created = await inventoryService.createInventoryItems({ sku: odooVariant.sku })
-                              console.log(`🔍 [WORKFLOW] Résultat createInventoryItems:`, typeof created, Array.isArray(created) ? `Array(${created.length})` : created)
-                              item = created?.[0]
+                              item = Array.isArray(created) ? created[0] : created
                               
                               if (!item) {
                                 console.warn(`⚠️ [WORKFLOW] Impossible de créer inventory item pour SKU ${odooVariant.sku}`)
-                                console.warn(`⚠️ [WORKFLOW] Détails:`, JSON.stringify(created))
+                                console.warn(`⚠️ [WORKFLOW] createInventoryItems retourné:`, typeof created, created)
                                 continue
                               }
                               
