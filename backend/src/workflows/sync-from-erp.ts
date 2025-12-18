@@ -495,6 +495,7 @@ export const syncFromErpWorkflow = createWorkflow(
           }
         })
 
+        console.log(`📊 [WORKFLOW] Transform terminé: ${productsToCreate.length} à créer, ${productsToUpdate.length} à mettre à jour, ${productIdsToHardDelete.length} à supprimer`)
         return { productsToCreate, productsToUpdate, productIdsToHardDelete }
       }
     )
@@ -512,6 +513,7 @@ export const syncFromErpWorkflow = createWorkflow(
     const createProductsStep = createStep(
       "create-products-from-odoo",
       async ({ productsToCreate, dryRun }: { productsToCreate: any[]; dryRun: boolean }, { container }) => {
+        console.log(`➕ [WORKFLOW] CREATE step appelé: ${productsToCreate.length} produit(s) à créer, dryRun=${dryRun}`)
         if (dryRun || productsToCreate.length === 0) return new StepResponse({ created: 0 })
         
         const productService = container.resolve(Modules.PRODUCT)
@@ -668,6 +670,7 @@ export const syncFromErpWorkflow = createWorkflow(
     const updateProductsStep = createStep(
         "update-products",
         async ({ productsToUpdate, dryRun }: { productsToUpdate: any[]; dryRun: boolean }, { container }) => {
+            console.log(`🔄 [WORKFLOW] UPDATE step appelé: ${productsToUpdate.length} produit(s) à mettre à jour, dryRun=${dryRun}`)
             if (dryRun || !productsToUpdate.length) return new StepResponse({ updated: 0 })
             
             let updatedCount = 0
