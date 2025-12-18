@@ -693,18 +693,60 @@ export const syncFromErpWorkflow = createWorkflow(
                       if (checkProduct.deleted_at) {
                         console.log(`♻️ [WORKFLOW] Restauration produit soft-deleted ${p.id} (import manuel)`)
                         
-                        // Nettoyer les variants orphelins AVANT de restaurer (sinon conflit SKU)
+                        // IMPORTANT: Nettoyer TOUS les inventory items pour tous les SKUs du produit
+                        // (y compris les orphelins/doublons) AVANT de restaurer pour éviter les conflits
                         const inventoryService = container.resolve(Modules.INVENTORY)
+                        
+                        // 1. Collecter tous les SKUs du produit (depuis Odoo ET depuis les variants existants)
+                        const allSkus = new Set<string>()
+                        
+                        // SKUs depuis les variants Odoo (p.variants)
+                        if (Array.isArray(p.variants)) {
+                          p.variants.forEach((v: any) => {
+                            if (v.sku) allSkus.add(v.sku)
+                          })
+                        }
+                        
+                        // SKUs depuis les variants Medusa existants (checkProduct.variants)
+                        if (Array.isArray(checkProduct.variants)) {
+                          checkProduct.variants.forEach((v: any) => {
+                            if (v.sku) allSkus.add(v.sku)
+                          })
+                        }
+                        
+                        console.log(`🧹 [WORKFLOW] Nettoyage de ${allSkus.size} SKUs pour ${p.id}`)
+                        
+                        // 2. Pour chaque SKU, supprimer TOUS les inventory items (même les doublons)
+                        for (const sku of allSkus) {
+                          try {
+                            const items = await inventoryService.listInventoryItems({ sku: [sku] })
+                            if (items.length > 0) {
+                              // Supprimer les niveaux de stock d'abord
+                              for (const item of items) {
+                                try {
+                                  const levels = await inventoryService.listInventoryLevels({ 
+                                    inventory_item_id: [item.id] 
+                                  })
+                                  if (levels.length > 0) {
+                                    await inventoryService.deleteInventoryLevels(levels.map((l: any) => l.id))
+                                  }
+                                } catch (e) {
+                                  // Continuer même si erreur
+                                }
+                              }
+                              
+                              // Puis supprimer les inventory items
+                              await inventoryService.deleteInventoryItems(items.map((i: any) => i.id))
+                              console.log(`🧹 [WORKFLOW] ${items.length} inventory item(s) supprimé(s) pour SKU ${sku}`)
+                            }
+                          } catch (cleanErr: any) {
+                            console.warn(`⚠️ [WORKFLOW] Erreur nettoyage inventory SKU ${sku}:`, cleanErr.message)
+                          }
+                        }
+                        
+                        // 3. Supprimer les variants soft-deleted
                         for (const variant of checkProduct.variants || []) {
                           try {
-                            // Supprimer l'inventory item lié
-                            const items = await inventoryService.listInventoryItems({ sku: [variant.sku] })
-                            if (items.length > 0) {
-                              await inventoryService.deleteInventoryItems(items.map((i: any) => i.id))
-                              console.log(`🧹 [WORKFLOW] Inventory item supprimé pour SKU ${variant.sku}`)
-                            }
-                            
-                            // Supprimer le variant
                             await productService.deleteProductVariants([variant.id])
                             console.log(`🧹 [WORKFLOW] Variant ${variant.sku} supprimé`)
                           } catch (cleanErr: any) {
@@ -712,8 +754,9 @@ export const syncFromErpWorkflow = createWorkflow(
                           }
                         }
                         
-                        // Maintenant on peut restaurer sans conflit
+                        // 4. Maintenant on peut restaurer sans conflit
                         await productService.restoreProducts([p.id])
+                        console.log(`✅ [WORKFLOW] Produit ${p.id} restauré et nettoyé`)
                       }
                     } catch (restoreErr: any) {
                       console.warn(`⚠️ [WORKFLOW] Erreur restauration ${p.id}:`, restoreErr.message)
@@ -828,8 +871,41 @@ export const syncFromErpWorkflow = createWorkflow(
                           const odooStock = odooVariant.metadata?.odoo_qty_available ?? 0
                           
                           try {
-                            // Chercher/créer l'inventory item
+                            // Chercher l'inventory item (et détecter les doublons)
                             let items = await inventoryService.listInventoryItems({ sku: [odooVariant.sku] })
+                            
+                            // 🔍 Détecter et supprimer les doublons d'inventory items
+                            if (items.length > 1) {
+                              console.warn(`⚠️ [WORKFLOW] ${items.length} doublons inventory_item pour SKU ${odooVariant.sku}, nettoyage...`)
+                              
+                              // Garder le plus récent (basé sur created_at), supprimer les autres
+                              const sorted = items.sort((a: any, b: any) => 
+                                new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+                              )
+                              const toKeep = sorted[0]
+                              const toDelete = sorted.slice(1)
+                              
+                              for (const oldItem of toDelete) {
+                                try {
+                                  // Supprimer les niveaux de stock liés
+                                  const oldLevels = await inventoryService.listInventoryLevels({ 
+                                    inventory_item_id: [oldItem.id] 
+                                  })
+                                  if (oldLevels.length > 0) {
+                                    await inventoryService.deleteInventoryLevels(oldLevels.map((l: any) => l.id))
+                                  }
+                                  
+                                  // Supprimer l'inventory item
+                                  await inventoryService.deleteInventoryItems([oldItem.id])
+                                  console.log(`🧹 [WORKFLOW] Doublon inventory_item supprimé: ${oldItem.id}`)
+                                } catch (deleteErr) {
+                                  // Continuer même si erreur
+                                }
+                              }
+                              
+                              items = [toKeep]
+                            }
+                            
                             let item = items[0]
                             
                             if (!item) {
@@ -849,6 +925,7 @@ export const syncFromErpWorkflow = createWorkflow(
                                   [Modules.INVENTORY]: { inventory_item_id: item.id } 
                                 }
                               ])
+                              console.log(`🔗 [WORKFLOW] Inventory item ${item.id} lié au variant ${medusaVariant.id}`)
                             }
                             
                             if (!item?.id) {
