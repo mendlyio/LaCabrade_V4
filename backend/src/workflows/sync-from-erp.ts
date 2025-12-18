@@ -45,18 +45,14 @@ function odooPriceToMedusaAmount(price: unknown, debugSku?: string): number {
 
   if (!Number.isFinite(raw)) return 0
 
-  // Par défaut, Odoo envoie des EUROS (1 = 1€, 20.5 = 20.50€)
-  // On multiplie par 100 pour obtenir des centimes (format Medusa)
-  // Seule exception: si ODOO_PRICE_IN_CENTS=true, on ne multiplie pas
-  const flag = (process.env.ODOO_PRICE_IN_CENTS || "").toLowerCase()
-  const priceIsInCents = flag === "true" || flag === "1"
-  
-  const amount = priceIsInCents ? Math.round(raw) : Math.round(raw * 100)
+  // NE PAS MULTIPLIER PAR 100 !
+  // Le pricing workflow de Medusa s'attend à recevoir des EUROS, pas des centimes.
+  // Medusa fera lui-même la conversion en "minor units" lors du stockage.
+  const amount = Math.round(raw * 100) / 100  // Arrondir à 2 décimales
   
   console.log(
     `💰 [PRICE] SKU:${debugSku || "?"} | ` +
-    `Odoo: ${raw}${priceIsInCents ? ' centimes' : '€'} → ` +
-    `Medusa: ${amount} centimes (affichage: ${(amount/100).toFixed(2)}€)`
+    `Odoo: ${raw}€ → Medusa: ${amount}€ (pas de x100)`
   )
   
   return amount
