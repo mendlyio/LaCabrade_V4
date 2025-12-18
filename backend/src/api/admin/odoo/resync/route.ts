@@ -27,12 +27,13 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
     console.log(`🔄 [ADMIN] Re-synchronisation de tous les produits Odoo déjà importés`)
 
-    // Récupérer tous les produits Medusa avec un external_id
+    // Récupérer tous les produits Medusa avec un external_id (sauf soft-deleted)
     const medusaProducts = await productService.listProducts(
       {},
       { 
         select: ["id", "metadata"],
         take: 10000,
+        withDeleted: false, // Ne pas inclure les produits supprimés dans le re-sync
       }
     )
 
@@ -101,6 +102,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
             offset: 0,
             dryRun: false,
             filterProductIds: batch,
+            isResync: true, // Flag pour ignorer les produits soft-deleted
           },
         })
 

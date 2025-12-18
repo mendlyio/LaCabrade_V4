@@ -23,6 +23,7 @@ type SyncFromErpInput = Pagination & {
   dryRun?: boolean
   filterProductIds?: number[]
   filterCategoryId?: number // Import par catégorie
+  isResync?: boolean // True = re-sync (ignore soft-deleted), False/undefined = import manuel (restaure soft-deleted)
 }
 
 /**
@@ -476,9 +477,9 @@ export const syncFromErpWorkflow = createWorkflow(
             if ((existingProduct as any).deleted_at) {
               // Pour un import manuel, on restaure et met à jour
               // Pour une re-sync, on ignore les produits supprimés
-              // On peut distinguer via filterProductIds (import manuel) vs pas de filtre (re-sync)
-              const isManualImport = input?.filterProductIds && input.filterProductIds.length > 0
-              if (isManualImport) {
+              // On distingue via le flag isResync (re-sync=true → ignore, import manuel=false → restaure)
+              const isResyncMode = input?.isResync === true
+              if (!isResyncMode) {
                 console.log(`♻️ [WORKFLOW] Import manuel: restauration produit soft-deleted ${existingProduct.id}`)
                 productsToUpdate.push(product as UpdateProductWorkflowInputDTO)
               } else {
@@ -685,14 +686,16 @@ export const syncFromErpWorkflow = createWorkflow(
                 try {
                     const productService = container.resolve(Modules.PRODUCT)
 
-                    // Restaurer le produit s'il est soft-deleted avant de le mettre à jour
+                    // NOTE: La restauration des produits soft-deleted est gérée dans le step "transform"
+                    // Si un produit arrive ici et est soft-deleted, c'est volontaire (import manuel)
+                    // On doit restaurer avant de mettre à jour pour éviter les erreurs
                     try {
                       const checkProduct = await productService.retrieveProduct(p.id, { 
                         withDeleted: true,
                         relations: ["variants"]
                       })
                       if (checkProduct.deleted_at) {
-                        console.log(`♻️ [WORKFLOW] Restauration produit soft-deleted ${p.id}`)
+                        console.log(`♻️ [WORKFLOW] Restauration produit soft-deleted ${p.id} (import manuel)`)
                         
                         // Nettoyer les variants orphelins AVANT de restaurer (sinon conflit SKU)
                         const inventoryService = container.resolve(Modules.INVENTORY)
@@ -760,13 +763,23 @@ export const syncFromErpWorkflow = createWorkflow(
                           relations: ["variants"],
                         })
 
+                        console.log(`💰 [UPDATE] Produit ${p.id}: ${p.variants.length} variantes Odoo, ${fresh.variants?.length || 0} variantes Medusa`)
+
                         const previousVariantIds = (fresh.variants || []).map((v: any) => v.id)
                         const variantPrices = p.variants
                           .map((v: any) => {
                             const match = (fresh.variants || []).find(
                               (fv: any) => fv.id === v.id || (fv.sku && v.sku && fv.sku === v.sku)
                             )
-                            if (!match || !v.prices?.length) return null
+                            if (!match) {
+                              console.log(`⚠️ [UPDATE] Variant SKU:${v.sku} non trouvé dans Medusa`)
+                              return null
+                            }
+                            if (!v.prices?.length) {
+                              console.log(`⚠️ [UPDATE] Variant SKU:${v.sku} sans prix`)
+                              return null
+                            }
+                            console.log(`💰 [UPDATE] Match variant ${match.id} (SKU:${v.sku}) → prix ${JSON.stringify(v.prices)}`)
                             return {
                               variant_id: match.id,
                               product_id: p.id,
@@ -776,6 +789,7 @@ export const syncFromErpWorkflow = createWorkflow(
                           .filter(Boolean)
 
                         if (variantPrices.length) {
+                          console.log(`💰 [UPDATE] Application pricing pour ${variantPrices.length} variantes`)
                           const pricingWf = upsertVariantPricesWorkflow(container)
                           await pricingWf.run({
                             input: {
@@ -783,6 +797,9 @@ export const syncFromErpWorkflow = createWorkflow(
                               previousVariantIds,
                             },
                           })
+                          console.log(`✅ [UPDATE] Pricing appliqué pour ${p.id}`)
+                        } else {
+                          console.log(`ℹ️ [UPDATE] Aucun prix à appliquer pour ${p.id}`)
                         }
                       } catch (pricingErr: any) {
                         console.warn(`⚠️ [WORKFLOW] Pricing update ${p.id}:`, pricingErr?.message || pricingErr)
