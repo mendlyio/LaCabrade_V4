@@ -691,9 +691,33 @@ export const syncFromErpWorkflow = createWorkflow(
 
                     // Restaurer le produit s'il est soft-deleted avant de le mettre à jour
                     try {
-                      const checkProduct = await productService.retrieveProduct(p.id, { withDeleted: true })
+                      const checkProduct = await productService.retrieveProduct(p.id, { 
+                        withDeleted: true,
+                        relations: ["variants"]
+                      })
                       if (checkProduct.deleted_at) {
                         console.log(`♻️ [WORKFLOW] Restauration produit soft-deleted ${p.id}`)
+                        
+                        // Nettoyer les variants orphelins AVANT de restaurer (sinon conflit SKU)
+                        const inventoryService = container.resolve(Modules.INVENTORY)
+                        for (const variant of checkProduct.variants || []) {
+                          try {
+                            // Supprimer l'inventory item lié
+                            const items = await inventoryService.listInventoryItems({ sku: [variant.sku] })
+                            if (items.length > 0) {
+                              await inventoryService.deleteInventoryItems(items.map((i: any) => i.id))
+                              console.log(`🧹 [WORKFLOW] Inventory item supprimé pour SKU ${variant.sku}`)
+                            }
+                            
+                            // Supprimer le variant
+                            await productService.deleteProductVariants([variant.id])
+                            console.log(`🧹 [WORKFLOW] Variant ${variant.sku} supprimé`)
+                          } catch (cleanErr: any) {
+                            console.warn(`⚠️ [WORKFLOW] Nettoyage variant ${variant.sku}:`, cleanErr.message)
+                          }
+                        }
+                        
+                        // Maintenant on peut restaurer sans conflit
                         await productService.restoreProducts([p.id])
                       }
                     } catch (restoreErr: any) {
@@ -798,7 +822,13 @@ export const syncFromErpWorkflow = createWorkflow(
                             
                             if (!item) {
                               const created = await inventoryService.createInventoryItems({ sku: odooVariant.sku })
-                              item = created[0]
+                              item = created?.[0]
+                              
+                              if (!item) {
+                                console.warn(`⚠️ [WORKFLOW] Impossible de créer inventory item pour SKU ${odooVariant.sku}`)
+                                continue
+                              }
+                              
                               // Lier au variant
                               const link = container.resolve("remoteLink")
                               await link.create([
@@ -807,6 +837,11 @@ export const syncFromErpWorkflow = createWorkflow(
                                   [Modules.INVENTORY]: { inventory_item_id: item.id } 
                                 }
                               ])
+                            }
+                            
+                            if (!item?.id) {
+                              console.warn(`⚠️ [WORKFLOW] Inventory item sans ID pour SKU ${odooVariant.sku}`)
+                              continue
                             }
                             
                             // Mettre à jour ou créer le niveau de stock
