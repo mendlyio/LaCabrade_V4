@@ -21,7 +21,7 @@ export type OdooProduct = {
   description_sale?: string
   qty_available?: number
   image_512?: string | false
-  product_image_ids?: number[] // IDs des images additionnelles dans product.image
+  ept_image_ids?: number[] // IDs des images additionnelles dans common.product.image.ept (module EPT)
   weight?: number
   volume?: number
   categ_id: any // [id, name]
@@ -84,7 +84,7 @@ export default class OdooModuleService {
   }
 
   /**
-   * Lecture robuste de product.template: si un champ est inconnu (ex: product_brand_id, product_image_ids),
+   * Lecture robuste de product.template: si un champ est inconnu (ex: product_brand_id, ept_image_ids),
    * on retente sans ce champ au lieu d'échouer (sinon l'admin affiche "Aucun produit").
    * Gère les champs optionnels qui peuvent ne pas exister selon la version Odoo.
    */
@@ -92,7 +92,7 @@ export default class OdooModuleService {
     productIds: number[],
     fields: string[]
   ): Promise<OdooProduct[]> {
-    const optionalFields = [this.getBrandField(), "product_image_ids"].filter(Boolean) as string[]
+    const optionalFields = [this.getBrandField(), "ept_image_ids"].filter(Boolean) as string[]
     
     const tryReadWithFields = async (fieldsToTry: string[]): Promise<OdooProduct[]> => {
       try {
@@ -413,9 +413,9 @@ export default class OdooModuleService {
    * @returns Odoo order ID
    */
   /**
-   * Récupère les images d'un produit depuis le modèle product.image
+   * Récupère les images d'un produit depuis le modèle common.product.image.ept (module EPT)
    */
-  async fetchProductImages(imageIds: number[]): Promise<Array<{ id: number; name: string; image_1920: string }>> {
+  async fetchProductImages(imageIds: number[]): Promise<Array<{ id: number; name: string; image: string; sequence: number }>> {
     console.log(`🖼️ [ODOO] fetchProductImages appelé avec IDs: ${JSON.stringify(imageIds)}`)
     
     if (!this.uid) {
@@ -429,7 +429,7 @@ export default class OdooModuleService {
     }
 
     try {
-      console.log(`🖼️ [ODOO] Requête Odoo pour ${imageIds.length} image(s)...`)
+      console.log(`🖼️ [ODOO] Requête Odoo pour ${imageIds.length} image(s) depuis 'common.product.image.ept'...`)
       const images = await this.client.request("call", {
         service: "object",
         method: "execute_kw",
@@ -437,14 +437,14 @@ export default class OdooModuleService {
           this.options.dbName,
           this.uid!,
           this.options.apiKey,
-          "product.image",
+          "common.product.image.ept", // Modèle EPT au lieu de product.image
           "read",
           [imageIds],
-          { fields: ["name", "image_1920"] },
+          { fields: ["name", "image", "sequence"] }, // Champ 'image' au lieu de 'image_1920'
         ],
       })
       console.log(`✅ [ODOO] ${images?.length || 0} image(s) récupérée(s) depuis Odoo`)
-      console.log(`🖼️ [ODOO] Images: ${JSON.stringify(images?.map((img: any) => ({ id: img.id, name: img.name, hasData: !!img.image_1920 })))}`)
+      console.log(`🖼️ [ODOO] Images: ${JSON.stringify(images?.map((img: any) => ({ id: img.id, name: img.name, hasData: !!img.image, sequence: img.sequence })))}`)
       return images
     } catch (error: any) {
       console.error(`❌ [ODOO] Erreur récupération images:`, error.message)
@@ -853,7 +853,7 @@ export default class OdooModuleService {
       "attribute_line_ids",
       "qty_available",
       "image_512",
-      "product_image_ids",
+      "ept_image_ids",
       "weight",
       "volume",
       "categ_id",
@@ -1056,7 +1056,7 @@ export default class OdooModuleService {
       "attribute_line_ids",
       "qty_available",
       "image_512",
-      "product_image_ids",
+      "ept_image_ids",
       "weight",
       "volume",
       "categ_id",

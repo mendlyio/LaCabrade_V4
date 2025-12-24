@@ -333,14 +333,14 @@ export const syncFromErpWorkflow = createWorkflow(
               odoo_image_base64: (odooProduct.image_512 && typeof odooProduct.image_512 === 'string') 
                 ? odooProduct.image_512 
                 : undefined,
-              odoo_image_ids: odooProduct.product_image_ids || [], // IDs des images additionnelles
+              odoo_image_ids: odooProduct.ept_image_ids || [], // IDs des images additionnelles (EPT)
             }
 
             // DEBUG: Afficher les IDs d'images disponibles
             console.log(`🖼️ [DEBUG] Produit ${odooProduct.display_name} (${odooProduct.id}):`)
             console.log(`  - image_512: ${odooProduct.image_512 ? 'présente' : 'absente'}`)
-            console.log(`  - product_image_ids: ${JSON.stringify(odooProduct.product_image_ids)}`)
-            console.log(`  - Type: ${typeof odooProduct.product_image_ids}, Array: ${Array.isArray(odooProduct.product_image_ids)}`)
+            console.log(`  - ept_image_ids: ${JSON.stringify(odooProduct.ept_image_ids)}`)
+            console.log(`  - Type: ${typeof odooProduct.ept_image_ids}, Array: ${Array.isArray(odooProduct.ept_image_ids)}`)
 
             // Gérer les options et variantes
           const hasMultipleVariants = odooProduct.product_variant_count > 1 && 
@@ -665,12 +665,15 @@ export const syncFromErpWorkflow = createWorkflow(
                                 const additionalImages = await odooModuleService.fetchProductImages(productData.odoo_image_ids)
                                 
                                 console.log(`📷 [WORKFLOW] ${additionalImages.length} image(s) additionnelle(s) trouvée(s) pour produit ${created.id}`)
-                                console.log(`🖼️ [DEBUG] Images récupérées: ${JSON.stringify(additionalImages.map(img => ({ id: img.id, name: img.name, hasImage: !!img.image_1920 })))}`)
+                                console.log(`🖼️ [DEBUG] Images récupérées: ${JSON.stringify(additionalImages.map(img => ({ id: img.id, name: img.name, hasImage: !!img.image, sequence: img.sequence })))}`)
                                 
-                                for (const img of additionalImages) {
-                                    if (img.image_1920 && typeof img.image_1920 === 'string') {
+                                // Trier par sequence pour respecter l'ordre Odoo
+                                const sortedImages = additionalImages.sort((a: any, b: any) => (a.sequence || 0) - (b.sequence || 0))
+                                
+                                for (const img of sortedImages) {
+                                    if (img.image && typeof img.image === 'string') {
                                         const filename = `odoo/products/${created.id}/img-${img.id}-${Date.now()}.png`
-                                        const buffer = Buffer.from(img.image_1920, 'base64')
+                                        const buffer = Buffer.from(img.image, 'base64')
                                         
                                         await client.putObject(bucket, filename, buffer, buffer.length, { 
                                             'Content-Type': 'image/png', 
@@ -679,9 +682,9 @@ export const syncFromErpWorkflow = createWorkflow(
                                         
                                         const url = `https://${endpoint}/${bucket}/${filename}`
                                         imageUrls.push(url)
-                                        console.log(`📷 [WORKFLOW] Image additionnelle uploadée: ${url}`)
+                                        console.log(`📷 [WORKFLOW] Image additionnelle uploadée: ${url} (sequence: ${img.sequence})`)
                                     } else {
-                                        console.warn(`⚠️ [DEBUG] Image ${img.id} sans données image_1920`)
+                                        console.warn(`⚠️ [DEBUG] Image ${img.id} sans données`)
                                     }
                                 }
                             } catch (imgErr: any) {

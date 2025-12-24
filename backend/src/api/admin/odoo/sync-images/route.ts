@@ -128,24 +128,27 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
           }
         }
 
-        // Upload images additionnelles depuis product.image
+        // Upload images additionnelles depuis common.product.image.ept (module EPT)
         if (
-          odooProduct.product_image_ids &&
-          Array.isArray(odooProduct.product_image_ids) &&
-          odooProduct.product_image_ids.length > 0
+          odooProduct.ept_image_ids &&
+          Array.isArray(odooProduct.ept_image_ids) &&
+          odooProduct.ept_image_ids.length > 0
         ) {
           const additionalImages = await odooService.fetchProductImages(
-            odooProduct.product_image_ids
+            odooProduct.ept_image_ids
           )
 
           console.log(
             `📷 [SYNC-IMAGES] ${additionalImages.length} image(s) additionnelle(s) trouvée(s) dans Odoo pour ${medusaProduct.id}`
           )
 
-          for (const img of additionalImages) {
-            if (img.image_1920 && typeof img.image_1920 === "string") {
+          // Trier par sequence pour respecter l'ordre Odoo
+          const sortedImages = additionalImages.sort((a: any, b: any) => (a.sequence || 0) - (b.sequence || 0))
+
+          for (const img of sortedImages) {
+            if (img.image && typeof img.image === "string") {
               const filename = `odoo/products/${medusaProduct.id}/img-${img.id}-${Date.now()}.png`
-              const buffer = Buffer.from(img.image_1920, "base64")
+              const buffer = Buffer.from(img.image, "base64")
 
               await minioClient.putObject(
                 bucket,
