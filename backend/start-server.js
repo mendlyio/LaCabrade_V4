@@ -148,10 +148,19 @@ async function main() {
   console.log('\n🚀 Starting Medusa server...');
   console.log('   Server will be available on port 9000');
   
+  // Augmenter la limite de mémoire Node.js pour éviter les erreurs "heap out of memory"
+  const nodeOptions = process.env.NODE_OPTIONS || '';
+  const memoryLimit = process.env.NODE_MAX_OLD_SPACE_SIZE || '2048';
+  if (!nodeOptions.includes('--max-old-space-size')) {
+    process.env.NODE_OPTIONS = `${nodeOptions} --max-old-space-size=${memoryLimit}`.trim();
+    console.log(`   Node memory limit: ${memoryLimit} MB`);
+  }
+  
   const proc = spawn('medusa', ['start', '--verbose'], {
     stdio: 'inherit',
     shell: true,
     cwd: '.medusa/server',
+    env: process.env,
   });
   
   proc.on('error', (error) => {

@@ -416,20 +416,16 @@ export default class OdooModuleService {
    * Récupère les images d'un produit depuis le modèle common.product.image.ept (module EPT)
    */
   async fetchProductImages(imageIds: number[]): Promise<Array<{ id: number; name: string; image: string; sequence: number }>> {
-    console.log(`🖼️ [ODOO] fetchProductImages appelé avec IDs: ${JSON.stringify(imageIds)}`)
-    
     if (!this.uid) {
-      console.log(`🖼️ [ODOO] Login nécessaire...`)
       await this.login()
     }
 
     if (!imageIds || imageIds.length === 0) {
-      console.log(`🖼️ [ODOO] Aucun ID d'image fourni, retour tableau vide`)
       return []
     }
 
     try {
-      console.log(`🖼️ [ODOO] Requête Odoo pour ${imageIds.length} image(s) depuis 'common.product.image.ept'...`)
+      console.log(`📷 [ODOO] Récupération de ${imageIds.length} image(s) depuis 'common.product.image.ept'...`)
       const images = await this.client.request("call", {
         service: "object",
         method: "execute_kw",
@@ -443,12 +439,10 @@ export default class OdooModuleService {
           { fields: ["name", "image", "sequence"] }, // Champ 'image' au lieu de 'image_1920'
         ],
       })
-      console.log(`✅ [ODOO] ${images?.length || 0} image(s) récupérée(s) depuis Odoo`)
-      console.log(`🖼️ [ODOO] Images: ${JSON.stringify(images?.map((img: any) => ({ id: img.id, name: img.name, hasData: !!img.image, sequence: img.sequence })))}`)
+      console.log(`✅ [ODOO] ${images?.length || 0} image(s) récupérée(s)`)
       return images
     } catch (error: any) {
       console.error(`❌ [ODOO] Erreur récupération images:`, error.message)
-      console.error(`❌ [ODOO] Stack:`, error.stack)
       return []
     }
   }

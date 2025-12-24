@@ -336,12 +336,6 @@ export const syncFromErpWorkflow = createWorkflow(
               odoo_image_ids: odooProduct.ept_image_ids || [], // IDs des images additionnelles (EPT)
             }
 
-            // DEBUG: Afficher les IDs d'images disponibles
-            console.log(`🖼️ [DEBUG] Produit ${odooProduct.display_name} (${odooProduct.id}):`)
-            console.log(`  - image_512: ${odooProduct.image_512 ? 'présente' : 'absente'}`)
-            console.log(`  - ept_image_ids: ${JSON.stringify(odooProduct.ept_image_ids)}`)
-            console.log(`  - Type: ${typeof odooProduct.ept_image_ids}, Array: ${Array.isArray(odooProduct.ept_image_ids)}`)
-
             // Gérer les options et variantes
           const hasMultipleVariants = odooProduct.product_variant_count > 1 && 
             Array.isArray(odooProduct.product_variant_ids) && 
@@ -651,21 +645,11 @@ export const syncFromErpWorkflow = createWorkflow(
                         }
                         
                         // Upload images additionnelles depuis product.image
-                        console.log(`🖼️ [DEBUG] Vérification images additionnelles pour produit ${created.id}:`)
-                        console.log(`  - odoo_image_ids présent: ${!!productData.odoo_image_ids}`)
-                        console.log(`  - Type: ${typeof productData.odoo_image_ids}`)
-                        console.log(`  - Array: ${Array.isArray(productData.odoo_image_ids)}`)
-                        console.log(`  - Length: ${productData.odoo_image_ids?.length || 0}`)
-                        console.log(`  - Valeur: ${JSON.stringify(productData.odoo_image_ids)}`)
-                        
                         if (productData.odoo_image_ids && Array.isArray(productData.odoo_image_ids) && productData.odoo_image_ids.length > 0) {
                             try {
-                                console.log(`🖼️ [DEBUG] Appel fetchProductImages avec IDs: ${JSON.stringify(productData.odoo_image_ids)}`)
+                                console.log(`📷 [WORKFLOW] Upload de ${productData.odoo_image_ids.length} image(s) additionnelle(s) pour produit ${created.id}...`)
                                 const odooModuleService = container.resolve(ODOO_MODULE) as OdooModuleService
                                 const additionalImages = await odooModuleService.fetchProductImages(productData.odoo_image_ids)
-                                
-                                console.log(`📷 [WORKFLOW] ${additionalImages.length} image(s) additionnelle(s) trouvée(s) pour produit ${created.id}`)
-                                console.log(`🖼️ [DEBUG] Images récupérées: ${JSON.stringify(additionalImages.map(img => ({ id: img.id, name: img.name, hasImage: !!img.image, sequence: img.sequence })))}`)
                                 
                                 // Trier par sequence pour respecter l'ordre Odoo
                                 const sortedImages = additionalImages.sort((a: any, b: any) => (a.sequence || 0) - (b.sequence || 0))
@@ -682,17 +666,13 @@ export const syncFromErpWorkflow = createWorkflow(
                                         
                                         const url = `https://${endpoint}/${bucket}/${filename}`
                                         imageUrls.push(url)
-                                        console.log(`📷 [WORKFLOW] Image additionnelle uploadée: ${url} (sequence: ${img.sequence})`)
-                                    } else {
-                                        console.warn(`⚠️ [DEBUG] Image ${img.id} sans données`)
+                                        console.log(`✅ [WORKFLOW] Image ${img.id} uploadée (sequence: ${img.sequence})`)
                                     }
                                 }
+                                console.log(`✅ [WORKFLOW] ${sortedImages.length} image(s) additionnelle(s) uploadée(s)`)
                             } catch (imgErr: any) {
-                                console.error(`❌ [WORKFLOW] Erreur récupération images additionnelles:`, imgErr.message)
-                                console.error(`❌ [WORKFLOW] Stack trace:`, imgErr.stack)
+                                console.error(`❌ [WORKFLOW] Erreur upload images additionnelles:`, imgErr.message)
                             }
-                        } else {
-                            console.log(`ℹ️ [WORKFLOW] Pas d'images additionnelles à uploader pour produit ${created.id}`)
                         }
                         
                         // Mettre à jour le produit avec toutes les images
