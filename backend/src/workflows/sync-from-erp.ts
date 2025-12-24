@@ -307,8 +307,8 @@ export const syncFromErpWorkflow = createWorkflow(
             // Elles servent uniquement à filtrer dans le module admin Odoo
 
             // Extraire la marque du produit si disponible
-            // Certains Odoo n'ont pas `product_brand_id` → champ configurable via ODOO_BRAND_FIELD
-            const brandField = (process.env.ODOO_BRAND_FIELD || "product_brand_id").trim()
+            // Certains Odoo n'ont pas `brand_id` → champ configurable via ODOO_BRAND_FIELD
+            const brandField = (process.env.ODOO_BRAND_FIELD || "brand_id").trim()
             const rawBrand = brandField ? (odooProduct as any)?.[brandField] : null
             const brandName =
               rawBrand && Array.isArray(rawBrand) ? rawBrand[1] : null

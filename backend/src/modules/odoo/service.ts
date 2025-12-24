@@ -28,7 +28,7 @@ export type OdooProduct = {
   currency_id: any // Peut être [id, name] ou {id, display_name}
   product_variant_ids: OdooProductVariant[]
   product_variant_count: number
-  product_brand_id?: [number, string] | false // [id, name] ou false si pas de marque
+  brand_id?: [number, string] | false // [id, name] ou false si pas de marque
   attribute_line_ids: {
     id: number
     attribute_id: {
@@ -75,16 +75,16 @@ export type OdooCategory = {
 export default class OdooModuleService {
   /**
    * Champ "marque" Odoo configurable.
-   * IMPORTANT: certains Odoo n'ont pas `product_brand_id` → si le champ n'existe pas,
+   * IMPORTANT: certains Odoo n'ont pas `brand_id` → si le champ n'existe pas,
    * on doit éviter de casser la liste des produits.
    */
   private getBrandField(): string | null {
-    const field = process.env.ODOO_BRAND_FIELD || "product_brand_id"
+    const field = process.env.ODOO_BRAND_FIELD || "brand_id"
     return field?.trim() ? field.trim() : null
   }
 
   /**
-   * Lecture robuste de product.template: si un champ est inconnu (ex: product_brand_id, ept_image_ids),
+   * Lecture robuste de product.template: si un champ est inconnu (ex: brand_id, ept_image_ids),
    * on retente sans ce champ au lieu d'échouer (sinon l'admin affiche "Aucun produit").
    * Gère les champs optionnels qui peuvent ne pas exister selon la version Odoo.
    */
