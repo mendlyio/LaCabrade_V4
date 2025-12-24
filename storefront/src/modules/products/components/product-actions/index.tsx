@@ -27,6 +27,69 @@ const optionsAsKeymap = (variantOptions: any) => {
   }, {})
 }
 
+// Vérifie si une variante est en stock
+const isVariantInStock = (variant: HttpTypes.StoreProductVariant): boolean => {
+  // Si on ne gère pas l'inventaire, c'est toujours disponible
+  if (!variant.manage_inventory) {
+    return true
+  }
+  
+  // Si les backorders sont autorisés, c'est toujours disponible
+  if (variant.allow_backorder) {
+    return true
+  }
+  
+  // Sinon, vérifier la quantité en stock
+  return (variant.inventory_quantity || 0) > 0
+}
+
+// Calcule les valeurs d'options indisponibles en fonction des sélections actuelles
+const getDisabledOptionValues = (
+  product: HttpTypes.StoreProduct,
+  currentOptionTitle: string,
+  selectedOptions: Record<string, string | undefined>
+): string[] => {
+  const variants = product.variants || []
+  const option = product.options?.find(opt => opt.title === currentOptionTitle)
+  if (!option || !option.values) return []
+  
+  const disabledValues: string[] = []
+  
+  // Pour chaque valeur de cette option
+  for (const optionValue of option.values) {
+    const value = optionValue.value
+    if (!value) continue
+    
+    // Créer un objet d'options hypothétique avec cette valeur
+    const hypotheticalOptions = {
+      ...selectedOptions,
+      [currentOptionTitle]: value
+    }
+    
+    // Chercher si au moins une variante correspond à ces options ET est en stock
+    const hasAvailableVariant = variants.some(variant => {
+      const variantOptions = optionsAsKeymap(variant.options)
+      
+      // Vérifier si la variante correspond aux options sélectionnées
+      const matchesSelection = Object.entries(hypotheticalOptions).every(([key, val]) => {
+        // Si l'option n'est pas encore sélectionnée, on ne filtre pas dessus
+        if (!val) return true
+        return variantOptions[key] === val
+      })
+      
+      // Si la variante correspond, vérifier le stock
+      return matchesSelection && isVariantInStock(variant)
+    })
+    
+    // Si aucune variante disponible pour cette valeur, la désactiver
+    if (!hasAvailableVariant) {
+      disabledValues.push(value)
+    }
+  }
+  
+  return disabledValues
+}
+
 export default function ProductActions({
   product,
   region,
@@ -158,6 +221,13 @@ export default function ProductActions({
         {(product.variants?.length ?? 0) > 1 && (
           <div className="space-y-4">
             {(product.options || []).map((option) => {
+              // Calculer les valeurs indisponibles pour cette option
+              const disabledValues = getDisabledOptionValues(
+                product,
+                option.title ?? "",
+                options
+              )
+              
               return (
                 <div key={option.id}>
                   <OptionSelect
@@ -167,6 +237,7 @@ export default function ProductActions({
                     title={option.title ?? ""}
                     data-testid="product-options"
                     disabled={!!disabled || isAdding}
+                    disabledValues={disabledValues}
                   />
                 </div>
               )
@@ -252,6 +323,7 @@ export default function ProductActions({
           isAdding={isAdding}
           show={!inView}
           optionsDisabled={!!disabled || isAdding}
+          getDisabledValues={(optionTitle) => getDisabledOptionValues(product, optionTitle, options)}
         />
       </div>
     </>

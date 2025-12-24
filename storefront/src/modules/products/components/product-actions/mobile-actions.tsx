@@ -20,6 +20,7 @@ type MobileActionsProps = {
   isAdding?: boolean
   show: boolean
   optionsDisabled: boolean
+  getDisabledValues: (optionTitle: string) => string[]
 }
 
 const MobileActions: React.FC<MobileActionsProps> = ({
@@ -32,6 +33,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   isAdding,
   show,
   optionsDisabled,
+  getDisabledValues,
 }) => {
   const { state, open, close } = useToggleState()
 
@@ -178,6 +180,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                                 updateOption={updateOptions}
                                 title={option.title ?? ""}
                                 disabled={optionsDisabled}
+                                disabledValues={getDisabledValues(option.title ?? "")}
                               />
                             </div>
                           )
