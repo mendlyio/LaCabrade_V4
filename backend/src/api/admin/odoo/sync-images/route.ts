@@ -86,7 +86,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     for (const medusaProduct of productsWithOdooId) {
       try {
         processed++
-        const odooId = parseInt(medusaProduct.metadata.external_id)
+        const odooId = parseInt(String(medusaProduct.metadata.external_id))
         const odooProduct = odooProducts.find((p) => p.id === odooId)
 
         if (!odooProduct) {
