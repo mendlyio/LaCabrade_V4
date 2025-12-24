@@ -21,6 +21,7 @@ export type OdooProduct = {
   description_sale?: string
   qty_available?: number
   image_512?: string | false
+  product_image_ids?: number[] // IDs des images additionnelles dans product.image
   weight?: number
   volume?: number
   categ_id: any // [id, name]
@@ -83,52 +84,18 @@ export default class OdooModuleService {
   }
 
   /**
-   * Lecture robuste de product.template: si un champ est inconnu (ex: product_brand_id),
+   * Lecture robuste de product.template: si un champ est inconnu (ex: product_brand_id, product_image_ids),
    * on retente sans ce champ au lieu d'échouer (sinon l'admin affiche "Aucun produit").
+   * Gère les champs optionnels qui peuvent ne pas exister selon la version Odoo.
    */
   private async safeReadProductTemplates(
     productIds: number[],
     fields: string[]
   ): Promise<OdooProduct[]> {
-    try {
-      return await this.client.request("call", {
-        service: "object",
-        method: "execute_kw",
-        args: [
-          this.options.dbName,
-          this.uid!,
-          this.options.apiKey,
-          "product.template",
-          "read",
-          [productIds],
-          { fields },
-        ],
-      })
-    } catch (error: any) {
-      // json-rpc-2.0 remonte souvent le détail dans `error.data.message` / `error.data.debug`
-      const msg = `${[
-        error?.message,
-        error?.data?.message,
-        error?.data?.debug,
-        error,
-      ]
-        .filter(Boolean)
-        .join(" | ")}`.toLowerCase()
-      const brandField = this.getBrandField()
-
-      // Retry 1x si le champ de marque est inconnu dans cet Odoo
-      if (
-        brandField &&
-        fields.includes(brandField) &&
-        (msg.includes("unknown field") ||
-          msg.includes("invalid field") ||
-          msg.includes("field") && msg.includes("does not exist") ||
-          msg.includes(brandField.toLowerCase()))
-      ) {
-        const retryFields = fields.filter((f) => f !== brandField)
-        console.warn(
-          `⚠️ [ODOO] Champ marque '${brandField}' indisponible, retry sans ce champ`
-        )
+    const optionalFields = [this.getBrandField(), "product_image_ids"].filter(Boolean) as string[]
+    
+    const tryReadWithFields = async (fieldsToTry: string[]): Promise<OdooProduct[]> => {
+      try {
         return await this.client.request("call", {
           service: "object",
           method: "execute_kw",
@@ -139,13 +106,42 @@ export default class OdooModuleService {
             "product.template",
             "read",
             [productIds],
-            { fields: retryFields },
+            { fields: fieldsToTry },
           ],
         })
-      }
+      } catch (error: any) {
+        const msg = `${[
+          error?.message,
+          error?.data?.message,
+          error?.data?.debug,
+          error,
+        ]
+          .filter(Boolean)
+          .join(" | ")}`.toLowerCase()
 
-      throw error
+        // Chercher quel champ optionnel pose problème
+        for (const optField of optionalFields) {
+          if (
+            optField &&
+            fieldsToTry.includes(optField) &&
+            (msg.includes("unknown field") ||
+              msg.includes("invalid field") ||
+              (msg.includes("field") && msg.includes("does not exist")) ||
+              msg.includes(optField.toLowerCase()))
+          ) {
+            console.warn(`⚠️ [ODOO] Champ '${optField}' indisponible, retry sans ce champ`)
+            const newFields = fieldsToTry.filter((f) => f !== optField)
+            // Retry récursif sans ce champ
+            return await tryReadWithFields(newFields)
+          }
+        }
+
+        // Aucun champ optionnel ne pose problème → erreur réelle
+        throw error
+      }
     }
+
+    return await tryReadWithFields(fields)
   }
   /**
    * Enrichit les product_template_variant_value_ids de chaque variante avec les détails des attributs
@@ -416,6 +412,39 @@ export default class OdooModuleService {
    * @param orderData - Medusa order data
    * @returns Odoo order ID
    */
+  /**
+   * Récupère les images d'un produit depuis le modèle product.image
+   */
+  async fetchProductImages(imageIds: number[]): Promise<Array<{ id: number; name: string; image_1920: string }>> {
+    if (!this.uid) {
+      await this.login()
+    }
+
+    if (!imageIds || imageIds.length === 0) {
+      return []
+    }
+
+    try {
+      const images = await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid!,
+          this.options.apiKey,
+          "product.image",
+          "read",
+          [imageIds],
+          { fields: ["name", "image_1920"] },
+        ],
+      })
+      return images
+    } catch (error) {
+      console.error(`❌ [ODOO] Erreur récupération images:`, error)
+      return []
+    }
+  }
+
   /**
    * Récupère le stock disponible d'un produit par son SKU
    * Si le SKU est au format "ODOO-{id}", utilise directement l'ID
@@ -816,6 +845,7 @@ export default class OdooModuleService {
       "attribute_line_ids",
       "qty_available",
       "image_512",
+      "product_image_ids",
       "weight",
       "volume",
       "categ_id",
@@ -1018,6 +1048,7 @@ export default class OdooModuleService {
       "attribute_line_ids",
       "qty_available",
       "image_512",
+      "product_image_ids",
       "weight",
       "volume",
       "categ_id",

@@ -333,6 +333,7 @@ export const syncFromErpWorkflow = createWorkflow(
               odoo_image_base64: (odooProduct.image_512 && typeof odooProduct.image_512 === 'string') 
                 ? odooProduct.image_512 
                 : undefined,
+              odoo_image_ids: odooProduct.product_image_ids || [], // IDs des images additionnelles
             }
 
             // Gérer les options et variantes
@@ -607,13 +608,14 @@ export const syncFromErpWorkflow = createWorkflow(
             const { result } = await workflow.run({ input: { products: [productPayload] } })
             const created = result[0]
             
-            // Image Upload (MinIO)
-            if (productData.odoo_image_base64 && created) {
+            // Image Upload (MinIO) - Upload toutes les images depuis Odoo
+            if (created) {
                 try {
                     // Vérifier que les variables MinIO sont définies
                     if (!process.env.MINIO_ENDPOINT || !process.env.MINIO_ACCESS_KEY || !process.env.MINIO_SECRET_KEY) {
                         console.warn(`⚠️ [WORKFLOW] Variables MinIO non définies, upload d'image ignoré pour produit ${created.id}`)
                     } else {
+                        const imageUrls: string[] = []
                         const { Client } = await import('minio')
                         const rawEndpoint = process.env.MINIO_ENDPOINT
                         const endpoint = rawEndpoint.replace(/^https?:\/\//, '')
@@ -627,20 +629,60 @@ export const syncFromErpWorkflow = createWorkflow(
                             secretKey: process.env.MINIO_SECRET_KEY
                         })
                         
-                        const filename = `odoo/products/${created.id}/${Date.now()}.png`
-                        const buffer = Buffer.from(productData.odoo_image_base64, 'base64')
+                        // Upload image principale (image_512) en premier
+                        if (productData.odoo_image_base64) {
+                            const filename = `odoo/products/${created.id}/main-${Date.now()}.png`
+                            const buffer = Buffer.from(productData.odoo_image_base64, 'base64')
+                            
+                            await client.putObject(bucket, filename, buffer, buffer.length, { 
+                                'Content-Type': 'image/png', 
+                                'x-amz-acl': 'public-read' 
+                            })
+                            
+                            const url = `https://${endpoint}/${bucket}/${filename}`
+                            imageUrls.push(url)
+                            console.log(`📷 [WORKFLOW] Image principale uploadée: ${url}`)
+                        }
                         
-                        await client.putObject(bucket, filename, buffer, buffer.length, { 
-                            'Content-Type': 'image/png', 
-                            'x-amz-acl': 'public-read' 
-                        })
+                        // Upload images additionnelles depuis product.image
+                        if (productData.odoo_image_ids && Array.isArray(productData.odoo_image_ids) && productData.odoo_image_ids.length > 0) {
+                            try {
+                                const odooModuleService = container.resolve(ODOO_MODULE) as OdooModuleService
+                                const additionalImages = await odooModuleService.fetchProductImages(productData.odoo_image_ids)
+                                
+                                console.log(`📷 [WORKFLOW] ${additionalImages.length} image(s) additionnelle(s) trouvée(s) pour produit ${created.id}`)
+                                
+                                for (const img of additionalImages) {
+                                    if (img.image_1920 && typeof img.image_1920 === 'string') {
+                                        const filename = `odoo/products/${created.id}/img-${img.id}-${Date.now()}.png`
+                                        const buffer = Buffer.from(img.image_1920, 'base64')
+                                        
+                                        await client.putObject(bucket, filename, buffer, buffer.length, { 
+                                            'Content-Type': 'image/png', 
+                                            'x-amz-acl': 'public-read' 
+                                        })
+                                        
+                                        const url = `https://${endpoint}/${bucket}/${filename}`
+                                        imageUrls.push(url)
+                                        console.log(`📷 [WORKFLOW] Image additionnelle uploadée: ${url}`)
+                                    }
+                                }
+                            } catch (imgErr: any) {
+                                console.warn(`⚠️ [WORKFLOW] Erreur récupération images additionnelles:`, imgErr.message)
+                            }
+                        }
                         
-                        const url = `https://${endpoint}/${bucket}/${filename}`
-                        await productService.updateProducts(created.id, { images: [{ url }], thumbnail: url })
-                        console.log(`📷 [WORKFLOW] Image uploadée: ${url}`)
+                        // Mettre à jour le produit avec toutes les images
+                        if (imageUrls.length > 0) {
+                            await productService.updateProducts(created.id, { 
+                                images: imageUrls.map(url => ({ url })), 
+                                thumbnail: imageUrls[0] // Première image = thumbnail
+                            })
+                            console.log(`✅ [WORKFLOW] ${imageUrls.length} image(s) associée(s) au produit ${created.id}`)
+                        }
                     }
                 } catch (e: any) { 
-                    console.error(`❌ [WORKFLOW] Erreur upload image MinIO:`, e.message) 
+                    console.error(`❌ [WORKFLOW] Erreur upload images MinIO:`, e.message) 
                 }
             }
             
