@@ -256,6 +256,34 @@ const OdooConfigurationWidget = () => {
     }
   }
 
+  const syncImages = async () => {
+    if (!confirm("🖼️ Synchroniser les images manquantes ?\n\nCette action va :\n• Récupérer toutes les images depuis Odoo\n• Ajouter uniquement les images manquantes\n• Conserver les images existantes\n\nCette opération peut prendre plusieurs minutes.")) {
+      return
+    }
+
+    setIsSyncing(true)
+    try {
+      const response = await fetch("/admin/odoo/sync-images", {
+        method: "POST",
+        credentials: "include",
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.success) {
+        alert(`✅ Synchronisation des images terminée:\n\n• ${data.processed} produit(s) traité(s)\n• ${data.updated} produit(s) mis à jour\n${data.errors ? `\n⚠️ ${data.errors.length} erreur(s)` : ""}`)
+        fetchProducts()
+      } else {
+        alert(`❌ ${data.message || "Erreur lors de la synchronisation des images"}`)
+      }
+    } catch (error) {
+      console.error("Erreur sync images:", error)
+      alert("❌ Erreur lors de la synchronisation des images")
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const resyncAll = async () => {
     if (!confirm("🔄 Re-synchroniser tous les produits déjà importés depuis Odoo ?\n\nCela mettra à jour les prix, descriptions, et autres données.\n\nCette opération peut prendre plusieurs minutes.")) {
       return
@@ -874,6 +902,17 @@ const OdooConfigurationWidget = () => {
                       {isSyncing 
                         ? `⏳ Re-synchronisation...` 
                         : `🔄 Re-sync tous`
+                      }
+                    </button>
+                    <button
+                      onClick={syncImages}
+                      disabled={isSyncing || !isConnected}
+                      className="w-full md:w-auto px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-500 disabled:cursor-not-allowed font-medium transition-colors text-sm"
+                      title="Ajoute les images manquantes depuis Odoo (conserve les existantes)"
+                    >
+                      {isSyncing 
+                        ? `⏳ Synchronisation...` 
+                        : `🖼️ Sync images`
                       }
                     </button>
                   </div>
