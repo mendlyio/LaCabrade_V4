@@ -109,20 +109,51 @@ export default async function CategoryTemplateModern({
               </svg>
               Sous-catégories
             </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {category.category_children.map((child) => (
-                <LocalizedClientLink
-                  key={child.id}
-                  href={`/categories/${child.handle}`}
-                  className="flex items-center gap-2 p-3 bg-gray-50 hover:bg-amber-50 border border-gray-200 hover:border-amber-300 rounded-lg transition-all duration-200 group"
-                >
-                  <span className="flex-1 text-sm font-medium text-gray-700 group-hover:text-amber-700">
-                    {child.name}
-                  </span>
-                  <svg className="w-4 h-4 text-gray-400 group-hover:text-amber-600 transform group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </LocalizedClientLink>
+                <div key={child.id} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <LocalizedClientLink
+                    href={`/categories/${child.handle}`}
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 bg-white hover:bg-amber-50 border border-gray-200 hover:border-amber-400 transition-colors group"
+                  >
+                    <span className="flex-1 text-sm font-semibold text-gray-800 group-hover:text-amber-800">
+                      {child.name}
+                    </span>
+                    <svg className="w-4 h-4 text-gray-500 group-hover:text-amber-700 transform group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </LocalizedClientLink>
+
+                  {child.category_children && child.category_children.length > 0 && (
+                    <ul className="mt-3 space-y-2">
+                      {child.category_children.map((grandChild) => (
+                        <li key={grandChild.id} className="space-y-1">
+                          <LocalizedClientLink
+                            href={`/categories/${grandChild.handle}`}
+                            className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:text-amber-800 hover:bg-amber-50 transition-colors"
+                          >
+                            {grandChild.name}
+                          </LocalizedClientLink>
+                          {grandChild.category_children &&
+                            grandChild.category_children.length > 0 && (
+                              <ul className="pl-3 border-l border-gray-200 space-y-1">
+                                {grandChild.category_children.map((greatGrandChild) => (
+                                  <li key={greatGrandChild.id}>
+                                    <LocalizedClientLink
+                                      href={`/categories/${greatGrandChild.handle}`}
+                                      className="block rounded-md px-3 py-1 text-xs text-gray-600 hover:text-amber-800 hover:bg-amber-50 transition-colors"
+                                    >
+                                      {greatGrandChild.name}
+                                    </LocalizedClientLink>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               ))}
             </div>
           </div>

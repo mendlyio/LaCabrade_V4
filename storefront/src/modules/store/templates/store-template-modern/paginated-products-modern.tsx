@@ -97,10 +97,7 @@ export default async function PaginatedProductsModern({
     }
   }
 
-  // Marque - tentative via metadata si supportée par l'API
-  if (searchParams.brand) {
-    queryParams["metadata[brand]"] = searchParams.brand
-  }
+  // Marque: filtrage côté client (plus fiable selon les backends)
 
   // Note: Les filtres de prix, stock et promotions seront appliqués côté client après récupération
 

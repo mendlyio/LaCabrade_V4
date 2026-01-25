@@ -64,7 +64,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                       <LocalizedClientLink
                         href={`/categories/${child.handle}`}
                         onClick={() => close()}
-                        className="block text-base font-bold text-gray-900 hover:text-amber-600 transition-colors"
+                        className="block text-base font-bold text-gray-900 hover:text-amber-700 transition-colors"
                       >
                         {child.name}
                       </LocalizedClientLink>
@@ -77,10 +77,26 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                               <LocalizedClientLink
                                 href={`/categories/${grandChild.handle}`}
                                 onClick={() => close()}
-                                className="text-sm text-gray-600 hover:text-amber-600 transition-colors block"
+                                className="text-sm text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-md px-2 py-1 transition-colors block"
                               >
                                 {grandChild.name}
                               </LocalizedClientLink>
+                              {grandChild.category_children &&
+                                grandChild.category_children.length > 0 && (
+                                  <ul className="mt-2 space-y-1 pl-3 border-l border-gray-200">
+                                    {grandChild.category_children.map((greatGrandChild) => (
+                                      <li key={greatGrandChild.id}>
+                                        <LocalizedClientLink
+                                          href={`/categories/${greatGrandChild.handle}`}
+                                          onClick={() => close()}
+                                          className="text-xs text-gray-600 hover:text-amber-700 hover:bg-amber-50 rounded-md px-2 py-1 transition-colors block"
+                                        >
+                                          {greatGrandChild.name}
+                                        </LocalizedClientLink>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
                             </li>
                           ))}
                         </ul>

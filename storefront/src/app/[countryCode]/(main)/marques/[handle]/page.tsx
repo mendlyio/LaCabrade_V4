@@ -24,15 +24,25 @@ type Props = {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const brand = await getBrandBySlug(params.handle)
+  try {
+    const brand = await getBrandBySlug(params.handle)
 
-  if (!brand) {
-    notFound()
-  }
+    if (!brand) {
+      return {
+        title: "Marque introuvable",
+        description: "La marque demandée est introuvable.",
+      }
+    }
 
-  return {
-    title: `${brand.name} | Marques`,
-    description: `Découvrez les produits de la marque ${brand.name}`,
+    return {
+      title: `${brand.name} | Marques`,
+      description: `Découvrez les produits de la marque ${brand.name}`,
+    }
+  } catch {
+    return {
+      title: "Marque",
+      description: "Découvrez nos marques",
+    }
   }
 }
 
