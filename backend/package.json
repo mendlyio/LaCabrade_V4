@@ -15,6 +15,7 @@
   "scripts": {
     "build": "medusa build && node src/scripts/postBuild.js",
     "seed": "medusa exec ./src/scripts/seed.ts",
+    "repair:categories": "medusa exec ./src/scripts/repair-categories.ts",
     "ib": "init-backend",
     "start": "node start-server.js",
     "start:simple": "init-backend && cd .medusa/server && medusa start --verbose",
