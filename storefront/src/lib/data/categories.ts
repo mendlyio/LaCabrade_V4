@@ -4,7 +4,7 @@ import { cache } from "react"
 export const listCategories = cache(async function () {
   return sdk.store.category
     .list({ 
-      fields: "*category_children,*parent_category",
+      fields: "*category_children,*category_children.category_children,*parent_category",
       limit: 100  // Récupérer jusqu'à 100 catégories
     }, { next: { tags: ["categories"] } })
     .then(({ product_categories }) => product_categories)

@@ -22,6 +22,22 @@ const optionsAsKeymap = (variantOptions: any) => {
   }, {})
 }
 
+const isVariantAvailable = (variant?: HttpTypes.StoreProductVariant) => {
+  if (!variant) {
+    return false
+  }
+
+  if (!variant.manage_inventory) {
+    return true
+  }
+
+  if (variant.allow_backorder) {
+    return true
+  }
+
+  return (variant.inventory_quantity || 0) > 0
+}
+
 export default function ProductActionsModern({
   product,
   region,
@@ -54,23 +70,7 @@ export default function ProductActionsModern({
 
   // Vérifier le stock
   const inStock = useMemo(() => {
-    if (selectedVariant && !selectedVariant.manage_inventory) {
-      return true
-    }
-
-    if (selectedVariant?.allow_backorder) {
-      return true
-    }
-
-    if (
-      selectedVariant &&
-      selectedVariant.manage_inventory &&
-      (selectedVariant.inventory_quantity || 0) > 0
-    ) {
-      return true
-    }
-
-    return false
+    return isVariantAvailable(selectedVariant)
   }, [selectedVariant])
 
   // Quantité disponible
@@ -80,6 +80,12 @@ export default function ProductActionsModern({
     }
     return selectedVariant.inventory_quantity || 0
   }, [selectedVariant])
+
+  useEffect(() => {
+    if (availableQuantity !== 999 && quantity > availableQuantity) {
+      setQuantity(Math.max(1, availableQuantity))
+    }
+  }, [availableQuantity, quantity])
 
   // Mettre à jour les options
   const setOptionValue = (title: string, value: string) => {
@@ -126,6 +132,31 @@ export default function ProductActionsModern({
     })
   }, [product])
 
+  const isOptionValueAvailable = (optionTitle: string, value: string) => {
+    if (!product.variants) {
+      return false
+    }
+
+    return product.variants.some((variant) => {
+      if (!isVariantAvailable(variant)) {
+        return false
+      }
+
+      const variantOptions = optionsAsKeymap(variant.options)
+      if (variantOptions?.[optionTitle] !== value) {
+        return false
+      }
+
+      return Object.entries(options).every(([title, selectedValue]) => {
+        if (!selectedValue || title === optionTitle) {
+          return true
+        }
+
+        return variantOptions?.[title] === selectedValue
+      })
+    })
+  }
+
   return (
     <div className="space-y-6">
       {/* Options (Taille, Couleur, etc) */}
@@ -144,15 +175,19 @@ export default function ProductActionsModern({
               <div className="flex flex-wrap gap-2">
                 {option.values?.map((value) => {
                   const isSelected = options[option.title] === value
+                  const isAvailable = isOptionValueAvailable(option.title, value as string)
                   return (
                     <button
                       key={value}
                       onClick={() => setOptionValue(option.title, value as string)}
+                      disabled={!isAvailable}
                       className={`
                         px-4 py-2 rounded-lg border-2 font-medium text-sm transition-all
                         ${
-                          isSelected
-                            ? 'border-amber-500 bg-amber-50 text-amber-700'
+                          !isAvailable
+                            ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : isSelected
+                            ? 'border-amber-700 bg-amber-600 text-white shadow-sm'
                             : 'border-gray-300 bg-white text-gray-700 hover:border-amber-300 hover:bg-amber-50'
                         }
                       `}

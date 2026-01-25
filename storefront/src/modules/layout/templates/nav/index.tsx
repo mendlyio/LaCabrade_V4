@@ -1,17 +1,17 @@
 import { Suspense } from "react"
 import { listRegions } from "@lib/data/regions"
 import { listCategories } from "@lib/data/categories"
-import { getCollectionsList } from "@lib/data/collections"
+import { listBrands } from "@lib/data/brands"
 import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import WishlistButton from "@modules/layout/components/wishlist-button"
 import SideMenu from "@modules/layout/components/side-menu"
 import SearchBar from "@modules/layout/components/search-bar"
-import NavLink from "@modules/layout/components/nav-link"
 import TopBar from "@modules/layout/components/top-bar"
 import BrandsMenu from "@modules/layout/components/brands-menu"
 import MegaMenu from "@modules/layout/components/mega-menu"
+import NavLinks from "@modules/layout/components/nav-links"
 import {
   MagnifyingGlass,
   User,
@@ -21,10 +21,12 @@ import {
 export default async function Nav() {
   const regions = await listRegions().then((regions: StoreRegion[]) => regions)
   const categories = await listCategories()
-  const { collections } = await getCollectionsList(0, 50)
+  const brands = await listBrands()
 
   // Filtrer les catégories racines (Niveau 0)
-  const parentCategories = categories.filter((c) => c.parent_category_id === null)
+  const parentCategories = categories.filter(
+    (c) => !c.parent_category_id && !c.parent_category
+  )
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
@@ -39,7 +41,7 @@ export default async function Nav() {
             {/* Mobile Menu + Logo */}
             <div className="flex items-center gap-2 sm:gap-4">
               <div className="lg:hidden">
-                <SideMenu regions={regions} categories={categories} />
+                <SideMenu regions={regions} categories={categories} brands={brands} />
               </div>
 
               {/* Logo */}
@@ -129,35 +131,11 @@ export default async function Nav() {
                 <MegaMenu key={category.id} category={category} />
               ))}
 
-              {/* 2. Nouveautés */}
-              <NavLink
-                href="/nouveautes"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
-                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
-              >
-                Nouveautés
-              </NavLink>
+              {/* 2-4. Liens principaux */}
+              <NavLinks />
 
-              {/* 3. Bon cadeau */}
-              <NavLink
-                href="/produits/bon-cadeau"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
-                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
-              >
-                Bon cadeau
-              </NavLink>
-
-              {/* 4. Marques (Dropdown dynamique) */}
-              <BrandsMenu collections={collections} />
-
-              {/* 5. À Propos */}
-              <NavLink
-                href="/a-propos"
-                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
-                activeClassName="bg-amber-100 text-amber-700 shadow-sm"
-              >
-                À Propos
-              </NavLink>
+              {/* 5. Marques (Dropdown dynamique) */}
+              <BrandsMenu brands={brands} />
             </div>
           </div>
         </nav>

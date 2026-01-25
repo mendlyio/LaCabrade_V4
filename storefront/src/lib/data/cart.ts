@@ -154,17 +154,23 @@ export async function enrichLineItems(
 ) {
   if (!lineItems) return []
 
-  // Prepare query parameters
-  const queryParams = {
-    ids: lineItems.map((lineItem) => lineItem.product_id!),
-    regionId: regionId,
+  const productIds = lineItems
+    .map((lineItem) => lineItem.product_id)
+    .filter(Boolean) as string[]
+
+  if (!lineItems?.length || productIds.length === 0) {
+    return lineItems as HttpTypes.StoreCartLineItem[]
   }
 
-  // Fetch products by their IDs
-  const products = await getProductsById(queryParams)
-  // If there are no line items or products, return an empty array
-  if (!lineItems?.length || !products) {
-    return []
+  let products: HttpTypes.StoreProduct[] = []
+  try {
+    products = await getProductsById({ ids: productIds, regionId })
+  } catch {
+    return lineItems as HttpTypes.StoreCartLineItem[]
+  }
+
+  if (!products?.length) {
+    return lineItems as HttpTypes.StoreCartLineItem[]
   }
 
   // Enrich line items with product and variant information

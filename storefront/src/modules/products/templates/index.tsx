@@ -8,6 +8,8 @@ import { notFound } from "next/navigation"
 import ProductActionsWrapper from "./product-actions-wrapper"
 import { HttpTypes } from "@medusajs/types"
 import { getProductPrice } from "@lib/util/get-product-price"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { slugify } from "@lib/util/slugify"
 
 type ProductTemplateProps = {
   product: HttpTypes.StoreProduct
@@ -40,9 +42,12 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           <div className="space-y-6">
             {/* Marque (Odoo -> metadata.brand) ou fallback collection */}
             {(product.metadata?.brand || product.collection?.title) && (
-              <div className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+              <LocalizedClientLink
+                href={`/marques/${slugify((product.metadata?.brand as string) || product.collection?.title || "")}`}
+                className="text-sm font-medium text-gray-500 uppercase tracking-wide hover:text-amber-600 transition-colors"
+              >
                 {(product.metadata?.brand as string) || product.collection?.title}
-              </div>
+              </LocalizedClientLink>
             )}
 
             {/* Titre du produit */}

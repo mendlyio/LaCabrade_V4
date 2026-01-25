@@ -1,0 +1,75 @@
+import { cache } from "react"
+import { sdk } from "@lib/config"
+import { slugify } from "@lib/util/slugify"
+
+export type Brand = {
+  name: string
+  slug: string
+  count: number
+}
+
+const normalizeBrand = (brand?: string | null) => {
+  if (!brand) {
+    return ""
+  }
+
+  return brand.trim()
+}
+
+export const listBrands = cache(async function (): Promise<Brand[]> {
+  const limit = 100
+  let offset = 0
+  let total = 0
+
+  const brandCounts = new Map<string, { name: string; count: number }>()
+
+  try {
+    do {
+      const { products, count } = await sdk.store.product.list(
+        {
+          limit,
+          offset,
+          fields: "id,metadata,collection",
+        },
+        { next: { tags: ["brands", "products"] } }
+      )
+
+      total = count || 0
+
+      products.forEach((product) => {
+      const metadataBrand = normalizeBrand(product.metadata?.brand as string | undefined)
+      const collectionBrand = normalizeBrand(product.collection?.title)
+      const brandName = metadataBrand || collectionBrand
+
+        if (!brandName) {
+          return
+        }
+
+      const key = brandName.toLowerCase()
+      const existing = brandCounts.get(key)
+      brandCounts.set(key, {
+        name: existing?.name || brandName,
+        count: (existing?.count || 0) + 1,
+      })
+      })
+
+      offset += limit
+    } while (offset < total)
+  } catch (error) {
+    console.error("Erreur lors de la récupération des marques:", error)
+    return []
+  }
+
+  return Array.from(brandCounts.values())
+    .map(({ name, count }) => ({
+      name,
+      slug: slugify(name),
+      count,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }))
+})
+
+export const getBrandBySlug = cache(async function (slug: string) {
+  const brands = await listBrands()
+  return brands.find((brand) => brand.slug === slug) || null
+})

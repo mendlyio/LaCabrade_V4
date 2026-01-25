@@ -4,21 +4,24 @@ import { Fragment } from "react"
 import { Popover, Transition } from "@headlessui/react"
 import { ChevronDown } from "@medusajs/icons"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import { HttpTypes } from "@medusajs/types"
+import { useTranslate } from "@lib/context/language-context"
+import { Brand } from "@lib/data/brands"
 
 type BrandsMenuProps = {
-  collections: HttpTypes.StoreCollection[]
+  brands: Brand[]
 }
 
-const BrandsMenu = ({ collections }: BrandsMenuProps) => {
-  // Si pas de collections, ne rien afficher ou un lien simple
-  if (!collections || collections.length === 0) {
+const BrandsMenu = ({ brands }: BrandsMenuProps) => {
+  const t = useTranslate()
+
+  // Si pas de marques, ne rien afficher ou un lien simple
+  if (!brands || brands.length === 0) {
     return (
       <LocalizedClientLink
-        href="/store"
+        href="/marques"
         className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
       >
-        Marques
+        {t("nav.marques")}
       </LocalizedClientLink>
     )
   }
@@ -37,7 +40,7 @@ const BrandsMenu = ({ collections }: BrandsMenuProps) => {
               }
             `}
           >
-            <span>Marques</span>
+            <span>{t("nav.marques")}</span>
             <ChevronDown
               className={`w-4 h-4 transition-transform duration-200 ${
                 open ? 'rotate-180' : ''
@@ -59,21 +62,21 @@ const BrandsMenu = ({ collections }: BrandsMenuProps) => {
                 {/* Header */}
                 <div className="border-b border-gray-100 bg-gray-50 px-6 py-3">
                   <h3 className="font-semibold text-sm text-gray-900">
-                    Nos marques
+                    {t("nav.brands_title")}
                   </h3>
                 </div>
 
                 {/* Liste des marques */}
                 <div className="p-4 max-h-96 overflow-y-auto">
                   <div className="grid grid-cols-2 gap-2">
-                    {collections.map((brand) => (
+                    {brands.map((brand) => (
                       <LocalizedClientLink
-                        key={brand.id}
-                        href={`/collections/${brand.handle}`}
+                        key={brand.slug}
+                        href={`/marques/${brand.slug}`}
                         onClick={() => close()}
                         className="px-3 py-2 text-sm text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all duration-200 font-medium truncate"
                       >
-                        {brand.title}
+                        {brand.name}
                       </LocalizedClientLink>
                     ))}
                   </div>
@@ -82,11 +85,11 @@ const BrandsMenu = ({ collections }: BrandsMenuProps) => {
                 {/* Footer */}
                 <div className="bg-gray-50 p-3 border-t border-gray-100 text-center">
                   <LocalizedClientLink
-                    href="/store"
+                    href="/marques"
                     onClick={() => close()}
                     className="text-xs font-medium text-amber-600 hover:text-amber-700"
                   >
-                    Voir tout →
+                    {t("nav.view_all")} →
                   </LocalizedClientLink>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import { getRegion } from "@lib/data/regions"
 import { getProductsList } from "@lib/data/products"
+import { slugify } from "@lib/util/slugify"
 import { listCategories } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
 import ProductCardModern from "@modules/products/components/product-card-modern"
@@ -11,6 +12,7 @@ type SearchParams = {
   q?: string
   category?: string
   collection?: string
+  brand?: string
   price_min?: string
   price_max?: string
   in_stock?: string
@@ -46,7 +48,7 @@ export default async function PaginatedProductsModern({
     limit,
     offset: (page - 1) * limit,
     region_id: region.id,
-    fields: "*variants.calculated_price,+variants.inventory_quantity",
+    fields: "*variants.calculated_price,+variants.inventory_quantity,+metadata",
   }
 
   // Recherche
@@ -95,6 +97,11 @@ export default async function PaginatedProductsModern({
     }
   }
 
+  // Marque - tentative via metadata si supportée par l'API
+  if (searchParams.brand) {
+    queryParams["metadata[brand]"] = searchParams.brand
+  }
+
   // Note: Les filtres de prix, stock et promotions seront appliqués côté client après récupération
 
   // Tri
@@ -126,6 +133,18 @@ export default async function PaginatedProductsModern({
 
   // Filtrage côté client pour les fonctionnalités non supportées par l'API
   let filteredProducts = [...products]
+
+  // Filtre par marque (sécurité côté client)
+  if (searchParams.brand) {
+    const normalizedBrand = slugify(searchParams.brand)
+    filteredProducts = filteredProducts.filter((product) => {
+      const metadataBrand = product.metadata?.brand as string | undefined
+      const collectionBrand = product.collection?.title
+      const productBrand = metadataBrand || collectionBrand || ""
+
+      return slugify(productBrand) === normalizedBrand
+    })
+  }
 
   // Filtre par prix
   if (searchParams.price_min || searchParams.price_max) {

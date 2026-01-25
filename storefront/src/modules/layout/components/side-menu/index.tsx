@@ -9,26 +9,30 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import CountrySelect from "../country-select"
 import { HttpTypes } from "@medusajs/types"
 import { useTranslate } from "@lib/context/language-context"
+import { Brand } from "@lib/data/brands"
 
 // Items principaux (non catégories) - les clés de traduction
 const SideMenuItemsKeys = [
   { key: "nav.accueil", href: "/" },
   { key: "nav.nouveautes", href: "/nouveautes", badge: "NEW" },
-  { key: "nav.bon_cadeau", href: "/produits/bon-cadeau" },
+  { key: "nav.bon_cadeau", href: "/bon-cadeau" },
+  { key: "nav.marques", href: "/marques" },
   { key: "nav.a_propos", href: "/a-propos" },
 ]
 
 type SideMenuProps = {
   regions: HttpTypes.StoreRegion[] | null
   categories?: any[]
+  brands?: Brand[]
 }
 
-const SideMenu = ({ regions, categories = [] }: SideMenuProps) => {
+const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
   const toggleState = useToggleState()
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const t = useTranslate()
   
-  const parentCategories = categories?.filter(cat => !cat.parent_category) || []
+  const parentCategories =
+    categories?.filter((cat) => !cat.parent_category && !cat.parent_category_id) || []
 
   const toggleCategory = (categoryId: string) => {
     const newExpanded = new Set(expandedCategories)
@@ -88,7 +92,7 @@ const SideMenu = ({ regions, categories = [] }: SideMenuProps) => {
                           </div>
                           <div>
                             <h2 className="text-lg font-bold text-gray-900">La Cabrade</h2>
-                            <p className="text-xs text-gray-600">Menu</p>
+                          <p className="text-xs text-gray-600">{t("nav.menu")}</p>
                           </div>
                         </div>
                         <button
@@ -132,7 +136,7 @@ const SideMenu = ({ regions, categories = [] }: SideMenuProps) => {
                         {parentCategories.length > 0 && (
                           <div className="mt-8 pt-6 border-t border-gray-200">
                             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-4">
-                              Catégories
+                              {t("nav.categories")}
                             </h3>
                             <ul className="space-y-2">
                               {parentCategories.map((category) => {
@@ -166,16 +170,31 @@ const SideMenu = ({ regions, categories = [] }: SideMenuProps) => {
                                     </div>
                                     
                                     {children.length > 0 && isExpanded && (
-                                      <ul className="ml-6 mt-1 space-y-1 border-l-2 border-amber-200 pl-3">
+                                      <ul className="ml-6 mt-2 space-y-2 border-l-2 border-amber-200 pl-3">
                                         {children.map((child: any) => (
-                                          <li key={child.id}>
+                                          <li key={child.id} className="space-y-1">
                                             <LocalizedClientLink
                                               href={`/categories/${child.handle}`}
-                                              className="block px-2 py-1.5 text-xs text-gray-600 hover:text-amber-600 transition-colors"
+                                              className="block px-2 py-1 text-sm font-medium text-gray-700 hover:text-amber-600 transition-colors"
                                               onClick={close}
                                             >
                                               {child.name}
                                             </LocalizedClientLink>
+                                            {child.category_children?.length > 0 && (
+                                              <ul className="ml-3 mt-1 space-y-1 border-l border-gray-200 pl-3">
+                                                {child.category_children.map((grandChild: any) => (
+                                                  <li key={grandChild.id}>
+                                                    <LocalizedClientLink
+                                                      href={`/categories/${grandChild.handle}`}
+                                                      className="block px-2 py-1 text-xs text-gray-600 hover:text-amber-600 transition-colors"
+                                                      onClick={close}
+                                                    >
+                                                      {grandChild.name}
+                                                    </LocalizedClientLink>
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            )}
                                           </li>
                                         ))}
                                       </ul>
@@ -187,17 +206,39 @@ const SideMenu = ({ regions, categories = [] }: SideMenuProps) => {
                           </div>
                         )}
 
+                        {/* Brands Section */}
+                        {brands.length > 0 && (
+                          <div className="mt-8 pt-6 border-t border-gray-200">
+                            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-4">
+                              {t("nav.marques")}
+                            </h3>
+                            <ul className="space-y-2 max-h-64 overflow-y-auto pr-2">
+                              {brands.map((brand) => (
+                                <li key={brand.slug}>
+                                  <LocalizedClientLink
+                                    href={`/marques/${brand.slug}`}
+                                    className="block px-4 py-2 text-sm text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                                    onClick={close}
+                                  >
+                                    {brand.name}
+                                  </LocalizedClientLink>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
                         {/* Quick Links */}
                         <div className="mt-8 pt-6 border-t border-gray-200">
                           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-4">
-                            Liens rapides
+                            {t("nav.quick_links")}
                           </h3>
                           <ul className="space-y-2">
                             {[
-                              { name: "Service client", href: "/contact" },
-                              { name: "Livraison", href: "/livraison" },
-                              { name: "Retours", href: "/retours" },
-                              { name: "FAQ", href: "/faq" },
+                              { name: t("nav.service_client"), href: "/contact" },
+                              { name: t("nav.shipping"), href: "/livraison" },
+                              { name: t("nav.returns"), href: "/retours" },
+                              { name: t("nav.faq"), href: "/faq" },
                             ].map((link) => (
                               <li key={link.name}>
                                 <LocalizedClientLink

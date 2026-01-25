@@ -12,6 +12,14 @@ export const translations = {
     "nav.my_account": "Mon compte",
     "nav.cart": "Panier",
     "nav.wishlist": "Liste de souhaits",
+    "nav.categories": "Catégories",
+    "nav.quick_links": "Liens rapides",
+    "nav.service_client": "Service client",
+    "nav.shipping": "Livraison",
+    "nav.returns": "Retours",
+    "nav.faq": "FAQ",
+    "nav.view_all": "Voir tout",
+    "nav.brands_title": "Nos marques",
     
     // Top Bar
     "topbar.promo": "-10% pour les nouveaux clients avec le code BIENVENUE10 | Livraison gratuite dès 100€",
@@ -89,6 +97,14 @@ export const translations = {
     "nav.my_account": "Mijn account",
     "nav.cart": "Winkelwagen",
     "nav.wishlist": "Verlanglijst",
+    "nav.categories": "Categorieën",
+    "nav.quick_links": "Snelle links",
+    "nav.service_client": "Klantenservice",
+    "nav.shipping": "Levering",
+    "nav.returns": "Retouren",
+    "nav.faq": "FAQ",
+    "nav.view_all": "Bekijk alles",
+    "nav.brands_title": "Onze merken",
     
     // Top Bar
     "topbar.promo": "-10% voor nieuwe klanten met code WELKOM10 | Gratis levering vanaf €100",

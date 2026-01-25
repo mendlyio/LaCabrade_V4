@@ -80,9 +80,9 @@ const CartTemplateModern = ({
                 )}
 
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="p-6 border-b border-gray-200 bg-amber-600">
-                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                      <ShoppingBag className="w-6 h-6 text-amber-600" />
+                  <div className="p-6 border-b border-amber-500 bg-amber-600">
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <ShoppingBag className="w-6 h-6 text-white" />
                       Articles ({itemCount})
                     </h2>
                   </div>

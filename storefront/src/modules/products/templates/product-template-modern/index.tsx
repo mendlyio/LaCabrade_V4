@@ -31,8 +31,18 @@ const ProductTemplateModern: React.FC<ProductTemplateModernProps> = ({
   )
 
   // Vérifier le stock
-  const isInStock = product.variants?.some(v => (v.inventory_quantity || 0) > 0)
-  const lowStock = product.variants?.some(v => v.inventory_quantity && v.inventory_quantity < 5)
+  const variants = product.variants || []
+  const hasUnlimitedStock = variants.some(
+    (variant) => !variant.manage_inventory || variant.allow_backorder
+  )
+  const totalAvailable = variants.reduce((acc, variant) => {
+    if (!variant.manage_inventory || variant.allow_backorder) {
+      return acc
+    }
+    return acc + (variant.inventory_quantity || 0)
+  }, 0)
+  const isInStock = hasUnlimitedStock || totalAvailable > 0
+  const lowStock = !hasUnlimitedStock && totalAvailable > 0 && totalAvailable < 5
 
   // Vérifier les metadata pour les pastilles NEW et PROMO
   const isNew = product.metadata?.is_new === true || product.metadata?.is_new === "true"

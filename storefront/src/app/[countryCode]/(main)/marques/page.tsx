@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import { sdk } from "@lib/config"
+import { listBrands } from "@lib/data/brands"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export const metadata: Metadata = {
@@ -7,21 +7,10 @@ export const metadata: Metadata = {
   description: "Découvrez toutes les marques disponibles dans notre sellerie",
 }
 
+export const dynamic = "force-dynamic"
+
 export default async function MarquesPage() {
-  // Récupérer toutes les collections qui peuvent servir de marques
-  let brands: any[] = []
-  
-  try {
-    const { collections } = await sdk.store.collection.list({ 
-      limit: 100,
-      fields: "id,title,handle,metadata"
-    })
-    
-    // Filtrer ou organiser les collections selon la metadata ou un critère spécifique
-    brands = collections || []
-  } catch (error) {
-    console.error("Erreur lors de la récupération des marques:", error)
-  }
+  const brands = await listBrands()
 
   return (
     <div className="content-container py-12">
@@ -42,12 +31,12 @@ export default async function MarquesPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-12">
           {brands.map((brand) => (
             <LocalizedClientLink
-              key={brand.id}
-              href={`/collections/${brand.handle}`}
+              key={brand.slug}
+              href={`/marques/${brand.slug}`}
               className="bg-white border border-gray-200 rounded-lg p-6 text-center hover:shadow-lg hover:border-amber-300 transition-all duration-200 group"
             >
               <h3 className="font-semibold text-gray-900 group-hover:text-amber-600 transition-colors">
-                {brand.title}
+                {brand.name}
               </h3>
             </LocalizedClientLink>
           ))}
@@ -63,12 +52,12 @@ export default async function MarquesPage() {
         <p className="text-gray-600 mb-8">
           Visitez notre magasin à Fléron pour découvrir toutes nos marques disponibles.
         </p>
-        <a
+        <LocalizedClientLink
           href="/store"
           className="inline-block px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition-colors"
         >
           Découvrir nos produits →
-        </a>
+        </LocalizedClientLink>
       </div>
     </div>
   )
