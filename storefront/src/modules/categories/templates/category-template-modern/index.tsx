@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import { listCategories } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
+import { buildCategoryTree } from "@lib/util/category-tree"
 import FiltersModern from "@modules/store/components/filters-modern"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import PaginatedProductsModern from "@modules/store/templates/store-template-modern/paginated-products-modern"
@@ -34,6 +35,9 @@ export default async function CategoryTemplateModern({
   // Récupérer toutes les catégories et collections pour les filtres
   const allCategories = await listCategories()
   const { collections } = await getCollectionsList(0, 100)
+  const { map: categoryMap } = buildCategoryTree(allCategories)
+  const categoryNode = categoryMap.get(category.id) || category
+  const categoryChildren = categoryNode.category_children || []
 
   // Compter le nombre de filtres actifs
   const activeFilters = Object.keys(searchParams).filter(
@@ -100,7 +104,7 @@ export default async function CategoryTemplateModern({
       </div>
 
       {/* Sous-catégories */}
-      {category.category_children && category.category_children.length > 0 && (
+      {categoryChildren.length > 0 && (
         <div className="content-container mb-8">
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -110,7 +114,7 @@ export default async function CategoryTemplateModern({
               Sous-catégories
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {category.category_children.map((child) => (
+              {categoryChildren.map((child) => (
                 <div key={child.id} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                   <LocalizedClientLink
                     href={`/categories/${child.handle}`}

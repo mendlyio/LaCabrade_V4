@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import { listRegions } from "@lib/data/regions"
 import { listCategories } from "@lib/data/categories"
 import { listBrands } from "@lib/data/brands"
+import { buildCategoryTree } from "@lib/util/category-tree"
 import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
@@ -24,9 +25,7 @@ export default async function Nav() {
   const brands = await listBrands()
 
   // Filtrer les catégories racines (Niveau 0)
-  const parentCategories = categories.filter(
-    (c) => !c.parent_category_id && !c.parent_category
-  )
+  const { roots: parentCategories } = buildCategoryTree(categories)
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">

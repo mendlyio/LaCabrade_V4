@@ -10,6 +10,7 @@ import CountrySelect from "../country-select"
 import { HttpTypes } from "@medusajs/types"
 import { useTranslate } from "@lib/context/language-context"
 import { Brand } from "@lib/data/brands"
+import { buildCategoryTree } from "@lib/util/category-tree"
 
 // Items principaux (non catégories) - les clés de traduction
 const SideMenuItemsKeys = [
@@ -31,8 +32,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const t = useTranslate()
   
-  const parentCategories =
-    categories?.filter((cat) => !cat.parent_category && !cat.parent_category_id) || []
+  const { roots: parentCategories } = buildCategoryTree(categories)
 
   const toggleCategory = (categoryId: string) => {
     const newExpanded = new Set(expandedCategories)
@@ -191,6 +191,21 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                                                     >
                                                       {grandChild.name}
                                                     </LocalizedClientLink>
+                                                    {grandChild.category_children?.length > 0 && (
+                                                      <ul className="ml-3 mt-1 space-y-1 border-l border-gray-100 pl-3">
+                                                        {grandChild.category_children.map((greatGrandChild: any) => (
+                                                          <li key={greatGrandChild.id}>
+                                                            <LocalizedClientLink
+                                                              href={`/categories/${greatGrandChild.handle}`}
+                                                              className="block px-2 py-1 text-xs text-gray-500 hover:text-amber-600 transition-colors"
+                                                              onClick={close}
+                                                            >
+                                                              {greatGrandChild.name}
+                                                            </LocalizedClientLink>
+                                                          </li>
+                                                        ))}
+                                                      </ul>
+                                                    )}
                                                   </li>
                                                 ))}
                                               </ul>
