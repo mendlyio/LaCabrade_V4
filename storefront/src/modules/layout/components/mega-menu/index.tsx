@@ -89,7 +89,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                                         <LocalizedClientLink
                                           href={`/categories/${greatGrandChild.handle}`}
                                           onClick={() => close()}
-                                          className="text-xs text-gray-600 hover:text-white hover:bg-amber-600 rounded-md px-2 py-1 transition-colors block"
+                                          className="text-xs text-gray-700 bg-white hover:text-white hover:bg-amber-600 rounded-md px-2 py-1 transition-colors block"
                                         >
                                           {greatGrandChild.name}
                                         </LocalizedClientLink>
