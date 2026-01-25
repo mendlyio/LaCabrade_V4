@@ -17,7 +17,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
     return (
       <LocalizedClientLink
         href={`/categories/${category.handle}`}
-        className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200 whitespace-nowrap"
+        className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-amber-600 transition-all duration-200 whitespace-nowrap"
       >
         {category.name}
       </LocalizedClientLink>
@@ -33,8 +33,8 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
               flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium outline-none
               transition-all duration-200 whitespace-nowrap
               ${open 
-                ? 'text-amber-600 bg-amber-50' 
-                : 'text-gray-700 hover:text-amber-600 hover:bg-amber-50'
+                ? 'text-white bg-amber-600 shadow-sm' 
+                : 'text-gray-700 hover:text-white hover:bg-amber-600'
               }
             `}
           >
@@ -77,7 +77,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                               <LocalizedClientLink
                                 href={`/categories/${grandChild.handle}`}
                                 onClick={() => close()}
-                                className="text-sm text-gray-700 hover:text-amber-700 hover:bg-amber-50 rounded-md px-2 py-1 transition-colors block"
+                                className="text-sm text-gray-700 hover:text-white hover:bg-amber-600 rounded-md px-2 py-1 transition-colors block"
                               >
                                 {grandChild.name}
                               </LocalizedClientLink>
@@ -89,7 +89,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                                         <LocalizedClientLink
                                           href={`/categories/${greatGrandChild.handle}`}
                                           onClick={() => close()}
-                                          className="text-xs text-gray-600 hover:text-amber-700 hover:bg-amber-50 rounded-md px-2 py-1 transition-colors block"
+                                          className="text-xs text-gray-600 hover:text-white hover:bg-amber-600 rounded-md px-2 py-1 transition-colors block"
                                         >
                                           {greatGrandChild.name}
                                         </LocalizedClientLink>

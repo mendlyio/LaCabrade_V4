@@ -19,7 +19,7 @@ const BrandsMenu = ({ brands }: BrandsMenuProps) => {
     return (
       <LocalizedClientLink
         href="/marques"
-        className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-amber-600 hover:bg-amber-50 transition-all duration-200"
+        className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-amber-600 transition-all duration-200"
       >
         {t("nav.marques")}
       </LocalizedClientLink>
@@ -35,8 +35,8 @@ const BrandsMenu = ({ brands }: BrandsMenuProps) => {
               flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium outline-none
               transition-all duration-200
               ${open 
-                ? 'text-amber-600 bg-amber-50' 
-                : 'text-gray-700 hover:text-amber-600 hover:bg-amber-50'
+                ? 'text-white bg-amber-600 shadow-sm' 
+                : 'text-gray-700 hover:text-white hover:bg-amber-600'
               }
             `}
           >
@@ -74,7 +74,7 @@ const BrandsMenu = ({ brands }: BrandsMenuProps) => {
                         key={brand.slug}
                         href={`/marques/${brand.slug}`}
                         onClick={() => close()}
-                        className="px-3 py-2 text-sm text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all duration-200 font-medium truncate"
+                        className="px-3 py-2 text-sm text-gray-700 hover:text-white hover:bg-amber-600 rounded-lg transition-all duration-200 font-medium truncate"
                       >
                         {brand.name}
                       </LocalizedClientLink>
