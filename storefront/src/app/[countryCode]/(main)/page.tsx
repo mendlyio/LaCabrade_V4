@@ -59,7 +59,10 @@ export default async function Home({
   let mainCategories: any[] = []
   try {
     const categories = await listCategories()
-    const parentCategories = categories?.filter((c: any) => c.parent_category_id === null) || []
+    const parentCategories =
+      categories?.filter(
+        (c: any) => c.parent_category_id == null && c.is_active !== false
+      ) || []
     mainCategories = parentCategories.slice(0, 8) || []
   } catch (error) {
     console.error("Erreur lors de la récupération des catégories:", error)

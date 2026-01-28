@@ -61,7 +61,10 @@ export default function FiltersModern({ categories, collections }: FiltersModern
   }
 
   // Catégories parentes uniquement
-  const parentCategories = categories?.filter(cat => !cat.parent_category) || []
+  const parentCategories =
+    categories?.filter(
+      (cat) => cat.parent_category_id == null && cat.is_active !== false
+    ) || []
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden sticky top-24">

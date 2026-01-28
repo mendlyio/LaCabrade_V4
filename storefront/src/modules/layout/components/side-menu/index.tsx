@@ -32,7 +32,8 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const t = useTranslate()
   
-  const { roots: parentCategories } = buildCategoryTree(categories)
+  const { roots } = buildCategoryTree(categories)
+  const parentCategories = roots.filter((cat) => (cat as any).is_active !== false)
 
   const toggleCategory = (categoryId: string) => {
     const newExpanded = new Set(expandedCategories)

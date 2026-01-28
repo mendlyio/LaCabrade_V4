@@ -24,8 +24,9 @@ export default async function Nav() {
   const categories = await listCategories()
   const brands = await listBrands()
 
-  // Filtrer les catégories racines (Niveau 0)
-  const { roots: parentCategories } = buildCategoryTree(categories)
+  // Filtrer les catégories racines (Niveau 0) et actives
+  const { roots } = buildCategoryTree(categories)
+  const parentCategories = roots.filter((c) => (c as any).is_active !== false)
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">

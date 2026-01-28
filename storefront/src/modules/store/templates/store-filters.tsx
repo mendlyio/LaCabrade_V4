@@ -25,7 +25,10 @@ export default function StoreFilters({
   const searchParams = useSearchParams()
 
   // Filtrer uniquement les catégories parentes
-  const parentCategories = categories?.filter(cat => !cat.parent_category_id) || []
+  const parentCategories =
+    categories?.filter(
+      (cat) => cat.parent_category_id == null && cat.is_active !== false
+    ) || []
 
   const handleFilterChange = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -179,7 +182,7 @@ export default function StoreFilters({
                 <select 
                   value={searchParams.get('category_id') || ''}
                   onChange={(e) => handleFilterChange('category_id', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                 >
                   <option value="">Toutes les catégories</option>
                   {parentCategories.map((category) => (

@@ -809,9 +809,8 @@ export const syncFromErpWorkflow = createWorkflow(
                     // 1) Mettre à jour le produit + options (sans variantes, pour éviter les DTO incompatibles)
                     const updatePayload = {
                         id: p.id,
-                        title: p.title,
+                        // Ne pas écraser le titre/handle côté Medusa
                         description: p.description,
-                        handle: p.handle,
                         status: p.status,
                         metadata: p.metadata,
                         options: p.options,
@@ -1041,9 +1040,8 @@ export const syncFromErpWorkflow = createWorkflow(
                     try {
                         const productService = container.resolve(Modules.PRODUCT)
                         await productService.updateProducts(p.id, { 
-                            title: p.title, 
+                            // Ne pas écraser le titre/handle côté Medusa
                             description: p.description, 
-                            handle: p.handle, 
                             status: p.status, 
                             metadata: p.metadata, 
                         })
