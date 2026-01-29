@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 import { listCategories } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
+import { listBrands } from "@lib/data/brands"
 import FiltersModern from "@modules/store/components/filters-modern"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import PaginatedProductsModern from "./paginated-products-modern"
@@ -15,6 +16,7 @@ export default async function StoreTemplateModern({
     q?: string
     category?: string
     collection?: string
+    brand?: string
     price_min?: string
     price_max?: string
     in_stock?: string
@@ -27,6 +29,7 @@ export default async function StoreTemplateModern({
   // Récupérer les catégories et collections pour les filtres
   const categories = await listCategories()
   const { collections } = await getCollectionsList(0, 100)
+  const brands = await listBrands()
 
   // Compter le nombre de filtres actifs
   const activeFilters = Object.keys(searchParams).filter(
@@ -92,12 +95,12 @@ export default async function StoreTemplateModern({
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar Filters - Desktop */}
           <aside className="hidden lg:block w-80 flex-shrink-0">
-            <FiltersModern categories={categories} collections={collections} />
+            <FiltersModern categories={categories} brands={brands} />
           </aside>
 
           {/* Mobile Filters */}
           <div className="lg:hidden">
-            <FiltersModern categories={categories} collections={collections} />
+            <FiltersModern categories={categories} brands={brands} />
           </div>
 
           {/* Products Grid */}
@@ -135,12 +138,12 @@ export default async function StoreTemplateModern({
               <p className="text-xs text-gray-600">En 48-72h</p>
             </div>
             <div className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-amber-100 text-amber-600 rounded-full mb-3">
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-amber-100 text-amber-700 rounded-full mb-3">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                 </svg>
               </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Retours gratuits</h3>
+              <h3 className="font-semibold text-gray-900 mb-1">Retours à charge du client</h3>
               <p className="text-xs text-gray-600">30 jours</p>
             </div>
             <div className="text-center">

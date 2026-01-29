@@ -143,7 +143,7 @@ export default function ContactPage() {
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">Retours et échanges</h3>
               <p className="text-sm text-gray-600">
-                Retours gratuits sous 30 jours. Produits non portés avec étiquettes.
+                Retours à charge du client sous 30 jours. Produits non portés avec étiquettes.
               </p>
             </div>
             <div>

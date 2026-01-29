@@ -8,9 +8,11 @@ import Image from "next/image"
 export default async function ProductCardModern({
   product,
   region,
+  variant = "default",
 }: {
   product: HttpTypes.StoreProduct
   region: HttpTypes.StoreRegion
+  variant?: "default" | "compact"
 }) {
   const [pricedProduct] = await getProductsById({
     ids: [product.id!],
@@ -48,6 +50,73 @@ export default async function ProductCardModern({
 
   // Obtenir la collection pour le badge
   const collection = pricedProduct.collection?.title
+
+  if (variant === "compact") {
+    return (
+      <LocalizedClientLink
+        href={`/products/${product.handle}`}
+        className="group block"
+        data-testid="product-card"
+      >
+        <div className="bg-white rounded-2xl border border-gray-100 hover:border-amber-300 shadow-sm hover:shadow-lg transition-all duration-300 p-4 flex items-center gap-4">
+          {/* Image compacte */}
+          <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
+            {product.thumbnail ? (
+              <Image
+                src={product.thumbnail}
+                alt={product.title || "Produit"}
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                sizes="96px"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-2xl opacity-20">🏇</div>
+              </div>
+            )}
+            {hasDiscount && (
+              <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow">
+                -{discountPercentage}%
+              </div>
+            )}
+          </div>
+
+          {/* Infos compactes */}
+          <div className="flex-1 min-w-0">
+            {collection && (
+              <div className="text-[11px] uppercase tracking-wide text-gray-400 mb-1 truncate">
+                {collection}
+              </div>
+            )}
+            <h3 className="font-semibold text-gray-900 group-hover:text-amber-600 transition-colors text-sm md:text-base line-clamp-2">
+              {product.title}
+            </h3>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <div className="flex flex-col">
+                {hasDiscount ? (
+                  <>
+                    <span className="text-sm font-bold text-red-600">
+                      {cheapestPrice?.calculated_price}
+                    </span>
+                    <span className="text-xs text-gray-400 line-through">
+                      {cheapestPrice?.original_price}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm font-bold text-gray-900">
+                    {cheapestPrice?.calculated_price || "Prix sur demande"}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-gray-500 whitespace-nowrap">
+                Voir →
+              </span>
+            </div>
+          </div>
+        </div>
+      </LocalizedClientLink>
+    )
+  }
 
   return (
     <LocalizedClientLink

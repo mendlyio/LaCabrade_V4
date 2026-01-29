@@ -2,14 +2,14 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useState } from "react"
-import { HttpTypes } from "@medusajs/types"
+import { Brand } from "@lib/data/brands"
 
 type FiltersModernProps = {
   categories: any[]
-  collections: HttpTypes.StoreCollection[]
+  brands: Brand[]
 }
 
-export default function FiltersModern({ categories, collections }: FiltersModernProps) {
+export default function FiltersModern({ categories, brands }: FiltersModernProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -69,16 +69,16 @@ export default function FiltersModern({ categories, collections }: FiltersModern
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden sticky top-24">
       {/* Header */}
-      <div className="bg-amber-600 px-6 py-4 border-b border-gray-200">
+      <div className="bg-amber-600 px-6 py-4 border-b border-amber-500">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
-            <h2 className="font-bold text-gray-900">
+            <h2 className="font-bold text-white">
               Filtres
               {activeFiltersCount > 0 && (
-                <span className="ml-2 inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-white bg-amber-600 rounded-full">
+                <span className="ml-2 inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-amber-700 bg-white rounded-full">
                   {activeFiltersCount}
                 </span>
               )}
@@ -86,7 +86,7 @@ export default function FiltersModern({ categories, collections }: FiltersModern
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="lg:hidden p-1 hover:bg-white rounded-lg transition-colors"
+            className="lg:hidden p-1 hover:bg-white/20 rounded-lg transition-colors text-white"
           >
             <svg className={`w-5 h-5 transition-transform ${showFilters ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -97,7 +97,7 @@ export default function FiltersModern({ categories, collections }: FiltersModern
         {activeFiltersCount > 0 && (
           <button
             onClick={clearAllFilters}
-            className="mt-3 text-sm text-amber-600 hover:text-amber-700 font-medium flex items-center gap-1"
+            className="mt-3 text-sm text-white/90 hover:text-white font-medium flex items-center gap-1"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -206,8 +206,8 @@ export default function FiltersModern({ categories, collections }: FiltersModern
             </div>
           )}
 
-          {/* Collections/Marques */}
-          {collections.length > 0 && (
+          {/* Marques */}
+          {brands.length > 0 && (
             <div className="space-y-3 pt-6 border-t border-gray-200">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                 <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -216,12 +216,12 @@ export default function FiltersModern({ categories, collections }: FiltersModern
                 Marques
               </label>
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {collections.map((collection) => {
-                  const isActive = searchParams.get('collection') === collection.handle
+                {brands.map((brand) => {
+                  const isActive = searchParams.get('brand') === brand.slug
                   return (
                     <button
-                      key={collection.id}
-                      onClick={() => updateFilters({ collection: isActive ? null : collection.handle })}
+                      key={brand.slug}
+                      onClick={() => updateFilters({ brand: isActive ? null : brand.slug })}
                       className={`
                         w-full text-left px-3 py-2 rounded-lg text-sm transition-all
                         ${isActive
@@ -231,7 +231,7 @@ export default function FiltersModern({ categories, collections }: FiltersModern
                       `}
                     >
                       <div className="flex items-center justify-between">
-                        <span>{collection.title}</span>
+                        <span>{brand.name}</span>
                         {isActive && (
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />

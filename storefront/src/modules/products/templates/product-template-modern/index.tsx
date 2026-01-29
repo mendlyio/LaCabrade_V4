@@ -9,6 +9,8 @@ import ProductTrustBadges from "@modules/products/components/product-trust-badge
 import RelatedProductsModern from "@modules/products/components/related-products-modern"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { listCategories } from "@lib/data/categories"
+import { buildCategoryTree } from "@lib/util/category-tree"
 
 type ProductTemplateModernProps = {
   product: HttpTypes.StoreProduct
@@ -16,19 +18,58 @@ type ProductTemplateModernProps = {
   countryCode: string
 }
 
-const ProductTemplateModern: React.FC<ProductTemplateModernProps> = ({
+const ProductTemplateModern = async ({
   product,
   region,
   countryCode,
-}) => {
+}: ProductTemplateModernProps) => {
   if (!product || !product.id) {
     return notFound()
   }
 
+  const allCategories = await listCategories()
+  const { map: categoryMap } = buildCategoryTree(allCategories || [])
+
+  const buildCategoryBreadcrumb = () => {
+    if (!product.categories?.length || categoryMap.size === 0) {
+      return []
+    }
+
+    const getPath = (categoryId: string) => {
+      const path: HttpTypes.StoreProductCategory[] = []
+      const visited = new Set<string>()
+      let current = categoryMap.get(categoryId)
+
+      while (current && !visited.has(current.id)) {
+        path.unshift(current)
+        visited.add(current.id)
+        const parentId =
+          current.parent_category_id || current.parent_category?.id || undefined
+        current = parentId ? categoryMap.get(parentId) : undefined
+      }
+
+      return path
+    }
+
+    const paths = product.categories
+      .map((category) => getPath(category.id))
+      .filter((path) => path.length > 0)
+
+    if (!paths.length) {
+      return []
+    }
+
+    return paths.sort((a, b) => b.length - a.length)[0]
+  }
+
+  const categoryBreadcrumb = buildCategoryBreadcrumb()
+
   // Vérifier si le produit est en promotion
-  const hasDiscount = product.variants?.some(v => 
-    v.calculated_price && v.calculated_price.calculated_amount < v.calculated_price.original_amount
-  )
+  const hasDiscount = product.variants?.some((v) => {
+    const calculated = v.calculated_price?.calculated_amount
+    const original = v.calculated_price?.original_amount
+    return typeof calculated === "number" && typeof original === "number" && calculated < original
+  })
 
   // Vérifier le stock
   const variants = product.variants || []
@@ -62,19 +103,29 @@ const ProductTemplateModern: React.FC<ProductTemplateModernProps> = ({
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-            <LocalizedClientLink href="/store" className="hover:text-amber-600 transition-colors">
-              Boutique
-            </LocalizedClientLink>
-            {product.collection && (
+            {categoryBreadcrumb.length > 0 ? (
+              <>
+                {categoryBreadcrumb.map((category) => (
+                  <span key={category.id} className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    <LocalizedClientLink
+                      href={`/categories/${category.handle}`}
+                      className="hover:text-amber-600 transition-colors"
+                    >
+                      {category.name}
+                    </LocalizedClientLink>
+                  </span>
+                ))}
+              </>
+            ) : (
               <>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-                <LocalizedClientLink 
-                  href={`/collections/${product.collection.handle}`}
-                  className="hover:text-amber-600 transition-colors"
-                >
-                  {product.collection.title}
+                <LocalizedClientLink href="/store" className="hover:text-amber-600 transition-colors">
+                  Boutique
                 </LocalizedClientLink>
               </>
             )}
@@ -232,11 +283,11 @@ const ProductTemplateModern: React.FC<ProductTemplateModernProps> = ({
               </div>
               <div className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex-shrink-0 w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-8 h-8 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                   </svg>
                 </div>
-                <div className="font-bold text-gray-900 text-lg mb-2">Retours gratuits</div>
+                <div className="font-bold text-gray-900 text-lg mb-2">Retours à charge du client</div>
                 <div className="text-sm text-gray-600">30 jours pour changer d'avis</div>
               </div>
             </div>

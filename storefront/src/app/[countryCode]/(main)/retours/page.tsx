@@ -3,7 +3,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 
 export const metadata: Metadata = {
   title: "Retours & Remboursements - La Cabrade",
-  description: "Politique de retour simple : 30 jours pour retourner vos articles. Retours gratuits en Belgique.",
+  description: "Politique de retour simple : 30 jours pour retourner vos articles. Retours à charge du client.",
 }
 
 export default function RetoursPage() {
@@ -19,7 +19,7 @@ export default function RetoursPage() {
               </span>
             </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              Retours faciles et gratuits
+              Retours simplifiés
             </h1>
             <p className="text-white/90 text-lg">
               Changé d'avis ? Pas de problème ! Vous avez 30 jours pour retourner vos articles.
@@ -35,7 +35,7 @@ export default function RetoursPage() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-900">30 jours pour changer d'avis</h2>
-              <p className="text-green-700 font-semibold">Retours GRATUITS en Belgique</p>
+              <p className="text-green-700 font-semibold">Retours à charge du client</p>
             </div>
           </div>
         </div>

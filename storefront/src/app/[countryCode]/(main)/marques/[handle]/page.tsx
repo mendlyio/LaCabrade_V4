@@ -2,8 +2,7 @@ import { Metadata } from "next"
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import { listCategories } from "@lib/data/categories"
-import { getCollectionsList } from "@lib/data/collections"
-import { getBrandBySlug } from "@lib/data/brands"
+import { getBrandBySlug, listBrands } from "@lib/data/brands"
 import FiltersModern from "@modules/store/components/filters-modern"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import PaginatedProductsModern from "@modules/store/templates/store-template-modern/paginated-products-modern"
@@ -16,6 +15,7 @@ type Props = {
     page?: string
     q?: string
     category?: string
+    brand?: string
     price_min?: string
     price_max?: string
     in_stock?: string
@@ -56,11 +56,11 @@ export default async function BrandPage({ params, searchParams }: Props) {
   }
 
   const allCategories = await listCategories()
-  const { collections } = await getCollectionsList(0, 100)
+  const brands = await listBrands()
 
   const searchParamsWithBrand = {
     ...searchParams,
-    brand: brand.name,
+    brand: brand.slug,
   }
 
   return (
@@ -97,11 +97,11 @@ export default async function BrandPage({ params, searchParams }: Props) {
       <div className="content-container pb-16">
         <div className="flex flex-col lg:flex-row gap-8">
           <aside className="hidden lg:block w-80 flex-shrink-0">
-            <FiltersModern categories={allCategories} collections={collections} />
+            <FiltersModern categories={allCategories} brands={brands} />
           </aside>
 
           <div className="lg:hidden">
-            <FiltersModern categories={allCategories} collections={collections} />
+            <FiltersModern categories={allCategories} brands={brands} />
           </div>
 
           <main className="flex-1">

@@ -50,18 +50,18 @@ export default async function RelatedProductsModern({
       </div>
 
       {/* Carrousel de produits similaires */}
-      <ScrollCarousel 
-        itemWidth="w-64 md:w-72" 
-        gap="gap-4 md:gap-6"
-        className="px-4 md:px-0"
-      >
-        {relatedProducts.map((relatedProduct) => (
-          <ProductCardModern
-            key={relatedProduct.id}
-            product={relatedProduct}
-            region={region}
-          />
-        ))}
+      <ScrollCarousel className="px-2 md:px-0">
+        <div className="flex gap-3 md:gap-4">
+          {relatedProducts.map((relatedProduct) => (
+            <div key={relatedProduct.id} className="w-80 md:w-96 flex-shrink-0">
+              <ProductCardModern
+                product={relatedProduct}
+                region={region}
+                variant="compact"
+              />
+            </div>
+          ))}
+        </div>
       </ScrollCarousel>
 
       {relatedProducts.length > 4 && (
