@@ -27,8 +27,14 @@ const ProductTemplateModern = async ({
     return notFound()
   }
 
-  const allCategories = await listCategories()
-  const { map: categoryMap } = buildCategoryTree(allCategories || [])
+  let allCategories: HttpTypes.StoreProductCategory[] = []
+  try {
+    allCategories = (await listCategories()) || []
+  } catch (error) {
+    console.error("Erreur lors du chargement des catégories:", error)
+    allCategories = []
+  }
+  const { map: categoryMap } = buildCategoryTree(allCategories)
 
   const buildCategoryBreadcrumb = () => {
     if (!product.categories?.length || categoryMap.size === 0) {
