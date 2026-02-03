@@ -3,6 +3,7 @@ import { getProductsList } from "@lib/data/products"
 import { slugify } from "@lib/util/slugify"
 import { listCategories } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
+import { buildCategoryTree } from "@lib/util/category-tree"
 import ProductCardModern from "@modules/products/components/product-card-modern"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
@@ -42,6 +43,7 @@ export default async function PaginatedProductsModern({
   // Récupérer les catégories et collections pour convertir les handles en IDs
   const categories = await listCategories()
   const { collections } = await getCollectionsList(0, 100)
+  const { map: categoryMap } = buildCategoryTree(categories || [])
 
   // Construire les paramètres de requête
   const queryParams: any = {
@@ -60,7 +62,31 @@ export default async function PaginatedProductsModern({
   if (searchParams.category) {
     const category = categories?.find(cat => cat.handle === searchParams.category)
     if (category) {
-      queryParams.category_id = [category.id]
+      const collectCategoryIds = (categoryId: string) => {
+        const ids: string[] = []
+        const stack: string[] = [categoryId]
+        const visited = new Set<string>()
+
+        while (stack.length) {
+          const currentId = stack.pop()
+          if (!currentId || visited.has(currentId)) {
+            continue
+          }
+          visited.add(currentId)
+          ids.push(currentId)
+
+          const node = categoryMap.get(currentId)
+          node?.category_children?.forEach((child) => {
+            if (child?.id && !visited.has(child.id)) {
+              stack.push(child.id)
+            }
+          })
+        }
+
+        return ids
+      }
+
+      queryParams.category_id = collectCategoryIds(category.id)
     } else {
       // Si la catégorie n'existe pas, retourner un résultat vide au lieu de tous les produits
       console.warn(`⚠️ Catégorie non trouvée pour le handle: ${searchParams.category}`)
