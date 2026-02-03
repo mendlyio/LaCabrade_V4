@@ -36,8 +36,12 @@ export default async function PaginatedProductsModern({
   const page = searchParams.page ? parseInt(searchParams.page) : 1
   
   // Si on a des filtres côté client actifs, récupérer plus de produits pour compenser le filtrage
-  const hasClientSideFilters = searchParams.price_min || searchParams.price_max || 
-                                 searchParams.in_stock === 'true' || searchParams.on_sale === 'true'
+  const hasClientSideFilters =
+    searchParams.price_min ||
+    searchParams.price_max ||
+    searchParams.in_stock === "true" ||
+    searchParams.on_sale === "true" ||
+    !!searchParams.brand
   const limit = hasClientSideFilters ? 50 : 12 // Récupérer plus de produits si on a des filtres côté client
 
   // Récupérer les catégories et collections pour convertir les handles en IDs
@@ -152,7 +156,8 @@ export default async function PaginatedProductsModern({
   })
 
   let products = result?.response?.products || []
-  let count = result?.response?.count || 0
+  const apiCount = result?.response?.count || 0
+  let count = apiCount
 
   // Filtrage côté client pour les fonctionnalités non supportées par l'API
   let filteredProducts = [...products]
@@ -207,11 +212,11 @@ export default async function PaginatedProductsModern({
   const startIndex = (page - 1) * displayLimit
   const endIndex = startIndex + displayLimit
   
-  products = hasClientSideFilters 
+  products = hasClientSideFilters
     ? filteredProducts.slice(startIndex, endIndex)
     : filteredProducts
   
-  count = totalFilteredCount
+  count = hasClientSideFilters ? totalFilteredCount : apiCount
 
   const totalPages = Math.ceil(count / displayLimit)
   const hasNextPage = page < totalPages

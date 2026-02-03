@@ -2,15 +2,37 @@ import { sdk } from "@lib/config"
 import { cache } from "react"
 
 export const listCategories = cache(async function () {
-  return sdk.store.category
-    .list(
+  const limit = 100
+  let offset = 0
+  let total = 0
+  const allCategories: any[] = []
+
+  do {
+    const { product_categories, count } = await sdk.store.category.list(
       {
-        // Paramètres compatibles pour éviter l'erreur "expand"
-        limit: 100,
+        limit,
+        offset,
       },
       { next: { tags: ["categories"] } }
     )
-    .then(({ product_categories }) => product_categories)
+
+    if (Array.isArray(product_categories)) {
+      allCategories.push(...product_categories)
+    }
+
+    total = typeof count === "number" ? count : allCategories.length
+    offset += limit
+  } while (offset < total)
+
+  // Dédupliquer par id pour éviter les doublons éventuels
+  const deduped = new Map<string, any>()
+  allCategories.forEach((category) => {
+    if (category?.id) {
+      deduped.set(category.id, category)
+    }
+  })
+
+  return Array.from(deduped.values())
 })
 
 export const getCategoriesList = cache(async function (

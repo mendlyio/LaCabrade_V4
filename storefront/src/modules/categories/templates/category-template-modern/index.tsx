@@ -87,7 +87,7 @@ export default async function CategoryTemplateModern({
             </h1>
             
             {category.description && (
-              <p className="text-lg text-amber-50 mb-4">
+              <p className="text-lg text-white/90 mb-4">
                 {category.description}
               </p>
             )}

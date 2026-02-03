@@ -73,7 +73,7 @@ export default async function StoreTemplateModern({
                 </>
               )}
             </h1>
-            <p className="text-lg text-amber-50">
+            <p className="text-lg text-white/90">
               {searchParams.q 
                 ? "Découvrez nos produits correspondant à votre recherche"
                 : "Découvrez notre gamme complète de produits équestres de qualité"}
