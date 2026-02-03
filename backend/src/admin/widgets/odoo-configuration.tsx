@@ -394,6 +394,116 @@ const OdooConfigurationWidget = () => {
     }
   }
 
+  const resyncPrices = async () => {
+    if (!confirm("💰 Re-synchroniser uniquement les PRIX des produits Odoo déjà importés ?\n\nCela mettra à jour les prix des variantes sans toucher aux descriptions, options ou stock.\n\nCette opération peut prendre plusieurs minutes.")) {
+      return
+    }
+
+    setIsSyncing(true)
+    setImportProgress({
+      show: true,
+      processed: 0,
+      total: 0,
+      created: 0,
+      updated: 0,
+      errors: 0,
+      currentBatch: 0,
+      totalBatches: 0,
+    })
+
+    try {
+      const response = await fetch("/admin/odoo/resync-prices", {
+        method: "POST",
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        throw new Error("Erreur lors de la connexion au serveur")
+      }
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error("Impossible de lire la réponse du serveur")
+      }
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const event = JSON.parse(line.substring(6))
+
+              if (event.type === 'start') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  total: event.total,
+                  totalBatches: event.batches,
+                } : null)
+              } else if (event.type === 'batch_start') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  currentBatch: event.batchNum,
+                } : null)
+              } else if (event.type === 'batch_complete') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  processed: event.processed,
+                  created: prev.created + event.created,
+                  updated: prev.updated + event.updated,
+                  currentBatch: event.batchNum,
+                } : null)
+              } else if (event.type === 'batch_error') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  processed: event.processed,
+                  errors: prev.errors + 1,
+                  currentBatch: event.batchNum,
+                } : null)
+              } else if (event.type === 'complete') {
+                setImportProgress(prev => prev ? {
+                  ...prev,
+                  processed: event.total,
+                  created: event.created,
+                  updated: event.updated,
+                  errors: event.errors,
+                } : null)
+
+                // Attendre 2 secondes avant de fermer la modal
+                setTimeout(() => {
+                  setImportProgress(null)
+                  fetchProducts()
+
+                  if (event.errors > 0) {
+                    alert(`⚠️ Re-synchronisation prix terminée avec des erreurs:\n${event.updated} mis à jour, ${event.errors} erreurs`)
+                  } else {
+                    alert(`✅ Re-synchronisation prix terminée:\n${event.updated} produit(s) mis à jour`)
+                  }
+                }, 2000)
+              } else if (event.type === 'error') {
+                throw new Error(event.message)
+              }
+            } catch (parseError) {
+              console.error("Erreur parsing SSE:", parseError)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Erreur re-synchronisation prix:", error)
+      alert("❌ Erreur lors de la re-synchronisation des prix")
+      setImportProgress(null)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   const syncModified = async () => {
     if (!confirm("⚡ Synchroniser les produits Odoo (FORCE / overwrite) ?\n\nCette action va re-synchroniser et écraser les données (prix, variantes, etc.) même si Odoo ne détecte pas de modification.\n\n⚠️ Peut prendre plusieurs minutes.")) {
       return
@@ -902,6 +1012,17 @@ const OdooConfigurationWidget = () => {
                       {isSyncing 
                         ? `⏳ Re-synchronisation...` 
                         : `🔄 Re-sync tous`
+                      }
+                    </button>
+                    <button
+                      onClick={resyncPrices}
+                      disabled={isSyncing || !isConnected}
+                      className="w-full md:w-auto px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 disabled:bg-gray-500 disabled:cursor-not-allowed font-medium transition-colors text-sm"
+                      title="Re-synchronise uniquement les prix (plus léger)"
+                    >
+                      {isSyncing 
+                        ? `⏳ Re-synchronisation...` 
+                        : `💰 Re-sync prix`
                       }
                     </button>
                     <button

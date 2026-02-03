@@ -24,6 +24,7 @@ type SyncFromErpInput = Pagination & {
   filterProductIds?: number[]
   filterCategoryId?: number // Import par catégorie
   isResync?: boolean // True = re-sync (ignore soft-deleted), False/undefined = import manuel (restaure soft-deleted)
+  priceOnly?: boolean // True = re-sync prix uniquement (ne touche pas au produit/stock)
 }
 
 /**
@@ -528,7 +529,7 @@ export const syncFromErpWorkflow = createWorkflow(
             })
           }
 
-          if (existingProduct) {
+            if (existingProduct) {
             // Si le produit est soft-deleted, on l'ignore (sauf si c'est un import manuel depuis Odoo)
             if ((existingProduct as any).deleted_at) {
               // Pour un import manuel, on restaure et met à jour
@@ -546,7 +547,9 @@ export const syncFromErpWorkflow = createWorkflow(
               productsToUpdate.push(product as UpdateProductWorkflowInputDTO)
             }
           } else {
-            productsToCreate.push(product as CreateProductWorkflowInputDTO)
+            if (!input?.priceOnly) {
+              productsToCreate.push(product as CreateProductWorkflowInputDTO)
+            }
           }
           } catch (error: any) {
             console.error(`❌ Erreur produit ${odooProduct.id}:`, error.message)
@@ -564,9 +567,20 @@ export const syncFromErpWorkflow = createWorkflow(
     
     const createProductsStep = createStep(
       "create-products-from-odoo",
-      async ({ productsToCreate, dryRun }: { productsToCreate: any[]; dryRun: boolean }, { container }) => {
-        console.log(`➕ [WORKFLOW] CREATE step appelé: ${productsToCreate.length} produit(s) à créer, dryRun=${dryRun}`)
-        if (dryRun || productsToCreate.length === 0) return new StepResponse({ created: 0 })
+      async (
+        {
+          productsToCreate,
+          dryRun,
+          priceOnly,
+        }: { productsToCreate: any[]; dryRun: boolean; priceOnly?: boolean },
+        { container }
+      ) => {
+        console.log(
+          `➕ [WORKFLOW] CREATE step appelé: ${productsToCreate.length} produit(s) à créer, dryRun=${dryRun}, priceOnly=${!!priceOnly}`
+        )
+        if (dryRun || priceOnly || productsToCreate.length === 0) {
+          return new StepResponse({ created: 0 })
+        }
         
         const productService = container.resolve(Modules.PRODUCT)
         const salesChannelService = container.resolve(Modules.SALES_CHANNEL)
@@ -760,13 +774,26 @@ export const syncFromErpWorkflow = createWorkflow(
       }
     )
 
-    const createResult = createProductsStep({ productsToCreate, dryRun: input.dryRun })
+    const createResult = createProductsStep({
+      productsToCreate,
+      dryRun: input.dryRun,
+      priceOnly: input.priceOnly,
+    })
 
     // Update Step - utilise le workflow officiel Medusa pour mettre à jour produits ET prix
     const updateProductsStep = createStep(
         "update-products",
-        async ({ productsToUpdate, dryRun }: { productsToUpdate: any[]; dryRun: boolean }, { container }) => {
-            console.log(`🔄 [WORKFLOW] UPDATE step appelé: ${productsToUpdate.length} produit(s) à mettre à jour, dryRun=${dryRun}`)
+        async (
+          {
+            productsToUpdate,
+            dryRun,
+            priceOnly,
+          }: { productsToUpdate: any[]; dryRun: boolean; priceOnly?: boolean },
+          { container }
+        ) => {
+            console.log(
+              `🔄 [WORKFLOW] UPDATE step appelé: ${productsToUpdate.length} produit(s) à mettre à jour, dryRun=${dryRun}, priceOnly=${!!priceOnly}`
+            )
             if (dryRun || !productsToUpdate.length) return new StepResponse({ updated: 0 })
             
             let updatedCount = 0
@@ -786,58 +813,60 @@ export const syncFromErpWorkflow = createWorkflow(
                 try {
                     const productService = container.resolve(Modules.PRODUCT)
 
-                    // NOTE: La restauration des produits soft-deleted est gérée dans le step "transform"
-                    // Si un produit arrive ici et est soft-deleted, c'est volontaire (import manuel)
-                    // On doit restaurer avant de mettre à jour pour éviter les erreurs
-                    try {
-                      const checkProduct = await productService.retrieveProduct(p.id, { 
-                        withDeleted: true,
-                        relations: ["variants"]
-                      })
-                      if (checkProduct.deleted_at) {
-                        console.log(`♻️ [WORKFLOW] Restauration produit soft-deleted ${p.id} (import manuel)`)
-                        
-                        // Restaurer directement le produit ET ses variants soft-deleted
-                        // Medusa restaure automatiquement les variants liés
-                        await productService.restoreProducts([p.id])
-                        console.log(`✅ [WORKFLOW] Produit ${p.id} restauré (variants et inventory items conservés)`)
+                    if (!priceOnly) {
+                      // NOTE: La restauration des produits soft-deleted est gérée dans le step "transform"
+                      // Si un produit arrive ici et est soft-deleted, c'est volontaire (import manuel)
+                      // On doit restaurer avant de mettre à jour pour éviter les erreurs
+                      try {
+                        const checkProduct = await productService.retrieveProduct(p.id, { 
+                          withDeleted: true,
+                          relations: ["variants"]
+                        })
+                        if (checkProduct.deleted_at) {
+                          console.log(`♻️ [WORKFLOW] Restauration produit soft-deleted ${p.id} (import manuel)`)
+                          
+                          // Restaurer directement le produit ET ses variants soft-deleted
+                          // Medusa restaure automatiquement les variants liés
+                          await productService.restoreProducts([p.id])
+                          console.log(`✅ [WORKFLOW] Produit ${p.id} restauré (variants et inventory items conservés)`)
+                        }
+                      } catch (restoreErr: any) {
+                        console.warn(`⚠️ [WORKFLOW] Erreur restauration ${p.id}:`, restoreErr.message)
                       }
-                    } catch (restoreErr: any) {
-                      console.warn(`⚠️ [WORKFLOW] Erreur restauration ${p.id}:`, restoreErr.message)
-                    }
 
-                    // 1) Mettre à jour le produit + options (sans variantes, pour éviter les DTO incompatibles)
-                    const updatePayload = {
-                        id: p.id,
-                        // Ne pas écraser le titre/handle côté Medusa
-                        description: p.description,
-                        status: p.status,
-                        metadata: p.metadata,
-                        options: p.options,
-                        sales_channels: [{ id: lacabradeChannel.id }],
-                    }
-                    
-                    // Utiliser le workflow officiel Medusa qui gère les prix correctement
-                    const workflow = updateProductsWorkflow(container)
-                    await workflow.run({ input: { products: [updatePayload] } })
+                      // 1) Mettre à jour le produit + options (sans variantes, pour éviter les DTO incompatibles)
+                      const updatePayload = {
+                          id: p.id,
+                          // Ne pas écraser le titre/handle côté Medusa
+                          description: p.description,
+                          status: p.status,
+                          metadata: p.metadata,
+                          options: p.options,
+                          sales_channels: [{ id: lacabradeChannel.id }],
+                      }
+                      
+                      // Utiliser le workflow officiel Medusa qui gère les prix correctement
+                      const workflow = updateProductsWorkflow(container)
+                      await workflow.run({ input: { products: [updatePayload] } })
 
-                    // 2) Upsert variantes (création + update) — overwrite SKU/options/title/etc.
-                    console.log(`🔍 [UPDATE] Avant upsert ${p.id}: ${p.variants?.length || 0} variantes, première a des prix? ${!!p.variants?.[0]?.prices}`)
-                    if (Array.isArray(p.variants) && p.variants.length) {
-                      await productService.upsertProductVariants(
-                        p.variants.map((v: any) => ({
-                          id: v.id,
-                          product_id: p.id,
-                          title: v.title,
-                          sku: v.sku,
-                          barcode: v.barcode,
-                          weight: v.weight,
-                          manage_inventory: v.manage_inventory,
-                          metadata: v.metadata,
-                          options: v.options,
-                        }))
-                      )
-                      console.log(`✅ [UPDATE] Upsert variantes OK pour ${p.id}`)
+                      // 2) Upsert variantes (création + update) — overwrite SKU/options/title/etc.
+                      console.log(`🔍 [UPDATE] Avant upsert ${p.id}: ${p.variants?.length || 0} variantes, première a des prix? ${!!p.variants?.[0]?.prices}`)
+                      if (Array.isArray(p.variants) && p.variants.length) {
+                        await productService.upsertProductVariants(
+                          p.variants.map((v: any) => ({
+                            id: v.id,
+                            product_id: p.id,
+                            title: v.title,
+                            sku: v.sku,
+                            barcode: v.barcode,
+                            weight: v.weight,
+                            manage_inventory: v.manage_inventory,
+                            metadata: v.metadata,
+                            options: v.options,
+                          }))
+                        )
+                        console.log(`✅ [UPDATE] Upsert variantes OK pour ${p.id}`)
+                      }
                     }
 
                     // 3) Prix via pricing workflow (encapsulé pour ne pas bloquer le reste)
@@ -892,12 +921,13 @@ export const syncFromErpWorkflow = createWorkflow(
                     }
 
                     // 4) Stock (encapsulé pour ne pas bloquer le reste)
-                    try {
-                      const stockLocationService = container.resolve(Modules.STOCK_LOCATION)
-                      const inventoryService = container.resolve(Modules.INVENTORY)
-                      const locs = await stockLocationService.listStockLocations({})
-                      if (locs.length && Array.isArray(p.variants) && p.variants.length) {
-                        const loc = locs[0]
+                    if (!priceOnly) {
+                      try {
+                        const stockLocationService = container.resolve(Modules.STOCK_LOCATION)
+                        const inventoryService = container.resolve(Modules.INVENTORY)
+                        const locs = await stockLocationService.listStockLocations({})
+                        if (locs.length && Array.isArray(p.variants) && p.variants.length) {
+                          const loc = locs[0]
                         
                         // Récupérer le produit complet avec les variantes pour avoir les IDs à jour
                         const fullProduct = await productService.retrieveProduct(p.id, { relations: ["variants"] })
@@ -1025,9 +1055,10 @@ export const syncFromErpWorkflow = createWorkflow(
                             console.warn(`⚠️ [WORKFLOW] Stock update ${odooVariant.sku}:`, stockErr?.message || stockErr)
                           }
                         }
+                        }
+                      } catch (stockBlockErr: any) {
+                        console.warn(`⚠️ [WORKFLOW] Stock block ${p.id}:`, stockBlockErr?.message || stockBlockErr)
                       }
-                    } catch (stockBlockErr: any) {
-                      console.warn(`⚠️ [WORKFLOW] Stock block ${p.id}:`, stockBlockErr?.message || stockBlockErr)
                     }
                     
                     console.log(`✅ [WORKFLOW] Produit ${p.title} (${p.id}) mis à jour avec prix`)
@@ -1057,7 +1088,11 @@ export const syncFromErpWorkflow = createWorkflow(
         }
     )
     
-    const updateResult = updateProductsStep({ productsToUpdate, dryRun: input.dryRun })
+    const updateResult = updateProductsStep({
+      productsToUpdate,
+      dryRun: input.dryRun,
+      priceOnly: input.priceOnly,
+    })
 
     return new WorkflowResponse({
       odooProducts,
