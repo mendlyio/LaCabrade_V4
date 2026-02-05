@@ -31,7 +31,16 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
     const productService = container.resolve(Modules.PRODUCT)
 
     // Récupérer tous les produits Medusa ayant un external_id (= importés depuis Odoo)
-    const medusaProducts = await productService.listProducts({})
+    // IMPORTANT: listProducts() est paginé par défaut.
+    // Inclure les variantes pour pouvoir lire les SKUs et synchroniser le stock.
+    const medusaProducts = await productService.listProducts(
+      {},
+      {
+        select: ["id", "metadata"],
+        relations: ["variants"],
+        take: 10000,
+      }
+    )
     
     const productsWithOdooId = medusaProducts.filter(
       (p: any) => p.metadata?.external_id
