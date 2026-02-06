@@ -193,7 +193,7 @@ const AccountNavLink = ({
           "bg-amber-600 text-white font-semibold hover:bg-amber-600 hover:text-white":
             active,
         }
-      })}
+      )}
       data-testid={dataTestId}
     >
       {children}
