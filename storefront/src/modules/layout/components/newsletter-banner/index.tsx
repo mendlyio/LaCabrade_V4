@@ -43,7 +43,7 @@ const NewsletterBanner = () => {
           <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
             Inscris-toi à notre newsletter
           </h3>
-          <p className="text-amber-50 text-lg mb-6">
+          <p className="text-white/90 text-lg mb-6">
             Et bénéficie de <strong className="text-white">5% de réduction</strong> sur ta prochaine commande
           </p>
           
@@ -74,7 +74,7 @@ const NewsletterBanner = () => {
             </p>
           )}
           
-          <p className="text-amber-100 text-sm mt-4">
+          <p className="text-white/80 text-sm mt-4">
             En t'inscrivant, tu acceptes de recevoir nos offres exclusives et actualités.
           </p>
         </div>

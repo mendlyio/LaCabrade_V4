@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { MagnifyingGlass, XMark } from "@medusajs/icons"
-import { useRouter } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 // Suggestions populaires pour une boutique équestre
@@ -23,6 +23,7 @@ const SearchBar = () => {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const router = useRouter()
+  const { countryCode } = useParams()
   const searchRef = useRef<HTMLDivElement>(null)
 
   // Gérer les clics en dehors du composant
@@ -52,7 +53,8 @@ const SearchBar = () => {
   const handleSearch = (searchQuery: string) => {
     if (searchQuery.trim()) {
       // Utiliser le store avec un filtre de recherche au lieu d'une page dédiée
-      router.push(`/store?q=${encodeURIComponent(searchQuery.trim())}`)
+      const basePath = countryCode ? `/${countryCode}/store` : "/store"
+      router.push(`${basePath}?q=${encodeURIComponent(searchQuery.trim())}`)
       setIsFocused(false)
       setQuery("")
     }

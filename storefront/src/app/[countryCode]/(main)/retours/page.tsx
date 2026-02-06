@@ -45,7 +45,7 @@ export default function RetoursPage() {
           <h2 className="text-2xl font-bold text-gray-900 mb-8">Comment faire un retour ?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4 text-xl font-bold text-amber-700">
+              <div className="w-12 h-12 bg-amber-600 rounded-full flex items-center justify-center mb-4 text-xl font-bold text-white">
                 1
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Demandez votre retour</h3>
@@ -54,7 +54,7 @@ export default function RetoursPage() {
               </p>
             </div>
             <div>
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4 text-xl font-bold text-amber-700">
+              <div className="w-12 h-12 bg-amber-600 rounded-full flex items-center justify-center mb-4 text-xl font-bold text-white">
                 2
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Préparez votre colis</h3>
@@ -63,7 +63,7 @@ export default function RetoursPage() {
               </p>
             </div>
             <div>
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4 text-xl font-bold text-amber-700">
+              <div className="w-12 h-12 bg-amber-600 rounded-full flex items-center justify-center mb-4 text-xl font-bold text-white">
                 3
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Envoyez votre colis</h3>

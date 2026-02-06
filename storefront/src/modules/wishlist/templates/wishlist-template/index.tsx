@@ -195,21 +195,21 @@ export default function WishlistTemplate({ region, countryCode }: WishlistTempla
               <p className="text-xs text-gray-600">Retrouvez vos favoris</p>
             </div>
             <div className="text-center">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 bg-amber-600 text-white rounded-full flex items-center justify-center mx-auto mb-3">
                 <span className="text-2xl">🚚</span>
               </div>
               <h3 className="font-semibold text-sm mb-1">Livraison Rapide</h3>
               <p className="text-xs text-gray-600">Expédition sous 24-48h</p>
             </div>
             <div className="text-center">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 bg-amber-600 text-white rounded-full flex items-center justify-center mx-auto mb-3">
                 <span className="text-2xl">🔒</span>
               </div>
               <h3 className="font-semibold text-sm mb-1">Paiement Sécurisé</h3>
               <p className="text-xs text-gray-600">Transactions protégées</p>
             </div>
             <div className="text-center">
-              <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 bg-amber-600 text-white rounded-full flex items-center justify-center mx-auto mb-3">
                 <span className="text-2xl">💬</span>
               </div>
               <h3 className="font-semibold text-sm mb-1">Support Client</h3>

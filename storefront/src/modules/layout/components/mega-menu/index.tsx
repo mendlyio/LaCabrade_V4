@@ -55,65 +55,74 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
             leaveFrom="opacity-100 translate-y-0"
             leaveTo="opacity-0 translate-y-1"
           >
-            <Popover.Panel className="absolute left-1/2 -translate-x-1/2 z-50 mt-3 w-screen max-w-3xl transform px-4 sm:px-0">
-              <div className="overflow-hidden rounded-xl shadow-xl ring-1 ring-black ring-opacity-5 bg-white">
-                <div className="p-6 grid grid-cols-3 gap-8">
-                  {category.category_children?.map((child) => (
-                    <div key={child.id} className="space-y-3">
-                      {/* Niveau 1 (Enfant direct) */}
-                      <LocalizedClientLink
-                        href={`/categories/${child.handle}`}
-                        onClick={() => close()}
-                        className="block text-base font-bold text-gray-900 hover:text-amber-700 transition-colors"
-                      >
-                        {child.name}
-                      </LocalizedClientLink>
-
-                      {/* Niveau 2 (Petit-enfant) */}
-                      {child.category_children && child.category_children.length > 0 && (
-                        <ul className="space-y-2">
-                          {child.category_children.map((grandChild) => (
-                            <li key={grandChild.id}>
-                              <LocalizedClientLink
-                                href={`/categories/${grandChild.handle}`}
-                                onClick={() => close()}
-                                className="text-sm text-gray-700 hover:text-white hover:bg-amber-600 rounded-md px-2 py-1 transition-colors block"
-                              >
-                                {grandChild.name}
-                              </LocalizedClientLink>
-                              {grandChild.category_children &&
-                                grandChild.category_children.length > 0 && (
-                                  <ul className="mt-2 space-y-1 pl-3 border-l border-gray-200">
-                                    {grandChild.category_children.map((greatGrandChild) => (
-                                      <li key={greatGrandChild.id}>
-                                        <LocalizedClientLink
-                                          href={`/categories/${greatGrandChild.handle}`}
-                                          onClick={() => close()}
-                                          className="text-xs text-gray-700 bg-white hover:text-white hover:bg-amber-600 rounded-md px-2 py-1 transition-colors block"
-                                        >
-                                          {greatGrandChild.name}
-                                        </LocalizedClientLink>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Footer du menu */}
-                <div className="bg-gray-50 p-4 border-t border-gray-100">
+            <Popover.Panel className="absolute left-1/2 -translate-x-1/2 z-50 mt-4 w-screen max-w-5xl transform px-4 sm:px-0">
+              <div className="overflow-hidden rounded-2xl shadow-2xl ring-1 ring-black/5 bg-white">
+                <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-gray-900">
+                      {category.name}
+                    </span>
+                    <span className="text-xs text-gray-500">Catégories</span>
+                  </div>
                   <LocalizedClientLink
                     href={`/categories/${category.handle}`}
                     onClick={() => close()}
-                    className="flex items-center justify-center text-sm font-medium text-amber-600 hover:text-amber-700"
+                    className="inline-flex items-center gap-2 rounded-full bg-amber-600 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-700 transition-colors"
                   >
-                    Voir tout {category.name} &rarr;
+                    Voir tout
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </LocalizedClientLink>
+                </div>
+
+                <div className="max-h-[70vh] overflow-y-auto">
+                  <div className="p-6 grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    {category.category_children?.map((child) => (
+                      <div key={child.id} className="space-y-3">
+                        <LocalizedClientLink
+                          href={`/categories/${child.handle}`}
+                          onClick={() => close()}
+                          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-900 hover:text-amber-700 transition-colors"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                          {child.name}
+                        </LocalizedClientLink>
+
+                        {child.category_children && child.category_children.length > 0 && (
+                          <ul className="space-y-1.5">
+                            {child.category_children.map((grandChild) => (
+                              <li key={grandChild.id} className="space-y-1">
+                                <LocalizedClientLink
+                                  href={`/categories/${grandChild.handle}`}
+                                  onClick={() => close()}
+                                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors block"
+                                >
+                                  {grandChild.name}
+                                </LocalizedClientLink>
+                                {grandChild.category_children &&
+                                  grandChild.category_children.length > 0 && (
+                                    <ul className="ml-3 border-l border-gray-200 pl-3 space-y-1">
+                                      {grandChild.category_children.map((greatGrandChild) => (
+                                        <li key={greatGrandChild.id}>
+                                          <LocalizedClientLink
+                                            href={`/categories/${greatGrandChild.handle}`}
+                                            onClick={() => close()}
+                                            className="text-xs text-gray-500 hover:text-amber-700 transition-colors block"
+                                          >
+                                            {greatGrandChild.name}
+                                          </LocalizedClientLink>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </Popover.Panel>
