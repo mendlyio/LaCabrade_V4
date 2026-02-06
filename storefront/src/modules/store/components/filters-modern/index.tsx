@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Brand } from "@lib/data/brands"
 import { buildCategoryTree } from "@lib/util/category-tree"
 
@@ -17,7 +17,8 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
   
   const [priceRange, setPriceRange] = useState({ min: "", max: "" })
   const [showFilters, setShowFilters] = useState(false) // Fermé par défaut sur mobile
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "")
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const createQueryString = useCallback(
     (updates: Record<string, string | null>) => {
@@ -42,13 +43,19 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
   }
 
   const clearAllFilters = () => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout)
-      setSearchTimeout(null)
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+      searchTimeoutRef.current = null
     }
     router.push(pathname, { scroll: false })
     setPriceRange({ min: "", max: "" })
+    setSearchQuery("")
   }
+  useEffect(() => {
+    const nextQuery = searchParams.get("q") || ""
+    setSearchQuery(nextQuery)
+  }, [searchParams])
+
 
   const activeFiltersCount = Array.from(searchParams.keys()).filter(
     key => !['sortBy', 'page'].includes(key)
@@ -160,15 +167,16 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
             <input
               type="text"
               placeholder="Rechercher un produit..."
-              defaultValue={searchParams.get('q') || ''}
+              value={searchQuery}
               onChange={(e) => {
-                if (searchTimeout) {
-                  clearTimeout(searchTimeout)
+                const nextValue = e.target.value
+                setSearchQuery(nextValue)
+                if (searchTimeoutRef.current) {
+                  clearTimeout(searchTimeoutRef.current)
                 }
-                const timeout = setTimeout(() => {
-                  updateFilters({ q: e.target.value || null })
+                searchTimeoutRef.current = setTimeout(() => {
+                  updateFilters({ q: nextValue || null })
                 }, 500)
-                setSearchTimeout(timeout)
               }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all text-sm"
             />
@@ -233,7 +241,7 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
                         <button
                           onClick={() =>
                             updateFilters({
-                              category: isActive ? null : category.handle,
+                              category: category.handle,
                             })
                           }
                           className={`
@@ -282,7 +290,7 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
                                   <button
                                     onClick={() =>
                                       updateFilters({
-                                        category: isChildActive ? null : child.handle,
+                                        category: child.handle,
                                       })
                                     }
                                     className={`
@@ -306,9 +314,7 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
                                             <button
                                               onClick={() =>
                                                 updateFilters({
-                                                  category: isGrandChildActive
-                                                    ? null
-                                                    : grandChild.handle,
+                                                  category: grandChild.handle,
                                                 })
                                               }
                                               className={`

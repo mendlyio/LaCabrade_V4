@@ -27,14 +27,14 @@ const OrderOverview = ({ orders }: { orders: HttpTypes.StoreOrder[] }) => {
       className="w-full flex flex-col items-center gap-y-4"
       data-testid="no-orders-container"
     >
-      <h2 className="text-large-semi">Nothing to see here</h2>
-      <p className="text-base-regular">
-        You don&apos;t have any orders yet, let us change that {":)"}
+      <h2 className="text-large-semi text-gray-900">Aucune commande pour l'instant</h2>
+      <p className="text-base-regular text-gray-600">
+        Vous n'avez pas encore passé de commande. Découvrons notre boutique !
       </p>
       <div className="mt-4">
         <LocalizedClientLink href="/" passHref>
           <Button data-testid="continue-shopping-button">
-            Continue shopping
+            Continuer mes achats
           </Button>
         </LocalizedClientLink>
       </div>

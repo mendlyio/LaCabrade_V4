@@ -288,8 +288,8 @@ const ProductTemplateModern = async ({
                 <div className="text-sm text-gray-600">48-72h en Belgique</div>
               </div>
               <div className="flex flex-col items-center text-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex-shrink-0 w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex-shrink-0 w-16 h-16 bg-amber-600 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                   </svg>
                 </div>

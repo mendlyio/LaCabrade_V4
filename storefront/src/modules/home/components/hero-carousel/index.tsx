@@ -79,7 +79,7 @@ const HeroCarousel = () => {
             </LocalizedClientLink>
             
             <LocalizedClientLink
-              href="/categories/LC-Equestrian"
+              href="/categories/lc-equestrian"
               className="w-full sm:w-auto px-8 py-4 bg-white text-amber-700 font-semibold rounded-lg hover:bg-amber-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 border-2 border-white"
             >
               LC Equestrian

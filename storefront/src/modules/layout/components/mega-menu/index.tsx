@@ -55,8 +55,8 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
             leaveFrom="opacity-100 translate-y-0"
             leaveTo="opacity-0 translate-y-1"
           >
-            <Popover.Panel className="absolute left-1/2 -translate-x-1/2 z-50 mt-4 w-screen max-w-5xl transform px-4 sm:px-0">
-              <div className="overflow-hidden rounded-2xl shadow-2xl ring-1 ring-black/5 bg-white">
+            <Popover.Panel className="absolute left-0 right-0 z-50 mt-4 w-screen px-4">
+              <div className="overflow-hidden rounded-2xl shadow-2xl ring-1 ring-black/5 bg-white max-w-6xl mx-auto">
                 <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b border-gray-100">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-semibold text-gray-900">

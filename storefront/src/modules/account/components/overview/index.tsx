@@ -14,14 +14,18 @@ const Overview = ({ customer, orders }: OverviewProps) => {
   return (
     <div data-testid="overview-page-wrapper">
       <div className="hidden small:block">
-        <div className="text-xl-semi flex justify-between items-center mb-4">
-          <span data-testid="welcome-message" data-value={customer?.first_name}>
-            Hello {customer?.first_name}
+        <div className="flex flex-col gap-2 mb-6">
+          <span
+            className="text-2xl font-semibold text-gray-900"
+            data-testid="welcome-message"
+            data-value={customer?.first_name}
+          >
+            Bonjour {customer?.first_name}
           </span>
-          <span className="text-small-regular text-ui-fg-base">
-            Signed in as:{" "}
+          <span className="text-sm text-gray-600">
+            Connecté avec{" "}
             <span
-              className="font-semibold"
+              className="font-semibold text-gray-900"
               data-testid="customer-email"
               data-value={customer?.email}
             >
@@ -29,50 +33,53 @@ const Overview = ({ customer, orders }: OverviewProps) => {
             </span>
           </span>
         </div>
-        <div className="flex flex-col py-8 border-t border-gray-200">
-          <div className="flex flex-col gap-y-4 h-full col-span-1 row-span-2 flex-1">
-            <div className="flex items-start gap-x-16 mb-6">
-              <div className="flex flex-col gap-y-4">
-                <h3 className="text-large-semi">Profile</h3>
-                <div className="flex items-end gap-x-2">
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="border border-gray-200 rounded-xl p-5 bg-gray-50">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Profil complété</h3>
+                <div className="flex items-end gap-2">
                   <span
-                    className="text-3xl-semi leading-none"
+                    className="text-3xl font-bold text-gray-900"
                     data-testid="customer-profile-completion"
                     data-value={getProfileCompletion(customer)}
                   >
                     {getProfileCompletion(customer)}%
                   </span>
-                  <span className="uppercase text-base-regular text-ui-fg-subtle">
-                    Completed
+                  <span className="text-xs uppercase tracking-wide text-gray-500">
+                    complété
                   </span>
                 </div>
               </div>
-
-              <div className="flex flex-col gap-y-4">
-                <h3 className="text-large-semi">Addresses</h3>
-                <div className="flex items-end gap-x-2">
+              <div className="border border-gray-200 rounded-xl p-5 bg-gray-50">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Adresses enregistrées</h3>
+                <div className="flex items-end gap-2">
                   <span
-                    className="text-3xl-semi leading-none"
+                    className="text-3xl font-bold text-gray-900"
                     data-testid="addresses-count"
                     data-value={customer?.addresses?.length || 0}
                   >
                     {customer?.addresses?.length || 0}
                   </span>
-                  <span className="uppercase text-base-regular text-ui-fg-subtle">
-                    Saved
+                  <span className="text-xs uppercase tracking-wide text-gray-500">
+                    sauvegardées
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col gap-y-4">
-              <div className="flex items-center gap-x-2">
-                <h3 className="text-large-semi">Recent orders</h3>
+            <div className="border border-gray-200 rounded-xl p-5 bg-white">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Dernières commandes</h3>
+                <LocalizedClientLink
+                  href="/account/orders"
+                  className="text-sm text-amber-600 hover:text-amber-700 font-semibold"
+                >
+                  Voir tout
+                </LocalizedClientLink>
               </div>
-              <ul
-                className="flex flex-col gap-y-4"
-                data-testid="orders-wrapper"
-              >
+              <ul className="flex flex-col gap-y-3" data-testid="orders-wrapper">
                 {orders && orders.length > 0 ? (
                   orders.slice(0, 5).map((order) => {
                     return (
@@ -84,17 +91,13 @@ const Overview = ({ customer, orders }: OverviewProps) => {
                         <LocalizedClientLink
                           href={`/account/orders/details/${order.id}`}
                         >
-                          <Container className="bg-gray-50 flex justify-between items-center p-4">
-                            <div className="grid grid-cols-3 grid-rows-2 text-small-regular gap-x-4 flex-1">
-                              <span className="font-semibold">Date placed</span>
-                              <span className="font-semibold">
-                                Order number
-                              </span>
-                              <span className="font-semibold">
-                                Total amount
-                              </span>
+                          <Container className="bg-gray-50 border border-gray-200 rounded-lg flex justify-between items-center p-4 hover:border-amber-300 hover:shadow-sm transition-all">
+                            <div className="grid grid-cols-3 grid-rows-2 text-sm gap-x-4 flex-1">
+                              <span className="font-semibold text-gray-700">Date</span>
+                              <span className="font-semibold text-gray-700">Commande</span>
+                              <span className="font-semibold text-gray-700">Total</span>
                               <span data-testid="order-created-date">
-                                {new Date(order.created_at).toDateString()}
+                                {new Date(order.created_at).toLocaleDateString("fr-FR")}
                               </span>
                               <span
                                 data-testid="order-id"
@@ -109,24 +112,48 @@ const Overview = ({ customer, orders }: OverviewProps) => {
                                 })}
                               </span>
                             </div>
-                            <button
-                              className="flex items-center justify-between"
-                              data-testid="open-order-button"
-                            >
-                              <span className="sr-only">
-                                Go to order #{order.display_id}
-                              </span>
-                              <ChevronDown className="-rotate-90" />
-                            </button>
+                            <span className="sr-only">
+                              Voir la commande #{order.display_id}
+                            </span>
+                            <ChevronDown className="-rotate-90 text-gray-400" />
                           </Container>
                         </LocalizedClientLink>
                       </li>
                     )
                   })
                 ) : (
-                  <span data-testid="no-orders-message">No recent orders</span>
+                  <span data-testid="no-orders-message" className="text-sm text-gray-500">
+                    Aucune commande récente
+                  </span>
                 )}
               </ul>
+            </div>
+          </div>
+
+          <div className="border border-gray-200 rounded-xl p-5 bg-gray-50">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Actions rapides</h3>
+            <div className="space-y-3">
+              <LocalizedClientLink
+                href="/account/profile"
+                className="flex items-center justify-between rounded-lg bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:text-amber-700 hover:border-amber-300 border border-gray-200 transition-colors"
+              >
+                Mettre à jour mon profil
+                <ChevronDown className="-rotate-90 text-gray-400" />
+              </LocalizedClientLink>
+              <LocalizedClientLink
+                href="/account/addresses"
+                className="flex items-center justify-between rounded-lg bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:text-amber-700 hover:border-amber-300 border border-gray-200 transition-colors"
+              >
+                Gérer mes adresses
+                <ChevronDown className="-rotate-90 text-gray-400" />
+              </LocalizedClientLink>
+              <LocalizedClientLink
+                href="/account/orders"
+                className="flex items-center justify-between rounded-lg bg-white px-4 py-3 text-sm font-semibold text-gray-700 hover:text-amber-700 hover:border-amber-300 border border-gray-200 transition-colors"
+              >
+                Suivre mes commandes
+                <ChevronDown className="-rotate-90 text-gray-400" />
+              </LocalizedClientLink>
             </div>
           </div>
         </div>

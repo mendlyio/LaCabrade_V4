@@ -34,6 +34,24 @@ export default async function PaginatedProductsModern({
   }
 
   const page = searchParams.page ? parseInt(searchParams.page) : 1
+
+  const buildSearchParams = (params: Record<string, unknown>) => {
+    const urlParams = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === "") {
+        return
+      }
+      if (Array.isArray(value)) {
+        const joined = value.filter(Boolean).join(",")
+        if (joined) {
+          urlParams.set(key, joined)
+        }
+        return
+      }
+      urlParams.set(key, String(value))
+    })
+    return urlParams.toString()
+  }
   
   // Si on a des filtres côté client actifs, récupérer plus de produits pour compenser le filtrage
   const hasClientSideFilters =
@@ -303,10 +321,10 @@ export default async function PaginatedProductsModern({
               {/* Bouton Précédent */}
               {hasPrevPage ? (
                 <LocalizedClientLink
-                  href={`/store?${new URLSearchParams({
+                  href={`/store?${buildSearchParams({
                     ...searchParams,
                     page: String(page - 1),
-                  }).toString()}`}
+                  })}`}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 flex items-center gap-2"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -342,10 +360,10 @@ export default async function PaginatedProductsModern({
                   return (
                     <LocalizedClientLink
                       key={pageNum}
-                      href={`/store?${new URLSearchParams({
+                      href={`/store?${buildSearchParams({
                         ...searchParams,
                         page: String(pageNum),
-                      }).toString()}`}
+                      })}`}
                       className={`
                         w-10 h-10 flex items-center justify-center rounded-lg text-sm font-medium transition-all
                         ${isActive
@@ -363,10 +381,10 @@ export default async function PaginatedProductsModern({
               {/* Bouton Suivant */}
               {hasNextPage ? (
                 <LocalizedClientLink
-                  href={`/store?${new URLSearchParams({
+                  href={`/store?${buildSearchParams({
                     ...searchParams,
                     page: String(page + 1),
-                  }).toString()}`}
+                  })}`}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 flex items-center gap-2"
                 >
                   Suivant

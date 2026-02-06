@@ -67,6 +67,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "bucket-production-de72.up.railway.app",
       },
+      {
+        protocol: "https",
+        hostname: "ik.imagekit.io",
+      },
 
       // Endpoint MinIO custom (si défini)
       ...(process.env.NEXT_PUBLIC_MINIO_ENDPOINT

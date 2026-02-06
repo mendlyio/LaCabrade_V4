@@ -124,7 +124,7 @@ export default async function Home({
               </ScrollCarousel>
               <div className="text-center mt-8">
                 <LocalizedClientLink
-                  href="/categories/LC-Equestrian"
+                  href="/categories/lc-equestrian"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
                 >
                   Voir toute la collection

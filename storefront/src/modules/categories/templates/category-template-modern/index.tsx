@@ -129,12 +129,12 @@ export default async function CategoryTemplateModern({
                 <div key={child.id} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                   <LocalizedClientLink
                     href={`/categories/${child.handle}`}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2 bg-white hover:bg-amber-50 border border-gray-200 hover:border-amber-400 transition-colors group"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 bg-white hover:bg-amber-600 border border-gray-200 hover:border-amber-600 transition-colors group"
                   >
-                    <span className="flex-1 text-sm font-semibold text-gray-800 group-hover:text-amber-800">
+                    <span className="flex-1 text-sm font-semibold text-gray-800 group-hover:text-white">
                       {child.name}
                     </span>
-                    <svg className="w-4 h-4 text-gray-500 group-hover:text-amber-700 transform group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-500 group-hover:text-white transform group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </LocalizedClientLink>
@@ -145,7 +145,7 @@ export default async function CategoryTemplateModern({
                         <li key={grandChild.id} className="space-y-1">
                           <LocalizedClientLink
                             href={`/categories/${grandChild.handle}`}
-                            className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:text-amber-800 hover:bg-amber-50 transition-colors"
+                            className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:text-white hover:bg-amber-600 transition-colors"
                           >
                             {grandChild.name}
                           </LocalizedClientLink>
@@ -156,7 +156,7 @@ export default async function CategoryTemplateModern({
                                   <li key={greatGrandChild.id}>
                                     <LocalizedClientLink
                                       href={`/categories/${greatGrandChild.handle}`}
-                                      className="block rounded-md px-3 py-1 text-xs text-gray-600 hover:text-amber-800 hover:bg-amber-50 transition-colors"
+                                      className="block rounded-md px-3 py-1 text-xs text-gray-600 hover:text-white hover:bg-amber-600 transition-colors"
                                     >
                                       {greatGrandChild.name}
                                     </LocalizedClientLink>
