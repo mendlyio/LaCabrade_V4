@@ -59,6 +59,38 @@ function odooPriceToMedusaAmount(price: unknown, debugSku?: string): number {
   return amount
 }
 
+function resolveOdooPriceAmount({
+  variantPrice,
+  productPrice,
+  debugSku,
+}: {
+  variantPrice: unknown
+  productPrice: unknown
+  debugSku?: string
+}): number {
+  const primary = odooPriceToMedusaAmount(variantPrice, debugSku)
+  if (primary > 0) {
+    return primary
+  }
+
+  const fallback = odooPriceToMedusaAmount(
+    productPrice,
+    debugSku ? `${debugSku}-fallback` : undefined
+  )
+  if (fallback > 0) {
+    console.warn(
+      `⚠️ [PRICE] Prix variante invalide pour SKU:${debugSku || "?"}, ` +
+      `fallback sur prix produit (${fallback}€).`
+    )
+    return fallback
+  }
+
+  console.warn(
+    `⚠️ [PRICE] Aucun prix valide trouvé pour SKU:${debugSku || "?"}`
+  )
+  return 0
+}
+
 function uniq<T>(arr: T[]): T[] {
   return Array.from(new Set(arr))
 }
@@ -454,7 +486,11 @@ export const syncFromErpWorkflow = createWorkflow(
               const weightInGrams = variant.weight ? Math.round(variant.weight * 1000) : undefined
               const variantSku = variant.default_code || `ODOO-${variant.id}`
               // Convertir le prix Odoo vers Medusa (centimes)
-              const priceAmount = odooPriceToMedusaAmount(variant.list_price, variantSku)
+              const priceAmount = resolveOdooPriceAmount({
+                variantPrice: variant.list_price,
+                productPrice: odooProduct.list_price,
+                debugSku: variantSku,
+              })
 
               // Titre clair: uniquement les valeurs d'options (ex: "NOIR / 6.5")
               const optionValues = Object.values(options).filter(Boolean)
@@ -502,7 +538,11 @@ export const syncFromErpWorkflow = createWorkflow(
             // Utiliser le SKU de la variante en priorité
             const productSku = firstVariant?.default_code || odooProduct.default_code || `ODOO-${firstVariant?.id || odooProduct.id}`
             // Convertir le prix Odoo vers Medusa (centimes)
-            const priceAmount = odooPriceToMedusaAmount(firstVariant?.list_price ?? odooProduct.list_price, productSku)
+            const priceAmount = resolveOdooPriceAmount({
+              variantPrice: firstVariant?.list_price,
+              productPrice: odooProduct.list_price,
+              debugSku: productSku,
+            })
             const variantId = firstVariant?.id || odooProduct.id
             const stockQty = firstVariant?.qty_available || odooProduct.qty_available || 0
             
@@ -882,15 +922,24 @@ export const syncFromErpWorkflow = createWorkflow(
                         const previousVariantIds = (fresh.variants || []).map((v: any) => v.id)
                         const variantPrices = p.variants
                           .map((v: any) => {
-                            const match = (fresh.variants || []).find(
-                              (fv: any) => fv.id === v.id || (fv.sku && v.sku && fv.sku === v.sku)
-                            )
+                            const match = (fresh.variants || []).find((fv: any) => {
+                              if (fv.id === v.id) return true
+                              if (fv.sku && v.sku && fv.sku === v.sku) return true
+                              const fvOdooId = fv.metadata?.odoo_variant_id || fv.metadata?.external_id
+                              const vOdooId = v.metadata?.odoo_variant_id || v.metadata?.external_id
+                              return fvOdooId && vOdooId && String(fvOdooId) === String(vOdooId)
+                            })
                             if (!match) {
                               console.log(`⚠️ [UPDATE] Variant SKU:${v.sku} non trouvé dans Medusa`)
                               return null
                             }
                             if (!v.prices?.length) {
                               console.log(`⚠️ [UPDATE] Variant SKU:${v.sku} sans prix`)
+                              return null
+                            }
+                            const hasValidPrice = v.prices.some((p: any) => Number(p?.amount) > 0)
+                            if (!hasValidPrice) {
+                              console.log(`⚠️ [UPDATE] Variant SKU:${v.sku} prix invalide ${JSON.stringify(v.prices)}`)
                               return null
                             }
                             console.log(`💰 [UPDATE] Match variant ${match.id} (SKU:${v.sku}) → prix ${JSON.stringify(v.prices)}`)
