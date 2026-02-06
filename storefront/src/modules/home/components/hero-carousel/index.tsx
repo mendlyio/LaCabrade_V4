@@ -6,21 +6,20 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 const HeroCarousel = () => {
   const [currentSlide, setCurrentSlide] = useState(0)
 
-  // Images du carrousel (à remplacer par de vraies images)
   const slides = [
     {
       id: 1,
-      image: "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=1920&h=800&fit=crop",
+      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/header-3.webp",
       alt: "Équitation de qualité"
     },
     {
       id: 2,
-      image: "https://images.unsplash.com/photo-1598978546041-e711cb27ddcf?w=1920&h=800&fit=crop",
+      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/header-2.webp",
       alt: "LC Equestrian"
     },
     {
       id: 3,
-      image: "https://images.unsplash.com/photo-1551958219-acbc608c6377?w=1920&h=800&fit=crop",
+      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/header-1.webp",
       alt: "Outlet et promotions"
     }
   ]
@@ -87,7 +86,7 @@ const HeroCarousel = () => {
             </LocalizedClientLink>
             
             <LocalizedClientLink
-              href="/outlet"
+              href="/categories/outlet"
               className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               Outlet

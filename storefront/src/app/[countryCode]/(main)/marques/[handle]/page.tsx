@@ -55,8 +55,18 @@ export default async function BrandPage({ params, searchParams }: Props) {
     notFound()
   }
 
-  const allCategories = await listCategories()
-  const brands = await listBrands()
+  let allCategories: any[] = []
+  let brands: any[] = []
+  try {
+    allCategories = await listCategories()
+  } catch (error) {
+    console.error("Erreur lors du chargement des catégories:", error)
+  }
+  try {
+    brands = await listBrands()
+  } catch (error) {
+    console.error("Erreur lors du chargement des marques:", error)
+  }
 
   const searchParamsWithBrand = {
     ...searchParams,
@@ -97,11 +107,11 @@ export default async function BrandPage({ params, searchParams }: Props) {
       <div className="content-container pb-16">
         <div className="flex flex-col lg:flex-row gap-8">
           <aside className="hidden lg:block w-80 flex-shrink-0">
-            <FiltersModern categories={allCategories} brands={brands} />
+            <FiltersModern categories={allCategories || []} brands={brands || []} />
           </aside>
 
           <div className="lg:hidden">
-            <FiltersModern categories={allCategories} brands={brands} />
+            <FiltersModern categories={allCategories || []} brands={brands || []} />
           </div>
 
           <main className="flex-1">

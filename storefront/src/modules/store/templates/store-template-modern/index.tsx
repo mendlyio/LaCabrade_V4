@@ -27,9 +27,25 @@ export default async function StoreTemplateModern({
   const pageNumber = searchParams.page ? parseInt(searchParams.page) : 1
   
   // Récupérer les catégories et collections pour les filtres
-  const categories = await listCategories()
-  const { collections } = await getCollectionsList(0, 100)
-  const brands = await listBrands()
+  let categories: any[] = []
+  let collections: any[] = []
+  let brands: any[] = []
+  try {
+    categories = await listCategories()
+  } catch (error) {
+    console.error("Erreur lors du chargement des catégories:", error)
+  }
+  try {
+    const collectionsResult = await getCollectionsList(0, 100)
+    collections = collectionsResult.collections || []
+  } catch (error) {
+    console.error("Erreur lors du chargement des collections:", error)
+  }
+  try {
+    brands = await listBrands()
+  } catch (error) {
+    console.error("Erreur lors du chargement des marques:", error)
+  }
 
   // Compter le nombre de filtres actifs
   const activeFilters = Object.keys(searchParams).filter(
@@ -55,14 +71,14 @@ export default async function StoreTemplateModern({
                   <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                   </svg>
-                  {categories.find(c => c.handle === searchParams.category)?.name || "Catégorie"}
+                  {(categories || []).find(c => c.handle === searchParams.category)?.name || "Catégorie"}
                 </>
               ) : searchParams.collection ? (
                 <>
                   <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                   </svg>
-                  {collections.find(c => c.handle === searchParams.collection)?.title || "Collection"}
+                  {(collections || []).find(c => c.handle === searchParams.collection)?.title || "Collection"}
                 </>
               ) : (
                 <>
@@ -95,12 +111,12 @@ export default async function StoreTemplateModern({
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar Filters - Desktop */}
           <aside className="hidden lg:block w-80 flex-shrink-0">
-            <FiltersModern categories={categories} brands={brands} />
+            <FiltersModern categories={categories || []} brands={brands || []} />
           </aside>
 
           {/* Mobile Filters */}
           <div className="lg:hidden">
-            <FiltersModern categories={categories} brands={brands} />
+            <FiltersModern categories={categories || []} brands={brands || []} />
           </div>
 
           {/* Products Grid */}

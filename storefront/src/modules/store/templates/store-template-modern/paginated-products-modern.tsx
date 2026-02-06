@@ -45,8 +45,19 @@ export default async function PaginatedProductsModern({
   const limit = hasClientSideFilters ? 50 : 12 // Récupérer plus de produits si on a des filtres côté client
 
   // Récupérer les catégories et collections pour convertir les handles en IDs
-  const categories = await listCategories()
-  const { collections } = await getCollectionsList(0, 100)
+  let categories: any[] = []
+  let collections: any[] = []
+  try {
+    categories = await listCategories()
+  } catch (error) {
+    console.error("Erreur lors du chargement des catégories:", error)
+  }
+  try {
+    const collectionsResult = await getCollectionsList(0, 100)
+    collections = collectionsResult.collections || []
+  } catch (error) {
+    console.error("Erreur lors du chargement des collections:", error)
+  }
   const { map: categoryMap } = buildCategoryTree(categories || [])
 
   // Construire les paramètres de requête
@@ -149,11 +160,38 @@ export default async function PaginatedProductsModern({
   }
 
   // Récupérer les produits
-  const result = await getProductsList({
-    pageParam: page,
-    queryParams,
-    countryCode,
-  })
+  let result
+  try {
+    result = await getProductsList({
+      pageParam: page,
+      queryParams,
+      countryCode,
+    })
+  } catch (error) {
+    console.error("Erreur lors de la récupération des produits:", error)
+    return (
+      <div className="text-center py-24 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
+        <div className="mb-6">
+          <svg className="w-24 h-24 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 className="text-2xl font-bold text-gray-800 mb-3">Impossible de charger les produits</h3>
+        <p className="text-gray-600 mb-6">
+          Une erreur est survenue lors du chargement. Merci de réessayer dans quelques instants.
+        </p>
+        <LocalizedClientLink
+          href="/store"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
+        >
+          Retour à la boutique
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </LocalizedClientLink>
+      </div>
+    )
+  }
 
   let products = result?.response?.products || []
   const apiCount = result?.response?.count || 0

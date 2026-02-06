@@ -83,9 +83,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
-  const { product_categories } = await getCategoryByHandle(
-    params.category
-  )
+  let product_categories
+  try {
+    const result = await getCategoryByHandle(params.category)
+    product_categories = result?.product_categories
+  } catch (error) {
+    console.error("Erreur lors de la récupération des catégories:", error)
+    notFound()
+  }
 
   if (!product_categories) {
     notFound()

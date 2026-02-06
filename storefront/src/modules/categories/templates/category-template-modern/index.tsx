@@ -34,9 +34,19 @@ export default async function CategoryTemplateModern({
   if (!category || !countryCode) notFound()
 
   // Récupérer toutes les catégories et collections pour les filtres
-  const allCategories = await listCategories()
-  const brands = await listBrands()
-  const { map: categoryMap } = buildCategoryTree(allCategories)
+  let allCategories: HttpTypes.StoreProductCategory[] = []
+  let brands: any[] = []
+  try {
+    allCategories = await listCategories()
+  } catch (error) {
+    console.error("Erreur lors du chargement des catégories:", error)
+  }
+  try {
+    brands = await listBrands()
+  } catch (error) {
+    console.error("Erreur lors du chargement des marques:", error)
+  }
+  const { map: categoryMap } = buildCategoryTree(allCategories || [])
   const categoryNode = categoryMap.get(category.id) || category
   const categoryChildren = categoryNode.category_children || []
 
@@ -170,12 +180,12 @@ export default async function CategoryTemplateModern({
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar Filters - Desktop */}
           <aside className="hidden lg:block w-80 flex-shrink-0">
-            <FiltersModern categories={allCategories} brands={brands} />
+            <FiltersModern categories={allCategories || []} brands={brands || []} />
           </aside>
 
           {/* Mobile Filters */}
           <div className="lg:hidden">
-            <FiltersModern categories={allCategories} brands={brands} />
+            <FiltersModern categories={allCategories || []} brands={brands || []} />
           </div>
 
           {/* Products Grid */}

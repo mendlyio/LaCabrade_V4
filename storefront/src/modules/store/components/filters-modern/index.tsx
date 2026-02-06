@@ -1,8 +1,9 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Brand } from "@lib/data/brands"
+import { buildCategoryTree } from "@lib/util/category-tree"
 
 type FiltersModernProps = {
   categories: any[]
@@ -60,11 +61,50 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
     })
   }
 
-  // Catégories parentes uniquement
-  const parentCategories =
-    categories?.filter(
-      (cat) => cat.parent_category_id == null && cat.is_active !== false
-    ) || []
+  const { roots: categoryRoots } = useMemo(
+    () => buildCategoryTree(categories || []),
+    [categories]
+  )
+  const activeCategoryHandle = searchParams.get("category") || ""
+
+  const categoryHasActiveChild = useCallback(
+    (category: any, handle: string): boolean => {
+      if (!category || !handle) {
+        return false
+      }
+      if (category.handle === handle) {
+        return true
+      }
+      return (
+        category.category_children?.some((child: any) =>
+          categoryHasActiveChild(child, handle)
+        ) || false
+      )
+    },
+    []
+  )
+
+  const defaultExpandedIds = useMemo(
+    () =>
+      categoryRoots
+        .filter((root) => categoryHasActiveChild(root, activeCategoryHandle))
+        .map((root) => root.id),
+    [categoryRoots, categoryHasActiveChild, activeCategoryHandle]
+  )
+
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState<string[]>(
+    defaultExpandedIds
+  )
+
+  useEffect(() => {
+    if (defaultExpandedIds.length === 0) {
+      return
+    }
+    setExpandedCategoryIds((prev) => {
+      const merged = new Set([...prev, ...defaultExpandedIds])
+      return Array.from(merged)
+    })
+  }, [defaultExpandedIds])
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden sticky top-24">
@@ -168,7 +208,7 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
           </div>
 
           {/* Catégories */}
-          {parentCategories.length > 0 && (
+          {categoryRoots.length > 0 && (
             <div className="space-y-3 pt-6 border-t border-gray-200">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                 <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,30 +216,123 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
                 </svg>
                 Catégories
               </label>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {parentCategories.map((category) => {
-                  const isActive = searchParams.get('category') === category.handle
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {categoryRoots.map((category) => {
+                  const isActive = activeCategoryHandle === category.handle
+                  const hasChildren = (category.category_children || []).length > 0
+                  const hasActiveChild = categoryHasActiveChild(
+                    category,
+                    activeCategoryHandle
+                  )
+                  const isExpanded =
+                    expandedCategoryIds.includes(category.id) || hasActiveChild
+
                   return (
-                    <button
-                      key={category.id}
-                      onClick={() => updateFilters({ category: isActive ? null : category.handle })}
-                      className={`
-                        w-full text-left px-3 py-2 rounded-lg text-sm transition-all
-                        ${isActive
-                          ? 'bg-amber-100 text-amber-700 font-semibold border border-amber-300'
-                          : 'hover:bg-gray-50 text-gray-700 border border-transparent'
-                        }
-                      `}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>{category.name}</span>
-                        {isActive && (
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
+                    <div key={category.id} className="rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between gap-2 px-3 py-2">
+                        <button
+                          onClick={() =>
+                            updateFilters({
+                              category: isActive ? null : category.handle,
+                            })
+                          }
+                          className={`
+                            flex-1 text-left text-sm font-semibold transition-all
+                            ${isActive
+                              ? 'text-white bg-amber-600 px-3 py-2 rounded-md'
+                              : 'text-gray-800 hover:text-amber-700'
+                            }
+                          `}
+                        >
+                          {category.name}
+                        </button>
+                        {hasChildren && (
+                          <button
+                            onClick={() =>
+                              setExpandedCategoryIds((prev) =>
+                                prev.includes(category.id)
+                                  ? prev.filter((id) => id !== category.id)
+                                  : [...prev, category.id]
+                              )
+                            }
+                            className="p-1 rounded-md text-gray-500 hover:text-amber-700 hover:bg-amber-50 transition-colors"
+                            aria-label={
+                              isExpanded ? "Réduire la catégorie" : "Développer la catégorie"
+                            }
+                          >
+                            <svg
+                              className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
                         )}
                       </div>
-                    </button>
+
+                      {hasChildren && isExpanded && (
+                        <div className="pb-3">
+                          <ul className="space-y-1 border-l border-gray-200 ml-4 pl-3">
+                            {category.category_children.map((child: any) => {
+                              const isChildActive = activeCategoryHandle === child.handle
+                              return (
+                                <li key={child.id} className="space-y-1">
+                                  <button
+                                    onClick={() =>
+                                      updateFilters({
+                                        category: isChildActive ? null : child.handle,
+                                      })
+                                    }
+                                    className={`
+                                      w-full text-left text-sm px-2 py-1 rounded-md transition-all
+                                      ${isChildActive
+                                        ? 'bg-amber-600 text-white font-semibold'
+                                        : 'text-gray-700 hover:text-amber-700 hover:bg-amber-50'
+                                      }
+                                    `}
+                                  >
+                                    {child.name}
+                                  </button>
+
+                                  {child.category_children?.length > 0 && (
+                                    <ul className="ml-3 border-l border-gray-200 pl-3 space-y-1">
+                                      {child.category_children.map((grandChild: any) => {
+                                        const isGrandChildActive =
+                                          activeCategoryHandle === grandChild.handle
+                                        return (
+                                          <li key={grandChild.id}>
+                                            <button
+                                              onClick={() =>
+                                                updateFilters({
+                                                  category: isGrandChildActive
+                                                    ? null
+                                                    : grandChild.handle,
+                                                })
+                                              }
+                                              className={`
+                                                w-full text-left text-xs px-2 py-1 rounded-md transition-all
+                                                ${isGrandChildActive
+                                                  ? 'bg-amber-600 text-white font-semibold'
+                                                  : 'text-gray-600 hover:text-amber-700 hover:bg-amber-50'
+                                                }
+                                              `}
+                                            >
+                                              {grandChild.name}
+                                            </button>
+                                          </li>
+                                        )
+                                      })}
+                                    </ul>
+                                  )}
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                   )
                 })}
               </div>

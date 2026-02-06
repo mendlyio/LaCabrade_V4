@@ -7,6 +7,44 @@ export const metadata: Metadata = {
 }
 
 export default function AProposPage() {
+  const teamMembers = [
+    {
+      name: "MÉLISSA - La boss 😎",
+      role: "Direction & sélection",
+      description:
+        "Mélissa a repris la sellerie en juillet 2022, depuis, elle met tout son cœur dans cette aventure. Toujours à l’écoute et de bon conseil, elle met un point d’honneur à satisfaire les besoins de sa clientèle.",
+      accent: "from-pink-100 to-rose-100",
+    },
+    {
+      name: "FLORIANE - L’ultra polyvalente 🤩",
+      role: "Conseil & collections",
+      description:
+        "Floriane vous accueille avec soin et vous conseille avec justesse en magasin. Elle organise et prend part à nos shootings, tout en jouant un rôle clé dans la sélection de nos nouvelles collections.",
+      accent: "from-blue-100 to-indigo-100",
+    },
+    {
+      name: "ELENA - La douce 😍",
+      role: "Communication & contenu",
+      description:
+        "Elle est une véritable perle en matière de communication et de création de contenu. Elena sublime nos produits sur les réseaux sociaux grâce à son œil avisé et à sa créativité débordante.",
+      accent: "from-green-100 to-emerald-100",
+    },
+    {
+      name: "CLARA - La motivée 😁",
+      role: "Selle sur-mesure Equipe",
+      description:
+        "Dernière arrivée, attentive et pleine d’énergie, Clara prend en main notre service de selle-sur-mesure Equipe. Elle vous aidera également à dénicher l’équipement de vos rêves en magasin.",
+      accent: "from-amber-100 to-orange-100",
+    },
+    {
+      name: "AMÉLIE - La discrète 🤓",
+      role: "Secrétariat & visuels",
+      description:
+        "Amélie, notre secrétaire attitrée, veille au bon fonctionnement du bureau au quotidien. Elle met de temps en temps ses compétences créatives au service du magasin en réalisant certains de nos visuels.",
+      accent: "from-slate-100 to-gray-100",
+    },
+  ]
+
   return (
     <div className="w-full">
       {/* Hero Section */}
@@ -45,15 +83,14 @@ export default function AProposPage() {
                 </div>
               </div>
               <div className="relative h-96 bg-gray-200 rounded-lg overflow-hidden shadow-lg">
-                {/* Placeholder pour image du magasin */}
-                <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                  <div className="text-center">
-                    <svg className="w-20 h-20 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    <p className="text-sm">Photo du magasin à ajouter</p>
-                  </div>
-                </div>
+                <Image
+                  src="https://ik.imagekit.io/kodt9cn6f/Cabrade/apropos.webp"
+                  alt="La Cabrade - magasin"
+                  fill
+                  className="object-cover"
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  priority
+                />
               </div>
             </div>
           </div>
@@ -74,71 +111,31 @@ export default function AProposPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {/* Membre 1 */}
-              <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow">
-                <div className="relative h-64 bg-pink-50">
-                  <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                    <svg className="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
+              {teamMembers.map((member) => (
+                <div
+                  key={member.name}
+                  className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
+                >
+                  <div className={`relative h-64 bg-gradient-to-br ${member.accent}`}>
+                    <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                      <svg className="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      {member.name}
+                    </h3>
+                    <p className="text-amber-600 font-medium mb-3">
+                      {member.role}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {member.description}
+                    </p>
                   </div>
                 </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    [Nom à compléter]
-                  </h3>
-                  <p className="text-amber-600 font-medium mb-3">
-                    Fondatrice & Gérante
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Cavalière passionnée depuis plus de 20 ans, elle a créé La Cabrade pour partager sa passion et son expertise avec les cavaliers de la région.
-                  </p>
-                </div>
-              </div>
-
-              {/* Membre 2 */}
-              <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow">
-                <div className="relative h-64 bg-gradient-to-br from-blue-100 to-indigo-100">
-                  <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                    <svg className="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    [Nom à compléter]
-                  </h3>
-                  <p className="text-amber-600 font-medium mb-3">
-                    Conseillère en équipement
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Experte en sellerie et harnachement, elle vous guide dans le choix du matériel adapté à vos besoins et à votre discipline.
-                  </p>
-                </div>
-              </div>
-
-              {/* Membre 3 */}
-              <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow">
-                <div className="relative h-64 bg-gradient-to-br from-green-100 to-emerald-100">
-                  <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                    <svg className="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                    [Nom à compléter]
-                  </h3>
-                  <p className="text-amber-600 font-medium mb-3">
-                    Spécialiste vêtements & accessoires
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Passionnée de mode équestre, elle vous conseille sur les dernières tendances et les équipements les plus adaptés à votre pratique.
-                  </p>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
