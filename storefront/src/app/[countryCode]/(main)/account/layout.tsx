@@ -10,9 +10,9 @@ export default async function AccountPageLayout({
 }) {
   const customer = await getCustomer().catch(() => null)
 
-  return (
-    <AccountLayout customer={customer}>
-      {customer ? dashboard : login}
-    </AccountLayout>
-  )
+  if (!customer) {
+    return <>{login}</>
+  }
+
+  return <AccountLayout customer={customer}>{dashboard}</AccountLayout>
 }
