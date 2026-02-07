@@ -1,7 +1,6 @@
 import repeat from "@lib/util/repeat"
 import { HttpTypes } from "@medusajs/types"
 import { Heading, Table } from "@medusajs/ui"
-import { useTranslate } from "@lib/context/language-context"
 
 import Item from "@modules/cart/components/item"
 import SkeletonLineItem from "@modules/skeletons/components/skeleton-line-item"
@@ -11,13 +10,11 @@ type ItemsTemplateProps = {
 }
 
 const ItemsTemplate = ({ items }: ItemsTemplateProps) => {
-  const t = useTranslate()
-
   return (
     <div>
       <div className="pb-3 flex items-center">
         <Heading className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          🛒 {t("cart.title" as any)}
+          Votre panier
         </Heading>
       </div>
       {/* Sur mobile le tableau peut être tronqué -> autoriser le scroll horizontal */}
@@ -26,14 +23,14 @@ const ItemsTemplate = ({ items }: ItemsTemplateProps) => {
           <Table>
             <Table.Header className="border-t-0">
               <Table.Row className="text-gray-600 text-sm font-semibold">
-                <Table.HeaderCell className="!pl-0">{t("cart.item" as any)}</Table.HeaderCell>
+                <Table.HeaderCell className="!pl-0">Article</Table.HeaderCell>
                 <Table.HeaderCell></Table.HeaderCell>
-                <Table.HeaderCell>{t("cart.quantity" as any)}</Table.HeaderCell>
+                <Table.HeaderCell>Quantité</Table.HeaderCell>
                 <Table.HeaderCell className="hidden small:table-cell">
-                  {t("cart.price" as any)}
+                  Prix
                 </Table.HeaderCell>
                 <Table.HeaderCell className="!pr-0 text-right">
-                  {t("cart.total" as any)}
+                  Total
                 </Table.HeaderCell>
               </Table.Row>
             </Table.Header>
