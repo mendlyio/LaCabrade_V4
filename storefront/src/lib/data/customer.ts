@@ -29,11 +29,22 @@ export const updateCustomer = cache(async function (
 
 export async function signup(_currentState: unknown, formData: FormData) {
   const password = formData.get("password") as string
-  const customerForm = {
+  const vatNumber = (formData.get("vat_number") as string || "").toUpperCase().replace(/[\s\-.]/g, "")
+  const companyName = formData.get("company_name") as string || ""
+
+  const customerForm: any = {
     email: formData.get("email") as string,
     first_name: formData.get("first_name") as string,
     last_name: formData.get("last_name") as string,
     phone: formData.get("phone") as string,
+  }
+
+  // Ajouter les infos professionnelles si fournies
+  if (vatNumber || companyName) {
+    customerForm.metadata = {
+      ...(vatNumber ? { vat_number: vatNumber } : {}),
+      ...(companyName ? { company_name: companyName } : {}),
+    }
   }
 
   try {

@@ -75,24 +75,46 @@ const ShippingAddress = ({
       setFormAddress(undefined, customer.email)
     }
 
-    // Restaurer le numéro de TVA : d'abord depuis le cart, sinon depuis localStorage
+    // Restaurer le numéro de TVA — ordre de priorité :
+    // 1. Depuis la metadata du cart (déjà validé pour cette commande)
+    // 2. Depuis le compte client (enregistré dans le profil)
+    // 3. Depuis localStorage (session précédente)
     const savedVat = (cart?.metadata as any)?.vat_number
+    const customerVat = (customer?.metadata as any)?.vat_number
     const localVat = typeof window !== "undefined" ? localStorage.getItem("lc_vat_number") : null
 
-    if (savedVat) {
-      setVatNumber(savedVat)
+    const vatToRestore = savedVat || customerVat || localVat
+
+    if (vatToRestore) {
+      setVatNumber(vatToRestore)
       setShowVatField(true)
-      setVatStatus("valid")
-      setVatMessage("Numéro validé")
+
+      if (savedVat) {
+        setVatStatus("valid")
+        setVatMessage("Numéro validé")
+      } else if (customerVat) {
+        setVatStatus("valid")
+        setVatMessage("Numéro depuis votre compte")
+      } else {
+        setVatStatus("valid")
+        setVatMessage("Numéro restauré — re-vérifiez si nécessaire")
+      }
+
       // Synchroniser localStorage
-      if (typeof window !== "undefined") localStorage.setItem("lc_vat_number", savedVat)
-    } else if (localVat) {
-      setVatNumber(localVat)
-      setShowVatField(true)
-      setVatStatus("valid")
-      setVatMessage("Numéro restauré — re-vérifiez si nécessaire")
+      if (typeof window !== "undefined") localStorage.setItem("lc_vat_number", vatToRestore)
     }
-  }, [cart]) // Add cart as a dependency
+
+    // Pré-remplir aussi le champ société depuis le compte client si pas déjà rempli
+    if (customer?.metadata && (customer.metadata as any).company_name) {
+      const companyName = (customer.metadata as any).company_name
+      if (!formData["shipping_address.company"]) {
+        setFormData((prev: Record<string, any>) => ({
+          ...prev,
+          "shipping_address.company": companyName,
+        }))
+      }
+    }
+  }, [cart, customer]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sauvegarder immédiatement le numéro validé dans cart.metadata + localStorage
   const saveVatToCart = useCallback(async (validatedVatNumber: string) => {
