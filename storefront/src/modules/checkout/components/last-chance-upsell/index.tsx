@@ -21,7 +21,7 @@ const LastChanceUpsell = ({
   currencyCode,
 }: LastChanceUpsellProps) => {
   const [loadingId, setLoadingId] = useState<string | null>(null)
-  const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
+  const [promoUsed, setPromoUsed] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [countdown, setCountdown] = useState(10 * 60) // 10 minutes
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -46,10 +46,11 @@ const LastChanceUpsell = ({
   // Exclure les produits déjà dans le panier
   const cartProductIds = cartItems?.map((item) => item.product_id) || []
   const filteredProducts = products.filter(
-    (p) => !cartProductIds.includes(p.id) && !addedIds.has(p.id)
+    (p) => !cartProductIds.includes(p.id)
   )
 
-  if (filteredProducts.length === 0 || dismissed) return null
+  // Masquer si promo déjà utilisée, fermé manuellement, ou plus de produits
+  if (promoUsed || dismissed || filteredProducts.length === 0) return null
 
   const handleAdd = async (product: HttpTypes.StoreProduct) => {
     const variant = product.variants?.[0]
@@ -61,7 +62,8 @@ const LastChanceUpsell = ({
         variantId: variant.id,
         countryCode,
       })
-      setAddedIds((prev) => new Set(prev).add(product.id))
+      // Promo utilisée → on masque le composant après ajout
+      setPromoUsed(true)
     } catch (e) {
       console.error("Erreur ajout last chance:", e)
     } finally {
@@ -115,8 +117,8 @@ const LastChanceUpsell = ({
                 Dernière chance !
               </h3>
               <p className="text-[11px] text-gray-500 leading-snug">
-                Ajoutez un article maintenant et profitez de{" "}
-                <span className="text-red-500 font-bold">-{DISCOUNT_PERCENT}%</span> dessus
+                Choisissez <span className="text-red-500 font-bold">1 article</span> et profitez de{" "}
+                <span className="text-red-500 font-bold">-{DISCOUNT_PERCENT}%</span> immédiat
               </p>
             </div>
           </div>

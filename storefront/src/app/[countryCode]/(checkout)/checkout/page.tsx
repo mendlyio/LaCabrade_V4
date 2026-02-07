@@ -28,6 +28,58 @@ const fetchCart = async () => {
   return cart
 }
 
+const TrustBadges = () => (
+  <div className="bg-white rounded-xl border border-gray-200 p-4">
+    <div className="flex items-center gap-2 mb-2">
+      <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+      </svg>
+      <span className="font-semibold text-xs text-gray-900">Achat sécurisé</span>
+    </div>
+    <ul className="space-y-1.5 text-[11px] text-gray-600">
+      <li className="flex items-center gap-1.5">
+        <svg className="w-3 h-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+        </svg>
+        Cryptage SSL 256 bits
+      </li>
+      <li className="flex items-center gap-1.5">
+        <svg className="w-3 h-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+        </svg>
+        Données protégées
+      </li>
+      <li className="flex items-center gap-1.5">
+        <svg className="w-3 h-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+        </svg>
+        Retours gratuits 14 jours
+      </li>
+    </ul>
+  </div>
+)
+
+const PaymentMethods = () => (
+  <div className="bg-white rounded-xl border border-gray-200 p-4">
+    <h4 className="font-semibold text-[11px] text-gray-500 uppercase tracking-wider mb-3">
+      Moyens de paiement acceptés
+    </h4>
+    <div className="flex flex-wrap gap-1.5">
+      {[
+        "Visa", "Mastercard", "CB", "Apple Pay", "PayPal",
+        "Klarna", "Alma", "Belfius", "CBC", "ING", "Revolut",
+      ].map((name) => (
+        <div
+          key={name}
+          className="px-2 py-1 bg-gray-50 rounded border border-gray-200 text-[10px] font-medium text-gray-600"
+        >
+          {name}
+        </div>
+      ))}
+    </div>
+  </div>
+)
+
 export default async function Checkout({
   params,
 }: {
@@ -41,7 +93,7 @@ export default async function Checkout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header compact */}
+      {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="content-container py-3 sm:py-4">
           <div className="flex items-center justify-between">
@@ -72,6 +124,13 @@ export default async function Checkout({
 
       {/* Main Content */}
       <div className="content-container py-4 sm:py-6 md:py-8">
+        {/* Mobile : Récapitulatif EN HAUT */}
+        <div className="lg:hidden mb-4">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <CheckoutSummary cart={cart} customer={customer} />
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 sm:gap-6 lg:gap-8">
           {/* Colonne gauche : étapes */}
           <div className="min-w-0">
@@ -95,42 +154,22 @@ export default async function Checkout({
             </LocalizedClientLink>
           </div>
 
-          {/* Colonne droite : résumé */}
-          <div className="lg:sticky lg:top-4 h-fit space-y-3">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <CheckoutSummary cart={cart} customer={customer} />
-            </div>
-
-            {/* Trust badges */}
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span className="font-semibold text-xs text-gray-900">Achat sécurisé</span>
+          {/* Colonne droite : résumé (desktop only) + trust + paiements */}
+          <div className="hidden lg:block">
+            <div className="sticky top-4 space-y-3">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <CheckoutSummary cart={cart} customer={customer} />
               </div>
-              <ul className="space-y-1.5 text-[11px] text-gray-600">
-                <li className="flex items-center gap-1.5">
-                  <svg className="w-3 h-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Cryptage SSL 256 bits
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <svg className="w-3 h-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Données protégées
-                </li>
-                <li className="flex items-center gap-1.5">
-                  <svg className="w-3 h-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Visa, Mastercard, CB
-                </li>
-              </ul>
+              <TrustBadges />
+              <PaymentMethods />
             </div>
           </div>
+        </div>
+
+        {/* Mobile : Trust + Moyens de paiement EN BAS après le formulaire */}
+        <div className="lg:hidden mt-4 space-y-3">
+          <TrustBadges />
+          <PaymentMethods />
         </div>
       </div>
     </div>
