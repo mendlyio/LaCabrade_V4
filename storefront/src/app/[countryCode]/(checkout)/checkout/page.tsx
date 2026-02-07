@@ -97,7 +97,7 @@ export default async function Checkout({
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <div className="p-5 sm:p-6 md:p-8">
                 <Wrapper cart={cart}>
-                  <CheckoutForm cart={cart} customer={customer} />
+                  <CheckoutForm cart={cart} customer={customer} countryCode={countryCode} />
                 </Wrapper>
               </div>
             </div>

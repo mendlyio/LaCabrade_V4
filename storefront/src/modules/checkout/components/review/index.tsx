@@ -1,11 +1,19 @@
 "use client"
 
 import { Heading, Text, clx } from "@medusajs/ui"
+import { HttpTypes } from "@medusajs/types"
 
 import PaymentButton from "../payment-button"
+import LastChanceUpsell from "../last-chance-upsell"
 import { useSearchParams } from "next/navigation"
 
-const Review = ({ cart }: { cart: any }) => {
+const Review = ({
+  cart,
+  lastChanceProducts = [],
+}: {
+  cart: any
+  lastChanceProducts?: HttpTypes.StoreProduct[]
+}) => {
   const searchParams = useSearchParams()
 
   const isOpen = searchParams.get("step") === "review"
@@ -44,7 +52,16 @@ const Review = ({ cart }: { cart: any }) => {
 
       {isOpen && previousStepsCompleted && (
         <div className="space-y-5">
-          {/* Message d'information */}
+          {/* Last chance — juste avant le bouton payer */}
+          {lastChanceProducts.length > 0 && (
+            <LastChanceUpsell
+              products={lastChanceProducts}
+              cartItems={cart.items}
+              currencyCode={cart.currency_code}
+            />
+          )}
+
+          {/* Message CGV */}
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center mt-0.5">
@@ -53,7 +70,7 @@ const Review = ({ cart }: { cart: any }) => {
                 </svg>
               </div>
               <Text className="text-sm text-gray-700 leading-relaxed">
-                En cliquant sur <strong>"Valider la commande"</strong>, vous confirmez avoir lu et accepté nos{" "}
+                En cliquant sur <strong>&quot;Valider la commande&quot;</strong>, vous confirmez avoir lu et accepté nos{" "}
                 <a href="#" className="text-amber-600 hover:text-amber-700 underline">Conditions Générales de Vente</a>,{" "}
                 notre <a href="#" className="text-amber-600 hover:text-amber-700 underline">Politique de Retour</a> et{" "}
                 notre <a href="#" className="text-amber-600 hover:text-amber-700 underline">Politique de Confidentialité</a>.
@@ -61,7 +78,7 @@ const Review = ({ cart }: { cart: any }) => {
             </div>
           </div>
 
-          {/* Bouton de paiement */}
+          {/* Bouton payer */}
           <PaymentButton cart={cart} data-testid="submit-order-button" />
         </div>
       )}
