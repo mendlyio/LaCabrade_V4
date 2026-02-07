@@ -11,18 +11,23 @@ export const metadata: Metadata = {
 }
 
 const fetchCart = async () => {
-  const cart = await retrieveCart()
+  try {
+    const cart = await retrieveCart()
 
-  if (!cart) {
+    if (!cart) {
+      return null
+    }
+
+    if (cart?.items?.length) {
+      const enrichedItems = await enrichLineItems(cart?.items, cart?.region_id!)
+      cart.items = enrichedItems as HttpTypes.StoreCartLineItem[]
+    }
+
+    return cart
+  } catch (error) {
+    console.error("Erreur lors de la récupération du panier:", error)
     return null
   }
-
-  if (cart?.items?.length) {
-    const enrichedItems = await enrichLineItems(cart?.items, cart?.region_id!)
-    cart.items = enrichedItems as HttpTypes.StoreCartLineItem[]
-  }
-
-  return cart
 }
 
 type Props = {
@@ -31,7 +36,7 @@ type Props = {
 
 export default async function Cart({ params }: Props) {
   const cart = await fetchCart()
-  const customer = await getCustomer()
+  const customer = await getCustomer().catch(() => null)
   const { countryCode } = params
 
   return <CartTemplateModern cart={cart} customer={customer} countryCode={countryCode} />

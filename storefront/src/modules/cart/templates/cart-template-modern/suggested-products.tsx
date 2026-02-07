@@ -10,29 +10,33 @@ type SuggestedProductsProps = {
 }
 
 export default async function SuggestedProducts({ cart, countryCode }: SuggestedProductsProps) {
-  const region = await getRegion(countryCode)
+  let suggestedProducts: HttpTypes.StoreProduct[] = []
 
-  if (!region) {
+  try {
+    const region = await getRegion(countryCode)
+
+    if (!region) {
+      return null
+    }
+
+    const result = await getProductsList({
+      pageParam: 1,
+      queryParams: {
+        limit: 4,
+        region_id: region.id,
+        fields: "*variants.calculated_price,+variants.inventory_quantity",
+        order: "-created_at",
+      },
+      countryCode,
+    })
+
+    const products = result?.response?.products || []
+    const cartProductIds = cart.items?.map(item => item.product_id) || []
+    suggestedProducts = products.filter(p => !cartProductIds.includes(p.id))
+  } catch (error) {
+    console.error("Erreur lors du chargement des produits suggérés:", error)
     return null
   }
-
-  // Récupérer des produits suggérés (produits récents ou populaires)
-  const result = await getProductsList({
-    pageParam: 1,
-    queryParams: {
-      limit: 4,
-      region_id: region.id,
-      fields: "*variants.calculated_price,+variants.inventory_quantity",
-      order: "-created_at",
-    },
-    countryCode,
-  })
-
-  const products = result?.response?.products || []
-
-  // Filtrer les produits qui sont déjà dans le panier
-  const cartProductIds = cart.items?.map(item => item.product_id) || []
-  const suggestedProducts = products.filter(p => !cartProductIds.includes(p.id))
 
   if (suggestedProducts.length === 0) {
     return null
