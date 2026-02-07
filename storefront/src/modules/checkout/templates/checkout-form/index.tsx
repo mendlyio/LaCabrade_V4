@@ -1,4 +1,3 @@
-import { Suspense } from "react"
 import { listCartShippingMethods } from "@lib/data/fulfillment"
 import { listCartPaymentMethods } from "@lib/data/payment"
 import { getProductsList } from "@lib/data/products"
@@ -9,6 +8,7 @@ import Payment from "@modules/checkout/components/payment"
 import Review from "@modules/checkout/components/review"
 import Shipping from "@modules/checkout/components/shipping"
 import CheckoutUpsell from "@modules/checkout/components/checkout-upsell"
+import CheckoutStepRouter from "@modules/checkout/components/checkout-step-router"
 
 async function fetchUpsellProducts(
   cart: HttpTypes.StoreCart,
@@ -82,6 +82,9 @@ export default async function CheckoutForm({
 
   return (
     <div className="w-full">
+      {/* Auto-routage vers la bonne étape au chargement */}
+      <CheckoutStepRouter cart={cart} />
+
       {/* Étape 1 : Adresse */}
       <div className="border-b border-gray-100 pb-2 mb-2">
         <Addresses cart={cart} customer={customer} />
