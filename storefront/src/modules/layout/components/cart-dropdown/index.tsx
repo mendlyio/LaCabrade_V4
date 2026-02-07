@@ -114,7 +114,7 @@ const CartDropdown = ({
             </div>
             {cartState && cartState.items?.length ? (
               <>
-                <div className="overflow-y-auto max-h-[420px] px-6 py-4 grid grid-cols-1 gap-y-4 no-scrollbar">
+                <div className="overflow-y-auto overflow-x-hidden max-h-[420px] px-6 py-4 grid grid-cols-1 gap-y-4 no-scrollbar">
                   {cartState.items
                     .sort((a, b) => {
                       return (a.created_at ?? "") > (b.created_at ?? "")
@@ -123,13 +123,13 @@ const CartDropdown = ({
                     })
                     .map((item) => (
                       <div
-                        className="grid grid-cols-[100px_1fr] gap-x-4 pb-4 border-b border-gray-100 last:border-0 group hover:bg-gray-50 -mx-6 px-6 py-3 transition-colors"
+                        className="grid grid-cols-[80px_1fr] gap-x-3 pb-4 border-b border-gray-100 last:border-0 group hover:bg-gray-50 -mx-6 px-6 py-3 transition-colors min-w-0"
                         key={item.id}
                         data-testid="cart-item"
                       >
                         <LocalizedClientLink
                           href={`/products/${item.variant?.product?.handle}`}
-                          className="relative overflow-hidden rounded-lg"
+                          className="relative overflow-hidden rounded-lg flex-shrink-0 w-[80px] h-[80px]"
                         >
                           <Thumbnail
                             thumbnail={item.variant?.product?.thumbnail}
@@ -138,10 +138,10 @@ const CartDropdown = ({
                           />
                           <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-5 transition-opacity rounded-lg"></div>
                         </LocalizedClientLink>
-                        <div className="flex flex-col justify-between flex-1">
-                          <div className="flex flex-col flex-1">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex flex-col flex-1 min-w-0">
+                        <div className="flex flex-col justify-between min-w-0">
+                          <div className="flex flex-col min-w-0">
+                            <div className="flex items-start justify-between gap-2 min-w-0">
+                              <div className="flex flex-col min-w-0 flex-1">
                                 <h3 className="text-sm font-medium text-gray-900 truncate">
                                   <LocalizedClientLink
                                     href={`/products/${item.variant?.product?.handle}`}
@@ -164,7 +164,7 @@ const CartDropdown = ({
                                   Qté: {item.quantity}
                                 </span>
                               </div>
-                              <div className="flex flex-col items-end gap-2">
+                              <div className="flex flex-col items-end gap-2 flex-shrink-0">
                                 <LineItemPrice item={item} style="tight" />
                               </div>
                             </div>
