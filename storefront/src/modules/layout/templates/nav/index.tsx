@@ -123,7 +123,7 @@ export default async function Nav() {
         </div>
 
         {/* Niveau 2 : Menu Navigation Centré (Desktop uniquement) */}
-        <nav className="hidden lg:block border-t border-gray-100 bg-white">
+        <nav className="hidden lg:block border-t border-gray-100 bg-white mega-menu-nav">
           <div className="content-container">
             <div className="flex items-center gap-1 justify-center py-3">
               {/* 1. Catégories dynamiques (Backoffice) */}

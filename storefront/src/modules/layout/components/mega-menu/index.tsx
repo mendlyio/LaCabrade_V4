@@ -1,7 +1,6 @@
 "use client"
 
-import { Fragment } from "react"
-import { Popover, Transition } from "@headlessui/react"
+import { Fragment, useState, useRef, useEffect } from "react"
 import { ChevronDown } from "@medusajs/icons"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HttpTypes } from "@medusajs/types"
@@ -12,6 +11,42 @@ type MegaMenuProps = {
 
 const MegaMenu = ({ category }: MegaMenuProps) => {
   const hasChildren = category.category_children && category.category_children.length > 0
+  const [open, setOpen] = useState(false)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const handleEnter = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    setOpen(true)
+  }
+
+  const handleLeave = () => {
+    timeoutRef.current = setTimeout(() => setOpen(false), 150)
+  }
+
+  const [panelTop, setPanelTop] = useState(160)
+
+  // Calculer la position top du panel en dessous du nav
+  useEffect(() => {
+    if (!open || !containerRef.current) return
+    const nav = containerRef.current.closest(".mega-menu-nav")
+    if (nav) {
+      const rect = nav.getBoundingClientRect()
+      setPanelTop(rect.bottom)
+    }
+  }, [open])
+
+  // Fermer si clic en dehors
+  useEffect(() => {
+    if (!open) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [open])
 
   if (!hasChildren) {
     return (
@@ -24,112 +59,136 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
     )
   }
 
+  // Grouper les enfants en colonnes de max 8 éléments pour un layout équilibré
+  const children = category.category_children || []
+  const columnCount = children.length <= 3 ? children.length : children.length <= 6 ? 3 : 4
+
   return (
-    <Popover className="relative">
-      {({ open, close }) => (
-        <>
-          <Popover.Button
-            className={`
-              flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium outline-none
-              transition-all duration-200 whitespace-nowrap
-              ${open 
-                ? 'text-white bg-amber-600 shadow-sm' 
-                : 'text-gray-700 hover:text-white hover:bg-amber-600'
-              }
-            `}
-          >
-            <span>{category.name}</span>
-            <ChevronDown
-              className={`w-4 h-4 transition-transform duration-200 ${
-                open ? 'rotate-180' : ''
-              }`}
-            />
-          </Popover.Button>
+    <div
+      ref={containerRef}
+      className="static"
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+    >
+      {/* Bouton trigger */}
+      <button
+        className={`
+          flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium outline-none
+          transition-all duration-200 whitespace-nowrap
+          ${open 
+            ? 'text-white bg-amber-600 shadow-sm' 
+            : 'text-gray-700 hover:text-white hover:bg-amber-600'
+          }
+        `}
+        onClick={() => setOpen(!open)}
+      >
+        <span>{category.name}</span>
+        <ChevronDown
+          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+            open ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
 
-          <Transition
-            as={Fragment}
-            enter="transition ease-out duration-200"
-            enterFrom="opacity-0 translate-y-1"
-            enterTo="opacity-100 translate-y-0"
-            leave="transition ease-in duration-150"
-            leaveFrom="opacity-100 translate-y-0"
-            leaveTo="opacity-0 translate-y-1"
-          >
-            <Popover.Panel className="absolute left-1/2 -translate-x-1/2 z-50 mt-4 w-[min(96vw,72rem)]">
-              <div className="overflow-hidden rounded-2xl shadow-2xl ring-1 ring-black/5 bg-white">
-                <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-gray-900">
-                      {category.name}
-                    </span>
-                    <span className="text-xs text-gray-500">Catégories</span>
-                  </div>
-                  <LocalizedClientLink
-                    href={`/categories/${category.handle}`}
-                    onClick={() => close()}
-                    className="inline-flex items-center gap-2 rounded-full bg-amber-600 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-700 transition-colors"
-                  >
-                    Voir tout
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </LocalizedClientLink>
-                </div>
+      {/* Overlay fond sombre */}
+      {open && (
+        <div
+          className="fixed inset-0 z-[55] bg-black/20"
+          style={{ top: `${panelTop}px` }}
+          onClick={() => setOpen(false)}
+        />
+      )}
 
-                <div className="max-h-[70vh] overflow-y-auto">
-                  <div className="p-6 grid grid-cols-2 lg:grid-cols-4 gap-6">
-                    {category.category_children?.map((child) => (
-                      <div key={child.id} className="space-y-3">
-                        <LocalizedClientLink
-                          href={`/categories/${child.handle}`}
-                          onClick={() => close()}
-                          className="inline-flex items-center gap-2 text-sm font-semibold text-gray-900 hover:text-amber-700 transition-colors"
-                        >
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+      {/* Dropdown Panel — positionné en fixed pour ne jamais sortir */}
+      {open && (
+        <div
+          className="fixed left-0 right-0 z-[60]"
+          style={{ top: `${panelTop}px` }}
+          onMouseEnter={handleEnter}
+          onMouseLeave={handleLeave}
+        >
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="bg-white rounded-b-2xl shadow-2xl ring-1 ring-black/10 overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-b border-gray-100">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                  {category.name}
+                </h3>
+                <LocalizedClientLink
+                  href={`/categories/${category.handle}`}
+                  onClick={() => setOpen(false)}
+                  className="inline-flex items-center gap-2 rounded-full bg-amber-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition-colors"
+                >
+                  Tout voir
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </LocalizedClientLink>
+              </div>
+
+              {/* Contenu grille */}
+              <div className="max-h-[65vh] overflow-y-auto p-6">
+                <div
+                  className="grid gap-x-8 gap-y-6"
+                  style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}
+                >
+                  {children.map((child) => (
+                    <div key={child.id} className="min-w-0">
+                      {/* Sous-catégorie parent */}
+                      <LocalizedClientLink
+                        href={`/categories/${child.handle}`}
+                        onClick={() => setOpen(false)}
+                        className="group flex items-center gap-2 mb-3 pb-2 border-b-2 border-amber-500/30"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
+                        <span className="text-sm font-bold text-gray-900 group-hover:text-amber-700 transition-colors truncate">
                           {child.name}
-                        </LocalizedClientLink>
+                        </span>
+                      </LocalizedClientLink>
 
-                        {child.category_children && child.category_children.length > 0 && (
-                          <ul className="space-y-1.5">
-                            {child.category_children.map((grandChild) => (
-                              <li key={grandChild.id} className="space-y-1">
-                                <LocalizedClientLink
-                                  href={`/categories/${grandChild.handle}`}
-                                  onClick={() => close()}
-                                  className="text-sm text-gray-700 hover:text-amber-700 transition-colors block"
-                                >
-                                  {grandChild.name}
-                                </LocalizedClientLink>
-                                {grandChild.category_children &&
-                                  grandChild.category_children.length > 0 && (
-                                    <ul className="ml-3 border-l border-gray-200 pl-3 space-y-1">
-                                      {grandChild.category_children.map((greatGrandChild) => (
-                                        <li key={greatGrandChild.id}>
-                                          <LocalizedClientLink
-                                            href={`/categories/${greatGrandChild.handle}`}
-                                            onClick={() => close()}
-                                            className="text-xs text-gray-500 hover:text-amber-700 transition-colors block"
-                                          >
-                                            {greatGrandChild.name}
-                                          </LocalizedClientLink>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  )}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                      {/* Enfants de niveau 3 */}
+                      {child.category_children && child.category_children.length > 0 && (
+                        <ul className="space-y-1">
+                          {child.category_children.map((grandChild) => (
+                            <li key={grandChild.id}>
+                              <LocalizedClientLink
+                                href={`/categories/${grandChild.handle}`}
+                                onClick={() => setOpen(false)}
+                                className="group/item flex items-center gap-2 py-1 px-2 rounded-md text-sm text-gray-600 hover:text-amber-700 hover:bg-amber-50 transition-all"
+                              >
+                                <span className="w-1 h-1 rounded-full bg-gray-300 group-hover/item:bg-amber-500 transition-colors flex-shrink-0" />
+                                <span className="truncate">{grandChild.name}</span>
+                              </LocalizedClientLink>
+
+                              {/* Enfants de niveau 4 */}
+                              {grandChild.category_children && grandChild.category_children.length > 0 && (
+                                <ul className="ml-5 mt-0.5 space-y-0.5">
+                                  {grandChild.category_children.map((greatGrandChild) => (
+                                    <li key={greatGrandChild.id}>
+                                      <LocalizedClientLink
+                                        href={`/categories/${greatGrandChild.handle}`}
+                                        onClick={() => setOpen(false)}
+                                        className="block py-0.5 px-2 rounded text-xs text-gray-400 hover:text-amber-600 hover:bg-amber-50/50 transition-all truncate"
+                                      >
+                                        {greatGrandChild.name}
+                                      </LocalizedClientLink>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
-            </Popover.Panel>
-          </Transition>
-        </>
+            </div>
+          </div>
+        </div>
       )}
-    </Popover>
+    </div>
   )
 }
 
