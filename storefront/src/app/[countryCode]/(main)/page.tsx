@@ -74,6 +74,8 @@ export default async function Home({
     cavalier: "https://ik.imagekit.io/kodt9cn6f/Cabrade/cavalier.webp",
     "soin-et-alimentation":
       "https://ik.imagekit.io/kodt9cn6f/Cabrade/soin%20et%20alimentation.webp?updatedAt=1770375198653",
+    "soins-et-alimentation":
+      "https://ik.imagekit.io/kodt9cn6f/Cabrade/soin%20et%20alimentation.webp?updatedAt=1770375198653",
     "son-et-alimentation":
       "https://ik.imagekit.io/kodt9cn6f/Cabrade/soin%20et%20alimentation.webp?updatedAt=1770375198653",
     ecurie: "https://ik.imagekit.io/kodt9cn6f/Cabrade/ecurie.webp",
@@ -171,20 +173,20 @@ export default async function Home({
                   <LocalizedClientLink
                     key={category.id}
                     href={`/categories/${category.handle}`}
-                    className="flex-none w-[calc(100%-32px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] group relative block overflow-hidden rounded-2xl aspect-square bg-white shadow-sm ring-1 ring-black/5 transition-all duration-300 hover:shadow-xl"
+                    className="flex-none w-[calc(100%-32px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] group/card relative block overflow-hidden rounded-2xl aspect-square bg-gray-200 shadow-sm ring-1 ring-black/5 transition-shadow duration-300 hover:shadow-xl"
                   >
                     <div
-                      className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-[1.03]"
+                      className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover/card:scale-[1.03]"
                       style={{
                         backgroundImage: categoryImage ? `url(${categoryImage})` : undefined,
                       }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent transition-opacity duration-300 group-hover:from-black/80" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                     <div className="absolute inset-x-0 bottom-0 p-5 text-left">
                       <h3 className="text-lg md:text-xl font-semibold text-white drop-shadow">
                         {category.name}
                       </h3>
-                      <div className="mt-2 inline-flex items-center gap-2 text-sm text-white/90 font-medium">
+                      <div className="mt-2 inline-flex items-center gap-2 text-sm text-white/90 font-medium opacity-0 translate-y-2 transition-all duration-300 group-hover/card:opacity-100 group-hover/card:translate-y-0">
                         Découvrir
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
