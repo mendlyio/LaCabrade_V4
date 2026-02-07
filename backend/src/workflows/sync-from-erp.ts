@@ -61,18 +61,37 @@ function odooPriceToMedusaAmount(price: unknown, debugSku?: string): number {
 
 function resolveOdooPriceAmount({
   variantPrice,
+  variantLstPrice,
   productPrice,
   debugSku,
 }: {
   variantPrice: unknown
+  variantLstPrice?: unknown
   productPrice: unknown
   debugSku?: string
 }): number {
+  // 1. Prix de la variante via list_price
   const primary = odooPriceToMedusaAmount(variantPrice, debugSku)
   if (primary > 0) {
     return primary
   }
 
+  // 2. Prix de la variante via lst_price (prix de vente public Odoo)
+  if (variantLstPrice !== undefined && variantLstPrice !== null) {
+    const lstFallback = odooPriceToMedusaAmount(
+      variantLstPrice,
+      debugSku ? `${debugSku}-lst_price` : undefined
+    )
+    if (lstFallback > 0) {
+      console.warn(
+        `⚠️ [PRICE] list_price invalide pour SKU:${debugSku || "?"}, ` +
+        `utilisation de lst_price variante (${lstFallback}€).`
+      )
+      return lstFallback
+    }
+  }
+
+  // 3. Fallback sur le prix du template produit
   const fallback = odooPriceToMedusaAmount(
     productPrice,
     debugSku ? `${debugSku}-fallback` : undefined
@@ -80,13 +99,14 @@ function resolveOdooPriceAmount({
   if (fallback > 0) {
     console.warn(
       `⚠️ [PRICE] Prix variante invalide pour SKU:${debugSku || "?"}, ` +
-      `fallback sur prix produit (${fallback}€).`
+      `fallback sur prix produit template (${fallback}€).`
     )
     return fallback
   }
 
   console.warn(
-    `⚠️ [PRICE] Aucun prix valide trouvé pour SKU:${debugSku || "?"}`
+    `⚠️ [PRICE] Aucun prix valide trouvé pour SKU:${debugSku || "?"} | ` +
+    `variantPrice=${JSON.stringify(variantPrice)}, variantLstPrice=${JSON.stringify(variantLstPrice)}, productPrice=${JSON.stringify(productPrice)}`
   )
   return 0
 }
@@ -485,9 +505,10 @@ export const syncFromErpWorkflow = createWorkflow(
 
               const weightInGrams = variant.weight ? Math.round(variant.weight * 1000) : undefined
               const variantSku = variant.default_code || `ODOO-${variant.id}`
-              // Convertir le prix Odoo vers Medusa (centimes)
+              // Convertir le prix Odoo vers Medusa
               const priceAmount = resolveOdooPriceAmount({
                 variantPrice: variant.list_price,
+                variantLstPrice: variant.lst_price,
                 productPrice: odooProduct.list_price,
                 debugSku: variantSku,
               })
@@ -532,14 +553,22 @@ export const syncFromErpWorkflow = createWorkflow(
               ? odooProduct.product_variant_ids[0] 
               : null
             
+            console.log(
+              `🔍 [SIMPLE-PRODUCT] Odoo #${odooProduct.id} "${odooProduct.name}" | ` +
+              `firstVariant: ${firstVariant ? `id=${firstVariant.id}, type=${typeof firstVariant}` : 'null'} | ` +
+              `variant.list_price=${firstVariant?.list_price}, variant.lst_price=${firstVariant?.lst_price} | ` +
+              `template.list_price=${odooProduct.list_price}`
+            )
+            
             const weightInGrams = (firstVariant?.weight || odooProduct.weight) 
               ? Math.round((firstVariant?.weight || odooProduct.weight) * 1000) 
               : undefined
             // Utiliser le SKU de la variante en priorité
             const productSku = firstVariant?.default_code || odooProduct.default_code || `ODOO-${firstVariant?.id || odooProduct.id}`
-            // Convertir le prix Odoo vers Medusa (centimes)
+            // Convertir le prix Odoo vers Medusa
             const priceAmount = resolveOdooPriceAmount({
               variantPrice: firstVariant?.list_price,
+              variantLstPrice: firstVariant?.lst_price,
               productPrice: odooProduct.list_price,
               debugSku: productSku,
             })

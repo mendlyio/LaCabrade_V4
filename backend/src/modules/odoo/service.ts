@@ -48,6 +48,7 @@ export type OdooProductVariant = {
   name?: string
   display_name?: string
   list_price: number
+  lst_price?: number // Prix de vente public (inclut extras d'attributs)
   default_code?: string // Référence interne Odoo (Internal Reference)
   weight?: number
   volume?: number
@@ -762,7 +763,12 @@ export default class OdooModuleService {
     const products: OdooProduct[] = await this.safeReadProductTemplates(productIds, fields)
 
     for (const product of products) {
-      if (product.product_variant_count > 1) {
+      // Enrichir les variantes — y compris les produits simples (1 variante)
+      const rawVariantIds = Array.isArray(product.product_variant_ids)
+        ? product.product_variant_ids.filter((v: any) => typeof v === "number")
+        : []
+
+      if (rawVariantIds.length > 0) {
         const variants: OdooProductVariant[] = await this.client.request(
           "call",
           {
@@ -774,12 +780,13 @@ export default class OdooModuleService {
               this.options.apiKey,
               "product.product",
               "read",
-              [product.product_variant_ids],
+              [rawVariantIds],
               {
                 fields: [
                   "display_name",
                   "list_price",
-                  "default_code", // Référence interne (était "code" - champ calculé souvent vide)
+                  "lst_price",
+                  "default_code",
                   "currency_id",
                   "product_template_variant_value_ids",
                   "weight",
@@ -793,8 +800,10 @@ export default class OdooModuleService {
           }
         )
 
-        // Enrichir les attributs des variantes
-        await this.enrichVariantAttributeValues(variants)
+        // Enrichir les attributs des variantes (utile uniquement pour multi-variantes)
+        if (product.product_variant_count > 1) {
+          await this.enrichVariantAttributeValues(variants)
+        }
         product.product_variant_ids = variants
       }
 
@@ -857,7 +866,12 @@ export default class OdooModuleService {
 
     // Enrichir les produits avec les variantes et attributs (même logique que fetchProductsPaged)
     for (const product of products) {
-      if (product.product_variant_count > 1) {
+      // Enrichir les variantes — y compris les produits simples (1 variante)
+      const rawVariantIds = Array.isArray(product.product_variant_ids)
+        ? product.product_variant_ids.filter((v: any) => typeof v === "number")
+        : []
+
+      if (rawVariantIds.length > 0) {
         const variants: OdooProductVariant[] = await this.client.request(
           "call",
           {
@@ -869,12 +883,13 @@ export default class OdooModuleService {
               this.options.apiKey,
               "product.product",
               "read",
-              [product.product_variant_ids],
+              [rawVariantIds],
               {
                 fields: [
                   "display_name",
                   "list_price",
-                  "default_code", // Référence interne (était "code" - champ calculé souvent vide)
+                  "lst_price",
+                  "default_code",
                   "currency_id",
                   "product_template_variant_value_ids",
                   "weight",
@@ -888,8 +903,10 @@ export default class OdooModuleService {
           }
         )
 
-        // Enrichir les attributs des variantes
-        await this.enrichVariantAttributeValues(variants)
+        // Enrichir les attributs des variantes (utile uniquement pour multi-variantes)
+        if (product.product_variant_count > 1) {
+          await this.enrichVariantAttributeValues(variants)
+        }
         product.product_variant_ids = variants
       }
 
@@ -1059,7 +1076,12 @@ export default class OdooModuleService {
     const products: OdooProduct[] = await this.safeReadProductTemplates(productIds, fields)
 
     for (const product of products) {
-      if (product.product_variant_count > 1) {
+      // Enrichir les variantes — y compris les produits simples (1 variante)
+      const rawVariantIds = Array.isArray(product.product_variant_ids)
+        ? product.product_variant_ids.filter((v: any) => typeof v === "number")
+        : []
+
+      if (rawVariantIds.length > 0) {
         const variants: OdooProductVariant[] = await this.client.request(
           "call",
           {
@@ -1071,12 +1093,13 @@ export default class OdooModuleService {
               this.options.apiKey,
               "product.product",
               "read",
-              [product.product_variant_ids],
+              [rawVariantIds],
               {
                 fields: [
                   "display_name",
                   "list_price",
-                  "default_code", // Référence interne (était "code" - champ calculé souvent vide)
+                  "lst_price",
+                  "default_code",
                   "currency_id",
                   "product_template_variant_value_ids",
                   "weight",
@@ -1090,8 +1113,10 @@ export default class OdooModuleService {
           }
         )
 
-        // Enrichir les attributs des variantes
-        await this.enrichVariantAttributeValues(variants)
+        // Enrichir les attributs des variantes (utile uniquement pour multi-variantes)
+        if (product.product_variant_count > 1) {
+          await this.enrichVariantAttributeValues(variants)
+        }
         product.product_variant_ids = variants
       }
 
