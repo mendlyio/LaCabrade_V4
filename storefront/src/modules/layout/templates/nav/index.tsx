@@ -80,20 +80,18 @@ export default async function Nav() {
                 </LocalizedClientLink>
               )}
 
-              {/* Wishlist - masqué sur très petit écran */}
-              <div className="hidden xs:block">
-                <WishlistButton />
-              </div>
-
-              {/* Compte - visible uniquement sur tablette+ */}
+              {/* Compte */}
               <LocalizedClientLink
                 href="/account"
-                className="hidden md:flex p-2 rounded-lg hover:bg-gray-100 transition-colors group"
+                className="flex p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors group"
                 data-testid="nav-account-link"
                 aria-label="Mon compte"
               >
                 <User className="w-5 h-5 text-gray-600 group-hover:text-amber-600 transition-colors" />
               </LocalizedClientLink>
+
+              {/* Wishlist */}
+              <WishlistButton />
 
               {/* Panier */}
               <Suspense

@@ -10,7 +10,7 @@ export default function WishlistButton() {
   return (
     <LocalizedClientLink
       href="/wishlist"
-      className="hidden sm:flex p-2 rounded-lg hover:bg-gray-100 transition-colors relative group"
+      className="flex p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors relative group"
       aria-label="Liste de souhaits"
     >
       <Heart className="w-5 h-5 text-gray-600 group-hover:text-red-500 transition-colors" />
