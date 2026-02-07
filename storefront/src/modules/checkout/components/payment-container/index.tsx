@@ -1,8 +1,6 @@
 import { RadioGroup } from "@headlessui/react"
-import { Text, Tooltip, clx } from "@medusajs/ui"
+import { Text, clx } from "@medusajs/ui"
 import React from "react"
-
-import Radio from "@modules/common/components/radio"
 
 import PaymentTest from "../payment-test"
 import { isManual } from "@lib/constants"
@@ -21,40 +19,52 @@ const PaymentContainer: React.FC<PaymentContainerProps> = ({
   disabled = false,
 }) => {
   const isDevelopment = process.env.NODE_ENV === "development"
+  const isSelected = selectedPaymentOptionId === paymentProviderId
 
   return (
-    <>
-      <RadioGroup.Option
-        key={paymentProviderId}
-        value={paymentProviderId}
-        disabled={disabled}
-        className={clx(
-          "flex flex-col gap-y-2 text-small-regular cursor-pointer py-4 border rounded-rounded px-8 mb-2 hover:shadow-borders-interactive-with-active",
+    <RadioGroup.Option
+      key={paymentProviderId}
+      value={paymentProviderId}
+      disabled={disabled}
+      className={clx(
+        "relative flex items-center justify-between cursor-pointer py-4 px-5 border-2 rounded-xl transition-all duration-200",
+        {
+          "border-amber-500 bg-amber-50 shadow-sm": isSelected,
+          "border-gray-200 hover:border-gray-300 hover:bg-gray-50": !isSelected,
+        }
+      )}
+    >
+      <div className="flex items-center gap-4">
+        <div className={clx(
+          "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
           {
-            "border-ui-border-interactive":
-              selectedPaymentOptionId === paymentProviderId,
+            "border-amber-600": isSelected,
+            "border-gray-300": !isSelected,
           }
-        )}
-      >
-        <div className="flex items-center justify-between ">
-          <div className="flex items-center gap-x-4">
-            <Radio checked={selectedPaymentOptionId === paymentProviderId} />
-            <Text className="text-base-regular">
-              {paymentInfoMap[paymentProviderId]?.title || paymentProviderId}
-            </Text>
-            {isManual(paymentProviderId) && isDevelopment && (
-              <PaymentTest className="hidden small:block" />
-            )}
-          </div>
-          <span className="justify-self-end text-ui-fg-base">
-            {paymentInfoMap[paymentProviderId]?.icon}
-          </span>
+        )}>
+          {isSelected && (
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-600" />
+          )}
         </div>
-        {isManual(paymentProviderId) && isDevelopment && (
-          <PaymentTest className="small:hidden text-[10px]" />
-        )}
-      </RadioGroup.Option>
-    </>
+        <div className="flex items-center gap-3">
+          <Text className={clx("text-sm font-medium", {
+            "text-gray-900": isSelected,
+            "text-gray-700": !isSelected,
+          })}>
+            {paymentInfoMap[paymentProviderId]?.title || paymentProviderId}
+          </Text>
+          {isManual(paymentProviderId) && isDevelopment && (
+            <PaymentTest className="hidden small:block" />
+          )}
+        </div>
+      </div>
+      <span className="text-gray-500">
+        {paymentInfoMap[paymentProviderId]?.icon}
+      </span>
+      {isManual(paymentProviderId) && isDevelopment && (
+        <PaymentTest className="small:hidden text-[10px]" />
+      )}
+    </RadioGroup.Option>
   )
 }
 

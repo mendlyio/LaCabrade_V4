@@ -23,21 +23,16 @@ const CartTemplateModern = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
-      {/* Hero Section */}
-      <div className="bg-amber-600 text-white">
-        <div className="content-container py-12">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="content-container py-6 sm:py-8">
           <div className="flex items-center justify-between">
             <div>
-              <div className="inline-block bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full mb-4">
-                <span className="text-sm font-semibold flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4" />
-                  Mon Panier
-                </span>
-              </div>
-              <h1 className="text-4xl font-bold mb-2">
-                Votre Panier
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
+                <ShoppingBag className="w-7 h-7 text-amber-600" />
+                Mon Panier
               </h1>
-              <p className="text-white/90">
+              <p className="text-sm text-gray-500 mt-1">
                 {itemCount > 0 
                   ? `${itemCount} article${itemCount > 1 ? 's' : ''} dans votre panier`
                   : "Votre panier est vide"}
@@ -45,9 +40,8 @@ const CartTemplateModern = ({
             </div>
             <LocalizedClientLink
               href="/store"
-              className="hidden md:flex items-center gap-2 px-6 py-3 bg-white text-amber-600 hover:bg-amber-50 rounded-lg font-medium transition-all shadow-lg hover:shadow-xl"
+              className="hidden md:flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-700 hover:border-amber-600 hover:text-amber-600 rounded-lg font-medium transition-all text-sm"
             >
-              <ShoppingBag className="w-5 h-5" />
               Continuer mes achats
             </LocalizedClientLink>
           </div>
@@ -55,13 +49,13 @@ const CartTemplateModern = ({
       </div>
 
       {/* Breadcrumb */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="content-container py-4">
-          <nav className="flex items-center gap-2 text-sm text-gray-600">
+      <div className="bg-gray-50 border-b border-gray-100">
+        <div className="content-container py-3">
+          <nav className="flex items-center gap-2 text-xs text-gray-500">
             <LocalizedClientLink href="/" className="hover:text-amber-600 transition-colors">
               Accueil
             </LocalizedClientLink>
-            <span>/</span>
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
             <span className="text-gray-900 font-medium">Panier</span>
           </nav>
         </div>
@@ -80,9 +74,9 @@ const CartTemplateModern = ({
                 )}
 
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="p-6 border-b border-amber-500 bg-amber-600">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                      <ShoppingBag className="w-6 h-6 text-white" />
+                  <div className="p-5 border-b border-gray-200 bg-gray-50">
+                    <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                      <ShoppingBag className="w-5 h-5 text-gray-600" />
                       Articles ({itemCount})
                     </h2>
                   </div>
@@ -94,9 +88,8 @@ const CartTemplateModern = ({
                 {/* Continue Shopping Button (Mobile) */}
                 <LocalizedClientLink
                   href="/store"
-                  className="md:hidden flex items-center justify-center gap-2 px-6 py-3 border-2 border-amber-600 text-amber-600 hover:bg-amber-50 rounded-lg font-medium transition-all w-full"
+                  className="md:hidden flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 hover:border-amber-600 hover:text-amber-600 rounded-lg font-medium transition-all w-full text-sm"
                 >
-                  <ShoppingBag className="w-5 h-5" />
                   Continuer mes achats
                 </LocalizedClientLink>
               </div>
@@ -129,8 +122,10 @@ const CartTemplateModern = ({
                   <p className="text-xs text-gray-600">24-48h</p>
                 </div>
                 <div className="text-center">
-                  <div className="w-12 h-12 bg-amber-600 text-white rounded-full flex items-center justify-center mx-auto mb-3">
-                    <span className="text-2xl">↩️</span>
+                  <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
                   </div>
                   <h3 className="font-semibold text-sm mb-1">Retours Faciles</h3>
                   <p className="text-xs text-gray-600">14 jours</p>

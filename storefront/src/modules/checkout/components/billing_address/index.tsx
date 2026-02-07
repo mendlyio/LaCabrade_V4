@@ -108,7 +108,7 @@ const BillingAddress = ({ cart }: { cart: HttpTypes.StoreCart | null }) => {
           data-testid="billing-province-input"
         />
         <Input
-          label="Phone"
+          label={t("checkout.phone" as any)}
           name="billing_address.phone"
           autoComplete="tel"
           value={formData["billing_address.phone"]}

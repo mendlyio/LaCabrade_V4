@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { RadioGroup } from "@headlessui/react"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import { CheckCircleSolid, CreditCard } from "@medusajs/icons"
-import { Button, Container, Heading, Text, Tooltip, clx } from "@medusajs/ui"
+import { Button, Container, Heading, Text, clx } from "@medusajs/ui"
 import { CardElement } from "@stripe/react-stripe-js"
 import { StripeCardElementOptions } from "@stripe/stripe-js"
 
@@ -54,14 +54,15 @@ const Payment = ({
       style: {
         base: {
           fontFamily: "Inter, sans-serif",
-          color: "#424270",
+          color: "#1f2937",
+          fontSize: "14px",
           "::placeholder": {
-            color: "rgb(107 114 128)",
+            color: "rgb(156 163 175)",
           },
         },
       },
       classes: {
-        base: "pt-3 pb-1 block w-full h-11 px-4 mt-0 bg-ui-bg-field border rounded-md appearance-none focus:outline-none focus:ring-0 focus:shadow-borders-interactive-with-active border-ui-border-base hover:bg-ui-bg-field-hover transition-all duration-300 ease-in-out",
+        base: "pt-3 pb-1 block w-full h-11 px-4 mt-0 bg-white border-2 border-gray-200 rounded-lg appearance-none focus:outline-none focus:border-amber-500 hover:border-gray-300 transition-all duration-200",
       },
     }
   }, [])
@@ -115,33 +116,48 @@ const Payment = ({
 
   return (
     <div className="bg-white">
-      <div className="flex flex-row items-center justify-between mb-6">
-        <Heading
-          level="h2"
-          className={clx(
-            "flex flex-row text-3xl-regular gap-x-2 items-baseline",
-            {
-              "opacity-50 pointer-events-none select-none":
-                !isOpen && !paymentReady,
-            }
-          )}
-        >
-          <span className="text-2xl">💳</span>
-          Paiement
-          {!isOpen && paymentReady && <CheckCircleSolid className="text-green-600" />}
-        </Heading>
-        {!isOpen && paymentReady && (
-          <Text>
-            <button
-              onClick={handleEdit}
-              className="text-amber-600 hover:text-amber-700 font-medium transition-colors"
-              data-testid="edit-payment-button"
+      {/* Step header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+            !isOpen && paymentReady
+              ? "bg-green-100 text-green-600"
+              : isOpen
+                ? "bg-amber-600 text-white"
+                : "bg-gray-100 text-gray-400"
+          }`}>
+            {!isOpen && paymentReady ? (
+              <CheckCircleSolid className="w-5 h-5" />
+            ) : (
+              "3"
+            )}
+          </div>
+          <div>
+            <Heading
+              level="h2"
+              className={clx("text-base font-bold", {
+                "text-gray-900": isOpen || paymentReady,
+                "text-gray-400": !isOpen && !paymentReady,
+              })}
             >
-              Modifier
-            </button>
-          </Text>
+              Paiement
+            </Heading>
+            {!isOpen && paymentReady && (
+              <p className="text-xs text-gray-500 mt-0.5">Étape complétée</p>
+            )}
+          </div>
+        </div>
+        {!isOpen && paymentReady && (
+          <button
+            onClick={handleEdit}
+            className="text-sm text-amber-600 hover:text-amber-700 font-medium transition-colors"
+            data-testid="edit-payment-button"
+          >
+            Modifier
+          </button>
         )}
       </div>
+
       <div>
         <div className={isOpen ? "block" : "hidden"}>
           {!paidByGiftcard && availablePaymentMethods?.length && (
@@ -150,27 +166,29 @@ const Payment = ({
                 value={selectedPaymentMethod}
                 onChange={(value: string) => setSelectedPaymentMethod(value)}
               >
-                {availablePaymentMethods
-                  .sort((a, b) => {
-                    return a.provider_id > b.provider_id ? 1 : -1
-                  })
-                  .map((paymentMethod) => {
-                    return (
-                      <PaymentContainer
-                        paymentInfoMap={paymentInfoMap}
-                        paymentProviderId={paymentMethod.id}
-                        key={paymentMethod.id}
-                        selectedPaymentOptionId={selectedPaymentMethod}
-                      />
-                    )
-                  })}
+                <div className="space-y-3">
+                  {availablePaymentMethods
+                    .sort((a, b) => {
+                      return a.provider_id > b.provider_id ? 1 : -1
+                    })
+                    .map((paymentMethod) => {
+                      return (
+                        <PaymentContainer
+                          paymentInfoMap={paymentInfoMap}
+                          paymentProviderId={paymentMethod.id}
+                          key={paymentMethod.id}
+                          selectedPaymentOptionId={selectedPaymentMethod}
+                        />
+                      )
+                    })}
+                </div>
               </RadioGroup>
+
               {isStripe && stripeReady && (
                 <div className="mt-5 transition-all duration-150 ease-in-out">
-                  <Text className="font-semibold text-gray-900 mb-2">
-                    Entrez vos informations de carte :
-                  </Text>
-
+                  <p className="text-sm font-medium text-gray-700 mb-3">
+                    Informations de carte bancaire
+                  </p>
                   <CardElement
                     options={useOptions as StripeCardElementOptions}
                     onChange={(e) => {
@@ -188,16 +206,10 @@ const Payment = ({
           )}
 
           {paidByGiftcard && (
-            <div className="flex flex-col w-1/3">
-              <Text className="font-semibold text-gray-900 mb-2">
-                Méthode de paiement
-              </Text>
-              <Text
-                className="text-gray-700"
-                data-testid="payment-method-summary"
-              >
-                Carte cadeau
-              </Text>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-sm font-medium text-green-800">
+                Votre commande est entièrement couverte par une carte cadeau.
+              </p>
             </div>
           )}
 
@@ -208,7 +220,7 @@ const Payment = ({
 
           <Button
             size="large"
-            className="mt-6 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            className="mt-6 w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             onClick={handleSubmit}
             isLoading={isLoading}
             disabled={
@@ -219,34 +231,34 @@ const Payment = ({
           >
             {!activeSession && isStripeFunc(selectedPaymentMethod)
               ? "Entrer les détails de la carte"
-              : "Continuer vers la révision →"}
+              : "Continuer vers la vérification"}
           </Button>
         </div>
 
         <div className={isOpen ? "hidden" : "block"}>
           {cart && paymentReady && activeSession ? (
-            <div className="flex items-start gap-x-1 w-full">
-              <div className="flex flex-col w-1/3">
-                <Text className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                  <span>💳</span> Méthode de paiement
-                </Text>
-                <Text
-                  className="text-gray-700"
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Méthode de paiement
+                </p>
+                <p
+                  className="text-sm font-medium text-gray-900"
                   data-testid="payment-method-summary"
                 >
                   {paymentInfoMap[selectedPaymentMethod]?.title ||
                     selectedPaymentMethod}
-                </Text>
+                </p>
               </div>
-              <div className="flex flex-col w-1/3">
-                <Text className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                  <span>🔒</span> Détails du paiement
-                </Text>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Détails
+                </p>
                 <div
-                  className="flex gap-2 txt-medium text-ui-fg-subtle items-center"
+                  className="flex gap-2 items-center text-sm text-gray-700"
                   data-testid="payment-details-summary"
                 >
-                  <Container className="flex items-center h-7 w-fit p-2 bg-ui-button-neutral-hover">
+                  <Container className="flex items-center h-7 w-fit p-2 bg-white border border-gray-200 rounded">
                     {paymentInfoMap[selectedPaymentMethod]?.icon || (
                       <CreditCard />
                     )}
@@ -254,22 +266,22 @@ const Payment = ({
                   <Text>
                     {isStripeFunc(selectedPaymentMethod) && cardBrand
                       ? cardBrand
-                      : "Another step will appear"}
+                      : "Prêt pour le paiement"}
                   </Text>
                 </div>
               </div>
             </div>
           ) : paidByGiftcard ? (
-            <div className="flex flex-col w-1/3">
-              <Text className="font-semibold text-gray-900 mb-2">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
                 Méthode de paiement
-              </Text>
-              <Text
-                className="text-gray-700"
+              </p>
+              <p
+                className="text-sm font-medium text-gray-900"
                 data-testid="payment-method-summary"
               >
                 Carte cadeau
-              </Text>
+              </p>
             </div>
           ) : null}
         </div>

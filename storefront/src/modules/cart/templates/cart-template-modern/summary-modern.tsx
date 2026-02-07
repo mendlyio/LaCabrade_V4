@@ -4,7 +4,6 @@ import CartTotals from "@modules/common/components/cart-totals"
 import DiscountCode from "@modules/checkout/components/discount-code"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HttpTypes } from "@medusajs/types"
-import ArrowRight from "@medusajs/icons/dist/esm/arrow-right"
 
 type SummaryProps = {
   cart: HttpTypes.StoreCart & {
@@ -29,14 +28,14 @@ const SummaryModern = ({ cart, customer }: SummaryProps) => {
   return (
     <div className="flex flex-col">
       {/* Header */}
-      <div className="p-6 bg-amber-600 border-b border-gray-200">
-        <h2 className="text-xl font-bold text-white">
+      <div className="p-5 border-b border-gray-200 bg-gray-50">
+        <h2 className="text-base font-bold text-gray-900">
           Récapitulatif
         </h2>
       </div>
 
       {/* Content */}
-      <div className="p-6 space-y-6">
+      <div className="p-5 space-y-5">
         {/* Code Promo */}
         <div>
           <DiscountCode cart={cart} customer={customer} />
@@ -52,21 +51,20 @@ const SummaryModern = ({ cart, customer }: SummaryProps) => {
           data-testid="checkout-button"
           className="block"
         >
-          <button className="w-full py-4 px-6 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 group">
+          <button className="w-full py-3.5 px-6 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-base transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-2 group">
             <span>Passer la commande</span>
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </button>
         </LocalizedClientLink>
 
         {/* Info supplémentaire */}
-        <div className="text-center text-xs text-gray-500 space-y-2">
-          <p className="flex items-center justify-center gap-1">
-            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-            </svg>
-            <span>Paiement 100% sécurisé</span>
-          </p>
-          <p>Vos données sont protégées</p>
+        <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+          <svg className="w-3.5 h-3.5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+          </svg>
+          <span>Paiement 100% sécurisé</span>
         </div>
       </div>
     </div>
@@ -74,4 +72,3 @@ const SummaryModern = ({ cart, customer }: SummaryProps) => {
 }
 
 export default SummaryModern
-

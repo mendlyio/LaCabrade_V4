@@ -5,7 +5,6 @@ import { CheckCircleSolid } from "@medusajs/icons"
 import { Button, Heading, Text, clx } from "@medusajs/ui"
 
 import Divider from "@modules/common/components/divider"
-import Radio from "@modules/common/components/radio"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import PickupPoints from "@modules/checkout/components/pickup-points"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
@@ -33,9 +32,10 @@ const Shipping: React.FC<ShippingProps> = ({
   const isOpen = searchParams.get("step") === "delivery"
 
   const selectedShippingMethod = availableShippingMethods?.find(
-    // To do: remove the previously selected shipping method instead of using the last one
     (method) => method.id === cart.shipping_methods?.at(-1)?.shipping_option_id
   )
+
+  const hasShipping = (cart.shipping_methods?.length ?? 0) > 0
 
   const handleEdit = () => {
     router.push(pathname + "?step=delivery", { scroll: false })
@@ -62,76 +62,111 @@ const Shipping: React.FC<ShippingProps> = ({
 
   return (
     <div className="bg-white">
-      <div className="flex flex-row items-center justify-between mb-6">
-        <Heading
-          level="h2"
-          className={clx(
-            "flex flex-row text-3xl-regular gap-x-2 items-baseline",
-            {
-              "opacity-50 pointer-events-none select-none":
-                !isOpen && cart.shipping_methods?.length === 0,
-            }
-          )}
-        >
-          <span className="text-2xl">🚚</span>
-          Livraison
-          {!isOpen && (cart.shipping_methods?.length ?? 0) > 0 && (
-            <CheckCircleSolid className="text-green-600" />
-          )}
-        </Heading>
+      {/* Step header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+            !isOpen && hasShipping
+              ? "bg-green-100 text-green-600"
+              : isOpen
+                ? "bg-amber-600 text-white"
+                : "bg-gray-100 text-gray-400"
+          }`}>
+            {!isOpen && hasShipping ? (
+              <CheckCircleSolid className="w-5 h-5" />
+            ) : (
+              "2"
+            )}
+          </div>
+          <div>
+            <Heading
+              level="h2"
+              className={clx("text-base font-bold", {
+                "text-gray-900": isOpen || hasShipping,
+                "text-gray-400": !isOpen && !hasShipping,
+              })}
+            >
+              Livraison
+            </Heading>
+            {!isOpen && hasShipping && (
+              <p className="text-xs text-gray-500 mt-0.5">Étape complétée</p>
+            )}
+          </div>
+        </div>
         {!isOpen &&
           cart?.shipping_address &&
           cart?.billing_address &&
           cart?.email && (
-            <Text>
-              <button
-                onClick={handleEdit}
-                className="text-amber-600 hover:text-amber-700 font-medium transition-colors"
-                data-testid="edit-delivery-button"
-              >
-                Modifier
-              </button>
-            </Text>
+            <button
+              onClick={handleEdit}
+              className="text-sm text-amber-600 hover:text-amber-700 font-medium transition-colors"
+              data-testid="edit-delivery-button"
+            >
+              Modifier
+            </button>
           )}
       </div>
+
       {isOpen ? (
         <div data-testid="delivery-options-container">
-          <div className="pb-8">
+          <div className="pb-6">
             <RadioGroup value={selectedShippingMethod?.id} onChange={set}>
-              {availableShippingMethods?.map((option) => {
-                return (
-                  <RadioGroup.Option
-                    key={option.id}
-                    value={option.id}
-                    data-testid="delivery-option-radio"
-                    className={clx(
-                      "flex items-center justify-between text-small-regular cursor-pointer py-4 border rounded-rounded px-8 mb-2 hover:shadow-borders-interactive-with-active",
-                      {
-                        "border-ui-border-interactive":
-                          option.id === selectedShippingMethod?.id,
-                      }
-                    )}
-                  >
-                    <div className="flex items-center gap-x-4">
-                      <Radio
-                        checked={option.id === selectedShippingMethod?.id}
-                      />
-                      <span className="text-base-regular">{option.name}</span>
-                    </div>
-                    <span className="justify-self-end text-ui-fg-base">
-                      {option.amount != null && !isNaN(option.amount) 
-                        ? convertToLocale({
-                            amount: option.amount,
-                            currency_code: cart?.currency_code,
-                          })
-                        : "5,00 €"
-                      }
-                    </span>
-                  </RadioGroup.Option>
-                )
-              })}
+              <div className="space-y-3">
+                {availableShippingMethods?.map((option) => {
+                  const isSelected = option.id === selectedShippingMethod?.id
+                  return (
+                    <RadioGroup.Option
+                      key={option.id}
+                      value={option.id}
+                      data-testid="delivery-option-radio"
+                      className={clx(
+                        "relative flex items-center justify-between cursor-pointer py-4 px-5 border-2 rounded-xl transition-all duration-200",
+                        {
+                          "border-amber-500 bg-amber-50 shadow-sm": isSelected,
+                          "border-gray-200 hover:border-gray-300 hover:bg-gray-50": !isSelected,
+                        }
+                      )}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={clx(
+                          "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                          {
+                            "border-amber-600": isSelected,
+                            "border-gray-300": !isSelected,
+                          }
+                        )}>
+                          {isSelected && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-amber-600" />
+                          )}
+                        </div>
+                        <div>
+                          <span className={clx("text-sm font-medium", {
+                            "text-gray-900": isSelected,
+                            "text-gray-700": !isSelected,
+                          })}>
+                            {option.name}
+                          </span>
+                        </div>
+                      </div>
+                      <span className={clx("text-sm font-semibold", {
+                        "text-amber-700": isSelected,
+                        "text-gray-600": !isSelected,
+                      })}>
+                        {option.amount != null && !isNaN(option.amount) 
+                          ? convertToLocale({
+                              amount: option.amount,
+                              currency_code: cart?.currency_code,
+                            })
+                          : "5,00 €"
+                        }
+                      </span>
+                    </RadioGroup.Option>
+                  )
+                })}
+              </div>
             </RadioGroup>
           </div>
+
           {selectedShippingMethod?.provider_id?.toLowerCase?.().includes("bpost") &&
             ((selectedShippingMethod as any)?.metadata?.mode === "pickup" || 
              (selectedShippingMethod as any)?.data?.mode === "pickup") && (
@@ -145,36 +180,36 @@ const Shipping: React.FC<ShippingProps> = ({
 
           <Button
             size="large"
-            className="mt-6 bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            className="mt-4 w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             onClick={handleSubmit}
             isLoading={isLoading}
             disabled={!cart.shipping_methods?.[0]}
             data-testid="submit-delivery-option-button"
           >
-            Continuer vers le paiement →
+            Continuer vers le paiement
           </Button>
         </div>
       ) : (
         <div>
-          <div className="text-small-regular">
-            {cart && (cart.shipping_methods?.length ?? 0) > 0 && (
-              <div className="flex flex-col w-1/3">
-                <Text className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                  <span>📦</span> Méthode
-                </Text>
-                <Text className="txt-medium text-ui-fg-subtle">
-                  {selectedShippingMethod?.name}{" "}
-                  {selectedShippingMethod?.amount != null && !isNaN(selectedShippingMethod.amount)
-                    ? convertToLocale({
-                        amount: selectedShippingMethod.amount,
-                        currency_code: cart?.currency_code,
-                      })
-                    : "5,00 €"
-                  }
-                </Text>
-              </div>
-            )}
-          </div>
+          {cart && hasShipping && (
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                Mode de livraison
+              </p>
+              <p className="text-sm font-medium text-gray-900">
+                {selectedShippingMethod?.name}
+              </p>
+              <p className="text-sm text-gray-600 mt-0.5">
+                {selectedShippingMethod?.amount != null && !isNaN(selectedShippingMethod.amount)
+                  ? convertToLocale({
+                      amount: selectedShippingMethod.amount,
+                      currency_code: cart?.currency_code,
+                    })
+                  : "5,00 €"
+                }
+              </p>
+            </div>
+          )}
         </div>
       )}
       <Divider className="mt-8" />
