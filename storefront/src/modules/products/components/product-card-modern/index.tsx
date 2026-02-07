@@ -225,12 +225,12 @@ export default async function ProductCardModern({
               )}
             </div>
 
-            {/* Bouton d'action */}
-            <button className="p-2 rounded-full bg-amber-600 text-white hover:bg-amber-700 shadow-md hover:shadow-lg transform group-hover:scale-110 transition-all">
+            {/* Flèche vers le produit */}
+            <span className="p-2 rounded-full bg-amber-600 text-white group-hover:bg-amber-700 shadow-md transition-all">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-            </button>
+            </span>
           </div>
 
           {/* Stock indicator */}
