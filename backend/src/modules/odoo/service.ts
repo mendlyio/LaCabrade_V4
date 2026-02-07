@@ -892,7 +892,7 @@ export default class OdooModuleService {
           )
           if (archivedVariantIds.length > 0) {
             console.log(`🔍 [ODOO] Produit ${product.id}: ${archivedVariantIds.length} variante(s) archivée(s) trouvée(s)`)
-            rawVariantIds = archivedVariantIds
+            rawVariantIds = archivedVariantIds as any
           }
         } catch (e: any) {
           console.warn(`⚠️ [ODOO] Erreur recherche variantes archivées pour ${product.id}:`, e.message)
@@ -1158,7 +1158,7 @@ export default class OdooModuleService {
           )
           if (archivedVariantIds.length > 0) {
             console.log(`🔍 [ODOO] fetchProductsPaged: Produit ${product.id}: ${archivedVariantIds.length} variante(s) archivée(s) trouvée(s)`)
-            rawVariantIds = archivedVariantIds
+            rawVariantIds = archivedVariantIds as any
           }
         } catch (e: any) {
           console.warn(`⚠️ [ODOO] fetchProductsPaged: Erreur recherche variantes archivées pour ${product.id}:`, e.message)
