@@ -1,9 +1,11 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { Suspense } from "react"
 
 import Wrapper from "@modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
+import UpsellProducts from "@modules/checkout/components/checkout-upsell/upsell-products"
 import { enrichLineItems, retrieveCart } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { getCustomer } from "@lib/data/customer"
@@ -28,9 +30,14 @@ const fetchCart = async () => {
   return cart
 }
 
-export default async function Checkout() {
+export default async function Checkout({
+  params,
+}: {
+  params: { countryCode: string }
+}) {
   const cart = await fetchCart()
   const customer = await getCustomer()
+  const countryCode = params.countryCode || "be"
 
   const itemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0
 
@@ -112,6 +119,11 @@ export default async function Checkout() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
               <CheckoutSummary cart={cart} customer={customer} />
             </div>
+
+            {/* Carrousel upsell */}
+            <Suspense fallback={null}>
+              <UpsellProducts cart={cart} countryCode={countryCode} />
+            </Suspense>
 
             {/* Trust badges */}
             <div className="bg-white rounded-xl border border-gray-200 p-5">

@@ -106,13 +106,10 @@ const CartDropdown = ({
             className="hidden small:block absolute top-[calc(100%+0.75rem)] right-0 bg-white rounded-xl shadow-2xl border border-gray-200 w-[440px] text-ui-fg-base overflow-hidden"
             data-testid="nav-cart-dropdown"
           >
-            <div className="p-6 flex items-center justify-between bg-amber-600 border-b border-amber-500">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100">
               <div>
-                <h3 className="text-lg font-bold text-white">Mon Panier</h3>
-                <p className="text-sm text-amber-100">{totalItems} article{totalItems > 1 ? 's' : ''}</p>
-              </div>
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl shadow-sm">
-                🛒
+                <h3 className="text-sm font-semibold text-gray-900">Mon Panier</h3>
+                <p className="text-xs text-gray-500">{totalItems} article{totalItems > 1 ? "s" : ""}</p>
               </div>
             </div>
             {cartState && cartState.items?.length ? (
