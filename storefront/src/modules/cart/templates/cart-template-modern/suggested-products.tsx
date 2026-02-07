@@ -11,9 +11,10 @@ type SuggestedProductsProps = {
 
 export default async function SuggestedProducts({ cart, countryCode }: SuggestedProductsProps) {
   let suggestedProducts: HttpTypes.StoreProduct[] = []
+  let region: HttpTypes.StoreRegion | null = null
 
   try {
-    const region = await getRegion(countryCode)
+    region = await getRegion(countryCode)
 
     if (!region) {
       return null
@@ -38,7 +39,7 @@ export default async function SuggestedProducts({ cart, countryCode }: Suggested
     return null
   }
 
-  if (suggestedProducts.length === 0) {
+  if (suggestedProducts.length === 0 || !region) {
     return null
   }
 
@@ -63,7 +64,7 @@ export default async function SuggestedProducts({ cart, countryCode }: Suggested
           <ProductCardModern
             key={product.id}
             product={product}
-            region={region}
+            region={region!}
           />
         ))}
       </div>

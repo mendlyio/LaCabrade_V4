@@ -30,7 +30,7 @@ const SummaryModern = ({ cart, customer }: SummaryProps) => {
     <div className="flex flex-col">
       {/* Header */}
       <div className="p-6 bg-amber-600 border-b border-gray-200">
-        <h2 className="text-xl font-bold text-gray-900">
+        <h2 className="text-xl font-bold text-white">
           Récapitulatif
         </h2>
       </div>
