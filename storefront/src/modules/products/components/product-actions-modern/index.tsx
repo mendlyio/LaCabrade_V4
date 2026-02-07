@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { HttpTypes } from "@medusajs/types"
 import { isEqual } from "lodash"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { addToCart } from "@lib/data/cart"
 import WishlistToggleButton from "@modules/common/components/wishlist-toggle-button"
 
@@ -47,6 +47,7 @@ export default function ProductActionsModern({
   const [isAdding, setIsAdding] = useState(false)
   const [addedToCart, setAddedToCart] = useState(false)
   const countryCode = useParams().countryCode as string
+  const router = useRouter()
 
   // Présélectionner les options si un seul variant
   useEffect(() => {
@@ -321,9 +322,26 @@ export default function ProductActionsModern({
         {/* Buy Now Button */}
         {selectedVariant && inStock && (
           <button
-            className="w-full py-4 px-6 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 border-2 border-amber-600 text-amber-700 hover:bg-amber-50"
+            onClick={async () => {
+              if (!selectedVariant?.id) return
+              setIsAdding(true)
+              try {
+                await addToCart({
+                  variantId: selectedVariant.id,
+                  quantity,
+                  countryCode,
+                })
+                router.push(`/${countryCode}/checkout`)
+              } catch (error) {
+                console.error("Erreur:", error)
+              } finally {
+                setIsAdding(false)
+              }
+            }}
+            disabled={isAdding}
+            className="w-full py-4 px-6 rounded-xl font-bold text-base transition-all duration-300 flex items-center justify-center gap-3 border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
             Acheter maintenant
