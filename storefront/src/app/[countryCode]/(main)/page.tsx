@@ -6,7 +6,7 @@ import { slugify } from "@lib/util/slugify"
 import HeroCarousel from "@modules/home/components/hero-carousel"
 import ScrollCarousel from "@modules/common/components/scroll-carousel"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import ProductPreview from "@modules/products/components/product-preview"
+import ProductCardModern from "@modules/products/components/product-card-modern"
 
 export const metadata: Metadata = {
   title: "La Cabrade - Sellerie Équestre | LC•EQUESTRIAN",
@@ -109,16 +109,15 @@ export default async function Home({
           {lcEquestrianProducts.length > 0 ? (
             <>
               <ScrollCarousel className="-mx-4 px-4">
-                <div className="flex gap-4 pb-4">
+                <div className="flex gap-3 sm:gap-4 pb-4">
                   {lcEquestrianProducts.map((product) => (
                     <div 
                       key={product.id} 
-                      className="flex-none w-[calc(50%-8px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(20%-13px)]"
+                      className="flex-none w-[calc(50%-6px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(25%-12px)] xl:w-[calc(20%-13px)]"
                     >
-                      <ProductPreview
+                      <ProductCardModern
                         region={region}
                         product={product}
-                        isFeatured
                       />
                     </div>
                   ))}
@@ -263,16 +262,15 @@ export default async function Home({
           {outletProducts.length > 0 ? (
             <>
               <ScrollCarousel className="-mx-4 px-4">
-                <div className="flex gap-4 pb-4">
+                <div className="flex gap-3 sm:gap-4 pb-4">
                   {outletProducts.map((product) => (
                     <div 
                       key={product.id} 
-                      className="flex-none w-[calc(50%-8px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(20%-13px)]"
+                      className="flex-none w-[calc(50%-6px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(25%-12px)] xl:w-[calc(20%-13px)]"
                     >
-                      <ProductPreview
+                      <ProductCardModern
                         region={region}
                         product={product}
-                        isFeatured
                       />
                     </div>
                   ))}
