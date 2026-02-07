@@ -54,10 +54,9 @@ export default async function ProductCardModern({
 
   const collection = pricedProduct.collection?.title
 
-  // Images : thumbnail + 3ème image pour le hover (sinon miroir de la 1ère)
+  // Images : 3ème image pour le hover
   const images = pricedProduct.images || []
   const hoverImage = images.length > 2 ? images[2]?.url : null
-  const useMirrorFallback = !hoverImage && !!product.thumbnail
 
   const variantCount = variants.length
 
@@ -172,9 +171,9 @@ export default async function ProductCardModern({
               alt={product.title || "Produit"}
               fill
               className={`object-cover transition-all duration-700 ease-out ${
-                hoverImage || useMirrorFallback
+                hoverImage
                   ? "group-hover:opacity-0 group-hover:scale-105"
-                  : "group-hover:scale-105"
+                  : "group-hover:scale-[1.06] group-hover:rotate-[1.5deg]"
               }`}
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />
@@ -196,24 +195,13 @@ export default async function ProductCardModern({
             </div>
           )}
 
-          {/* 3ème image au hover */}
+          {/* 3ème image au hover : légère rotation + zoom */}
           {hoverImage && (
             <Image
               src={hoverImage}
               alt={`${product.title} - vue alternative`}
               fill
-              className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out scale-105 group-hover:scale-100"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            />
-          )}
-
-          {/* Miroir de la 1ère image si pas de 3ème */}
-          {useMirrorFallback && (
-            <Image
-              src={product.thumbnail!}
-              alt={`${product.title} - vue alternative`}
-              fill
-              className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out scale-105 group-hover:scale-100 -scale-x-100"
+              className="object-cover absolute inset-0 opacity-0 scale-[1.08] rotate-[-1deg] group-hover:opacity-100 group-hover:scale-[1.03] group-hover:rotate-[1deg] transition-all duration-700 ease-out"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />
           )}
