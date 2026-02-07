@@ -237,7 +237,7 @@ export default async function PaginatedProductsModern({
       const price = product.variants?.[0]?.calculated_price?.calculated_amount
       if (!price) return true
       
-      const priceValue = price / 100 // Convertir centimes en euros
+      const priceValue = price // Medusa v2 retourne déjà en euros
       const minPrice = searchParams.price_min ? parseFloat(searchParams.price_min) : 0
       const maxPrice = searchParams.price_max ? parseFloat(searchParams.price_max) : Infinity
       

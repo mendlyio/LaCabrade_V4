@@ -35,7 +35,7 @@ function ProductCardClient({
     new Intl.NumberFormat("fr-FR", {
       style: "currency",
       currency: currencyCode,
-    }).format(amount / 100)
+    }).format(amount)
 
   const isInStock = product.variants?.some((v) => {
     if (!v.manage_inventory || v.allow_backorder) return true
