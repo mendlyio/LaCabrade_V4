@@ -75,15 +75,40 @@ const ShippingAddress = ({
       setFormAddress(undefined, customer.email)
     }
 
-    // Restaurer le numéro de TVA depuis la metadata du cart
+    // Restaurer le numéro de TVA : d'abord depuis le cart, sinon depuis localStorage
     const savedVat = (cart?.metadata as any)?.vat_number
+    const localVat = typeof window !== "undefined" ? localStorage.getItem("lc_vat_number") : null
+
     if (savedVat) {
       setVatNumber(savedVat)
       setShowVatField(true)
       setVatStatus("valid")
       setVatMessage("Numéro validé")
+      // Synchroniser localStorage
+      if (typeof window !== "undefined") localStorage.setItem("lc_vat_number", savedVat)
+    } else if (localVat) {
+      setVatNumber(localVat)
+      setShowVatField(true)
+      setVatStatus("valid")
+      setVatMessage("Numéro restauré — re-vérifiez si nécessaire")
     }
   }, [cart]) // Add cart as a dependency
+
+  // Sauvegarder immédiatement le numéro validé dans cart.metadata + localStorage
+  const saveVatToCart = useCallback(async (validatedVatNumber: string) => {
+    // Sauvegarder dans localStorage immédiatement
+    if (typeof window !== "undefined") {
+      localStorage.setItem("lc_vat_number", validatedVatNumber)
+    }
+
+    // Sauvegarder aussi dans cart.metadata directement (sans attendre la soumission du formulaire)
+    try {
+      const { updateCart } = await import("@lib/data/cart")
+      await updateCart({ metadata: { vat_number: validatedVatNumber } } as any)
+    } catch (err) {
+      console.warn("Impossible de sauvegarder le numéro de TVA dans le cart:", err)
+    }
+  }, [])
 
   // Valider le numéro de TVA via VIES
   const validateVat = useCallback(async () => {
@@ -113,6 +138,8 @@ const ShippingAddress = ({
       if (res.ok && result.valid) {
         setVatStatus("valid")
         setVatMessage(result.company_name ? `✓ ${result.company_name}` : "Numéro valide")
+        // Sauvegarder immédiatement le numéro validé
+        await saveVatToCart(vatNumber)
       } else {
         setVatStatus("invalid")
         setVatMessage(result.message || "Numéro de TVA invalide")
@@ -121,7 +148,7 @@ const ShippingAddress = ({
       setVatStatus("invalid")
       setVatMessage("Erreur de validation. Réessayez.")
     }
-  }, [vatNumber])
+  }, [vatNumber, saveVatToCart])
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -280,11 +307,17 @@ const ShippingAddress = ({
               </div>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   setShowVatField(false)
                   setVatNumber("")
                   setVatStatus("idle")
                   setVatMessage("")
+                  // Nettoyer localStorage et cart.metadata
+                  if (typeof window !== "undefined") localStorage.removeItem("lc_vat_number")
+                  try {
+                    const { updateCart } = await import("@lib/data/cart")
+                    await updateCart({ metadata: { vat_number: null } } as any)
+                  } catch {}
                 }}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
                 aria-label="Fermer"

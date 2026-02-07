@@ -24,6 +24,9 @@ function getCheckoutStep(cart: HttpTypes.StoreCart) {
 
 const SummaryModern = ({ cart, customer }: SummaryProps) => {
   const step = getCheckoutStep(cart)
+  const vatNumber = (cart.metadata as any)?.vat_number || null
+  const customerCountry = cart.shipping_address?.country_code?.toLowerCase()
+  const isIntraCommunityExempt = !!(vatNumber && customerCountry && customerCountry !== "be")
 
   return (
     <div className="flex flex-col">
@@ -35,6 +38,25 @@ const SummaryModern = ({ cart, customer }: SummaryProps) => {
       </div>
 
       <div className="p-6 space-y-5">
+        {/* Bandeau TVA intracommunautaire */}
+        {vatNumber && (
+          <div className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
+            isIntraCommunityExempt
+              ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+              : "bg-blue-50 border border-blue-200 text-blue-700"
+          }`}>
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            <div>
+              <span className="font-semibold">TVA : {vatNumber}</span>
+              {isIntraCommunityExempt && (
+                <span className="block text-[10px] opacity-80">Exonération intracommunautaire appliquée</span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Code Promo */}
         <DiscountCode cart={cart} customer={customer} />
 
