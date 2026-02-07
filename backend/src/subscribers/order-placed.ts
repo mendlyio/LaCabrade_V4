@@ -77,6 +77,14 @@ export default async function customOrderPlacedEmailHandler({
       const shippingCost = order.shipping_methods?.reduce((acc, method) => acc + (Number(method.amount) || 0), 0) || 0
 
       if (items.length > 0) {
+        // Récupérer le numéro de TVA et le nom de société depuis la metadata de la commande
+        const vatNumber = (order.metadata as any)?.vat_number || null
+        const companyName = shippingAddress?.company || null
+
+        if (vatNumber) {
+          console.log(`🏢 Commande avec TVA intracommunautaire: ${vatNumber} (société: ${companyName || 'N/A'})`)
+        }
+
         const odooOrderId = await odooService.createOrder({
           customerEmail: order.email,
           customerName: shippingAddress ? `${shippingAddress.first_name} ${shippingAddress.last_name}` : 'Client Web',
@@ -88,7 +96,9 @@ export default async function customOrderPlacedEmailHandler({
             city: shippingAddress.city,
             postal_code: shippingAddress.postal_code,
             country_code: shippingAddress.country_code
-          } : undefined
+          } : undefined,
+          companyName: companyName || undefined,
+          vatNumber: vatNumber || undefined,
         })
         console.log(`✅ Order synced to Odoo successfully! Odoo ID: ${odooOrderId}`)
       } else {

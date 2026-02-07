@@ -392,6 +392,21 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
         province: formData.get("billing_address.province"),
         phone: formData.get("billing_address.phone"),
       }
+    // Récupérer le numéro de TVA validé s'il est présent
+    const vatNumber = formData.get("vat_number") as string
+    if (vatNumber) {
+      data.metadata = {
+        ...(data.metadata || {}),
+        vat_number: vatNumber,
+      }
+    } else {
+      // Supprimer le numéro de TVA si le champ est vide (l'utilisateur l'a retiré)
+      data.metadata = {
+        ...(data.metadata || {}),
+        vat_number: null,
+      }
+    }
+
     await updateCart(data)
   } catch (e: any) {
     return e.message

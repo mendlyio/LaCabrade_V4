@@ -526,6 +526,8 @@ export default class OdooModuleService {
       postal_code?: string
       country_code?: string
     }
+    companyName?: string // Nom de la société
+    vatNumber?: string   // Numéro de TVA intracommunautaire
   }): Promise<number> {
     if (!this.uid) {
       await this.login()
@@ -551,6 +553,32 @@ export default class OdooModuleService {
 
     if (partnerIds.length === 0) {
       // Create customer
+      const partnerData: any = {
+        name: orderData.companyName || orderData.customerName,
+        email: orderData.customerEmail,
+        street: orderData.shippingAddress?.address_1 || "",
+        city: orderData.shippingAddress?.city || "",
+        zip: orderData.shippingAddress?.postal_code || "",
+      }
+
+      // Si un numéro de TVA est fourni, l'ajouter au partenaire Odoo
+      if (orderData.vatNumber) {
+        partnerData.vat = orderData.vatNumber
+        partnerData.is_company = true
+        console.log(`[Odoo] 🏢 Création partenaire entreprise avec TVA: ${orderData.vatNumber}`)
+      }
+
+      // Si un nom de société est fourni séparément du nom du contact
+      if (orderData.companyName && orderData.companyName !== orderData.customerName) {
+        partnerData.name = orderData.companyName
+        // On peut aussi créer un contact enfant pour la personne physique
+        partnerData.child_ids = [[0, 0, {
+          name: orderData.customerName,
+          email: orderData.customerEmail,
+          type: "contact",
+        }]]
+      }
+
       partnerId = await this.client.request("call", {
         service: "object",
         method: "execute_kw",
@@ -560,19 +588,36 @@ export default class OdooModuleService {
           this.options.apiKey,
           "res.partner",
           "create",
-          [
-            {
-              name: orderData.customerName,
-              email: orderData.customerEmail,
-              street: orderData.shippingAddress?.address_1 || "",
-              city: orderData.shippingAddress?.city || "",
-              zip: orderData.shippingAddress?.postal_code || "",
-            },
-          ],
+          [partnerData],
         ],
       })
     } else {
       partnerId = partnerIds[0]
+
+      // Mettre à jour le partenaire existant avec le numéro de TVA si nouveau
+      if (orderData.vatNumber) {
+        try {
+          await this.client.request("call", {
+            service: "object",
+            method: "execute_kw",
+            args: [
+              this.options.dbName,
+              this.uid,
+              this.options.apiKey,
+              "res.partner",
+              "write",
+              [[partnerId], {
+                vat: orderData.vatNumber,
+                is_company: true,
+                ...(orderData.companyName ? { name: orderData.companyName } : {}),
+              }],
+            ],
+          })
+          console.log(`[Odoo] 🏢 Partner ${partnerId} mis à jour avec TVA: ${orderData.vatNumber}`)
+        } catch (error: any) {
+          console.warn(`[Odoo] ⚠️ Impossible de mettre à jour le partner avec TVA: ${error.message}`)
+        }
+      }
     }
 
     // 2. Create order lines

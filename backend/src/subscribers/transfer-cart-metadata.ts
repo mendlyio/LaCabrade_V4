@@ -44,6 +44,11 @@ export default async function transferCartMetadataHandler({
       metadataToTransfer.bpost_pickup_point = cart.metadata.bpost_pickup_point
       console.log(`[TransferMetadata] ✅ Point relais Bpost transféré vers order ${orderId}`)
     }
+
+    if (cart.metadata.vat_number) {
+      metadataToTransfer.vat_number = cart.metadata.vat_number
+      console.log(`[TransferMetadata] ✅ Numéro de TVA transféré vers order ${orderId}: ${cart.metadata.vat_number}`)
+    }
     
     // Mettre à jour la commande si on a des métadonnées à transférer
     if (Object.keys(metadataToTransfer).length > 0) {

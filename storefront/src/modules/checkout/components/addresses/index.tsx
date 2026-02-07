@@ -121,78 +121,101 @@ const Addresses = ({
       ) : (
         <div>
           {cart && cart.shipping_address ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div
-                className="bg-gray-50 rounded-lg p-4"
-                data-testid="shipping-address-summary"
-              >
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Livraison
-                </p>
-                <p className="text-sm font-medium text-gray-900">
-                  {cart.shipping_address.first_name}{" "}
-                  {cart.shipping_address.last_name}
-                </p>
-                <p className="text-sm text-gray-600 mt-0.5">
-                  {cart.shipping_address.address_1}
-                  {cart.shipping_address.address_2 && `, ${cart.shipping_address.address_2}`}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {cart.shipping_address.postal_code}{" "}
-                  {cart.shipping_address.city}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {cart.shipping_address.country_code?.toUpperCase()}
-                </p>
-              </div>
-
-              <div
-                className="bg-gray-50 rounded-lg p-4"
-                data-testid="shipping-contact-summary"
-              >
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Contact
-                </p>
-                <p className="text-sm font-medium text-gray-900">
-                  {cart.shipping_address.phone || "—"}
-                </p>
-                <p className="text-sm text-gray-600 mt-0.5">
-                  {cart.email}
-                </p>
-              </div>
-
-              <div
-                className="bg-gray-50 rounded-lg p-4"
-                data-testid="billing-address-summary"
-              >
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                  Facturation
-                </p>
-                {sameAsBilling ? (
-                  <p className="text-sm text-gray-500 italic">
-                    Identique à la livraison
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div
+                  className="bg-gray-50 rounded-lg p-4"
+                  data-testid="shipping-address-summary"
+                >
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Livraison
                   </p>
-                ) : (
-                  <>
-                    <p className="text-sm font-medium text-gray-900">
-                      {cart.billing_address?.first_name}{" "}
-                      {cart.billing_address?.last_name}
+                  <p className="text-sm font-medium text-gray-900">
+                    {cart.shipping_address.first_name}{" "}
+                    {cart.shipping_address.last_name}
+                  </p>
+                  {cart.shipping_address.company && (
+                    <p className="text-sm font-medium text-amber-700 mt-0.5">
+                      {cart.shipping_address.company}
                     </p>
-                    <p className="text-sm text-gray-600 mt-0.5">
-                      {cart.billing_address?.address_1}
-                      {cart.billing_address?.address_2 && `, ${cart.billing_address.address_2}`}
+                  )}
+                  <p className="text-sm text-gray-600 mt-0.5">
+                    {cart.shipping_address.address_1}
+                    {cart.shipping_address.address_2 && `, ${cart.shipping_address.address_2}`}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {cart.shipping_address.postal_code}{" "}
+                    {cart.shipping_address.city}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {cart.shipping_address.country_code?.toUpperCase()}
+                  </p>
+                </div>
+
+                <div
+                  className="bg-gray-50 rounded-lg p-4"
+                  data-testid="shipping-contact-summary"
+                >
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Contact
+                  </p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {cart.shipping_address.phone || "—"}
+                  </p>
+                  <p className="text-sm text-gray-600 mt-0.5">
+                    {cart.email}
+                  </p>
+                </div>
+
+                <div
+                  className="bg-gray-50 rounded-lg p-4"
+                  data-testid="billing-address-summary"
+                >
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                    Facturation
+                  </p>
+                  {sameAsBilling ? (
+                    <p className="text-sm text-gray-500 italic">
+                      Identique à la livraison
                     </p>
-                    <p className="text-sm text-gray-600">
-                      {cart.billing_address?.postal_code}{" "}
-                      {cart.billing_address?.city}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {cart.billing_address?.country_code?.toUpperCase()}
-                    </p>
-                  </>
-                )}
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-gray-900">
+                        {cart.billing_address?.first_name}{" "}
+                        {cart.billing_address?.last_name}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-0.5">
+                        {cart.billing_address?.address_1}
+                        {cart.billing_address?.address_2 && `, ${cart.billing_address.address_2}`}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {cart.billing_address?.postal_code}{" "}
+                        {cart.billing_address?.city}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        {cart.billing_address?.country_code?.toUpperCase()}
+                      </p>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
+
+              {/* Numéro de TVA intracommunautaire */}
+              {(cart.metadata as any)?.vat_number && (
+                <div className="mt-3 flex items-center gap-2.5 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2.5">
+                  <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-emerald-700">N° TVA intracommunautaire</p>
+                    <p className="text-sm font-mono text-emerald-800">{(cart.metadata as any).vat_number}</p>
+                  </div>
+                  <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              )}
+            </>
           ) : (
             <div className="flex items-center justify-center py-4">
               <Spinner />

@@ -3,7 +3,7 @@ import { Container } from "@medusajs/ui"
 import Checkbox from "@modules/common/components/checkbox"
 import Input from "@modules/common/components/input"
 import { mapKeys } from "lodash"
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 import AddressSelect from "../address-select"
 import CountrySelect from "../country-select"
 import { useTranslate } from "@lib/context/language-context"
@@ -21,6 +21,10 @@ const ShippingAddress = ({
 }) => {
   const t = useTranslate()
   const [formData, setFormData] = useState<Record<string, any>>({})
+  const [vatNumber, setVatNumber] = useState("")
+  const [vatStatus, setVatStatus] = useState<"idle" | "validating" | "valid" | "invalid">("idle")
+  const [vatMessage, setVatMessage] = useState("")
+  const [showVatField, setShowVatField] = useState(false)
 
   const countriesInRegion = useMemo(
     () => cart?.region?.countries?.map((c) => c.iso_2),
@@ -70,7 +74,54 @@ const ShippingAddress = ({
     if (cart && !cart.email && customer?.email) {
       setFormAddress(undefined, customer.email)
     }
+
+    // Restaurer le numéro de TVA depuis la metadata du cart
+    const savedVat = (cart?.metadata as any)?.vat_number
+    if (savedVat) {
+      setVatNumber(savedVat)
+      setShowVatField(true)
+      setVatStatus("valid")
+      setVatMessage("Numéro validé")
+    }
   }, [cart]) // Add cart as a dependency
+
+  // Valider le numéro de TVA via VIES
+  const validateVat = useCallback(async () => {
+    if (!vatNumber || vatNumber.length < 4) {
+      setVatStatus("invalid")
+      setVatMessage("Numéro de TVA trop court")
+      return
+    }
+
+    setVatStatus("validating")
+    setVatMessage("")
+
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+      if (publishableKey) headers["x-publishable-api-key"] = publishableKey
+
+      const res = await fetch(`${backendUrl}/store/custom/validate-vat`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ vat_number: vatNumber }),
+      })
+
+      const result = await res.json()
+
+      if (res.ok && result.valid) {
+        setVatStatus("valid")
+        setVatMessage(result.company_name ? `✓ ${result.company_name}` : "Numéro valide")
+      } else {
+        setVatStatus("invalid")
+        setVatMessage(result.message || "Numéro de TVA invalide")
+      }
+    } catch {
+      setVatStatus("invalid")
+      setVatMessage("Erreur de validation. Réessayez.")
+    }
+  }, [vatNumber])
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -203,6 +254,128 @@ const ShippingAddress = ({
           onChange={handleChange}
           data-testid="shipping-phone-input"
         />
+      </div>
+
+      {/* Numéro de TVA — optionnel, pour les professionnels */}
+      <div className="mb-4">
+        {!showVatField ? (
+          <button
+            type="button"
+            onClick={() => setShowVatField(true)}
+            className="flex items-center gap-2 text-sm text-amber-700 hover:text-amber-800 font-medium transition-colors group"
+          >
+            <svg className="w-4 h-4 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Ajouter un numéro de TVA (professionnel)
+          </button>
+        ) : (
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <span className="text-sm font-semibold text-gray-700">Numéro de TVA intracommunautaire</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowVatField(false)
+                  setVatNumber("")
+                  setVatStatus("idle")
+                  setVatMessage("")
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Fermer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  name="vat_number"
+                  value={vatNumber}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "")
+                    setVatNumber(val)
+                    if (vatStatus !== "idle") setVatStatus("idle")
+                  }}
+                  placeholder="Ex: BE0123456789"
+                  className={`w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:outline-none transition-colors ${
+                    vatStatus === "valid"
+                      ? "border-emerald-300 bg-emerald-50 focus:ring-emerald-500 focus:border-emerald-500"
+                      : vatStatus === "invalid"
+                      ? "border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500"
+                      : "border-gray-300 bg-white focus:ring-amber-500 focus:border-amber-500"
+                  }`}
+                  data-testid="vat-number-input"
+                />
+                {vatStatus === "valid" && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+                {vatStatus === "invalid" && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={validateVat}
+                disabled={vatStatus === "validating" || !vatNumber}
+                className="px-4 py-2.5 bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 text-white font-medium rounded-lg text-sm transition-colors whitespace-nowrap flex items-center gap-2"
+              >
+                {vatStatus === "validating" ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Vérification...
+                  </>
+                ) : (
+                  "Vérifier"
+                )}
+              </button>
+            </div>
+
+            {vatMessage && (
+              <p className={`text-xs font-medium ${
+                vatStatus === "valid" ? "text-emerald-600" : vatStatus === "invalid" ? "text-red-600" : "text-gray-500"
+              }`}>
+                {vatMessage}
+              </p>
+            )}
+
+            {vatStatus === "valid" && (
+              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 text-xs text-emerald-700">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>La TVA sera déduite pour les achats intracommunautaires hors Belgique.</span>
+              </div>
+            )}
+
+            <p className="text-xs text-gray-400">
+              Format : code pays + numéro (ex: BE0123456789, FR12345678901, DE123456789)
+            </p>
+
+            {/* Champ caché pour transmettre le numéro validé au formulaire */}
+            <input type="hidden" name="vat_number" value={vatStatus === "valid" ? vatNumber : ""} />
+          </div>
+        )}
       </div>
     </>
   )
