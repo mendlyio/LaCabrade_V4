@@ -4,7 +4,6 @@ import { RadioGroup } from "@headlessui/react"
 import { CheckCircleSolid } from "@medusajs/icons"
 import { Button, Heading, Text, clx } from "@medusajs/ui"
 
-import Divider from "@modules/common/components/divider"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import PickupPoints from "@modules/checkout/components/pickup-points"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
@@ -212,7 +211,6 @@ const Shipping: React.FC<ShippingProps> = ({
           )}
         </div>
       )}
-      <Divider className="mt-8" />
     </div>
   )
 }

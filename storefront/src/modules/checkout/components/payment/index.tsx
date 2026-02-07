@@ -9,7 +9,6 @@ import { Button, Container, Heading, Text, clx } from "@medusajs/ui"
 import { CardElement } from "@stripe/react-stripe-js"
 import { StripeCardElementOptions } from "@stripe/stripe-js"
 
-import Divider from "@modules/common/components/divider"
 import PaymentContainer from "@modules/checkout/components/payment-container"
 import { isStripe as isStripeFunc, paymentInfoMap } from "@lib/constants"
 import { StripeContext } from "@modules/checkout/components/payment-wrapper"
@@ -129,7 +128,7 @@ const Payment = ({
             {!isOpen && paymentReady ? (
               <CheckCircleSolid className="w-5 h-5" />
             ) : (
-              "3"
+              "4"
             )}
           </div>
           <div>
@@ -220,7 +219,11 @@ const Payment = ({
 
           <Button
             size="large"
-            className="mt-6 w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            className={`mt-6 w-full font-semibold py-3.5 px-6 rounded-lg transition-all duration-200 text-base ${
+              (isStripe && !cardComplete) || (!selectedPaymentMethod && !paidByGiftcard)
+                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                : "bg-amber-600 hover:bg-amber-700 text-white shadow-md hover:shadow-lg"
+            }`}
             onClick={handleSubmit}
             isLoading={isLoading}
             disabled={
@@ -233,6 +236,16 @@ const Payment = ({
               ? "Entrer les détails de la carte"
               : "Continuer vers la vérification"}
           </Button>
+          {(isStripe && !cardComplete) && selectedPaymentMethod && (
+            <p className="text-xs text-gray-500 text-center mt-2">
+              Veuillez remplir les informations de carte ci-dessus
+            </p>
+          )}
+          {!selectedPaymentMethod && !paidByGiftcard && (
+            <p className="text-xs text-gray-500 text-center mt-2">
+              Sélectionnez un moyen de paiement ci-dessus
+            </p>
+          )}
         </div>
 
         <div className={isOpen ? "hidden" : "block"}>
@@ -286,7 +299,6 @@ const Payment = ({
           ) : null}
         </div>
       </div>
-      <Divider className="mt-8" />
     </div>
   )
 }

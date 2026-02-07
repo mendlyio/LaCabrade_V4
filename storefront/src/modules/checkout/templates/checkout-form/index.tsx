@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { listCartShippingMethods } from "@lib/data/fulfillment"
 import { listCartPaymentMethods } from "@lib/data/payment"
 import { getProductsList } from "@lib/data/products"
@@ -7,8 +8,9 @@ import Addresses from "@modules/checkout/components/addresses"
 import Payment from "@modules/checkout/components/payment"
 import Review from "@modules/checkout/components/review"
 import Shipping from "@modules/checkout/components/shipping"
+import CheckoutUpsell from "@modules/checkout/components/checkout-upsell"
 
-async function fetchLastChanceProducts(
+async function fetchUpsellProducts(
   cart: HttpTypes.StoreCart,
   countryCode: string
 ): Promise<HttpTypes.StoreProduct[]> {
@@ -29,7 +31,7 @@ async function fetchLastChanceProducts(
     const products = result?.response?.products || []
     const cartProductIds = cart.items?.map((item) => item.product_id) || []
 
-    return products
+    const filtered = products
       .filter((p) => !cartProductIds.includes(p.id))
       .filter((p) => {
         const variant = p.variants?.[0] as any
@@ -41,11 +43,15 @@ async function fetchLastChanceProducts(
         const priceB = (b.variants?.[0] as any)?.calculated_price?.calculated_amount || 0
         return priceA - priceB
       })
-      .slice(0, 10)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 6)
+
+    // Upsell "complétez votre commande" = les 8 moins chers
+    const upsell = filtered.slice(0, 8)
+    // Last chance = 6 aléatoires parmi les 10 suivants (pour varier)
+    const lastChance = filtered.slice(0, 12).sort(() => Math.random() - 0.5).slice(0, 6)
+
+    return [upsell, lastChance] as any
   } catch {
-    return []
+    return [[], []] as any
   }
 }
 
@@ -62,22 +68,49 @@ export default async function CheckoutForm({
     return null
   }
 
-  const [shippingMethods, paymentMethods, lastChanceProducts] = await Promise.all([
+  const [shippingMethods, paymentMethods, productSets] = await Promise.all([
     listCartShippingMethods(cart.id),
     listCartPaymentMethods(cart.region?.id ?? ""),
-    fetchLastChanceProducts(cart, countryCode),
+    fetchUpsellProducts(cart, countryCode),
   ])
 
   if (!shippingMethods || !paymentMethods) {
     return null
   }
 
+  const [upsellProducts, lastChanceProducts] = productSets as any as [HttpTypes.StoreProduct[], HttpTypes.StoreProduct[]]
+
   return (
-    <div className="w-full space-y-2">
-      <Addresses cart={cart} customer={customer} />
-      <Shipping cart={cart} availableShippingMethods={shippingMethods} />
-      <Payment cart={cart} availablePaymentMethods={paymentMethods} />
-      <Review cart={cart} lastChanceProducts={lastChanceProducts} />
+    <div className="w-full">
+      {/* Étape 1 : Adresse */}
+      <div className="border-b border-gray-100 pb-2 mb-2">
+        <Addresses cart={cart} customer={customer} />
+      </div>
+
+      {/* Étape 2 : Livraison */}
+      <div className="border-b border-gray-100 pb-2 mb-2">
+        <Shipping cart={cart} availableShippingMethods={shippingMethods} />
+      </div>
+
+      {/* Étape 3 : Complétez votre commande (upsell) */}
+      <div className="border-b border-gray-100 pb-2 mb-2">
+        <CheckoutUpsell
+          products={upsellProducts || []}
+          cartItems={cart.items}
+          currencyCode={cart.currency_code}
+          stepNumber={3}
+        />
+      </div>
+
+      {/* Étape 4 : Paiement */}
+      <div className="border-b border-gray-100 pb-2 mb-2">
+        <Payment cart={cart} availablePaymentMethods={paymentMethods} />
+      </div>
+
+      {/* Étape 5 : Vérification et validation */}
+      <div>
+        <Review cart={cart} lastChanceProducts={lastChanceProducts || []} />
+      </div>
     </div>
   )
 }

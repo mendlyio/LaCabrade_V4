@@ -30,7 +30,7 @@ const Item = ({ item, type = "full" }: ItemProps) => {
     setError(null)
     setUpdating(true)
 
-    const message = await updateLineItem({
+    await updateLineItem({
       lineId: item.id,
       quantity,
     })
@@ -42,18 +42,17 @@ const Item = ({ item, type = "full" }: ItemProps) => {
       })
   }
 
-  // TODO: Update this to grab the actual max inventory
   const maxQtyFromInventory = 10
   const maxQuantity = item.variant?.manage_inventory ? 10 : maxQtyFromInventory
 
   return (
     <Table.Row className="w-full" data-testid="product-row">
-      <Table.Cell className="!pl-0 p-4 w-24">
+      <Table.Cell className="!pl-0 p-2 sm:p-4 w-14 sm:w-24">
         <LocalizedClientLink
           href={`/products/${handle}`}
           className={clx("flex", {
-            "w-16": type === "preview",
-            "small:w-24 w-12": type === "full",
+            "w-12 sm:w-16": type === "preview",
+            "w-14 sm:w-20 md:w-24": type === "full",
           })}
         >
           <Thumbnail
@@ -64,34 +63,51 @@ const Item = ({ item, type = "full" }: ItemProps) => {
         </LocalizedClientLink>
       </Table.Cell>
 
-      <Table.Cell className="text-left">
+      <Table.Cell className="text-left p-2 sm:p-4">
         <Text
-          className="txt-medium-plus text-ui-fg-base"
+          className="text-xs sm:text-sm font-medium text-gray-900 line-clamp-2"
           data-testid="product-title"
         >
           {item.product_title}
         </Text>
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {/* Mobile : afficher quantité + delete inline */}
+        {type === "full" && (
+          <div className="flex sm:hidden items-center gap-2 mt-2">
+            <CartItemSelect
+              value={item.quantity}
+              onChange={(value) => changeQuantity(parseInt(value.target.value))}
+              className="w-14 h-8 text-xs p-1"
+              data-testid="product-select-button"
+            >
+              {Array.from(
+                { length: Math.min(maxQuantity, 10) },
+                (_, i) => (
+                  <option value={i + 1} key={i}>{i + 1}</option>
+                )
+              )}
+            </CartItemSelect>
+            <DeleteButton id={item.id} data-testid="product-delete-button" />
+            {updating && <Spinner />}
+          </div>
+        )}
       </Table.Cell>
 
+      {/* Desktop: Quantité */}
       {type === "full" && (
-        <Table.Cell>
-          <div className="flex gap-2 items-center w-28">
+        <Table.Cell className="hidden sm:table-cell p-2 sm:p-4">
+          <div className="flex gap-2 items-center">
             <DeleteButton id={item.id} data-testid="product-delete-button" />
             <CartItemSelect
               value={item.quantity}
               onChange={(value) => changeQuantity(parseInt(value.target.value))}
-              className="w-14 h-10 p-4"
+              className="w-14 h-10 p-2"
               data-testid="product-select-button"
             >
               {Array.from(
-                {
-                  length: Math.min(maxQuantity, 10),
-                },
+                { length: Math.min(maxQuantity, 10) },
                 (_, i) => (
-                  <option value={i + 1} key={i}>
-                    {i + 1}
-                  </option>
+                  <option value={i + 1} key={i}>{i + 1}</option>
                 )
               )}
             </CartItemSelect>
@@ -101,21 +117,23 @@ const Item = ({ item, type = "full" }: ItemProps) => {
         </Table.Cell>
       )}
 
+      {/* Desktop: Prix unitaire */}
       {type === "full" && (
-        <Table.Cell className="hidden small:table-cell">
+        <Table.Cell className="hidden md:table-cell p-2 sm:p-4">
           <LineItemUnitPrice item={item} style="tight" />
         </Table.Cell>
       )}
 
-      <Table.Cell className="!pr-0">
+      {/* Total */}
+      <Table.Cell className="!pr-0 p-2 sm:p-4">
         <span
           className={clx("!pr-0", {
             "flex flex-col items-end h-full justify-center": type === "preview",
           })}
         >
           {type === "preview" && (
-            <span className="flex gap-x-1 ">
-              <Text className="text-ui-fg-muted">{item.quantity}x </Text>
+            <span className="flex gap-x-1">
+              <Text className="text-ui-fg-muted text-xs">{item.quantity}x </Text>
               <LineItemUnitPrice item={item} style="tight" />
             </span>
           )}
