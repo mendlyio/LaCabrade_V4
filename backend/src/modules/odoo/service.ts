@@ -867,47 +867,103 @@ export default class OdooModuleService {
     // Enrichir les produits avec les variantes et attributs (même logique que fetchProductsPaged)
     for (const product of products) {
       // Enrichir les variantes — y compris les produits simples (1 variante)
-      const rawVariantIds = Array.isArray(product.product_variant_ids)
+      let rawVariantIds = Array.isArray(product.product_variant_ids)
         ? product.product_variant_ids.filter((v: any) => typeof v === "number")
         : []
 
-      if (rawVariantIds.length > 0) {
-        const variants: OdooProductVariant[] = await this.client.request(
-          "call",
-          {
-            service: "object",
-            method: "execute_kw",
-            args: [
-              this.options.dbName,
-              this.uid!,
-              this.options.apiKey,
-              "product.product",
-              "read",
-              [rawVariantIds],
-              {
-                fields: [
-                  "display_name",
-                  "list_price",
-                  "lst_price",
-                  "default_code",
-                  "currency_id",
-                  "product_template_variant_value_ids",
-                  "weight",
-                  "volume",
-                  "barcode",
-                  "image_512",
-                  "qty_available",
-                ],
-              },
-            ],
+      // Si aucune variante visible, chercher les variantes archivées (active_test: false)
+      if (rawVariantIds.length === 0) {
+        try {
+          const archivedVariantIds: number[] = await this.client.request(
+            "call",
+            {
+              service: "object",
+              method: "execute_kw",
+              args: [
+                this.options.dbName,
+                this.uid!,
+                this.options.apiKey,
+                "product.product",
+                "search",
+                [[["product_tmpl_id", "=", product.id]]],
+                { context: { active_test: false } },
+              ],
+            }
+          )
+          if (archivedVariantIds.length > 0) {
+            console.log(`🔍 [ODOO] Produit ${product.id}: ${archivedVariantIds.length} variante(s) archivée(s) trouvée(s)`)
+            rawVariantIds = archivedVariantIds
           }
-        )
+        } catch (e: any) {
+          console.warn(`⚠️ [ODOO] Erreur recherche variantes archivées pour ${product.id}:`, e.message)
+        }
+      }
+
+      if (rawVariantIds.length > 0) {
+        const variantFields = [
+          "display_name",
+          "list_price",
+          "lst_price",
+          "default_code",
+          "currency_id",
+          "product_template_variant_value_ids",
+          "weight",
+          "volume",
+          "barcode",
+          "image_512",
+          "qty_available",
+        ]
+
+        let variants: OdooProductVariant[] = []
+        try {
+          // Tenter la lecture normale
+          variants = await this.client.request(
+            "call",
+            {
+              service: "object",
+              method: "execute_kw",
+              args: [
+                this.options.dbName,
+                this.uid!,
+                this.options.apiKey,
+                "product.product",
+                "read",
+                [rawVariantIds],
+                { fields: variantFields },
+              ],
+            }
+          )
+        } catch (readErr: any) {
+          // Si read échoue (variantes archivées), retenter avec active_test: false
+          try {
+            variants = await this.client.request(
+              "call",
+              {
+                service: "object",
+                method: "execute_kw",
+                args: [
+                  this.options.dbName,
+                  this.uid!,
+                  this.options.apiKey,
+                  "product.product",
+                  "search_read",
+                  [[["id", "in", rawVariantIds]]],
+                  { fields: variantFields, context: { active_test: false } },
+                ],
+              }
+            )
+          } catch (fallbackErr: any) {
+            console.warn(`⚠️ [ODOO] Impossible de lire les variantes pour produit ${product.id}:`, fallbackErr.message)
+          }
+        }
 
         // Enrichir les attributs des variantes (utile uniquement pour multi-variantes)
-        if (product.product_variant_count > 1) {
+        if (product.product_variant_count > 1 && variants.length > 0) {
           await this.enrichVariantAttributeValues(variants)
         }
-        product.product_variant_ids = variants
+        if (variants.length > 0) {
+          product.product_variant_ids = variants
+        }
       }
 
       if (product.attribute_line_ids?.length) {
