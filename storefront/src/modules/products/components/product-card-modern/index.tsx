@@ -54,9 +54,10 @@ export default async function ProductCardModern({
 
   const collection = pricedProduct.collection?.title
 
-  // Images : thumbnail + 2ème image pour le hover
+  // Images : thumbnail + 3ème image pour le hover (sinon miroir de la 1ère)
   const images = pricedProduct.images || []
-  const secondImage = images.length > 1 ? images[1]?.url : null
+  const hoverImage = images.length > 2 ? images[2]?.url : null
+  const useMirrorFallback = !hoverImage && !!product.thumbnail
 
   const variantCount = variants.length
 
@@ -171,7 +172,7 @@ export default async function ProductCardModern({
               alt={product.title || "Produit"}
               fill
               className={`object-cover transition-all duration-700 ease-out ${
-                secondImage
+                hoverImage || useMirrorFallback
                   ? "group-hover:opacity-0 group-hover:scale-105"
                   : "group-hover:scale-105"
               }`}
@@ -195,13 +196,24 @@ export default async function ProductCardModern({
             </div>
           )}
 
-          {/* 2ème image au hover */}
-          {secondImage && (
+          {/* 3ème image au hover */}
+          {hoverImage && (
             <Image
-              src={secondImage}
-              alt={`${product.title} - vue 2`}
+              src={hoverImage}
+              alt={`${product.title} - vue alternative`}
               fill
               className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out scale-105 group-hover:scale-100"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            />
+          )}
+
+          {/* Miroir de la 1ère image si pas de 3ème */}
+          {useMirrorFallback && (
+            <Image
+              src={product.thumbnail!}
+              alt={`${product.title} - vue alternative`}
+              fill
+              className="object-cover absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out scale-105 group-hover:scale-100 -scale-x-100"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />
           )}
