@@ -73,9 +73,9 @@ export default async function Home({
     cheval: "https://ik.imagekit.io/kodt9cn6f/Cabrade/cheval.webp",
     cavalier: "https://ik.imagekit.io/kodt9cn6f/Cabrade/cavalier.webp",
     "soin-et-alimentation":
-      "https://ik.imagekit.io/kodt9cn6f/Cabrade/soin%20et%20alimentation.webp",
+      "https://ik.imagekit.io/kodt9cn6f/Cabrade/soin%20et%20alimentation.webp?updatedAt=1770375198653",
     "son-et-alimentation":
-      "https://ik.imagekit.io/kodt9cn6f/Cabrade/soin%20et%20alimentation.webp",
+      "https://ik.imagekit.io/kodt9cn6f/Cabrade/soin%20et%20alimentation.webp?updatedAt=1770375198653",
     ecurie: "https://ik.imagekit.io/kodt9cn6f/Cabrade/ecurie.webp",
     outlet: "https://ik.imagekit.io/kodt9cn6f/Cabrade/outlet.webp",
   }
@@ -171,27 +171,25 @@ export default async function Home({
                   <LocalizedClientLink
                     key={category.id}
                     href={`/categories/${category.handle}`}
-                    className="flex-none w-[calc(100%-32px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] group relative block overflow-hidden rounded-xl aspect-square bg-pink-50 hover:shadow-2xl transition-all duration-300"
+                    className="flex-none w-[calc(100%-32px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] group relative block overflow-hidden rounded-2xl aspect-square bg-white shadow-sm ring-1 ring-black/5 transition-all duration-300 hover:shadow-xl"
                   >
                     <div
-                      className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+                      className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-[1.03]"
                       style={{
                         backgroundImage: categoryImage ? `url(${categoryImage})` : undefined,
                       }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#4a1d2a]/70 via-[#4a1d2a]/20 to-transparent group-hover:from-[#4a1d2a]/80 transition-all duration-300" />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-20 group-hover:opacity-30 transition-opacity">
-                      <svg className="w-32 h-32 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                      </svg>
-                    </div>
-                    <div className="absolute inset-0 flex flex-col items-center justify-end p-6 text-center">
-                      <h3 className="text-xl md:text-2xl font-bold text-white mb-2 drop-shadow-lg">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent transition-opacity duration-300 group-hover:from-black/80" />
+                    <div className="absolute inset-x-0 bottom-0 p-5 text-left">
+                      <h3 className="text-lg md:text-xl font-semibold text-white drop-shadow">
                         {category.name}
                       </h3>
-                      <p className="text-sm text-white/90 opacity-0 group-hover:opacity-100 transition-opacity duration-300 font-medium">
-                        Découvrir →
-                      </p>
+                      <div className="mt-2 inline-flex items-center gap-2 text-sm text-white/90 font-medium">
+                        Découvrir
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
                     </div>
                 </LocalizedClientLink>
                   )
