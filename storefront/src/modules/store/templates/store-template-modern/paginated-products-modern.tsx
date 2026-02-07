@@ -6,6 +6,7 @@ import { getCollectionsList } from "@lib/data/collections"
 import { buildCategoryTree } from "@lib/util/category-tree"
 import ProductCardModern from "@modules/products/components/product-card-modern"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import LoadMoreProducts from "./load-more-products"
 
 type SearchParams = {
   sortBy?: string
@@ -294,111 +295,18 @@ export default async function PaginatedProductsModern({
             <span className="text-gray-400">Aucun produit trouvé</span>
           )}
         </div>
-        
-        {totalPages > 1 && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
-            <span className="w-6 h-6 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-[11px]">{page}</span>
-            <span>/</span>
-            <span>{totalPages}</span>
-          </div>
-        )}
       </div>
 
-      {/* Products Grid */}
+      {/* Products Grid — "Charger plus" dynamique */}
       {products.length > 0 ? (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 mb-16">
-            {products.map((product) => (
-              <ProductCardModern
-                key={product.id}
-                product={product}
-                region={region}
-              />
-            ))}
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-1.5 sm:gap-2">
-              {/* Bouton Précédent */}
-              {hasPrevPage ? (
-                <LocalizedClientLink
-                  href={`/store?${buildSearchParams({
-                    ...searchParams,
-                    page: String(page - 1),
-                  })}`}
-                  className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-all text-gray-600 hover:text-amber-600"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </LocalizedClientLink>
-              ) : (
-                <div className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-100 text-gray-300 cursor-not-allowed">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                </div>
-              )}
-
-              {/* Numéros de page */}
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum
-                  if (totalPages <= 5) {
-                    pageNum = i + 1
-                  } else if (page <= 3) {
-                    pageNum = i + 1
-                  } else if (page >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i
-                  } else {
-                    pageNum = page - 2 + i
-                  }
-
-                  const isActive = pageNum === page
-
-                  return (
-                    <LocalizedClientLink
-                      key={pageNum}
-                      href={`/store?${buildSearchParams({
-                        ...searchParams,
-                        page: String(pageNum),
-                      })}`}
-                      className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-medium transition-all duration-200 ${
-                        isActive
-                          ? 'bg-amber-600 text-white shadow-md shadow-amber-200'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {pageNum}
-                    </LocalizedClientLink>
-                  )
-                })}
-              </div>
-
-              {/* Bouton Suivant */}
-              {hasNextPage ? (
-                <LocalizedClientLink
-                  href={`/store?${buildSearchParams({
-                    ...searchParams,
-                    page: String(page + 1),
-                  })}`}
-                  className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-all text-gray-600 hover:text-amber-600"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </LocalizedClientLink>
-              ) : (
-                <div className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-100 text-gray-300 cursor-not-allowed">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              )}
-            </div>
-          )}
-        </>
+        <LoadMoreProducts
+          initialProducts={products}
+          totalCount={count}
+          limit={displayLimit}
+          countryCode={countryCode}
+          regionId={region.id}
+          queryParams={queryParams}
+        />
       ) : (
         <div className="text-center py-24 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
           <div className="mb-6">
