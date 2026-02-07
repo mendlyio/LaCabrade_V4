@@ -46,6 +46,8 @@ export default function ProductActionsModern({
   const [quantity, setQuantity] = useState(1)
   const [isAdding, setIsAdding] = useState(false)
   const [addedToCart, setAddedToCart] = useState(false)
+  const [notifyEmail, setNotifyEmail] = useState("")
+  const [notifySubmitted, setNotifySubmitted] = useState(false)
   const countryCode = useParams().countryCode as string
   const router = useRouter()
 
@@ -73,6 +75,36 @@ export default function ProductActionsModern({
   const inStock = useMemo(() => {
     return isVariantAvailable(selectedVariant)
   }, [selectedVariant])
+
+  // Produit globalement épuisé ?
+  const isProductGloballyOutOfStock = useMemo(() => {
+    if (!product.variants || product.variants.length === 0) return false
+    return product.variants.every((v) => !isVariantAvailable(v))
+  }, [product.variants])
+
+  // Notification stock
+  const handleNotifyMe = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!notifyEmail) return
+
+    try {
+      await fetch("/api/stock-notification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: notifyEmail,
+          variantId: selectedVariant?.id || product.variants?.[0]?.id,
+          productTitle: product.title,
+        }),
+      })
+      setNotifySubmitted(true)
+      setNotifyEmail("")
+    } catch (error) {
+      console.error("Erreur notification stock:", error)
+      setNotifySubmitted(true)
+      setNotifyEmail("")
+    }
+  }
 
   // Quantité disponible
   const availableQuantity = useMemo(() => {
@@ -353,6 +385,46 @@ export default function ProductActionsModern({
           <WishlistToggleButton productId={product.id!} variant="button" size="lg" />
         </div>
       </div>
+
+      {/* Formulaire alertez-moi : variante épuisée OU produit globalement épuisé */}
+      {((!inStock && selectedVariant) || isProductGloballyOutOfStock) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            <h3 className="font-bold text-gray-900">Alertez-moi du retour en stock</h3>
+          </div>
+          {notifySubmitted ? (
+            <div className="flex items-center gap-2 text-green-700 bg-green-50 rounded-lg p-3">
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              <span className="text-sm font-medium">Merci ! Nous vous préviendrons dès le retour en stock.</span>
+            </div>
+          ) : (
+            <form onSubmit={handleNotifyMe} className="flex gap-2">
+              <input
+                type="email"
+                value={notifyEmail}
+                onChange={(e) => setNotifyEmail(e.target.value)}
+                placeholder="Votre adresse email"
+                required
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm"
+              />
+              <button
+                type="submit"
+                className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-colors text-sm"
+              >
+                Notifier
+              </button>
+            </form>
+          )}
+          <p className="text-xs text-gray-500">
+            Recevez un email dès que ce produit est de nouveau disponible.
+          </p>
+        </div>
+      )}
 
       {/* Help Text */}
       <div className="text-sm text-gray-500 text-center">
