@@ -81,37 +81,44 @@ export default async function CheckoutForm({
   const [upsellProducts, lastChanceProducts] = productSets as any as [HttpTypes.StoreProduct[], HttpTypes.StoreProduct[]]
 
   return (
-    <div className="w-full">
+    <div className="w-full relative">
       {/* Auto-routage vers la bonne étape au chargement */}
       <CheckoutStepRouter cart={cart} />
 
+      {/* Ligne de progression verticale */}
+      <div className="absolute left-[19px] top-6 bottom-6 w-[2px] bg-gradient-to-b from-amber-200 via-gray-200 to-gray-100 hidden sm:block" />
+
       {/* Étape 1 : Adresse */}
-      <div className="border-b border-gray-100 pb-2 mb-2">
+      <div className="relative pb-8 mb-0">
         <Addresses cart={cart} customer={customer} />
+        <div className="mx-4 sm:mx-0 sm:ml-[40px] mt-6 border-b-2 border-dashed border-gray-200" />
       </div>
 
       {/* Étape 2 : Livraison */}
-      <div className="border-b border-gray-100 pb-2 mb-2">
+      <div className="relative pb-8 mb-0">
         <Shipping cart={cart} availableShippingMethods={shippingMethods} />
+        <div className="mx-4 sm:mx-0 sm:ml-[40px] mt-6 border-b-2 border-dashed border-gray-200" />
       </div>
 
       {/* Étape 3 : Complétez votre commande (upsell) */}
-      <div className="border-b border-gray-100 pb-2 mb-2">
+      <div className="relative pb-8 mb-0">
         <CheckoutUpsell
           products={upsellProducts || []}
           cartItems={cart.items}
           currencyCode={cart.currency_code}
           stepNumber={3}
         />
+        <div className="mx-4 sm:mx-0 sm:ml-[40px] mt-6 border-b-2 border-dashed border-gray-200" />
       </div>
 
       {/* Étape 4 : Paiement */}
-      <div className="border-b border-gray-100 pb-2 mb-2">
+      <div className="relative pb-8 mb-0">
         <Payment cart={cart} availablePaymentMethods={paymentMethods} />
+        <div className="mx-4 sm:mx-0 sm:ml-[40px] mt-6 border-b-2 border-dashed border-gray-200" />
       </div>
 
       {/* Étape 5 : Vérification et validation */}
-      <div>
+      <div className="relative pb-2">
         <Review cart={cart} lastChanceProducts={lastChanceProducts || []} />
       </div>
     </div>
