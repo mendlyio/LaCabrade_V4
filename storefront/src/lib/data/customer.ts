@@ -39,11 +39,44 @@ export async function signup(_currentState: unknown, formData: FormData) {
     phone: formData.get("phone") as string,
   }
 
-  // Ajouter les infos professionnelles si fournies
-  if (vatNumber || companyName) {
+  // Si un numéro de TVA est fourni, le valider via VIES avant de l'enregistrer
+  let validatedVat = ""
+  let validatedCompanyName = companyName
+
+  if (vatNumber) {
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || process.env.MEDUSA_BACKEND_URL || "http://localhost:9000"
+      const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (publishableKey) headers["x-publishable-api-key"] = publishableKey
+
+      const viesRes = await fetch(`${backendUrl}/store/custom/validate-vat`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ vat_number: vatNumber }),
+      })
+
+      const viesData = await viesRes.json()
+
+      if (viesRes.ok && viesData.valid) {
+        validatedVat = vatNumber
+        // Utiliser le nom de société retourné par VIES si pas déjà renseigné
+        if (!validatedCompanyName && viesData.company_name) {
+          validatedCompanyName = viesData.company_name
+        }
+      } else {
+        return `Numéro de TVA invalide : ${viesData.message || "vérifiez le format et réessayez"}`
+      }
+    } catch {
+      return "Impossible de vérifier le numéro de TVA. Réessayez ou laissez le champ vide."
+    }
+  }
+
+  // Ajouter les infos professionnelles si fournies et validées
+  if (validatedVat || validatedCompanyName) {
     customerForm.metadata = {
-      ...(vatNumber ? { vat_number: vatNumber } : {}),
-      ...(companyName ? { company_name: companyName } : {}),
+      ...(validatedVat ? { vat_number: validatedVat } : {}),
+      ...(validatedCompanyName ? { company_name: validatedCompanyName } : {}),
     }
   }
 
