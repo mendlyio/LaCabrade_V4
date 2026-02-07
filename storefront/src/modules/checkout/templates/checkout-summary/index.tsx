@@ -10,10 +10,10 @@ const CheckoutSummary = ({ cart, customer }: { cart: any; customer?: HttpTypes.S
   return (
     <div className="flex flex-col">
       {/* Header */}
-      <div className="p-5 border-b border-gray-200 bg-gray-50">
-        <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+      <div className="px-5 py-4 border-b border-gray-100">
+        <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider flex items-center justify-between">
           Récapitulatif
-          <span className="ml-auto text-xs font-medium text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-200">
+          <span className="text-xs font-normal normal-case tracking-normal text-gray-500">
             {itemCount} article{itemCount > 1 ? "s" : ""}
           </span>
         </h2>

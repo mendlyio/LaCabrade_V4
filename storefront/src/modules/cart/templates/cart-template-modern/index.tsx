@@ -5,10 +5,6 @@ import SignInPrompt from "../../components/sign-in-prompt"
 import SuggestedProducts from "./suggested-products"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import ShoppingBag from "@medusajs/icons/dist/esm/shopping-bag"
-import Heart from "@medusajs/icons/dist/esm/heart"
-import TruckFast from "@medusajs/icons/dist/esm/truck-fast"
-import ShieldCheck from "@medusajs/icons/dist/esm/shield-check"
 
 const CartTemplateModern = ({
   cart,
@@ -22,25 +18,24 @@ const CartTemplateModern = ({
   const itemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="content-container py-6 sm:py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <ShoppingBag className="w-7 h-7 text-amber-600" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                 Mon Panier
               </h1>
               <p className="text-sm text-gray-500 mt-1">
                 {itemCount > 0 
-                  ? `${itemCount} article${itemCount > 1 ? 's' : ''} dans votre panier`
+                  ? `${itemCount} article${itemCount > 1 ? "s" : ""} dans votre panier`
                   : "Votre panier est vide"}
               </p>
             </div>
             <LocalizedClientLink
               href="/store"
-              className="hidden md:flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-700 hover:border-amber-600 hover:text-amber-600 rounded-lg font-medium transition-all text-sm"
+              className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all"
             >
               Continuer mes achats
             </LocalizedClientLink>
@@ -49,106 +44,81 @@ const CartTemplateModern = ({
       </div>
 
       {/* Breadcrumb */}
-      <div className="bg-gray-50 border-b border-gray-100">
+      <div className="bg-white border-b border-gray-100">
         <div className="content-container py-3">
-          <nav className="flex items-center gap-2 text-xs text-gray-500">
+          <nav className="flex items-center gap-2 text-xs text-gray-400">
             <LocalizedClientLink href="/" className="hover:text-amber-600 transition-colors">
               Accueil
             </LocalizedClientLink>
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-            <span className="text-gray-900 font-medium">Panier</span>
+            <span>/</span>
+            <span className="text-gray-700 font-medium">Panier</span>
           </nav>
         </div>
       </div>
 
-      <div className="content-container py-12" data-testid="cart-container">
+      <div className="content-container py-8 sm:py-10" data-testid="cart-container">
         {cart?.items?.length ? (
           <>
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8">
-              {/* Articles du panier */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
+              {/* Colonne gauche */}
               <div className="space-y-6">
-                {!customer && (
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
-                    <SignInPrompt />
-                  </div>
-                )}
+                {!customer && <SignInPrompt />}
 
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                  <div className="p-5 border-b border-gray-200 bg-gray-50">
-                    <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                      <ShoppingBag className="w-5 h-5 text-gray-600" />
+                  <div className="px-6 py-4 border-b border-gray-100">
+                    <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
                       Articles ({itemCount})
                     </h2>
                   </div>
-                  <div className="p-6">
+                  <div className="p-4 sm:p-6">
                     <ItemsTemplate items={cart?.items} />
                   </div>
                 </div>
 
-                {/* Continue Shopping Button (Mobile) */}
+                {/* Mobile : continuer achats */}
                 <LocalizedClientLink
                   href="/store"
-                  className="md:hidden flex items-center justify-center gap-2 px-6 py-3 border border-gray-300 text-gray-700 hover:border-amber-600 hover:text-amber-600 rounded-lg font-medium transition-all w-full text-sm"
+                  className="md:hidden flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all w-full"
                 >
                   Continuer mes achats
                 </LocalizedClientLink>
               </div>
 
-              {/* Résumé */}
+              {/* Colonne droite : résumé */}
               <div className="lg:sticky lg:top-24 h-fit">
                 {cart && cart.region && (
-                  <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <Summary cart={cart as any} customer={customer} />
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Trust Badges */}
-            <div className="mt-12 bg-white rounded-xl border border-gray-200 p-8">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <ShieldCheck className="w-6 h-6 text-green-600" />
-                  </div>
-                  <h3 className="font-semibold text-sm mb-1">Paiement Sécurisé</h3>
-                  <p className="text-xs text-gray-600">100% sécurisé</p>
+            {/* Réassurance */}
+            <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z", label: "Paiement sécurisé", sub: "SSL 256 bits" },
+                { icon: "M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0", label: "Livraison rapide", sub: "24-48h" },
+                { icon: "M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6", label: "Retours faciles", sub: "14 jours" },
+                { icon: "M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z", label: "Service client", sub: "7j/7" },
+              ].map((item, i) => (
+                <div key={i} className="bg-white rounded-lg border border-gray-200 p-4 text-center">
+                  <svg className="w-6 h-6 text-amber-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={item.icon} />
+                  </svg>
+                  <p className="text-xs font-semibold text-gray-900">{item.label}</p>
+                  <p className="text-[10px] text-gray-500">{item.sub}</p>
                 </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <TruckFast className="w-6 h-6 text-blue-600" />
-                  </div>
-                  <h3 className="font-semibold text-sm mb-1">Livraison Rapide</h3>
-                  <p className="text-xs text-gray-600">24-48h</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                    </svg>
-                  </div>
-                  <h3 className="font-semibold text-sm mb-1">Retours Faciles</h3>
-                  <p className="text-xs text-gray-600">14 jours</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Heart className="w-6 h-6 text-red-600" />
-                  </div>
-                  <h3 className="font-semibold text-sm mb-1">Service Client</h3>
-                  <p className="text-xs text-gray-600">7j/7</p>
-                </div>
-              </div>
+              ))}
             </div>
 
             {/* Produits suggérés */}
-            <div className="mt-12">
+            <div className="mt-10">
               <SuggestedProducts cart={cart} countryCode={countryCode} />
             </div>
           </>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
-            <EmptyCartMessage />
-          </div>
+          <EmptyCartMessage />
         )}
       </div>
     </div>
@@ -156,4 +126,3 @@ const CartTemplateModern = ({
 }
 
 export default CartTemplateModern
-

@@ -34,21 +34,21 @@ module.exports = {
           80: "#1F2937",
           90: "#111827",
         },
-        // Couleur brand La Cabrade (UNIQUE) : #9e354a
-        // On force toutes les nuances "amber-*" à la même valeur pour éviter
-        // les variations (dégradés / hover plus clair/foncé).
+        // Couleur brand La Cabrade : #9e354a (bordeaux)
+        // Palette complète avec dégradés clairs pour fonds/bordures
+        // et foncés pour hover/active — élimine les problèmes ton-sur-ton
         amber: {
-          50: "#9e354a",
-          100: "#9e354a",
-          200: "#9e354a",
-          300: "#9e354a",
-          400: "#9e354a",
-          500: "#9e354a",
+          50:  "#fdf2f4",
+          100: "#fce7eb",
+          200: "#f9cdd6",
+          300: "#f4a3b3",
+          400: "#ec6b84",
+          500: "#d9405d",
           600: "#9e354a",
-          700: "#9e354a",
-          800: "#9e354a",
-          900: "#9e354a",
-          950: "#9e354a",
+          700: "#882e40",
+          800: "#742636",
+          900: "#63222f",
+          950: "#3a0f18",
         },
       },
       borderRadius: {
