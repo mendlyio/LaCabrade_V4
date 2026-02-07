@@ -115,30 +115,31 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden sticky top-24">
-      {/* Header */}
-      <div className="bg-amber-600 px-6 py-4 border-b border-amber-500">
+      {/* Header — cliquable sur mobile pour toggle */}
+      <div
+        className="bg-amber-600 px-4 py-3 lg:px-6 lg:py-4 border-b border-amber-500 cursor-pointer lg:cursor-default"
+        onClick={() => setShowFilters(!showFilters)}
+      >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="flex items-center gap-2 lg:gap-3">
+            <svg className="w-4 h-4 lg:w-5 lg:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
-            <h2 className="font-bold text-white">
-              Filtres
+            <h2 className="font-bold text-white text-sm lg:text-base">
+              <span className="lg:hidden">Filtres & catégories</span>
+              <span className="hidden lg:inline">Filtres</span>
               {activeFiltersCount > 0 && (
-                <span className="ml-2 inline-flex items-center justify-center w-6 h-6 text-xs font-bold text-amber-700 bg-white rounded-full">
+                <span className="ml-2 inline-flex items-center justify-center w-5 h-5 lg:w-6 lg:h-6 text-[10px] lg:text-xs font-bold text-amber-700 bg-white rounded-full">
                   {activeFiltersCount}
                 </span>
               )}
             </h2>
           </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="lg:hidden p-1 hover:bg-white/20 rounded-lg transition-colors text-white"
-          >
+          <div className="lg:hidden p-1 text-white">
             <svg className={`w-5 h-5 transition-transform ${showFilters ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
-          </button>
+          </div>
         </div>
         
         {activeFiltersCount > 0 && (

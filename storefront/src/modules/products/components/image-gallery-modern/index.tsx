@@ -118,15 +118,15 @@ export default function ImageGalleryModern({ images }: ImageGalleryModernProps) 
 
         {/* Thumbnails */}
         {images.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto pb-2 px-1 scrollbar-hide">
             {images.map((image, index) => (
               <button
                 key={image.id || index}
                 onClick={() => setSelectedImage(index)}
                 className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden transition-all duration-200 ${
                   selectedImage === index
-                    ? "ring-2 ring-amber-500 ring-offset-2 opacity-100"
-                    : "ring-1 ring-gray-200 opacity-60 hover:opacity-100"
+                    ? "border-2 border-amber-500 opacity-100 scale-105"
+                    : "border border-gray-200 opacity-60 hover:opacity-100"
                 }`}
               >
                 <Image

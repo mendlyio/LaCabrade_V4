@@ -50,10 +50,10 @@ export default async function RelatedProductsModern({
       </div>
 
       {/* Carrousel de produits similaires */}
-      <ScrollCarousel className="px-2 md:px-0">
+      <ScrollCarousel className="px-4 md:px-0">
         <div className="flex gap-3 sm:gap-4">
           {relatedProducts.map((relatedProduct) => (
-            <div key={relatedProduct.id} className="flex-shrink-0 w-[60vw] sm:w-[45vw] md:w-[280px] lg:w-[260px]">
+            <div key={relatedProduct.id} className="flex-shrink-0 w-[44vw] sm:w-[40vw] md:w-[240px] lg:w-[230px]">
               <ProductCardModern
                 product={relatedProduct}
                 region={region}

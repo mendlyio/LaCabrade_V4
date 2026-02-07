@@ -69,25 +69,25 @@ const HeroCarousel = () => {
             Votre sellerie équestre à Fléron
           </p>
           
-          {/* 3 Boutons principaux */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          {/* Bouton principal — un seul sur mobile, trois sur desktop */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4">
             <LocalizedClientLink
-              href="/nouveautes"
-              className="w-full sm:w-auto px-8 py-4 bg-amber-600 text-white font-semibold rounded-lg hover:bg-amber-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              href="/store"
+              className="px-6 py-3 sm:px-8 sm:py-4 bg-amber-600 text-white text-sm sm:text-base font-semibold rounded-lg hover:bg-amber-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
-              Nouveautés
+              Découvrir la boutique
             </LocalizedClientLink>
             
             <LocalizedClientLink
               href="/categories/lc-equestrian"
-              className="w-full sm:w-auto px-8 py-4 bg-white text-amber-700 font-semibold rounded-lg hover:bg-amber-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 border-2 border-white"
+              className="hidden sm:inline-flex px-8 py-4 bg-white text-amber-700 font-semibold rounded-lg hover:bg-amber-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 border-2 border-white"
             >
               LC Equestrian
             </LocalizedClientLink>
             
             <LocalizedClientLink
               href="/categories/outlet"
-              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              className="hidden sm:inline-flex px-8 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
             >
               Outlet
             </LocalizedClientLink>
