@@ -70,43 +70,51 @@ function resolveOdooPriceAmount({
   productPrice: unknown
   debugSku?: string
 }): number {
-  // 1. Prix de la variante via list_price
-  const primary = odooPriceToMedusaAmount(variantPrice, debugSku)
-  if (primary > 0) {
-    return primary
-  }
+  // Dans Odoo:
+  //   list_price (product.template) = prix de base du template (parfois 1€ par défaut)
+  //   list_price (product.product) = relié au template, donc aussi parfois 1€
+  //   lst_price  (product.product) = prix de vente public CALCULÉ (inclut pricelist + extras)
+  //
+  // PRIORITÉ: lst_price > list_price variante > list_price template
 
-  // 2. Prix de la variante via lst_price (prix de vente public Odoo)
+  // 1. lst_price de la variante — c'est le VRAI prix de vente public Odoo
   if (variantLstPrice !== undefined && variantLstPrice !== null) {
-    const lstFallback = odooPriceToMedusaAmount(
+    const lstPrice = odooPriceToMedusaAmount(
       variantLstPrice,
       debugSku ? `${debugSku}-lst_price` : undefined
     )
-    if (lstFallback > 0) {
-      console.warn(
-        `⚠️ [PRICE] list_price invalide pour SKU:${debugSku || "?"}, ` +
-        `utilisation de lst_price variante (${lstFallback}€).`
+    if (lstPrice > 0) {
+      console.log(
+        `✅ [PRICE] SKU:${debugSku || "?"} → lst_price variante = ${lstPrice}€`
       )
-      return lstFallback
+      return lstPrice
     }
   }
 
-  // 3. Fallback sur le prix du template produit
-  const fallback = odooPriceToMedusaAmount(
-    productPrice,
-    debugSku ? `${debugSku}-fallback` : undefined
-  )
-  if (fallback > 0) {
-    console.warn(
-      `⚠️ [PRICE] Prix variante invalide pour SKU:${debugSku || "?"}, ` +
-      `fallback sur prix produit template (${fallback}€).`
+  // 2. list_price de la variante (relié au template)
+  const varPrice = odooPriceToMedusaAmount(variantPrice, debugSku)
+  if (varPrice > 0) {
+    console.log(
+      `ℹ️ [PRICE] SKU:${debugSku || "?"} → list_price variante = ${varPrice}€ (lst_price indisponible)`
     )
-    return fallback
+    return varPrice
+  }
+
+  // 3. Fallback sur list_price du template produit
+  const tmplPrice = odooPriceToMedusaAmount(
+    productPrice,
+    debugSku ? `${debugSku}-template` : undefined
+  )
+  if (tmplPrice > 0) {
+    console.warn(
+      `⚠️ [PRICE] SKU:${debugSku || "?"} → fallback template list_price = ${tmplPrice}€`
+    )
+    return tmplPrice
   }
 
   console.warn(
-    `⚠️ [PRICE] Aucun prix valide trouvé pour SKU:${debugSku || "?"} | ` +
-    `variantPrice=${JSON.stringify(variantPrice)}, variantLstPrice=${JSON.stringify(variantLstPrice)}, productPrice=${JSON.stringify(productPrice)}`
+    `⚠️ [PRICE] Aucun prix valide pour SKU:${debugSku || "?"} | ` +
+    `lst_price=${JSON.stringify(variantLstPrice)}, list_price=${JSON.stringify(variantPrice)}, template=${JSON.stringify(productPrice)}`
   )
   return 0
 }
