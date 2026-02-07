@@ -281,23 +281,25 @@ export default async function PaginatedProductsModern({
   return (
     <div>
       {/* Résultats info */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="text-sm text-gray-600">
+      <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="text-sm text-gray-500 font-medium tracking-wide">
           {count > 0 ? (
             <>
-              Affichage de <span className="font-semibold text-gray-900">{startIndex + 1}</span> à{' '}
-              <span className="font-semibold text-gray-900">{Math.min(endIndex, count)}</span> sur{' '}
-              <span className="font-semibold text-gray-900">{count}</span> produit{count > 1 ? 's' : ''}
+              <span className="text-gray-900 font-semibold">{count}</span> produit{count > 1 ? 's' : ''}
+              {(searchParams.q || searchParams.category || searchParams.collection) && (
+                <span className="text-gray-400"> &mdash; résultats filtrés</span>
+              )}
             </>
           ) : (
-            <span className="text-gray-500">Aucun produit trouvé</span>
+            <span className="text-gray-400">Aucun produit trouvé</span>
           )}
         </div>
         
         {totalPages > 1 && (
-          <div className="text-sm text-gray-600">
-            Page <span className="font-semibold text-gray-900">{page}</span> sur{' '}
-            <span className="font-semibold text-gray-900">{totalPages}</span>
+          <div className="flex items-center gap-1.5 text-xs text-gray-400 font-medium">
+            <span className="w-6 h-6 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-[11px]">{page}</span>
+            <span>/</span>
+            <span>{totalPages}</span>
           </div>
         )}
       </div>
@@ -305,7 +307,7 @@ export default async function PaginatedProductsModern({
       {/* Products Grid */}
       {products.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 mb-16">
             {products.map((product) => (
               <ProductCardModern
                 key={product.id}
@@ -317,7 +319,7 @@ export default async function PaginatedProductsModern({
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-12">
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2">
               {/* Bouton Précédent */}
               {hasPrevPage ? (
                 <LocalizedClientLink
@@ -325,19 +327,17 @@ export default async function PaginatedProductsModern({
                     ...searchParams,
                     page: String(page - 1),
                   })}`}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 flex items-center gap-2"
+                  className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-all text-gray-600 hover:text-amber-600"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
-                  Précédent
                 </LocalizedClientLink>
               ) : (
-                <div className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed flex items-center gap-2">
+                <div className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-100 text-gray-300 cursor-not-allowed">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
-                  Précédent
                 </div>
               )}
 
@@ -364,13 +364,11 @@ export default async function PaginatedProductsModern({
                         ...searchParams,
                         page: String(pageNum),
                       })}`}
-                      className={`
-                        w-10 h-10 flex items-center justify-center rounded-lg text-sm font-medium transition-all
-                        ${isActive
-                          ? 'bg-amber-600 text-white shadow-md'
-                          : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                        }
-                      `}
+                      className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-medium transition-all duration-200 ${
+                        isActive
+                          ? 'bg-amber-600 text-white shadow-md shadow-amber-200'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                     >
                       {pageNum}
                     </LocalizedClientLink>
@@ -385,16 +383,14 @@ export default async function PaginatedProductsModern({
                     ...searchParams,
                     page: String(page + 1),
                   })}`}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 flex items-center gap-2"
+                  className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-all text-gray-600 hover:text-amber-600"
                 >
-                  Suivant
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </LocalizedClientLink>
               ) : (
-                <div className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed flex items-center gap-2">
-                  Suivant
+                <div className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-100 text-gray-300 cursor-not-allowed">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
