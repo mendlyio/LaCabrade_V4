@@ -60,15 +60,6 @@ const HeroCarousel = () => {
       {/* Contenu par-dessus */}
       <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 drop-shadow-2xl">
-            <span className="bg-amber-600 bg-clip-text text-transparent">
-              La Cabrade
-            </span>
-          </h1>
-          <p className="text-xl md:text-2xl text-white mb-8 drop-shadow-lg font-light">
-            Votre sellerie équestre à Fléron
-          </p>
-          
           {/* Bouton principal — un seul sur mobile, trois sur desktop */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4">
             <LocalizedClientLink
