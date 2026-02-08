@@ -13,10 +13,14 @@ type ProductActionsModernProps = {
   countryCode: string
 }
 
-const optionsAsKeymap = (variantOptions: any) => {
-  return variantOptions?.reduce((acc: Record<string, string | undefined>, varopt: any) => {
-    if (varopt.option && varopt.value !== null && varopt.value !== undefined) {
-      acc[varopt.option.title] = varopt.value
+const optionsAsKeymap = (variantOptions: any): Record<string, string | undefined> => {
+  if (!variantOptions || !Array.isArray(variantOptions) || variantOptions.length === 0) {
+    return {}
+  }
+  return variantOptions.reduce((acc: Record<string, string | undefined>, varopt: any) => {
+    const title = varopt.option?.title ?? varopt.option_id
+    if (title && varopt.value !== null && varopt.value !== undefined) {
+      acc[title] = varopt.value
     }
     return acc
   }, {})
@@ -51,13 +55,34 @@ export default function ProductActionsModern({
   const countryCode = useParams().countryCode as string
   const router = useRouter()
 
-  // Présélectionner les options si un seul variant
+  // Présélectionner les options si un seul variant ou si le produit n'a pas d'options réelles
   useEffect(() => {
-    if (product.variants?.length === 1) {
+    if (!product.variants?.length) return
+
+    // Un seul variant → auto-sélection
+    if (product.variants.length === 1) {
       const variantOptions = optionsAsKeymap(product.variants[0].options)
-      setOptions(variantOptions ?? {})
+      setOptions(variantOptions)
+      return
     }
-  }, [product.variants])
+
+    // Pas d'options de produit ou options vides → sélectionner le premier variant disponible
+    const hasRealOptions = product.options && product.options.length > 0 &&
+      product.options.some((o) => {
+        const uniqueValues = new Set(
+          product.variants!
+            .map((v) => v.options?.find((vo) => vo.option_id === o.id)?.value)
+            .filter(Boolean)
+        )
+        return uniqueValues.size > 1
+      })
+
+    if (!hasRealOptions) {
+      const firstAvailable = product.variants.find(isVariantAvailable) || product.variants[0]
+      const variantOptions = optionsAsKeymap(firstAvailable.options)
+      setOptions(variantOptions)
+    }
+  }, [product.variants, product.options])
 
   // Trouver le variant sélectionné
   const selectedVariant = useMemo(() => {

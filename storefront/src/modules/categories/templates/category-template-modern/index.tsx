@@ -114,64 +114,72 @@ export default async function CategoryTemplateModern({
         </div>
       </div>
 
-      {/* Sous-catégories */}
+      {/* Sous-catégories — repliable */}
       {categoryChildren.length > 0 && (
         <div className="content-container mb-8">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          <details className="group bg-white rounded-xl shadow-md overflow-hidden">
+            <summary className="flex items-center justify-between cursor-pointer px-5 py-4 hover:bg-gray-50 transition-colors select-none">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                Sous-catégories
+                <span className="ml-1 text-sm font-normal text-gray-500">({categoryChildren.length})</span>
+              </h2>
+              <svg className="w-5 h-5 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-              Sous-catégories
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {categoryChildren.map((child) => (
-                <div key={child.id} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                  <LocalizedClientLink
-                    href={`/categories/${child.handle}`}
-                    className="flex items-center gap-2 rounded-lg px-3 py-2 bg-white hover:bg-amber-600 border border-gray-200 hover:border-amber-600 transition-colors group"
-                  >
-                    <span className="flex-1 text-sm font-semibold text-gray-800 group-hover:text-white">
-                      {child.name}
-                    </span>
-                    <svg className="w-4 h-4 text-gray-500 group-hover:text-white transform group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </LocalizedClientLink>
+            </summary>
+            <div className="px-5 pb-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categoryChildren.map((child) => (
+                  <div key={child.id} className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <LocalizedClientLink
+                      href={`/categories/${child.handle}`}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 bg-white hover:bg-amber-600 border border-gray-200 hover:border-amber-600 transition-colors group"
+                    >
+                      <span className="flex-1 text-sm font-semibold text-gray-800 group-hover:text-white">
+                        {child.name}
+                      </span>
+                      <svg className="w-4 h-4 text-gray-500 group-hover:text-white transform group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </LocalizedClientLink>
 
-                  {child.category_children && child.category_children.length > 0 && (
-                    <ul className="mt-3 space-y-2">
-                      {child.category_children.map((grandChild) => (
-                        <li key={grandChild.id} className="space-y-1">
-                          <LocalizedClientLink
-                            href={`/categories/${grandChild.handle}`}
-                            className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:text-white hover:bg-amber-600 transition-colors"
-                          >
-                            {grandChild.name}
-                          </LocalizedClientLink>
-                          {grandChild.category_children &&
-                            grandChild.category_children.length > 0 && (
-                              <ul className="pl-3 border-l border-gray-200 space-y-1">
-                                {grandChild.category_children.map((greatGrandChild) => (
-                                  <li key={greatGrandChild.id}>
-                                    <LocalizedClientLink
-                                      href={`/categories/${greatGrandChild.handle}`}
-                                      className="block rounded-md px-3 py-1 text-xs text-gray-600 hover:text-white hover:bg-amber-600 transition-colors"
-                                    >
-                                      {greatGrandChild.name}
-                                    </LocalizedClientLink>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
+                    {child.category_children && child.category_children.length > 0 && (
+                      <ul className="mt-3 space-y-2">
+                        {child.category_children.map((grandChild) => (
+                          <li key={grandChild.id} className="space-y-1">
+                            <LocalizedClientLink
+                              href={`/categories/${grandChild.handle}`}
+                              className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:text-white hover:bg-amber-600 transition-colors"
+                            >
+                              {grandChild.name}
+                            </LocalizedClientLink>
+                            {grandChild.category_children &&
+                              grandChild.category_children.length > 0 && (
+                                <ul className="pl-3 border-l border-gray-200 space-y-1">
+                                  {grandChild.category_children.map((greatGrandChild) => (
+                                    <li key={greatGrandChild.id}>
+                                      <LocalizedClientLink
+                                        href={`/categories/${greatGrandChild.handle}`}
+                                        className="block rounded-md px-3 py-1 text-xs text-gray-600 hover:text-white hover:bg-amber-600 transition-colors"
+                                      >
+                                        {greatGrandChild.name}
+                                      </LocalizedClientLink>
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          </details>
         </div>
       )}
 

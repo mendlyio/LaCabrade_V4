@@ -18,10 +18,14 @@ type ProductActionsProps = {
   disabled?: boolean
 }
 
-const optionsAsKeymap = (variantOptions: any) => {
-  return variantOptions?.reduce((acc: Record<string, string | undefined>, varopt: any) => {
-    if (varopt.option && varopt.value !== null && varopt.value !== undefined) {
-      acc[varopt.option.title] = varopt.value
+const optionsAsKeymap = (variantOptions: any): Record<string, string | undefined> => {
+  if (!variantOptions || !Array.isArray(variantOptions) || variantOptions.length === 0) {
+    return {}
+  }
+  return variantOptions.reduce((acc: Record<string, string | undefined>, varopt: any) => {
+    const title = varopt.option?.title ?? varopt.option_id
+    if (title && varopt.value !== null && varopt.value !== undefined) {
+      acc[title] = varopt.value
     }
     return acc
   }, {})
@@ -101,13 +105,33 @@ export default function ProductActions({
   const [notifySubmitted, setNotifySubmitted] = useState(false)
   const countryCode = useParams().countryCode as string
 
-  // If there is only 1 variant, preselect the options
+  // Présélectionner si un seul variant ou pas d'options distinctes
   useEffect(() => {
-    if (product.variants?.length === 1) {
+    if (!product.variants?.length) return
+
+    if (product.variants.length === 1) {
       const variantOptions = optionsAsKeymap(product.variants[0].options)
-      setOptions(variantOptions ?? {})
+      setOptions(variantOptions)
+      return
     }
-  }, [product.variants])
+
+    // Pas d'options réelles (toutes les valeurs identiques) → auto-sélection
+    const hasRealOptions = product.options && product.options.length > 0 &&
+      product.options.some((o) => {
+        const uniqueValues = new Set(
+          product.variants!
+            .map((v) => v.options?.find((vo) => vo.option_id === o.id)?.value)
+            .filter(Boolean)
+        )
+        return uniqueValues.size > 1
+      })
+
+    if (!hasRealOptions) {
+      const firstAvailable = product.variants.find(isVariantInStock) || product.variants[0]
+      const variantOptions = optionsAsKeymap(firstAvailable.options)
+      setOptions(variantOptions)
+    }
+  }, [product.variants, product.options])
 
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
