@@ -12,6 +12,7 @@ type LoadMoreProductsProps = {
   countryCode: string
   regionId: string
   queryParams: Record<string, any>
+  brandSlug?: string
 }
 
 // Carte produit côté client (pas de fetch serveur)
@@ -167,6 +168,15 @@ function ProductCardClient({
   )
 }
 
+function slugifyBrand(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
 export default function LoadMoreProducts({
   initialProducts,
   totalCount,
@@ -174,6 +184,7 @@ export default function LoadMoreProducts({
   countryCode,
   regionId,
   queryParams,
+  brandSlug,
 }: LoadMoreProductsProps) {
   const [products, setProducts] = useState<HttpTypes.StoreProduct[]>(initialProducts)
   const [page, setPage] = useState(1)
@@ -195,7 +206,7 @@ export default function LoadMoreProducts({
       params.set("limit", String(limit))
       params.set("offset", String(page * limit))
       params.set("region_id", regionId)
-      params.set("fields", "*variants.calculated_price,+variants.inventory_quantity,+images")
+      params.set("fields", "*variants.calculated_price,+variants.inventory_quantity,+images,+metadata,+collection.title,+collection.handle")
 
       // Pass through relevant query params
       if (queryParams.category_id) {
@@ -221,7 +232,17 @@ export default function LoadMoreProducts({
       if (!res.ok) throw new Error("Erreur chargement")
 
       const data = await res.json()
-      const newProducts = data.products || []
+      let newProducts = data.products || []
+
+      // Filtrer par marque côté client si nécessaire
+      if (brandSlug) {
+        newProducts = newProducts.filter((product: any) => {
+          const metadataBrand = product.metadata?.brand as string | undefined
+          const collectionBrand = product.collection?.title
+          const productBrand = metadataBrand || collectionBrand || ""
+          return slugifyBrand(productBrand) === brandSlug
+        })
+      }
 
       // Track new products for animation
       const newIds = new Set(newProducts.map((p: any) => p.id))

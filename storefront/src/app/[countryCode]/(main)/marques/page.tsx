@@ -19,9 +19,9 @@ export default async function MarquesPage() {
         <p className="text-gray-600">Découvrez notre sélection de marques équestres de qualité</p>
       </div>
 
-      <div className="bg-amber-600 rounded-xl p-8 mb-8">
-        <h2 className="text-2xl font-bold mb-4">Des marques renommées</h2>
-        <p className="text-gray-700 mb-6">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-8 mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">Des marques renommées</h2>
+        <p className="text-gray-600">
           Dans notre sellerie à Fléron, près de Liège, nous collaborons avec les meilleurs fournisseurs
           d&apos;équipements d&apos;équitation pour offrir qualité et innovation à chaque cavalier et monture.
         </p>
@@ -38,6 +38,9 @@ export default async function MarquesPage() {
               <h3 className="font-semibold text-gray-900 group-hover:text-amber-600 transition-colors">
                 {brand.name}
               </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                {brand.count} produit{brand.count > 1 ? "s" : ""}
+              </p>
             </LocalizedClientLink>
           ))}
         </div>

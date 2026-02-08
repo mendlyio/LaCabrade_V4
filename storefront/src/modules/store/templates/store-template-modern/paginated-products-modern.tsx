@@ -54,14 +54,14 @@ export default async function PaginatedProductsModern({
     return urlParams.toString()
   }
   
-  // Si on a des filtres côté client actifs, récupérer plus de produits pour compenser le filtrage
+  // Filtres côté client (hors marque, qui sera géré différemment)
   const hasClientSideFilters =
     searchParams.price_min ||
     searchParams.price_max ||
     searchParams.in_stock === "true" ||
-    searchParams.on_sale === "true" ||
-    !!searchParams.brand
-  const limit = hasClientSideFilters ? 50 : 12 // Récupérer plus de produits si on a des filtres côté client
+    searchParams.on_sale === "true"
+  const hasBrandFilter = !!searchParams.brand
+  const limit = hasClientSideFilters ? 50 : 12
 
   // Récupérer les catégories et collections pour convertir les handles en IDs
   let categories: any[] = []
@@ -84,7 +84,7 @@ export default async function PaginatedProductsModern({
     limit,
     offset: (page - 1) * limit,
     region_id: region.id,
-    fields: "*variants.calculated_price,+variants.inventory_quantity,+metadata",
+    fields: "*variants.calculated_price,+variants.inventory_quantity,+metadata,+collection.title,+collection.handle",
   }
 
   // Recherche
@@ -178,14 +178,55 @@ export default async function PaginatedProductsModern({
     queryParams.order = '-created_at'
   }
 
-  // Récupérer les produits
+  // ─── Récupérer les produits ───
+  // Pour le filtre marque, on récupère TOUS les produits (paginated) pour un filtrage fiable
   let result
   try {
-    result = await getProductsList({
-      pageParam: page,
-      queryParams,
-      countryCode,
-    })
+    if (hasBrandFilter) {
+      // Fetch ALL products in batches and filter by brand server-side
+      const batchSize = 100
+      let allProducts: any[] = []
+      let batchOffset = 0
+      let totalProducts = 0
+
+      do {
+        const batchResult = await getProductsList({
+          pageParam: 1,
+          queryParams: {
+            ...queryParams,
+            limit: batchSize,
+            offset: batchOffset,
+          },
+          countryCode,
+        })
+        const batchProducts = batchResult.response.products || []
+        totalProducts = batchResult.response.count || 0
+        allProducts = [...allProducts, ...batchProducts]
+        batchOffset += batchSize
+      } while (batchOffset < totalProducts)
+
+      // Filtrer par marque côté serveur
+      const normalizedBrand = slugify(searchParams.brand!)
+      const brandProducts = allProducts.filter((product) => {
+        const metadataBrand = product.metadata?.brand as string | undefined
+        const collectionBrand = product.collection?.title
+        const productBrand = metadataBrand || collectionBrand || ""
+        return slugify(productBrand) === normalizedBrand
+      })
+
+      result = {
+        response: {
+          products: brandProducts,
+          count: brandProducts.length,
+        },
+      }
+    } else {
+      result = await getProductsList({
+        pageParam: page,
+        queryParams,
+        countryCode,
+      })
+    }
   } catch (error) {
     console.error("Erreur lors de la récupération des produits:", error)
     return (
@@ -219,17 +260,7 @@ export default async function PaginatedProductsModern({
   // Filtrage côté client pour les fonctionnalités non supportées par l'API
   let filteredProducts = [...products]
 
-  // Filtre par marque (sécurité côté client)
-  if (searchParams.brand) {
-    const normalizedBrand = slugify(searchParams.brand)
-    filteredProducts = filteredProducts.filter((product) => {
-      const metadataBrand = product.metadata?.brand as string | undefined
-      const collectionBrand = product.collection?.title
-      const productBrand = metadataBrand || collectionBrand || ""
-
-      return slugify(productBrand) === normalizedBrand
-    })
-  }
+  // Note: le filtre par marque est déjà appliqué côté serveur (fetch complet)
 
   // Filtre par prix
   if (searchParams.price_min || searchParams.price_max) {
@@ -264,16 +295,17 @@ export default async function PaginatedProductsModern({
   // Mettre à jour le count total après filtrage
   const totalFilteredCount = filteredProducts.length
   
-  // Si on a des filtres côté client, paginer les résultats filtrés
+  // Si on a des filtres côté client (prix, stock, promo) ou marque, paginer les résultats filtrés
   const displayLimit = 12 // Toujours afficher 12 produits par page
+  const needsClientPagination = hasClientSideFilters || hasBrandFilter
   const startIndex = (page - 1) * displayLimit
   const endIndex = startIndex + displayLimit
   
-  products = hasClientSideFilters
+  products = needsClientPagination
     ? filteredProducts.slice(startIndex, endIndex)
     : filteredProducts
   
-  count = hasClientSideFilters ? totalFilteredCount : apiCount
+  count = needsClientPagination ? totalFilteredCount : apiCount
 
   const totalPages = Math.ceil(count / displayLimit)
   const hasNextPage = page < totalPages
@@ -306,6 +338,7 @@ export default async function PaginatedProductsModern({
           countryCode={countryCode}
           regionId={region.id}
           queryParams={queryParams}
+          brandSlug={searchParams.brand || undefined}
         />
       ) : (
         <div className="text-center py-24 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">

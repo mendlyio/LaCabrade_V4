@@ -29,7 +29,7 @@ export const listBrands = cache(async function (): Promise<Brand[]> {
         {
           limit,
           offset,
-          fields: "id,metadata,collection",
+          fields: "id,metadata,+collection.title,+collection.handle",
         },
         { next: { tags: ["brands", "products"] } }
       )
