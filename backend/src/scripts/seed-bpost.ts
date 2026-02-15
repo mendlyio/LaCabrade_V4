@@ -6,6 +6,7 @@
  * - Une zone de service pour l'international (FR, NL, DE, LU)
  * - Option "Livraison à domicile Bpost" (Belgique + International)
  * - Option "Point relais Bpost" (Belgique uniquement)
+ * - Option "Livraison express Bpost" (Belgique + International) — 12,90 €
  * 
  * Usage: npx medusa exec src/scripts/seed-bpost.ts
  */
@@ -21,8 +22,10 @@ import {
   createStockLocationsWorkflow,
 } from "@medusajs/medusa/core-flows"
 
-// Prix fixe pour toutes les options (en euros) = 5€
+// Prix par défaut pour livraison standard (en euros)
 const FIXED_PRICE = 5
+// Prix pour la livraison express (en euros)
+const EXPRESS_PRICE = 12.9
 
 export default async function seedBpostShipping({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -326,6 +329,60 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
     })
   }
 
+  // Option 4: Livraison express Belgique — 12,90 €
+  if (belgiumZone) {
+    shippingOptions.push({
+      name: "Bpost - Livraison express (Belgique)",
+      price_type: "flat",
+      provider_id: bpostProvider.id,
+      service_zone_id: belgiumZone.id,
+      shipping_profile_id: shippingProfile.id,
+      type: {
+        label: "Bpost Express BE",
+        description: "Livraison express en Belgique via Bpost (24 h ouvrées)",
+        code: "bpost-express-be",
+      },
+      data: {
+        id: "bpost-express-be",
+        mode: "express",
+      },
+      prices: [
+        { currency_code: "eur", amount: EXPRESS_PRICE },
+      ],
+      rules: [
+        { attribute: "enabled_in_store", value: "true", operator: "eq" },
+        { attribute: "is_return", value: "false", operator: "eq" },
+      ],
+    })
+  }
+
+  // Option 5: Livraison express Europe — 12,90 €
+  if (europeZone) {
+    shippingOptions.push({
+      name: "Bpost - Livraison express (Europe)",
+      price_type: "flat",
+      provider_id: bpostProvider.id,
+      service_zone_id: europeZone.id,
+      shipping_profile_id: shippingProfile.id,
+      type: {
+        label: "Bpost Express EU",
+        description: "Livraison express internationale via Bpost (48-72 h ouvrées)",
+        code: "bpost-express-eu",
+      },
+      data: {
+        id: "bpost-express-eu",
+        mode: "express",
+      },
+      prices: [
+        { currency_code: "eur", amount: EXPRESS_PRICE },
+      ],
+      rules: [
+        { attribute: "enabled_in_store", value: "true", operator: "eq" },
+        { attribute: "is_return", value: "false", operator: "eq" },
+      ],
+    })
+  }
+
   if (shippingOptions.length === 0) {
     logger.error("❌ Aucune option de livraison à créer (zones non trouvées)")
     return
@@ -355,10 +412,11 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
   logger.info("Résumé des options créées:")
   for (const opt of finalOptions) {
     const optData = (opt as any).data || {}
-    logger.info(`  📦 ${opt.name} — ${FIXED_PRICE}€`)
+    const price = optData.mode === "express" ? EXPRESS_PRICE : FIXED_PRICE
+    logger.info(`  📦 ${opt.name} — ${price}€`)
     logger.info(`     Mode: ${optData.mode || "home"}`)
   }
   logger.info("")
-  logger.info("📋 Prix configurés: 5€ pour toutes les options")
+  logger.info(`📋 Prix configurés: Standard ${FIXED_PRICE}€ | Express ${EXPRESS_PRICE}€`)
 }
 

@@ -6,11 +6,28 @@ import { Button, Heading, Text, clx } from "@medusajs/ui"
 
 import ErrorMessage from "@modules/checkout/components/error-message"
 import PickupPoints from "@modules/checkout/components/pickup-points"
+import StorePickup from "@modules/checkout/components/store-pickup"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { setShippingMethod } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
+
+/**
+ * Détecte si une option de livraison correspond au retrait en magasin.
+ * On se base sur le nom (contient "retrait" ou "magasin") ou sur data.mode.
+ */
+function isStorePickupOption(
+  option: HttpTypes.StoreCartShippingOption
+): boolean {
+  const name = (option.name ?? "").toLowerCase()
+  const mode = ((option as any).data?.mode ?? "").toLowerCase()
+  return (
+    mode === "store_pickup" ||
+    (name.includes("retrait") && name.includes("magasin")) ||
+    (name.includes("click") && name.includes("collect"))
+  )
+}
 
 type ShippingProps = {
   cart: HttpTypes.StoreCart
@@ -166,10 +183,16 @@ const Shipping: React.FC<ShippingProps> = ({
             </RadioGroup>
           </div>
 
+          {/* Bpost : Points relais */}
           {selectedShippingMethod?.provider_id?.toLowerCase?.().includes("bpost") &&
             ((selectedShippingMethod as any)?.metadata?.mode === "pickup" || 
              (selectedShippingMethod as any)?.data?.mode === "pickup") && (
             <PickupPoints cart={cart} />
+          )}
+
+          {/* Retrait en magasin : sélection du point de retrait */}
+          {selectedShippingMethod && isStorePickupOption(selectedShippingMethod) && (
+            <StorePickup cart={cart} />
           )}
 
           <ErrorMessage
@@ -182,7 +205,12 @@ const Shipping: React.FC<ShippingProps> = ({
             className="mt-4 w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             onClick={handleSubmit}
             isLoading={isLoading}
-            disabled={!cart.shipping_methods?.[0]}
+            disabled={
+              !cart.shipping_methods?.[0] ||
+              (selectedShippingMethod &&
+                isStorePickupOption(selectedShippingMethod) &&
+                !(cart.metadata?.pickup_location as any)?.id)
+            }
             data-testid="submit-delivery-option-button"
           >
             Continuer vers le paiement
@@ -207,6 +235,12 @@ const Shipping: React.FC<ShippingProps> = ({
                   : "5,00 €"
                 }
               </p>
+              {/* Afficher le magasin de retrait si applicable */}
+              {(cart.metadata?.pickup_location as any)?.name && (
+                <p className="text-sm text-amber-700 font-medium mt-2">
+                  📍 {(cart.metadata.pickup_location as any).name}
+                </p>
+              )}
             </div>
           )}
         </div>

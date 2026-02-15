@@ -265,6 +265,31 @@ export async function setShippingMethod({
     .catch(medusaError)
 }
 
+/**
+ * Sauvegarde le lieu de retrait en magasin dans les métadonnées du panier.
+ * Passer `null` pour effacer la sélection.
+ */
+export async function setPickupLocation({
+  cartId,
+  pickupLocation,
+}: {
+  cartId: string
+  pickupLocation: { id: string; name: string; address: string } | null
+}) {
+  return sdk.store.cart
+    .update(
+      cartId,
+      { metadata: { pickup_location: pickupLocation } } as any,
+      {},
+      getAuthHeaders()
+    )
+    .then(({ cart }) => {
+      revalidateTag("cart")
+      return cart
+    })
+    .catch(medusaError)
+}
+
 export async function initiatePaymentSession(
   cart: HttpTypes.StoreCart,
   data: {
