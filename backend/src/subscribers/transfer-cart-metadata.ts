@@ -4,7 +4,7 @@ import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa'
 
 /**
  * Subscriber qui transfère les métadonnées du panier vers la commande
- * (notamment bpost_pickup_point pour Bpost)
+ * (notamment bpost_pickup_point pour Bpost et gift card metadata)
  */
 export default async function transferCartMetadataHandler({
   event: { data },
@@ -16,8 +16,10 @@ export default async function transferCartMetadataHandler({
   try {
     const orderId = data.id
     
-    // Récupérer la commande
-    const order = await orderModuleService.retrieveOrder(orderId)
+    // Récupérer la commande avec les items
+    const order = await orderModuleService.retrieveOrder(orderId, {
+      relations: ['items']
+    })
     
     // Récupérer le cart_id depuis order.metadata (Medusa le sauvegarde automatiquement)
     const cartId = (order as any).cart_id
@@ -27,27 +29,31 @@ export default async function transferCartMetadataHandler({
       return
     }
     
-    // Récupérer le panier
+    // Récupérer le panier avec ses items
     const cart = await cartModuleService.retrieveCart(cartId, {
-      select: ['metadata']
+      select: ['metadata'],
+      relations: ['items']
     })
     
-    if (!cart.metadata) {
-      console.log(`[TransferMetadata] Pas de metadata dans cart ${cartId}`)
-      return
-    }
-    
-    // Transférer les métadonnées intéressantes
+    // --- Transfert des métadonnées au niveau du panier ---
     const metadataToTransfer: any = {}
     
-    if (cart.metadata.bpost_pickup_point) {
-      metadataToTransfer.bpost_pickup_point = cart.metadata.bpost_pickup_point
-      console.log(`[TransferMetadata] ✅ Point relais Bpost transféré vers order ${orderId}`)
-    }
+    if (cart.metadata) {
+      if (cart.metadata.bpost_pickup_point) {
+        metadataToTransfer.bpost_pickup_point = cart.metadata.bpost_pickup_point
+        console.log(`[TransferMetadata] ✅ Point relais Bpost transféré vers order ${orderId}`)
+      }
 
-    if (cart.metadata.vat_number) {
-      metadataToTransfer.vat_number = cart.metadata.vat_number
-      console.log(`[TransferMetadata] ✅ Numéro de TVA transféré vers order ${orderId}: ${cart.metadata.vat_number}`)
+      if (cart.metadata.pickup_location) {
+        metadataToTransfer.pickup_location = cart.metadata.pickup_location
+        const loc = cart.metadata.pickup_location as any
+        console.log(`[TransferMetadata] ✅ Retrait en magasin transféré vers order ${orderId}: ${loc.name || loc.id}`)
+      }
+
+      if (cart.metadata.vat_number) {
+        metadataToTransfer.vat_number = cart.metadata.vat_number
+        console.log(`[TransferMetadata] ✅ Numéro de TVA transféré vers order ${orderId}: ${cart.metadata.vat_number}`)
+      }
     }
     
     // Mettre à jour la commande si on a des métadonnées à transférer
@@ -61,6 +67,23 @@ export default async function transferCartMetadataHandler({
       }])
       
       console.log(`[TransferMetadata] ✅ Métadonnées transférées:`, Object.keys(metadataToTransfer))
+    }
+
+    // --- Vérification des métadonnées gift card sur les line items ---
+    // En Medusa v2, les metadata des line items du cart sont normalement préservées
+    // sur les order items. On log juste pour confirmer.
+    const giftCardItems = order.items?.filter(
+      (item: any) => item.metadata?.is_gift_card === true
+    ) || []
+
+    if (giftCardItems.length > 0) {
+      console.log(
+        `[TransferMetadata] 🎁 ${giftCardItems.length} bon(s) cadeau(x) détecté(s) dans order ${orderId}:`,
+        giftCardItems.map((item: any) => ({
+          recipient: item.metadata?.recipient_email,
+          name: item.metadata?.recipient_name,
+        }))
+      )
     }
     
   } catch (error) {

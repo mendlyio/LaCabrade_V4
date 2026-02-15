@@ -5,13 +5,15 @@ import { OrderPlacedTemplate, ORDER_PLACED, isOrderPlacedTemplateData } from './
 import { OrderShippedTemplate, ORDER_SHIPPED, isOrderShippedTemplateData } from './order-shipped'
 import { WelcomeTemplate, WELCOME, isWelcomeTemplateData } from './welcome'
 import { StockAlertTemplate, STOCK_ALERT, isStockAlertTemplateData } from './stock-alert'
+import { GiftCardDeliveryTemplate, GIFT_CARD_DELIVERY, isGiftCardDeliveryData } from './gift-card-delivery'
 
 export const EmailTemplates = {
   INVITE_USER,
   ORDER_PLACED,
   ORDER_SHIPPED,
   WELCOME,
-  STOCK_ALERT
+  STOCK_ALERT,
+  GIFT_CARD_DELIVERY,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -63,6 +65,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <StockAlertTemplate {...data} />
 
+    case EmailTemplates.GIFT_CARD_DELIVERY:
+      if (!isGiftCardDeliveryData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.GIFT_CARD_DELIVERY}"`
+        )
+      }
+      return <GiftCardDeliveryTemplate {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -71,4 +82,4 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
   }
 }
 
-export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, WelcomeTemplate, StockAlertTemplate }
+export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, WelcomeTemplate, StockAlertTemplate, GiftCardDeliveryTemplate }

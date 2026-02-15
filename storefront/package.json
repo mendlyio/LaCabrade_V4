@@ -39,6 +39,7 @@
     "@stripe/stripe-js": "^1.29.0",
     "algoliasearch": "^4.20.0",
     "axios": "^1.6.7",
+    "framer-motion": "^12.34.0",
     "lodash": "^4.17.21",
     "medusajs-launch-utils": "0.0.18",
     "next": "^15.1.11",
