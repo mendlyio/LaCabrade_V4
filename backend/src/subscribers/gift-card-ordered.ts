@@ -108,7 +108,7 @@ export default async function giftCardOrderedHandler({
                 subject: `🎁 Vous avez reçu un Bon Cadeau La Cabrade de ${amount}€ !`,
                 attachments: [
                   {
-                    content: pdfBuffer.toString("base64"),
+                    content: Buffer.from(pdfBuffer).toString("base64"),
                     filename: `bon-cadeau-lacabrade-${code}.pdf`,
                     content_type: "application/pdf",
                     disposition: "attachment",
