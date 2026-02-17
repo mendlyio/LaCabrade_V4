@@ -41,10 +41,10 @@ const NewsletterBanner = () => {
       <div className="content-container">
         <div className="max-w-3xl mx-auto text-center">
           <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
-            Inscris-toi à notre newsletter
+            Un petit bonus pour toi !
           </h3>
           <p className="text-white/90 text-lg mb-6">
-            Et bénéficie de <strong className="text-white">5% de réduction</strong> sur ta prochaine commande
+            Rejoins-nous et économise <strong className="text-white">10%</strong>
           </p>
           
           <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-xl mx-auto">

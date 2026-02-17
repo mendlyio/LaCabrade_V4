@@ -69,7 +69,7 @@ export default function ProductInfoModern({ product, region }: ProductInfoModern
         )}
         
         <div className="mt-2 text-sm text-gray-500">
-          TVA incluse • Frais de livraison calculés à l'étape suivante
+          TVA incluse • Frais de livraison calculés à l'étape suivante • Paiement 100% sécurisé
         </div>
       </div>
     </div>

@@ -237,17 +237,17 @@ export default async function ProductCardModern({
             )}
           </div>
 
-          {/* Collection badge haut droite */}
+          {/* Collection badge */}
           {collection && (
-            <div className="absolute top-2.5 right-2.5 z-10">
+            <div className="absolute bottom-2.5 left-2.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               <div className="bg-white/80 backdrop-blur-md text-gray-600 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider shadow-sm">
                 {collection}
               </div>
             </div>
           )}
 
-          {/* Wishlist - visible au hover */}
-          <div className="absolute bottom-2.5 right-2.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          {/* Wishlist - toujours visible */}
+          <div className="absolute top-2.5 right-2.5 z-10">
             <WishlistToggleButton productId={product.id!} size="md" />
           </div>
 

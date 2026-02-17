@@ -26,9 +26,6 @@ export default async function NouveautesPage({ params, searchParams }: Props) {
       <div className="bg-amber-600 text-white">
         <div className="content-container py-16">
           <div className="max-w-3xl">
-            <div className="inline-block bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full mb-4">
-              <span className="text-sm font-semibold">✨ Dernières Arrivées</span>
-            </div>
             <h1 className="text-5xl font-bold mb-4">
               Nouveautés
             </h1>
@@ -36,16 +33,6 @@ export default async function NouveautesPage({ params, searchParams }: Props) {
               Découvrez nos derniers produits équestres. Restez à la pointe avec notre sélection 
               des équipements les plus récents pour vous et votre cheval.
             </p>
-            <div className="flex flex-wrap gap-4 text-sm">
-              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
-                <span>📦</span>
-                <span>Nouveaux produits ajoutés régulièrement</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
-                <span>⚡</span>
-                <span>Dernières tendances équestres</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>

@@ -1,16 +1,15 @@
 "use client"
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Brand } from "@lib/data/brands"
-import { buildCategoryTree } from "@lib/util/category-tree"
 
 type FiltersModernProps = {
-  categories: any[]
+  categories?: any[]
   brands: Brand[]
 }
 
-export default function FiltersModern({ categories, brands }: FiltersModernProps) {
+export default function FiltersModern({ brands }: FiltersModernProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -68,51 +67,6 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
     })
   }
 
-  const { roots: categoryRoots } = useMemo(
-    () => buildCategoryTree(categories || []),
-    [categories]
-  )
-  const activeCategoryHandle = searchParams.get("category") || ""
-
-  const categoryHasActiveChild = useCallback(
-    (category: any, handle: string): boolean => {
-      if (!category || !handle) {
-        return false
-      }
-      if (category.handle === handle) {
-        return true
-      }
-      return (
-        category.category_children?.some((child: any) =>
-          categoryHasActiveChild(child, handle)
-        ) || false
-      )
-    },
-    []
-  )
-
-  const defaultExpandedIds = useMemo(
-    () =>
-      categoryRoots
-        .filter((root) => categoryHasActiveChild(root, activeCategoryHandle))
-        .map((root) => root.id),
-    [categoryRoots, categoryHasActiveChild, activeCategoryHandle]
-  )
-
-  const [expandedCategoryIds, setExpandedCategoryIds] = useState<string[]>(
-    defaultExpandedIds
-  )
-
-  useEffect(() => {
-    if (defaultExpandedIds.length === 0) {
-      return
-    }
-    setExpandedCategoryIds((prev) => {
-      const merged = new Set([...prev, ...defaultExpandedIds])
-      return Array.from(merged)
-    })
-  }, [defaultExpandedIds])
-
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden sticky top-24">
       {/* Header — cliquable sur mobile pour toggle */}
@@ -157,8 +111,29 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
 
       {/* Filters Content */}
       <div className={`p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto lg:block ${showFilters ? 'block' : 'hidden'}`}>
-          {/* Recherche instantanée */}
+          {/* Trier par */}
           <div className="space-y-3">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+              </svg>
+              Trier par
+            </label>
+            <select
+              value={searchParams.get('sortBy') || '-created_at'}
+              onChange={(e) => updateFilters({ sortBy: e.target.value === '-created_at' ? null : e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white"
+            >
+              <option value="-created_at">Nouveautés</option>
+              <option value="price_asc">Prix croissant</option>
+              <option value="price_desc">Prix décroissant</option>
+              <option value="title_asc">Nom A-Z</option>
+              <option value="title_desc">Nom Z-A</option>
+            </select>
+          </div>
+
+          {/* Recherche instantanée */}
+          <div className="space-y-3 pt-6 border-t border-gray-200">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
               <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -215,136 +190,6 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
               Appliquer
             </button>
           </div>
-
-          {/* Catégories */}
-          {categoryRoots.length > 0 && (
-            <div className="space-y-3 pt-6 border-t border-gray-200">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                </svg>
-                Catégories
-              </label>
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {categoryRoots.map((category) => {
-                  const isActive = activeCategoryHandle === category.handle
-                  const hasChildren = (category.category_children || []).length > 0
-                  const hasActiveChild = categoryHasActiveChild(
-                    category,
-                    activeCategoryHandle
-                  )
-                  const isExpanded =
-                    expandedCategoryIds.includes(category.id) || hasActiveChild
-
-                  return (
-                    <div key={category.id} className="rounded-lg border border-gray-200">
-                      <div className="flex items-center justify-between gap-2 px-3 py-2">
-                        <button
-                          onClick={() =>
-                            updateFilters({
-                              category: category.handle,
-                            })
-                          }
-                          className={`
-                            flex-1 text-left text-sm font-semibold transition-all
-                            ${isActive
-                              ? 'text-white bg-amber-600 px-3 py-2 rounded-md'
-                              : 'text-gray-800 hover:text-amber-700'
-                            }
-                          `}
-                        >
-                          {category.name}
-                        </button>
-                        {hasChildren && (
-                          <button
-                            onClick={() =>
-                              setExpandedCategoryIds((prev) =>
-                                prev.includes(category.id)
-                                  ? prev.filter((id) => id !== category.id)
-                                  : [...prev, category.id]
-                              )
-                            }
-                            className="p-1 rounded-md text-gray-500 hover:text-amber-700 hover:bg-amber-50 transition-colors"
-                            aria-label={
-                              isExpanded ? "Réduire la catégorie" : "Développer la catégorie"
-                            }
-                          >
-                            <svg
-                              className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-
-                      {hasChildren && isExpanded && (
-                        <div className="pb-3">
-                          <ul className="space-y-1 border-l border-gray-200 ml-4 pl-3">
-                            {category.category_children.map((child: any) => {
-                              const isChildActive = activeCategoryHandle === child.handle
-                              return (
-                                <li key={child.id} className="space-y-1">
-                                  <button
-                                    onClick={() =>
-                                      updateFilters({
-                                        category: child.handle,
-                                      })
-                                    }
-                                    className={`
-                                      w-full text-left text-sm px-2 py-1 rounded-md transition-all
-                                      ${isChildActive
-                                        ? 'bg-amber-600 text-white font-semibold'
-                                        : 'text-gray-700 hover:text-amber-700 hover:bg-amber-50'
-                                      }
-                                    `}
-                                  >
-                                    {child.name}
-                                  </button>
-
-                                  {child.category_children?.length > 0 && (
-                                    <ul className="ml-3 border-l border-gray-200 pl-3 space-y-1">
-                                      {child.category_children.map((grandChild: any) => {
-                                        const isGrandChildActive =
-                                          activeCategoryHandle === grandChild.handle
-                                        return (
-                                          <li key={grandChild.id}>
-                                            <button
-                                              onClick={() =>
-                                                updateFilters({
-                                                  category: grandChild.handle,
-                                                })
-                                              }
-                                              className={`
-                                                w-full text-left text-xs px-2 py-1 rounded-md transition-all
-                                                ${isGrandChildActive
-                                                  ? 'bg-amber-600 text-white font-semibold'
-                                                  : 'text-gray-600 hover:text-amber-700 hover:bg-amber-50'
-                                                }
-                                              `}
-                                            >
-                                              {grandChild.name}
-                                            </button>
-                                          </li>
-                                        )
-                                      })}
-                                    </ul>
-                                  )}
-                                </li>
-                              )
-                            })}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
 
           {/* Marques */}
           {brands.length > 0 && (
@@ -418,26 +263,6 @@ export default function FiltersModern({ categories, brands }: FiltersModernProps
             </label>
           </div>
 
-          {/* Trier par */}
-          <div className="space-y-3 pt-6 border-t border-gray-200">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-              </svg>
-              Trier par
-            </label>
-            <select
-              value={searchParams.get('sortBy') || '-created_at'}
-              onChange={(e) => updateFilters({ sortBy: e.target.value === '-created_at' ? null : e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white"
-            >
-              <option value="-created_at">Nouveautés</option>
-              <option value="price_asc">Prix croissant</option>
-              <option value="price_desc">Prix décroissant</option>
-              <option value="title_asc">Nom A-Z</option>
-              <option value="title_desc">Nom Z-A</option>
-            </select>
-          </div>
         </div>
     </div>
   )

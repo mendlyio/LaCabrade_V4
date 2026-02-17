@@ -108,7 +108,7 @@ const SearchBar = () => {
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Rechercher un produit, une marque..."
+          placeholder="Recherche"
           className="w-full pl-12 pr-12 py-3 bg-transparent text-base font-medium text-gray-900 placeholder-gray-500 focus:outline-none"
         />
         {query && (

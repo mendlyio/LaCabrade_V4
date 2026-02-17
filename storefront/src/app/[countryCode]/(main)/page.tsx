@@ -207,6 +207,51 @@ export default async function Home({
         </div>
       </section>
 
+      {/* Section Icônes Info */}
+      <section className="py-12 bg-white border-t border-gray-100">
+        <div className="content-container">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            <div className="text-center">
+              <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-sm text-gray-900 mb-1">Livraison gratuite</h3>
+              <p className="text-xs text-gray-500">à partir de 75 €</p>
+            </div>
+            <div className="text-center">
+              <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-sm text-gray-900 mb-1">Envoi rapide</h3>
+              <p className="text-xs text-gray-500">48-72h en Belgique</p>
+            </div>
+            <div className="text-center">
+              <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-sm text-gray-900 mb-1">Service après-vente</h3>
+              <p className="text-xs text-gray-500">Retours 30 jours</p>
+            </div>
+            <div className="text-center">
+              <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-7 h-7 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-sm text-gray-900 mb-1">6 points d'enlèvement</h3>
+              <p className="text-xs text-gray-500">Livraison gratuite</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Bandeau Selle sur-mesure */}
       <section 
         className="relative py-24 md:py-32 bg-cover bg-center overflow-hidden"
@@ -245,16 +290,11 @@ export default async function Home({
         </div>
       </section>
 
-      {/* Section Prix Mini / Outlet */}
-      <section className="py-16 bg-red-50">
+      {/* Section Outlet */}
+      <section className="py-16 bg-gray-50">
         <div className="content-container">
           <div className="text-center mb-12">
-            <div className="inline-block mb-4">
-              <span className="px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-bold">
-                OUTLET
-              </span>
-            </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Prix mini</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Outlet</h2>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
               Notre sélection d'articles à prix tout doux
             </p>
@@ -279,7 +319,7 @@ export default async function Home({
               <div className="text-center mt-8">
                 <LocalizedClientLink
                   href="/categories/outlet"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#c4707f] hover:bg-[#b5616f] text-white font-semibold rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
                 >
                   Voir tous les outlets
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

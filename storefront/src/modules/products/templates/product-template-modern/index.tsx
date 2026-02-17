@@ -4,8 +4,6 @@ import { notFound } from "next/navigation"
 import ImageGalleryModern from "@modules/products/components/image-gallery-modern"
 import ProductInfoModern from "@modules/products/components/product-info-modern"
 import ProductActionsModern from "@modules/products/components/product-actions-modern"
-import ProductShareButtons from "@modules/products/components/product-share-buttons"
-import ProductTrustBadges from "@modules/products/components/product-trust-badges"
 import RelatedProductsModern from "@modules/products/components/related-products-modern"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -246,13 +244,56 @@ const ProductTemplateModern = async ({
                 </div>
               )}
 
-              {/* Share */}
+              {/* Trust Badges - Infos livraison */}
               <div className="border-t border-gray-100 pt-5">
-                <ProductShareButtons product={product} />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex-shrink-0 w-10 h-10 bg-white rounded-full flex items-center justify-center text-amber-700 shadow-sm">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 text-sm">Livraison gratuite</div>
+                      <div className="text-xs text-gray-600">à partir de 75 €</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex-shrink-0 w-10 h-10 bg-white rounded-full flex items-center justify-center text-amber-700 shadow-sm">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 text-sm">Envoi rapide</div>
+                      <div className="text-xs text-gray-600">48-72h en Belgique</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex-shrink-0 w-10 h-10 bg-white rounded-full flex items-center justify-center text-amber-700 shadow-sm">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 text-sm">Service après-vente</div>
+                      <div className="text-xs text-gray-600">Retours 30 jours</div>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex-shrink-0 w-10 h-10 bg-white rounded-full flex items-center justify-center text-amber-700 shadow-sm">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-gray-900 text-sm">6 points d'enlèvement</div>
+                      <div className="text-xs text-gray-600">Livraison gratuite</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-
-              {/* Trust Badges */}
-              <ProductTrustBadges />
             </div>
           </div>
         </div>
@@ -353,7 +394,7 @@ const ProductTemplateModern = async ({
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-gray-900">Livraison gratuite</p>
-                      <p className="text-xs text-gray-500 mt-0.5">Dès 100€ en Belgique</p>
+                      <p className="text-xs text-gray-500 mt-0.5">À partir de 75€</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl">

@@ -58,21 +58,14 @@ export default function WishlistTemplate({ region, countryCode }: WishlistTempla
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-red-500 to-pink-600 text-white">
-        <div className="content-container py-16">
+      <div className="bg-[#9e354a] text-white">
+        <div className="content-container py-12">
           <div className="max-w-3xl">
-            <div className="inline-block bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full mb-4">
-              <span className="text-sm font-semibold flex items-center gap-2">
-                <Heart className="w-4 h-4" />
-                Ma Liste de Souhaits
-              </span>
-            </div>
-            <h1 className="text-5xl font-bold mb-4">
-              Mes Produits Favoris
+            <h1 className="text-4xl font-bold mb-3">
+              Ma liste de souhaits
             </h1>
-            <p className="text-xl text-white/90 mb-6">
-              Retrouvez tous les produits que vous aimez en un seul endroit. 
-              Ajoutez-les au panier quand vous êtes prêt !
+            <p className="text-lg text-white/90 mb-4">
+              Retrouvez tous les produits que vous aimez en un seul endroit.
             </p>
             <div className="flex items-center gap-6 text-sm">
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-lg">
@@ -101,6 +94,7 @@ export default function WishlistTemplate({ region, countryCode }: WishlistTempla
             </LocalizedClientLink>
             <span>/</span>
             <span className="text-gray-900 font-medium">Liste de souhaits</span>
+
           </nav>
         </div>
       </div>
@@ -110,15 +104,15 @@ export default function WishlistTemplate({ region, countryCode }: WishlistTempla
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
-              <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <div className="w-16 h-16 border-4 border-[#9e354a] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p className="text-gray-600">Chargement de votre liste de souhaits...</p>
             </div>
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-20">
             <div className="max-w-md mx-auto">
-              <div className="w-24 h-24 bg-gradient-to-br from-red-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Heart className="w-12 h-12 text-red-500" />
+              <div className="w-24 h-24 bg-gradient-to-br from-[#9e354a]/10 to-[#9e354a]/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Heart className="w-12 h-12 text-[#9e354a]" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-3">
                 Votre liste de souhaits est vide
@@ -129,7 +123,7 @@ export default function WishlistTemplate({ region, countryCode }: WishlistTempla
               </p>
               <LocalizedClientLink
                 href="/store"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#9e354a] hover:bg-[#8a2d40] text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg"
               >
                 <ShoppingBag className="w-5 h-5" />
                 Découvrir nos produits
@@ -151,7 +145,7 @@ export default function WishlistTemplate({ region, countryCode }: WishlistTempla
                 </div>
                 <button
                   onClick={clearWishlist}
-                  className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm"
+                  className="px-4 py-2 text-[#9e354a] hover:bg-[#9e354a]/10 rounded-lg transition-colors font-medium text-sm"
                 >
                   Tout supprimer
                 </button>

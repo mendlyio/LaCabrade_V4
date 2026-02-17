@@ -3,9 +3,8 @@
 import { useState, useEffect, useMemo } from "react"
 import { HttpTypes } from "@medusajs/types"
 import { isEqual } from "lodash"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { addToCart } from "@lib/data/cart"
-import WishlistToggleButton from "@modules/common/components/wishlist-toggle-button"
 
 type ProductActionsModernProps = {
   product: HttpTypes.StoreProduct
@@ -53,7 +52,6 @@ export default function ProductActionsModern({
   const [notifyEmail, setNotifyEmail] = useState("")
   const [notifySubmitted, setNotifySubmitted] = useState(false)
   const countryCode = useParams().countryCode as string
-  const router = useRouter()
 
   // Présélectionner les options si un seul variant ou si le produit n'a pas d'options réelles
   useEffect(() => {
@@ -376,39 +374,7 @@ export default function ProductActionsModern({
           )}
         </button>
 
-        {/* Buy Now Button */}
-        {selectedVariant && inStock && (
-          <button
-            onClick={async () => {
-              if (!selectedVariant?.id) return
-              setIsAdding(true)
-              try {
-                await addToCart({
-                  variantId: selectedVariant.id,
-                  quantity,
-                  countryCode,
-                })
-                router.push(`/${countryCode}/checkout`)
-              } catch (error) {
-                console.error("Erreur:", error)
-              } finally {
-                setIsAdding(false)
-              }
-            }}
-            disabled={isAdding}
-            className="w-full py-4 px-6 rounded-xl font-bold text-base transition-all duration-300 flex items-center justify-center gap-3 border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            Acheter maintenant
-          </button>
-        )}
-
-        {/* Wishlist Button */}
-        <div className="pt-2">
-          <WishlistToggleButton productId={product.id!} variant="button" size="lg" />
-        </div>
+        
       </div>
 
       {/* Formulaire alertez-moi : variante épuisée OU produit globalement épuisé */}
@@ -451,10 +417,7 @@ export default function ProductActionsModern({
         </div>
       )}
 
-      {/* Help Text */}
-      <div className="text-sm text-gray-500 text-center">
-        <p>🔒 Paiement 100% sécurisé</p>
-      </div>
+      
     </div>
   )
 }

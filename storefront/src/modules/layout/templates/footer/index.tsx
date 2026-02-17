@@ -14,8 +14,11 @@ export default async function Footer() {
           {/* COLONNE 1 : LOGO + RÉSEAUX SOCIAUX */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-2xl font-bold text-amber-600">La Cabrade</h3>
-              <p className="text-sm text-amber-400 font-medium tracking-wide">LC•EQUESTRIAN</p>
+              <img 
+                src="https://ik.imagekit.io/kodt9cn6f/Cabrade/Logo-cabrade.webp" 
+                alt="La Cabrade" 
+                className="h-14 w-auto object-contain"
+              />
             </div>
             <p className="text-sm text-gray-300 leading-relaxed">
               Sellerie - Magasin d&apos;équitation à Fléron, près de Liège
@@ -168,20 +171,20 @@ export default async function Footer() {
             </h3>
             <ul className="space-y-1.5 text-sm text-gray-300">
               <li className="flex justify-between">
-                <span>Lundi</span>
-                <span className="font-medium text-gray-100">Fermé</span>
+                <span>Lundi :</span>
+                <span className="font-medium text-gray-100">fermé</span>
               </li>
               <li className="flex justify-between">
-                <span>Mardi - Vendredi</span>
+                <span>Mardi - Vendredi :</span>
                 <span className="font-medium text-gray-100">10h - 18h</span>
               </li>
               <li className="flex justify-between">
-                <span>Samedi</span>
+                <span>Samedi :</span>
                 <span className="font-medium text-gray-100">10h - 17h</span>
               </li>
               <li className="flex justify-between">
-                <span>Dimanche</span>
-                <span className="font-medium text-gray-100">Fermé</span>
+                <span>Dimanche :</span>
+                <span className="font-medium text-gray-100">fermé</span>
               </li>
             </ul>
           </div>
