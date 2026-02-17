@@ -12,10 +12,12 @@ import { useTranslate } from "@lib/context/language-context"
 import { Brand } from "@lib/data/brands"
 import { buildCategoryTree } from "@lib/util/category-tree"
 
-// Items principaux (non catégories) - les clés de traduction
-const SideMenuItemsKeys = [
+// Ordre: Nouveautés → Catégories → Bon cadeau → Marques → A Propos
+const SideMenuItemsBeforeCategories = [
   { key: "nav.accueil", href: "/" },
   { key: "nav.nouveautes", href: "/nouveautes", badge: "NEW" },
+]
+const SideMenuItemsAfterCategories = [
   { key: "nav.bon_cadeau", href: "/bon-cadeau" },
   { key: "nav.marques", href: "/marques" },
   { key: "nav.a_propos", href: "/a-propos" },
@@ -130,10 +132,10 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                         </LocalizedClientLink>
                       </div>
 
-                      {/* Menu Items */}
+                      {/* Menu Items - Ordre: Nouveautés → Catégories → Bon cadeau → Marques → A Propos */}
                       <nav className="flex-1 overflow-y-auto custom-scrollbar p-6">
                         <ul className="space-y-2">
-                          {SideMenuItemsKeys.map((item) => (
+                          {SideMenuItemsBeforeCategories.map((item) => (
                             <li key={item.key}>
                               <LocalizedClientLink
                                 href={item.href}
@@ -157,7 +159,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                           ))}
                         </ul>
 
-                        {/* Categories Section */}
+                        {/* Categories Section (entre Nouveautés et Bon cadeau) */}
                         {parentCategories.length > 0 && (
                           <div className="mt-8 pt-6 border-t border-gray-200">
                             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-4">
@@ -249,6 +251,27 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                             </ul>
                           </div>
                         )}
+
+                        {/* Bon cadeau, Marques, A Propos (après Catégories) */}
+                        <ul className="space-y-2 mt-8 pt-6 border-t border-gray-200">
+                          {SideMenuItemsAfterCategories.map((item) => (
+                            <li key={item.key}>
+                              <LocalizedClientLink
+                                href={item.href}
+                                className="flex items-center gap-4 px-4 py-3 rounded-xl text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition-all duration-200 group relative"
+                                onClick={close}
+                                data-testid={`${item.key.toLowerCase()}-link`}
+                              >
+                                <span className="text-base font-medium flex-1">
+                                  {t(item.key as any)}
+                                </span>
+                                <span className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  →
+                                </span>
+                              </LocalizedClientLink>
+                            </li>
+                          ))}
+                        </ul>
 
                         {/* Brands Section */}
                         {brands.length > 0 && (

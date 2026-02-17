@@ -3,36 +3,39 @@
 import NavLink from "@modules/layout/components/nav-link"
 import { useTranslate } from "@lib/context/language-context"
 
-const NavLinks = () => {
+const linkClass = "px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-amber-600 transition-all duration-200"
+const activeClass = "bg-amber-600 text-white shadow-sm"
+
+type NavLinksProps = {
+  variant?: "nouveautes" | "bon_cadeau" | "a_propos"
+}
+
+const NavLinks = ({ variant }: NavLinksProps) => {
   const t = useTranslate()
 
-  return (
-    <>
-      <NavLink
-        href="/nouveautes"
-        className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-amber-600 transition-all duration-200"
-        activeClassName="bg-amber-600 text-white shadow-sm"
-      >
+  if (variant === "nouveautes") {
+    return (
+      <NavLink href="/nouveautes" className={linkClass} activeClassName={activeClass}>
         {t("nav.nouveautes")}
       </NavLink>
-
-      <NavLink
-        href="/bon-cadeau"
-        className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-amber-600 transition-all duration-200"
-        activeClassName="bg-amber-600 text-white shadow-sm"
-      >
+    )
+  }
+  if (variant === "bon_cadeau") {
+    return (
+      <NavLink href="/bon-cadeau" className={linkClass} activeClassName={activeClass}>
         {t("nav.bon_cadeau")}
       </NavLink>
-
-      <NavLink
-        href="/a-propos"
-        className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-amber-600 transition-all duration-200"
-        activeClassName="bg-amber-600 text-white shadow-sm"
-      >
+    )
+  }
+  if (variant === "a_propos") {
+    return (
+      <NavLink href="/a-propos" className={linkClass} activeClassName={activeClass}>
         {t("nav.a_propos")}
       </NavLink>
-    </>
-  )
+    )
+  }
+
+  return null
 }
 
 export default NavLinks

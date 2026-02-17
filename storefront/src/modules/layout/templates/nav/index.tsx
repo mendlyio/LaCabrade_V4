@@ -124,16 +124,18 @@ export default async function Nav() {
         <nav className="hidden lg:block border-t border-gray-100 bg-white mega-menu-nav">
           <div className="content-container">
             <div className="flex items-center gap-1 justify-center py-3">
-              {/* 1. Catégories dynamiques (Backoffice) */}
+              {/* 1. Nouveautés */}
+              <NavLinks variant="nouveautes" />
+              {/* 2. Catégories dynamiques (Backoffice) */}
               {parentCategories.map((category) => (
                 <MegaMenu key={category.id} category={category} />
               ))}
-
-              {/* 2-4. Liens principaux */}
-              <NavLinks />
-
-              {/* 5. Marques (Dropdown dynamique) */}
+              {/* 3. Bon cadeau */}
+              <NavLinks variant="bon_cadeau" />
+              {/* 4. Marques (Dropdown dynamique) */}
               <BrandsMenu brands={brands} />
+              {/* 5. A Propos */}
+              <NavLinks variant="a_propos" />
             </div>
           </div>
         </nav>
