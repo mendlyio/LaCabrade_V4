@@ -946,6 +946,78 @@ export const syncFromErpWorkflow = createWorkflow(
                       }
                     }
 
+                    // 2b) Re-sync images depuis Odoo (si le produit a des images Odoo)
+                    if (!priceOnly && (p.odoo_image_base64 || (p.odoo_image_ids && p.odoo_image_ids.length > 0))) {
+                      try {
+                        if (!process.env.MINIO_ENDPOINT || !process.env.MINIO_ACCESS_KEY || !process.env.MINIO_SECRET_KEY) {
+                          console.warn(`⚠️ [UPDATE] Variables MinIO non définies, images ignorées pour ${p.id}`)
+                        } else {
+                          const imageUrls: string[] = []
+                          const { Client } = await import('minio')
+                          const rawEndpoint = process.env.MINIO_ENDPOINT
+                          const endpoint = rawEndpoint.replace(/^https?:\/\//, '')
+                          const bucket = process.env.MINIO_BUCKET || 'medusa-media'
+
+                          const client = new Client({
+                            endPoint: endpoint,
+                            port: 443,
+                            useSSL: true,
+                            accessKey: process.env.MINIO_ACCESS_KEY,
+                            secretKey: process.env.MINIO_SECRET_KEY,
+                          })
+
+                          // Upload image principale (image_512)
+                          if (p.odoo_image_base64) {
+                            const filename = `odoo/products/${p.id}/main-${Date.now()}.png`
+                            const buffer = Buffer.from(p.odoo_image_base64, 'base64')
+                            await client.putObject(bucket, filename, buffer, buffer.length, {
+                              'Content-Type': 'image/png',
+                              'x-amz-acl': 'public-read',
+                            })
+                            const url = `https://${endpoint}/${bucket}/${filename}`
+                            imageUrls.push(url)
+                            console.log(`📷 [UPDATE] Image principale re-uploadée: ${url}`)
+                          }
+
+                          // Upload images additionnelles (EPT)
+                          if (p.odoo_image_ids && Array.isArray(p.odoo_image_ids) && p.odoo_image_ids.length > 0) {
+                            try {
+                              const odooModuleService = container.resolve(ODOO_MODULE) as OdooModuleService
+                              const additionalImages = await odooModuleService.fetchProductImages(p.odoo_image_ids)
+                              const sortedImages = additionalImages.sort((a: any, b: any) => (a.sequence || 0) - (b.sequence || 0))
+
+                              for (const img of sortedImages) {
+                                if (img.image && typeof img.image === 'string') {
+                                  const filename = `odoo/products/${p.id}/img-${img.id}-${Date.now()}.png`
+                                  const buffer = Buffer.from(img.image, 'base64')
+                                  await client.putObject(bucket, filename, buffer, buffer.length, {
+                                    'Content-Type': 'image/png',
+                                    'x-amz-acl': 'public-read',
+                                  })
+                                  const url = `https://${endpoint}/${bucket}/${filename}`
+                                  imageUrls.push(url)
+                                }
+                              }
+                              console.log(`📷 [UPDATE] ${sortedImages.length} image(s) additionnelle(s) re-uploadée(s)`)
+                            } catch (imgErr: any) {
+                              console.error(`❌ [UPDATE] Erreur images additionnelles:`, imgErr.message)
+                            }
+                          }
+
+                          // Mettre à jour le produit avec les nouvelles images
+                          if (imageUrls.length > 0) {
+                            await productService.updateProducts(p.id, {
+                              images: imageUrls.map(url => ({ url })),
+                              thumbnail: imageUrls[0],
+                            })
+                            console.log(`✅ [UPDATE] ${imageUrls.length} image(s) mises à jour pour ${p.id}`)
+                          }
+                        }
+                      } catch (imgErr: any) {
+                        console.error(`❌ [UPDATE] Erreur re-sync images ${p.id}:`, imgErr.message)
+                      }
+                    }
+
                     // 3) Prix via pricing workflow (encapsulé pour ne pas bloquer le reste)
                     console.log(`🔍 [UPDATE] Vérif pricing ${p.id}: hasVariants=${Array.isArray(p.variants)}, length=${p.variants?.length || 0}`)
                     if (Array.isArray(p.variants) && p.variants.length) {
