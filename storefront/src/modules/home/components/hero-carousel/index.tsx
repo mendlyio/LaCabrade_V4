@@ -10,18 +10,27 @@ const HeroCarousel = () => {
     {
       id: 1,
       image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/header-3.webp",
-      alt: "Équitation de qualité"
+      alt: "Découvrir la boutique",
+      buttonText: "Découvrir la boutique",
+      buttonHref: "/store",
+      buttonStyle: "bg-amber-600 text-white hover:bg-amber-700",
     },
     {
       id: 2,
       image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/header-2.webp",
-      alt: "LC Equestrian"
+      alt: "LC Equestrian",
+      buttonText: "LC Equestrian",
+      buttonHref: "/lc-equestrian",
+      buttonStyle: "bg-white text-amber-700 hover:bg-amber-50 border-2 border-white",
     },
     {
       id: 3,
       image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/header-1.webp",
-      alt: "Outlet et promotions"
-    }
+      alt: "Outlet",
+      buttonText: "Voir les promotions",
+      buttonHref: "/categories/outlet",
+      buttonStyle: "bg-[#c4707f] text-white hover:bg-[#b5616f]",
+    },
   ]
 
   // Auto-défilement toutes les 5 secondes
@@ -57,33 +66,23 @@ const HeroCarousel = () => {
         ))}
       </div>
 
-      {/* Contenu par-dessus */}
-      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Bouton principal — un seul sur mobile, trois sur desktop */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center px-4">
+      {/* Bouton par slide — positionné en bas */}
+      <div className="absolute bottom-20 sm:bottom-24 left-0 right-0 z-20 flex justify-center px-4">
+        {slides.map((slide, index) => (
+          <div
+            key={slide.id}
+            className={`transition-opacity duration-700 ${
+              index === currentSlide ? 'opacity-100' : 'opacity-0 absolute'
+            }`}
+          >
             <LocalizedClientLink
-              href="/store"
-              className="px-6 py-3 sm:px-8 sm:py-4 bg-amber-600 text-white text-sm sm:text-base font-semibold rounded-lg hover:bg-amber-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              href={slide.buttonHref}
+              className={`inline-flex px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-semibold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${slide.buttonStyle}`}
             >
-              Découvrir la boutique
-            </LocalizedClientLink>
-            
-            <LocalizedClientLink
-              href="/categories/lc-equestrian"
-              className="hidden sm:inline-flex px-8 py-4 bg-white text-amber-700 font-semibold rounded-lg hover:bg-amber-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 border-2 border-white"
-            >
-              LC Equestrian
-            </LocalizedClientLink>
-            
-            <LocalizedClientLink
-              href="/categories/outlet"
-              className="hidden sm:inline-flex px-8 py-4 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              Outlet
+              {slide.buttonText}
             </LocalizedClientLink>
           </div>
-        </div>
+        ))}
       </div>
 
       {/* Indicateurs de slides */}

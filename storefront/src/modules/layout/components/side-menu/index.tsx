@@ -173,7 +173,11 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                                     <div className="flex items-center gap-2">
                                       <LocalizedClientLink
                                         href={`/categories/${category.handle}`}
-                                        className="flex-1 px-4 py-2 text-sm text-gray-700 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors font-medium"
+                                        className={`flex-1 px-4 py-2 text-sm rounded-lg transition-colors font-medium ${
+                                          category.handle === "outlet"
+                                            ? "text-[#c4707f] hover:text-[#9e354a] hover:bg-[#c4707f]/10"
+                                            : "text-gray-700 hover:text-amber-600 hover:bg-amber-50"
+                                        }`}
                                         onClick={close}
                                       >
                                         {category.name}

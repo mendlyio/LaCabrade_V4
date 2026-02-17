@@ -48,11 +48,17 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [open])
 
+  const isOutlet = category.handle === "outlet"
+
   if (!hasChildren) {
     return (
       <LocalizedClientLink
         href={`/categories/${category.handle}`}
-        className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-amber-600 transition-all duration-200 whitespace-nowrap"
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+          isOutlet 
+            ? "text-[#c4707f] hover:text-white hover:bg-[#c4707f]" 
+            : "text-gray-700 hover:text-white hover:bg-amber-600"
+        }`}
       >
         {category.name}
       </LocalizedClientLink>
@@ -75,9 +81,13 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
         className={`
           flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium outline-none
           transition-all duration-200 whitespace-nowrap
-          ${open 
-            ? 'text-white bg-amber-600 shadow-sm' 
-            : 'text-gray-700 hover:text-white hover:bg-amber-600'
+          ${isOutlet
+            ? (open 
+                ? 'text-white bg-[#c4707f] shadow-sm' 
+                : 'text-[#c4707f] hover:text-white hover:bg-[#c4707f]')
+            : (open 
+                ? 'text-white bg-amber-600 shadow-sm' 
+                : 'text-gray-700 hover:text-white hover:bg-amber-600')
           }
         `}
         onClick={() => setOpen(!open)}

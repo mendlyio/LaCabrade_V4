@@ -26,6 +26,22 @@ export default async function Home({
     return null
   }
 
+  // Récupérer les catégories d'abord (pour filtrer par catégorie)
+  let allCategories: any[] = []
+  try {
+    allCategories = await listCategories() || []
+  } catch (error) {
+    console.error("Erreur lors de la récupération des catégories:", error)
+  }
+
+  // Trouver les IDs de catégories pour LC Equestrian et Outlet
+  const lcCategory = allCategories.find((c: any) => 
+    c.handle === "la-cabrade" || c.handle === "lc-equestrian"
+  )
+  const outletCategory = allCategories.find((c: any) => 
+    c.handle === "outlet"
+  )
+
   // Récupérer les produits LC Equestrian
   let lcEquestrianProducts: any[] = []
   try {
@@ -33,12 +49,13 @@ export default async function Home({
       queryParams: {
         limit: 8,
         region_id: region.id,
+        ...(lcCategory ? { category_id: [lcCategory.id] } : {}),
       },
       countryCode,
     })
     lcEquestrianProducts = result.response.products || []
   } catch (error) {
-    console.error("❌ Erreur lors de la récupération des produits:", error)
+    console.error("Erreur lors de la récupération des produits LC Equestrian:", error)
   }
 
   // Récupérer les produits outlet
@@ -48,26 +65,20 @@ export default async function Home({
       queryParams: {
         limit: 8,
         region_id: region.id,
+        ...(outletCategory ? { category_id: [outletCategory.id] } : {}),
       },
       countryCode,
     })
     outletProducts = result.response.products || []
   } catch (error) {
-    console.error("❌ Erreur lors de la récupération des produits outlet:", error)
+    console.error("Erreur lors de la récupération des produits outlet:", error)
   }
 
-  // Récupérer les catégories
-  let mainCategories: any[] = []
-  try {
-    const categories = await listCategories()
-    const parentCategories =
-      categories?.filter(
-        (c: any) => c.parent_category_id == null && c.is_active !== false
-      ) || []
-    mainCategories = parentCategories.slice(0, 8) || []
-  } catch (error) {
-    console.error("Erreur lors de la récupération des catégories:", error)
-  }
+  // Filtrer les catégories principales pour la section catégories
+  const parentCategories = allCategories.filter(
+    (c: any) => c.parent_category_id == null && c.is_active !== false
+  )
+  const mainCategories = parentCategories.slice(0, 8)
 
   const categoryImages: Record<string, string> = {
     cheval: "https://ik.imagekit.io/kodt9cn6f/Cabrade/cheval.webp",
@@ -125,7 +136,7 @@ export default async function Home({
               </ScrollCarousel>
               <div className="text-center mt-8">
                 <LocalizedClientLink
-                  href="/categories/lc-equestrian"
+                  href="/lc-equestrian"
                   className="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
                 >
                   Voir toute la collection
