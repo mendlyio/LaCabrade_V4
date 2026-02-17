@@ -60,6 +60,16 @@ export default async function ProductCardModern({
 
   const variantCount = variants.length
 
+  // Badge "Nouveau" automatique : produits créés il y a moins de 30 jours
+  const isNew = (() => {
+    if (pricedProduct.metadata?.new === true) return true
+    if (!pricedProduct.created_at) return false
+    const createdAt = new Date(pricedProduct.created_at)
+    const now = new Date()
+    const daysSinceCreation = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
+    return daysSinceCreation <= 30
+  })()
+
   // ─── COMPACT ───────────────────────────────────────────────
   if (variant === "compact") {
     return (
@@ -224,7 +234,7 @@ export default async function ProductCardModern({
                 -{discountPercentage}%
               </div>
             )}
-            {pricedProduct.metadata?.new && (
+            {isNew && (
               <div className="bg-emerald-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
                 Nouveau
               </div>
