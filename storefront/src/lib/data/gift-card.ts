@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidateTag } from "next/cache"
-import { getAuthHeaders, getCartId } from "./cookies"
+import { getAuthHeaders } from "./cookies"
 import { getOrSetCart } from "./cart"
 import { sdk } from "@lib/config"
 
@@ -9,6 +9,38 @@ const BACKEND_URL =
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
 const PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
+
+/**
+ * Ajoute un bon cadeau au panier via l'API standard Medusa (variant_id + metadata).
+ * Utilise le SDK pour plus de fiabilité.
+ */
+async function addGiftCardViaSdk(
+  cartId: string,
+  variantId: string,
+  metadata: Record<string, unknown>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await sdk.store.cart.createLineItem(
+      cartId,
+      {
+        variant_id: variantId,
+        quantity: 1,
+        metadata,
+      },
+      {},
+      getAuthHeaders()
+    )
+    revalidateTag("cart")
+    return { success: true }
+  } catch (error: any) {
+    console.error("[GiftCard] Erreur SDK createLineItem:", error)
+    const msg =
+      error?.message ||
+      error?.cause?.message ||
+      "Erreur lors de l'ajout au panier"
+    return { success: false, error: msg }
+  }
+}
 
 export interface GiftCardCartInput {
   variantId?: string
@@ -85,8 +117,9 @@ export async function getGiftCardProduct(
 }
 
 /**
- * Ajoute un bon cadeau au panier via l'endpoint backend custom.
- * Gère les montants fixes (via variant) et personnalisés.
+ * Ajoute un bon cadeau au panier.
+ * - Montant fixe (variant_id) : utilise l'API standard Medusa via SDK.
+ * - Montant personnalisé : utilise l'endpoint backend custom.
  */
 export async function addGiftCardToCart(
   input: GiftCardCartInput
@@ -97,45 +130,55 @@ export async function addGiftCardToCart(
       return { success: false, error: "Impossible de récupérer le panier" }
     }
 
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    }
-
-    if (PUBLISHABLE_KEY) {
-      headers["x-publishable-api-key"] = PUBLISHABLE_KEY
-    }
-
-    const body: Record<string, any> = {
-      cart_id: cart.id,
+    const metadata = {
       recipient_email: input.recipientEmail,
       recipient_name: input.recipientName,
       message: input.message || "",
     }
 
     if (input.variantId) {
-      body.variant_id = input.variantId
-    } else if (input.customAmount) {
-      body.custom_amount = input.customAmount
+      return addGiftCardViaSdk(cart.id, input.variantId, metadata)
     }
 
-    const res = await fetch(`${BACKEND_URL}/store/gift-card/add-to-cart`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    })
-
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ message: "Erreur inconnue" }))
-      return { success: false, error: error.message }
+    if (input.customAmount) {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      }
+      if (PUBLISHABLE_KEY) {
+        headers["x-publishable-api-key"] = PUBLISHABLE_KEY
+      }
+      const res = await fetch(
+        `${BACKEND_URL}/store/custom/gift-card-add-to-cart`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            cart_id: cart.id,
+            custom_amount: input.customAmount,
+            recipient_email: input.recipientEmail,
+            recipient_name: input.recipientName,
+            message: input.message || "",
+          }),
+        }
+      )
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: "Erreur inconnue" }))
+        const msg =
+          error?.message || error?.error || `Erreur serveur (${res.status})`
+        return { success: false, error: msg }
+      }
+      revalidateTag("cart")
+      return { success: true }
     }
 
-    revalidateTag("cart")
-    return { success: true }
+    return { success: false, error: "Veuillez sélectionner un montant" }
   } catch (error: any) {
     console.error("[GiftCard] Erreur ajout au panier:", error)
-    return {
-      success: false,
-      error: error.message || "Erreur lors de l'ajout au panier",
-    }
+    const msg =
+      error?.message ||
+      (error?.code === "ECONNREFUSED"
+        ? "Impossible de joindre le serveur. Vérifiez que le backend est démarré."
+        : "Erreur lors de l'ajout au panier")
+    return { success: false, error: msg }
   }
 }

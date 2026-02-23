@@ -68,17 +68,30 @@ export default async function CheckoutForm({
     return null
   }
 
-  const [shippingMethods, paymentMethods, productSets] = await Promise.all([
-    listCartShippingMethods(cart.id),
-    listCartPaymentMethods(cart.region?.id ?? ""),
-    fetchUpsellProducts(cart, countryCode),
-  ])
+  let shippingMethods: Awaited<ReturnType<typeof listCartShippingMethods>>
+  let paymentMethods: Awaited<ReturnType<typeof listCartPaymentMethods>>
+  let productSets: [HttpTypes.StoreProduct[], HttpTypes.StoreProduct[]]
+
+  try {
+    const regionId = cart.region?.id ?? ""
+    const [ship, pay, prod] = await Promise.all([
+      listCartShippingMethods(cart.id),
+      regionId ? listCartPaymentMethods(regionId) : Promise.resolve(null),
+      fetchUpsellProducts(cart, countryCode),
+    ])
+    shippingMethods = ship
+    paymentMethods = pay
+    productSets = prod as [HttpTypes.StoreProduct[], HttpTypes.StoreProduct[]]
+  } catch (err) {
+    console.error("[CheckoutForm] Erreur lors du chargement:", err)
+    return null
+  }
 
   if (!shippingMethods || !paymentMethods) {
     return null
   }
 
-  const [upsellProducts, lastChanceProducts] = productSets as any as [HttpTypes.StoreProduct[], HttpTypes.StoreProduct[]]
+  const [upsellProducts, lastChanceProducts] = productSets
 
   return (
     <div className="w-full relative">

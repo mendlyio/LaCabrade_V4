@@ -4,6 +4,7 @@ import {
   IOrderModuleService,
 } from "@medusajs/framework/types"
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
+import { createPromotionsWorkflow } from "@medusajs/medusa/core-flows"
 import { EmailTemplates } from "../modules/email-notifications/templates"
 import { generateGiftCardPDF, generateGiftCardCode } from "../utils/generate-gift-card-pdf"
 import { syncGiftCardToOdoo } from "../utils/sync-gift-card-odoo"
@@ -12,13 +13,14 @@ import OdooModuleService from "../modules/odoo/service"
 
 /**
  * Subscriber qui gère la livraison des bons cadeaux après une commande.
- * 
+ *
  * Déclenché sur `order.placed`, il :
  * 1. Détecte les items "Gift Card" via la metadata `is_gift_card`
  * 2. Génère un code unique pour chaque bon cadeau
- * 3. Génère un PDF avec le design La Cabrade
- * 4. Envoie un email au destinataire avec le PDF en pièce jointe
- * 5. Synchronise le bon cadeau vers Odoo (si configuré)
+ * 3. Crée une promotion Medusa (utilisable comme code au checkout)
+ * 4. Génère un PDF avec le design La Cabrade
+ * 5. Envoie un email au destinataire avec le PDF en pièce jointe
+ * 6. Synchronise le bon cadeau vers Odoo (si configuré)
  */
 export default async function giftCardOrderedHandler({
   event: { data },
@@ -86,7 +88,48 @@ export default async function giftCardOrderedHandler({
         const code = generateGiftCardCode()
         console.log(`[GiftCard] 🔑 Code généré: ${code} (${amount}€ pour ${recipientEmail})`)
 
-        // 2. Générer le PDF
+        // 2. Créer une promotion Medusa pour que le code soit utilisable au checkout
+        const amountInCents = Math.round(amount * 100)
+        try {
+          const createPromotions = createPromotionsWorkflow(container)
+          await createPromotions.run({
+            input: {
+              promotionsData: [
+                {
+                  code,
+                  type: "standard",
+                  status: "active",
+                  is_automatic: false,
+                  campaign: {
+                    name: `Bon Cadeau ${code}`,
+                    campaign_identifier: code,
+                    budget: {
+                      type: "spend",
+                      limit: amountInCents,
+                      currency_code: "eur",
+                    },
+                  },
+                  application_method: {
+                    type: "fixed",
+                    target_type: "items",
+                    allocation: "across",
+                    value: amountInCents,
+                    currency_code: "eur",
+                  },
+                },
+              ],
+            },
+          })
+          console.log(`[GiftCard] ✅ Promotion créée pour le code ${code} (${amount}€)`)
+        } catch (promoError: any) {
+          console.error(
+            `[GiftCard] ❌ Erreur création promotion pour ${code}:`,
+            promoError.message
+          )
+          // On continue quand même : le code est dans order.metadata, le destinataire reçoit l'email
+        }
+
+        // 3. Générer le PDF
         const pdfBuffer = await generateGiftCardPDF({
           code,
           amount,
@@ -96,7 +139,7 @@ export default async function giftCardOrderedHandler({
         })
         console.log(`[GiftCard] 📄 PDF généré (${pdfBuffer.length} bytes)`)
 
-        // 3. Envoyer l'email au destinataire avec le PDF en PJ
+        // 4. Envoyer l'email au destinataire avec le PDF en PJ
         try {
           await notificationModuleService.createNotifications({
             to: recipientEmail,
@@ -134,7 +177,7 @@ export default async function giftCardOrderedHandler({
           )
         }
 
-        // 4. Synchroniser vers Odoo (si configuré)
+        // 5. Synchroniser vers Odoo (si configuré)
         if (odooService) {
           await syncGiftCardToOdoo(odooService, {
             code,
@@ -143,7 +186,7 @@ export default async function giftCardOrderedHandler({
           })
         }
 
-        // 5. Sauvegarder le code dans les metadata de la commande pour référence
+        // 6. Sauvegarder le code dans les metadata de la commande pour référence
         try {
           const existingGiftCards = ((order.metadata as any)?.gift_cards || []) as any[]
           await orderModuleService.updateOrders([

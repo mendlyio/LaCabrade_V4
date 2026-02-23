@@ -14,7 +14,7 @@ import {
 } from "@medusajs/framework/utils"
 import { createShippingOptionsWorkflow } from "@medusajs/medusa/core-flows"
 
-const EXPRESS_PRICE = 12.9 // 12,90 €
+const EXPRESS_PRICE = 12.9 // 12,90 € (format euros)
 
 export default async function seedExpressShipping({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -160,7 +160,7 @@ export default async function seedExpressShipping({ container }: ExecArgs) {
   logger.info("")
   logger.info("🎉 Résumé :")
   for (const opt of shippingOptions) {
-    logger.info(`  ⚡ ${opt.name} — ${EXPRESS_PRICE} €`)
+    logger.info(`  ⚡ ${opt.name} — ${Number(EXPRESS_PRICE).toFixed(2)} €`)
   }
   logger.info("")
 }

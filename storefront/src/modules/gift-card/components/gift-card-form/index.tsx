@@ -82,10 +82,18 @@ export default function GiftCardForm({ variants, countryCode }: GiftCardFormProp
 
     try {
       const variant = getVariantForAmount(selectedAmount)
+      const isCustom = selectedAmount === "custom"
+      const customAmt = isCustom ? Number(customAmount) : undefined
+      // Si montant fixe mais variant non trouvé (ex: produit non seedé), fallback sur custom_amount
+      const variantId = variant?.id
+      const fallbackCustomAmount =
+        !variantId && !isCustom && ["25", "50", "100"].includes(selectedAmount)
+          ? Number(selectedAmount)
+          : undefined
 
       const result = await addGiftCardToCart({
-        variantId: variant?.id,
-        customAmount: selectedAmount === "custom" ? Number(customAmount) : undefined,
+        variantId: variantId ?? undefined,
+        customAmount: customAmt ?? fallbackCustomAmount,
         recipientEmail: recipientEmail.trim(),
         recipientName: recipientName.trim(),
         message: message.trim(),

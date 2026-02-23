@@ -4,12 +4,17 @@ import {
   Modules,
   ProductStatus,
 } from "@medusajs/framework/utils"
-import { createProductsWorkflow } from "@medusajs/medusa/core-flows"
+import {
+  createProductsWorkflow,
+  linkProductsToSalesChannelWorkflow,
+} from "@medusajs/medusa/core-flows"
 
 /**
  * Seed script pour créer le produit "Bon Cadeau La Cabrade" avec 3 variants.
- * 
+ * Si le produit existe déjà, le lie à TOUS les sales channels (fix prod).
+ *
  * Usage : npx medusa exec src/scripts/seed-gift-card.ts
+ * En local sans Redis : REDIS_URL= npx medusa exec src/scripts/seed-gift-card.ts
  */
 export default async function seedGiftCard({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -19,24 +24,54 @@ export default async function seedGiftCard({ container }: ExecArgs) {
 
   logger.info("🎁 Seeding Gift Card product...")
 
+  // Récupérer TOUS les sales channels (priorité LaCabrade en prod)
+  let salesChannels = await salesChannelModuleService.listSalesChannels({
+    name: "LaCabrade",
+  })
+  if (!salesChannels.length) {
+    salesChannels = await salesChannelModuleService.listSalesChannels({
+      name: "Default Sales Channel",
+    })
+  }
+  if (!salesChannels.length) {
+    salesChannels = await salesChannelModuleService.listSalesChannels({})
+  }
+  if (!salesChannels.length) {
+    logger.error("❌ Aucun Sales Channel trouvé. Lancez d'abord le seed principal ou créez un canal.")
+    return
+  }
+
   // Vérifier si le produit existe déjà
   const existingProducts = await productModuleService.listProducts({
     handle: "bon-cadeau",
   })
 
   if (existingProducts.length > 0) {
-    logger.info("⚠️ Le produit Bon Cadeau existe déjà (handle: bon-cadeau). Seed annulé.")
+    const product = existingProducts[0]
+    logger.info(`⚠️ Le produit Bon Cadeau existe déjà (id: ${product.id}). Liaison à tous les sales channels...`)
+
+    // Lier le produit à TOUS les sales channels (fix pour prod)
+    for (const channel of salesChannels) {
+      try {
+        await linkProductsToSalesChannelWorkflow(container).run({
+          input: {
+            id: channel.id,
+            add: [product.id],
+          },
+        })
+        logger.info(`   ✅ Lié au canal: ${channel.name}`)
+      } catch (e: any) {
+        // Ignorer si déjà lié
+        if (!e.message?.includes("already") && !e.message?.includes("duplicate")) {
+          logger.warn(`   ⚠️ Canal ${channel.name}: ${e.message}`)
+        }
+      }
+    }
+    logger.info("✅ Bon Cadeau mis à jour et visible sur tous les canaux.")
     return
   }
 
-  // Récupérer le sales channel par défaut
-  const salesChannels = await salesChannelModuleService.listSalesChannels({
-    name: "Default Sales Channel",
-  })
-  if (!salesChannels.length) {
-    logger.error("❌ Aucun Sales Channel par défaut trouvé. Lancez d'abord le seed principal.")
-    return
-  }
+  logger.info(`Using sales channel: ${salesChannels[0].name}`)
 
   // Récupérer le shipping profile par défaut
   const shippingProfiles = await fulfillmentModuleService.listShippingProfiles({
@@ -109,9 +144,7 @@ export default async function seedGiftCard({ container }: ExecArgs) {
               },
             },
           ],
-          sales_channels: [
-            { id: salesChannels[0].id },
-          ],
+          sales_channels: salesChannels.map((sc) => ({ id: sc.id })),
         },
       ],
     },

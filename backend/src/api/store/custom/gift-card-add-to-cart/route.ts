@@ -12,7 +12,7 @@ interface AddGiftCardToCartBody {
 }
 
 /**
- * POST /store/gift-card/add-to-cart
+ * POST /store/custom/gift-card-add-to-cart
  *
  * Ajoute un bon cadeau au panier avec les métadonnées du destinataire.
  * Supporte les montants fixes (via variant_id) et les montants personnalisés (via custom_amount).

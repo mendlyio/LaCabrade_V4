@@ -27,6 +27,16 @@ export default class BpostFulfillmentProviderService extends AbstractFulfillment
         name: "Bpost — Point relais",
         is_calculated: true,
       },
+      {
+        id: "bpost-express-be",
+        name: "Bpost — Livraison express (Belgique)",
+        is_calculated: true,
+      },
+      {
+        id: "bpost-express-eu",
+        name: "Bpost — Livraison express (Europe)",
+        is_calculated: true,
+      },
     ]
   }
 
@@ -58,16 +68,15 @@ export default class BpostFulfillmentProviderService extends AbstractFulfillment
     const shippingOption = context?.option
     const metadata = shippingOption?.metadata || {}
     
-    // Prix fixe : chercher dans optionData (data de l'option), puis metadata, puis défaut 500 (5€)
-    let amount = 500 // Défaut: 5€
-    
-    if (optionData?.bpost_amount !== undefined) {
-      amount = Number(optionData.bpost_amount) || 500
-    } else if (metadata?.bpost_amount !== undefined) {
-      amount = Number(metadata.bpost_amount) || 500
-    }
+    // Prix fixe : chercher dans optionData (data de l'option), puis metadata, puis mode express (12,90€), défaut 500 (5€)
+    const isExpress = optionData?.mode === "express"
+    let amount = isExpress ? 1290 : 500 // Express: 12,90€ | Standard: 5€ (en centimes)
 
-    console.log("[Bpost] calculatePrice - amount:", amount, "optionData:", optionData)
+    if (optionData?.bpost_amount !== undefined) {
+      amount = Number(optionData.bpost_amount) || amount
+    } else if (metadata?.bpost_amount !== undefined) {
+      amount = Number(metadata.bpost_amount) || amount
+    }
 
     // Retourne un objet CalculatedShippingOptionPrice
     return {

@@ -1,4 +1,4 @@
-import { convertToLocale } from "@lib/util/money"
+import { formatAmountFromCents } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 
 type OrderSummaryProps = {
@@ -7,14 +7,11 @@ type OrderSummaryProps = {
 
 const OrderSummary = ({ order }: OrderSummaryProps) => {
   const getAmount = (amount?: number | null) => {
-    if (!amount) {
+    if (amount == null) {
       return
     }
 
-    return convertToLocale({
-      amount,
-      currency_code: order.currency_code,
-    })
+    return formatAmountFromCents(amount, order.currency_code)
   }
 
   return (

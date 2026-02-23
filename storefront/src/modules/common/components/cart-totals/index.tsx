@@ -1,6 +1,6 @@
 "use client"
 
-import { convertToLocale } from "@lib/util/money"
+import { formatAmountFromCents } from "@lib/util/money"
 import React from "react"
 
 type CartTotalsProps = {
@@ -67,7 +67,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
         <div className="flex items-center justify-between">
           <span className="text-gray-600">Sous-total</span>
           <span className="font-medium text-gray-900" data-testid="cart-subtotal" data-value={displayedSubtotal || 0}>
-            {convertToLocale({ amount: displayedSubtotal, currency_code })}
+            {formatAmountFromCents(displayedSubtotal, currency_code)}
           </span>
         </div>
 
@@ -79,7 +79,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
               data-testid="cart-discount"
               data-value={discount_total || 0}
             >
-              - {convertToLocale({ amount: discount_total ?? 0, currency_code })}
+              - {formatAmountFromCents(discount_total ?? 0, currency_code)}
             </span>
           </div>
         )}
@@ -88,7 +88,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
           <span className="text-gray-600">Livraison</span>
           <span className="font-medium text-gray-900" data-testid="cart-shipping" data-value={shipping_total || 0}>
             {shipping_total
-              ? convertToLocale({ amount: shipping_total, currency_code })
+              ? formatAmountFromCents(shipping_total, currency_code)
               : <span className="text-gray-400 italic text-xs">Calculé à l'étape suivante</span>
             }
           </span>
@@ -107,12 +107,12 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
             {isIntraCommunityExempt ? (
               <span className="flex items-center gap-1.5">
                 <span className="line-through text-gray-400 text-xs">
-                  {convertToLocale({ amount: tax_total ?? 0, currency_code })}
+                  {formatAmountFromCents(tax_total ?? 0, currency_code)}
                 </span>
-                <span>{convertToLocale({ amount: 0, currency_code })}</span>
+                <span>{formatAmountFromCents(0, currency_code)}</span>
               </span>
             ) : (
-              convertToLocale({ amount: tax_total ?? 0, currency_code })
+              formatAmountFromCents(tax_total ?? 0, currency_code)
             )}
           </span>
         </div>
@@ -125,7 +125,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
               data-testid="cart-gift-card-amount"
               data-value={gift_card_total || 0}
             >
-              - {convertToLocale({ amount: gift_card_total ?? 0, currency_code })}
+              - {formatAmountFromCents(gift_card_total ?? 0, currency_code)}
             </span>
           </div>
         )}
@@ -157,7 +157,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
           data-testid="cart-total"
           data-value={displayedTotal || 0}
         >
-          {convertToLocale({ amount: displayedTotal, currency_code })}
+          {formatAmountFromCents(displayedTotal, currency_code)}
         </span>
       </div>
 

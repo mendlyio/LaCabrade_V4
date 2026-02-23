@@ -37,6 +37,22 @@ Vous pouvez les modifier:
 
 ---
 
+### ⚡ seed-express.ts - Ajout de la livraison express (12,90 €)
+
+Si les options Bpost existent déjà mais **sans** la livraison express, exécutez ce script pour l'ajouter :
+
+```bash
+npx medusa exec src/scripts/seed-express.ts
+```
+
+**Ce que fait le script:**
+- Ajoute **Bpost - Livraison express (Belgique)** — 12,90 €
+- Ajoute **Bpost - Livraison express (Europe)** — 12,90 € (si la zone Europe existe)
+
+**Note:** Si vous avez lancé `seed-bpost` avant l'ajout des options express, celui-ci détecte les options existantes et s'arrête sans rien créer. Utilisez `seed-express` pour ajouter uniquement l'express.
+
+---
+
 ## How to Create a Custom CLI Script?
 
 To create a custom CLI script, create a TypeScript or JavaScript file under the `src/scripts` directory. The file must default export a function.

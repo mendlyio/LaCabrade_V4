@@ -25,14 +25,17 @@ Pour le développement local, tu as **2 options** :
 **2. Lance les serveurs :**
 
 ```bash
-# Terminal 1 - Backend
+# Terminal 1 - Backend (utilise dev:local si erreurs Redis/MinIO)
 cd /Users/valentinbronfort/Documents/LaCabrade_V4/backend
-npm run dev
+npm run dev:local   # ou npm run dev
 
 # Terminal 2 - Storefront
 cd /Users/valentinbronfort/Documents/LaCabrade_V4/storefront
 npm run dev
 ```
+
+> ⚠️ **Erreurs Redis / MinIO en local ?**  
+> Si tu vois `getaddrinfo ENOTFOUND redis.railway.internal` ou `The Access Key Id you provided does not exist`, utilise **`npm run dev:local`** à la place de `npm run dev`. Ce script désactive Redis et MinIO pour utiliser le stockage local.
 
 **3. Accède au site :**
 - Storefront : http://localhost:3000

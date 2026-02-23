@@ -22,10 +22,9 @@ import {
   createStockLocationsWorkflow,
 } from "@medusajs/medusa/core-flows"
 
-// Prix par défaut pour livraison standard (en euros)
-const FIXED_PRICE = 5
-// Prix pour la livraison express (en euros)
-const EXPRESS_PRICE = 12.9
+// Prix en euros (format attendu par l'affichage storefront)
+const FIXED_PRICE = 5    // 5,00 €
+const EXPRESS_PRICE = 12.9 // 12,90 €
 
 export default async function seedBpostShipping({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -413,7 +412,7 @@ export default async function seedBpostShipping({ container }: ExecArgs) {
   for (const opt of finalOptions) {
     const optData = (opt as any).data || {}
     const price = optData.mode === "express" ? EXPRESS_PRICE : FIXED_PRICE
-    logger.info(`  📦 ${opt.name} — ${price}€`)
+    logger.info(`  📦 ${opt.name} — ${Number(price).toFixed(2)}€`)
     logger.info(`     Mode: ${optData.mode || "home"}`)
   }
   logger.info("")

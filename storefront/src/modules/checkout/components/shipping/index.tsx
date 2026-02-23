@@ -10,7 +10,7 @@ import StorePickup from "@modules/checkout/components/store-pickup"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { setShippingMethod } from "@lib/data/cart"
-import { convertToLocale } from "@lib/util/money"
+import { formatAmountFromCents } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 
 /**
@@ -128,7 +128,7 @@ const Shipping: React.FC<ShippingProps> = ({
           <div className="pb-6">
             <RadioGroup value={selectedShippingMethod?.id} onChange={set}>
               <div className="space-y-3">
-                {availableShippingMethods?.map((option) => {
+                {(Array.isArray(availableShippingMethods) ? availableShippingMethods : []).map((option) => {
                   const isSelected = option.id === selectedShippingMethod?.id
                   return (
                     <RadioGroup.Option
@@ -168,13 +168,10 @@ const Shipping: React.FC<ShippingProps> = ({
                         "text-amber-700": isSelected,
                         "text-gray-600": !isSelected,
                       })}>
-                        {option.amount != null && !isNaN(option.amount) 
-                          ? convertToLocale({
-                              amount: option.amount,
-                              currency_code: cart?.currency_code,
-                            })
-                          : "5,00 €"
-                        }
+                        {formatAmountFromCents(
+                          (option as any)?.calculated_price?.calculated_amount ?? option.amount,
+                          cart?.currency_code ?? "eur"
+                        )}
                       </span>
                     </RadioGroup.Option>
                   )
@@ -227,13 +224,10 @@ const Shipping: React.FC<ShippingProps> = ({
                 {selectedShippingMethod?.name}
               </p>
               <p className="text-sm text-gray-600 mt-0.5">
-                {selectedShippingMethod?.amount != null && !isNaN(selectedShippingMethod.amount)
-                  ? convertToLocale({
-                      amount: selectedShippingMethod.amount,
-                      currency_code: cart?.currency_code,
-                    })
-                  : "5,00 €"
-                }
+                {formatAmountFromCents(
+                  (selectedShippingMethod as any)?.calculated_price?.calculated_amount ?? selectedShippingMethod?.amount,
+                  cart?.currency_code ?? "eur"
+                )}
               </p>
               {/* Afficher le magasin de retrait si applicable */}
               {(cart.metadata?.pickup_location as any)?.name && (
