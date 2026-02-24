@@ -215,6 +215,12 @@ export default function LoadMoreProducts({
   const [isLoading, setIsLoading] = useState(false)
   const [newProductIds, setNewProductIds] = useState<Set<string>>(new Set())
 
+  // Sync avec les nouveaux produits initiaux si la key change (nouvelle recherche/filtre)
+  useEffect(() => {
+    setProducts(initialProducts)
+    setPage(1)
+  }, [initialProducts])
+
   const hasMore = products.length < totalCount
 
   const loadMore = useCallback(async () => {

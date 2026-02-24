@@ -348,6 +348,17 @@ export default async function PaginatedProductsModern({
       {/* Products Grid — "Charger plus" dynamique */}
       {products.length > 0 ? (
         <LoadMoreProducts
+          key={[
+            searchParams.q,
+            searchParams.category,
+            searchParams.collection,
+            searchParams.brand,
+            searchParams.sortBy,
+            searchParams.price_min,
+            searchParams.price_max,
+            searchParams.in_stock,
+            searchParams.on_sale,
+          ].join("|")}
           initialProducts={products}
           totalCount={count}
           limit={displayLimit}
