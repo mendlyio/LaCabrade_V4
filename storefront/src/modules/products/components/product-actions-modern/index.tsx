@@ -5,6 +5,7 @@ import { HttpTypes } from "@medusajs/types"
 import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
 import { addToCart } from "@lib/data/cart"
+import { convertToLocale } from "@lib/util/money"
 
 type ProductActionsModernProps = {
   product: HttpTypes.StoreProduct
@@ -213,8 +214,89 @@ export default function ProductActionsModern({
     })
   }
 
+  // ── Prix réactif ────────────────────────────────────────────────────────────
+  const categories = (product as any).categories || []
+  const isOutlet = categories.some((cat: any) => cat.handle?.toLowerCase() === "outlet")
+
+  const priceData = useMemo(() => {
+    // Utiliser le variant sélectionné si disponible, sinon le variant le moins cher
+    const priceVariant = selectedVariant
+      ?? product.variants?.filter((v: any) => v.calculated_price?.calculated_amount != null)
+          .sort((a: any, b: any) => a.calculated_price.calculated_amount - b.calculated_price.calculated_amount)[0]
+
+    const amount: number | undefined = (priceVariant as any)?.calculated_price?.calculated_amount
+    const original: number | undefined = (priceVariant as any)?.calculated_price?.original_amount
+    const currency: string = (priceVariant as any)?.calculated_price?.currency_code || "eur"
+
+    if (amount == null) return null
+
+    const hasDiscount = original != null && original > amount
+    const discountPct = hasDiscount
+      ? Math.round(((original! - amount) / original!) * 100)
+      : 0
+
+    const outletAmount = isOutlet ? amount * 0.5 : null
+
+    return {
+      amount,
+      original,
+      currency,
+      hasDiscount,
+      discountPct,
+      outletAmount,
+      formatted: convertToLocale({ amount, currency_code: currency }),
+      formattedOriginal: original != null ? convertToLocale({ amount: original, currency_code: currency }) : null,
+      formattedOutlet: outletAmount != null ? convertToLocale({ amount: outletAmount, currency_code: currency }) : null,
+    }
+  }, [selectedVariant, product.variants, isOutlet])
+
   return (
     <div className="space-y-6">
+      {/* ── PRIX (réactif au variant sélectionné) ── */}
+      {priceData && (
+        <div className="py-3 border-b border-gray-100">
+          {isOutlet ? (
+            <div className="space-y-1.5">
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl md:text-4xl font-bold text-[#c4707f]">
+                  {priceData.formattedOutlet}
+                </span>
+                <span className="text-xl text-gray-400 line-through">
+                  {priceData.formatted}
+                </span>
+              </div>
+              <div className="inline-flex items-center gap-2 bg-[#c4707f]/10 text-[#c4707f] px-3 py-1 rounded-full text-sm font-bold">
+                Prix Outlet — économisez 50%
+              </div>
+              <p className="text-xs text-gray-500">
+                La remise est appliquée automatiquement dans votre panier.
+              </p>
+            </div>
+          ) : priceData.hasDiscount ? (
+            <div className="space-y-1.5">
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl md:text-4xl font-bold text-red-600">
+                  {priceData.formatted}
+                </span>
+                <span className="text-xl text-gray-400 line-through">
+                  {priceData.formattedOriginal}
+                </span>
+              </div>
+              <div className="inline-flex items-center gap-2 bg-red-50 text-red-700 px-3 py-1 rounded-full text-sm font-bold">
+                -{priceData.discountPct}%
+              </div>
+            </div>
+          ) : (
+            <div className="text-3xl md:text-4xl font-bold text-gray-900">
+              {priceData.formatted}
+            </div>
+          )}
+          <div className="mt-2 text-xs text-gray-500">
+            TVA incluse • Livraison calculée à l'étape suivante
+          </div>
+        </div>
+      )}
+
       {/* Options (Taille, Couleur, etc) */}
       {productOptions.length > 0 && (
         <div className="space-y-4">

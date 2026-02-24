@@ -25,13 +25,28 @@ function ProductCardClient({
   product: HttpTypes.StoreProduct
   isNew?: boolean
 }) {
-  const variant = product.variants?.[0] as any
-  const price = variant?.calculated_price?.calculated_amount
-  const originalPrice = variant?.calculated_price?.original_amount
-  const currencyCode = variant?.calculated_price?.currency_code || "eur"
+  // ── Trouver le variant le moins cher ────────────────────────────────────
+  const allPricedVariants = (product.variants || [])
+    .filter((v: any) => v.calculated_price?.calculated_amount != null) as any[]
+
+  const cheapestVariant = allPricedVariants.sort(
+    (a, b) => a.calculated_price.calculated_amount - b.calculated_price.calculated_amount
+  )[0]
+
+  const price: number | undefined = cheapestVariant?.calculated_price?.calculated_amount
+  const originalPrice: number | undefined = cheapestVariant?.calculated_price?.original_amount
+  const currencyCode: string = cheapestVariant?.calculated_price?.currency_code || "eur"
+
+  // "Dès X€" si plusieurs prix différents parmi les variants
+  const hasPriceRange =
+    allPricedVariants.length > 1 &&
+    allPricedVariants.some(
+      (v) => v.calculated_price.calculated_amount !== price
+    )
+
   const hasDiscount = price != null && originalPrice != null && price < originalPrice
   const discountPct = hasDiscount
-    ? Math.round(((originalPrice - price) / originalPrice) * 100)
+    ? Math.round(((originalPrice! - price!) / originalPrice!) * 100)
     : 0
 
   const formatPrice = (amount: number) =>
@@ -192,14 +207,16 @@ function ProductCardClient({
               ) : hasDiscount ? (
                 <>
                   <span className="text-[11px] text-gray-400 line-through leading-none">
-                    {formatPrice(originalPrice)}
+                    {formatPrice(originalPrice!)}
                   </span>
                   <span className="text-base sm:text-lg font-bold text-red-600 leading-tight">
-                    {formatPrice(price)}
+                    {hasPriceRange && <span className="text-[10px] font-normal mr-0.5">Dès</span>}
+                    {formatPrice(price!)}
                   </span>
                 </>
-              ) : price ? (
+              ) : price != null ? (
                 <span className="text-base sm:text-lg font-bold text-gray-900 leading-tight">
+                  {hasPriceRange && <span className="text-[10px] font-normal mr-0.5 text-gray-500">Dès</span>}
                   {formatPrice(price)}
                 </span>
               ) : (

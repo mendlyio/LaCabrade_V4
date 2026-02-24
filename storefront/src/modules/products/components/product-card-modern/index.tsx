@@ -31,6 +31,16 @@ export default async function ProductCardModern({
     product: pricedProduct,
   })
 
+  // "Dès X€" quand plusieurs variantes avec des prix différents
+  const pricedVariants = (pricedProduct.variants || []).filter(
+    (v: any) => v.calculated_price?.calculated_amount != null
+  ) as any[]
+  const hasPriceRange =
+    pricedVariants.length > 1 &&
+    pricedVariants.some(
+      (v) => v.calculated_price.calculated_amount !== cheapestPrice?.calculated_price_number
+    )
+
   // Détection catégories
   const categories = (product as any).categories || (pricedProduct as any).categories || []
   const isLcEquestrian = categories.some((cat: any) =>
@@ -180,6 +190,7 @@ export default async function ProductCardModern({
                 ) : hasDiscount ? (
                   <>
                     <span className="text-sm font-bold text-red-600">
+                      {hasPriceRange && <span className="text-[9px] font-normal mr-0.5">Dès</span>}
                       {cheapestPrice?.calculated_price}
                     </span>
                     <span className="text-xs text-gray-400 line-through">
@@ -188,6 +199,7 @@ export default async function ProductCardModern({
                   </>
                 ) : (
                   <span className="text-sm font-bold text-gray-900">
+                    {hasPriceRange && <span className="text-[9px] font-normal mr-0.5 text-gray-500">Dès</span>}
                     {cheapestPrice?.calculated_price || "Sur demande"}
                   </span>
                 )}
@@ -391,6 +403,7 @@ export default async function ProductCardModern({
                     {cheapestPrice?.original_price}
                   </span>
                   <span className="text-base sm:text-lg font-bold text-red-600 leading-tight">
+                    {hasPriceRange && <span className="text-[10px] font-normal mr-0.5">Dès</span>}
                     {cheapestPrice?.calculated_price}
                   </span>
                   <span className="text-[10px] text-red-500 font-semibold mt-0.5">
@@ -399,6 +412,7 @@ export default async function ProductCardModern({
                 </>
               ) : (
                 <span className="text-base sm:text-lg font-bold text-gray-900 leading-tight">
+                  {hasPriceRange && <span className="text-[10px] font-normal mr-0.5 text-gray-500">Dès</span>}
                   {cheapestPrice?.calculated_price || "Sur demande"}
                 </span>
               )}
