@@ -1,4 +1,9 @@
 import { Metadata } from "next"
+import { Suspense } from "react"
+import { listCategories } from "@lib/data/categories"
+import { listBrands } from "@lib/data/brands"
+import FiltersModern from "@modules/store/components/filters-modern"
+import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import PaginatedProductsModern from "@modules/store/templates/store-template-modern/paginated-products-modern"
 
 export const metadata: Metadata = {
@@ -8,87 +13,89 @@ export const metadata: Metadata = {
 
 type Props = {
   params: { countryCode: string }
-  searchParams: Record<string, string | string[] | undefined>
+  searchParams: {
+    sortBy?: string
+    page?: string
+    q?: string
+    brand?: string
+    price_min?: string
+    price_max?: string
+    in_stock?: string
+    on_sale?: string
+  }
 }
 
 export default async function NouveautesPage({ params, searchParams }: Props) {
   const { countryCode } = params
 
-  // Forcer le tri par date de création décroissante pour afficher les nouveautés
+  let categories: any[] = []
+  let brands: any[] = []
+  try {
+    categories = await listCategories()
+  } catch {}
+  try {
+    brands = await listBrands()
+  } catch {}
+
+  const activeFiltersCount = Object.keys(searchParams).filter(
+    (key) => !["sortBy", "page"].includes(key) && searchParams[key as keyof typeof searchParams]
+  ).length
+
+  // Forcer le tri par nouveautés SAUF si le user choisit un autre tri
   const searchParamsWithOrder = {
     ...searchParams,
-    order: "-created_at"
+    sortBy: searchParams.sortBy || "created_at",
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
-      {/* Hero Section */}
-      <div className="bg-amber-600 text-white">
-        <div className="content-container py-16">
+    <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen">
+      {/* Hero */}
+      <div className="bg-amber-600 text-white py-12 mb-8">
+        <div className="content-container">
           <div className="max-w-3xl">
-            <h1 className="text-5xl font-bold mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 flex items-center gap-3">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
+              </svg>
               Nouveautés
             </h1>
-            <p className="text-xl text-white/90 mb-6">
-              Découvrez nos derniers produits équestres. Restez à la pointe avec notre sélection 
-              des équipements les plus récents pour vous et votre cheval.
+            <p className="text-lg text-white/90">
+              Découvrez nos derniers produits équestres — les équipements les plus récents pour vous et votre cheval.
             </p>
+            {activeFiltersCount > 0 && (
+              <div className="mt-4 flex items-center gap-2 text-sm">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                <span>{activeFiltersCount} filtre{activeFiltersCount > 1 ? "s" : ""} actif{activeFiltersCount > 1 ? "s" : ""}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Breadcrumb */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="content-container py-4">
-          <nav className="flex items-center gap-2 text-sm text-gray-600">
-            <a href="/" className="hover:text-amber-600 transition-colors">Accueil</a>
-            <span>/</span>
-            <span className="text-gray-900 font-medium">Nouveautés</span>
-          </nav>
-        </div>
-      </div>
+      {/* Main Content */}
+      <div className="content-container pb-16">
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Sidebar Filtres — Desktop */}
+          <aside className="hidden lg:block w-80 flex-shrink-0">
+            <FiltersModern categories={categories} brands={brands} />
+          </aside>
 
-      {/* Products Section */}
-      <div className="content-container py-12">
-        <PaginatedProductsModern
-          searchParams={searchParamsWithOrder}
-          countryCode={countryCode}
-        />
-      </div>
-
-      {/* Trust Badges */}
-      <div className="bg-white border-t border-gray-200 py-12 mt-12">
-        <div className="content-container">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-amber-600 text-white rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl">🚚</span>
-              </div>
-              <h3 className="font-semibold text-sm mb-1">Livraison Rapide</h3>
-              <p className="text-xs text-gray-600">Expédition sous 24-48h</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-amber-600 text-white rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl">🔒</span>
-              </div>
-              <h3 className="font-semibold text-sm mb-1">Paiement Sécurisé</h3>
-              <p className="text-xs text-gray-600">Transactions protégées</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-amber-600 text-white rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl">↩️</span>
-              </div>
-              <h3 className="font-semibold text-sm mb-1">Retours Faciles</h3>
-              <p className="text-xs text-gray-600">14 jours pour changer d'avis</p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-amber-600 text-white rounded-full flex items-center justify-center mx-auto mb-3">
-                <span className="text-2xl">💬</span>
-              </div>
-              <h3 className="font-semibold text-sm mb-1">Support Client</h3>
-              <p className="text-xs text-gray-600">À votre écoute 7j/7</p>
-            </div>
+          {/* Filtres — Mobile */}
+          <div className="lg:hidden">
+            <FiltersModern categories={categories} brands={brands} />
           </div>
+
+          {/* Grille produits */}
+          <main className="flex-1">
+            <Suspense fallback={<SkeletonProductGrid />}>
+              <PaginatedProductsModern
+                searchParams={searchParamsWithOrder}
+                countryCode={countryCode}
+              />
+            </Suspense>
+          </main>
         </div>
       </div>
     </div>
