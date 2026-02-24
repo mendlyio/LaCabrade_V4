@@ -150,7 +150,6 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                         onClick={() => setOpen(false)}
                         className="group flex items-center gap-2 mb-3 pb-2 border-b-2 border-gray-200 hover:border-amber-500 transition-colors"
                       >
-                        <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
                         <span className="text-sm font-bold text-gray-900 group-hover:text-amber-700 transition-colors truncate">
                           {child.name}
                         </span>
@@ -164,9 +163,8 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                               <LocalizedClientLink
                                 href={`/categories/${encodeURIComponent(grandChild.handle)}`}
                                 onClick={() => setOpen(false)}
-                                className="group/item flex items-center gap-2 py-1.5 px-2 rounded-md text-sm text-gray-700 hover:text-white hover:bg-amber-600 transition-all"
+                                className="group/item flex items-center py-1.5 px-2 rounded-md text-sm text-gray-700 hover:text-white hover:bg-amber-600 transition-all"
                               >
-                                <span className="w-1 h-1 rounded-full bg-gray-300 group-hover/item:bg-white transition-colors flex-shrink-0" />
                                 <span className="truncate">{grandChild.name}</span>
                               </LocalizedClientLink>
 
