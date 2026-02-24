@@ -49,11 +49,18 @@ function ProductCardClient({
   const images = product.images || []
   const hoverImage = images.length > 2 ? images[2]?.url : null
 
-  // Détection LC-Equestrian
+  // Détection catégories
   const categories = (product as any).categories || []
   const isLcEquestrian = categories.some((cat: any) =>
     LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase())
   )
+  const isOutlet = categories.some((cat: any) => cat.handle?.toLowerCase() === "outlet")
+
+  // Prix outlet : -50% affiché (la promotion OUTLET_50 gère le checkout)
+  const outletOriginalNumber = isOutlet ? (price ?? 0) : 0
+  const outletPriceNumber = isOutlet ? outletOriginalNumber * 0.5 : 0
+  const outletPriceFormatted = isOutlet ? formatPrice(outletPriceNumber) : null
+  const outletOriginalFormatted = isOutlet ? formatPrice(outletOriginalNumber) : null
 
   return (
     <LocalizedClientLink
@@ -116,6 +123,16 @@ function ProductCardClient({
             )}
           </div>
 
+          {/* Badge OUTLET */}
+          {isOutlet && (
+            <div className="absolute top-2.5 left-2.5 z-20">
+              <div className="bg-[#c4707f] text-white px-2.5 py-1 rounded-lg text-[11px] font-bold tracking-wide shadow-sm flex items-center gap-1">
+                <span>OUTLET</span>
+                <span className="bg-white/20 px-1 rounded">-50%</span>
+              </div>
+            </div>
+          )}
+
           {/* Badge LC Equestrian — coin supérieur droit */}
           {isLcEquestrian ? (
             <div className="absolute top-2.5 right-2.5 z-20">
@@ -124,7 +141,7 @@ function ProductCardClient({
                 <span>LC Equestrian</span>
               </div>
             </div>
-          ) : collection ? (
+          ) : !isOutlet && collection ? (
             <div className="absolute top-2.5 right-2.5 z-10">
               <div className="bg-white/80 backdrop-blur-md text-gray-600 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider shadow-sm">
                 {collection}
@@ -160,7 +177,19 @@ function ProductCardClient({
 
           <div className="flex items-end justify-between gap-2 mt-auto pt-1.5">
             <div className="flex flex-col">
-              {hasDiscount ? (
+              {isOutlet ? (
+                <>
+                  <span className="text-[11px] text-gray-400 line-through leading-none">
+                    {outletOriginalFormatted}
+                  </span>
+                  <span className="text-base sm:text-lg font-bold text-[#c4707f] leading-tight">
+                    {outletPriceFormatted}
+                  </span>
+                  <span className="text-[10px] text-[#c4707f] font-semibold mt-0.5">
+                    Économisez 50%
+                  </span>
+                </>
+              ) : hasDiscount ? (
                 <>
                   <span className="text-[11px] text-gray-400 line-through leading-none">
                     {formatPrice(originalPrice)}

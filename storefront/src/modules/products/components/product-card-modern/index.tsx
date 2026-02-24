@@ -3,9 +3,11 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import { getProductPrice } from "@lib/util/get-product-price"
 import { getProductsById } from "@lib/data/products"
 import WishlistToggleButton from "@modules/common/components/wishlist-toggle-button"
+import { convertToLocale } from "@lib/util/money"
 import Image from "next/image"
 
 const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
+const OUTLET_DISCOUNT = 0.5 // -50%
 
 export default async function ProductCardModern({
   product,
@@ -29,11 +31,21 @@ export default async function ProductCardModern({
     product: pricedProduct,
   })
 
-  // Détection LC-Equestrian (via catégories du produit de la liste ou du produit pricé)
+  // Détection catégories
   const categories = (product as any).categories || (pricedProduct as any).categories || []
   const isLcEquestrian = categories.some((cat: any) =>
     LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase())
   )
+  const isOutlet = categories.some((cat: any) => cat.handle?.toLowerCase() === "outlet")
+
+  // Prix outlet : -50% appliqué visuellement (la promotion gère le checkout)
+  const outletOriginalNumber = isOutlet ? (cheapestPrice?.calculated_price_number ?? 0) : 0
+  const outletPriceNumber = isOutlet ? outletOriginalNumber * (1 - OUTLET_DISCOUNT) : 0
+  const currencyCode = cheapestPrice?.currency_code || "eur"
+  const outletPriceFormatted = isOutlet
+    ? convertToLocale({ amount: outletPriceNumber, currency_code: currencyCode })
+    : null
+  const outletOriginalFormatted = isOutlet ? cheapestPrice?.calculated_price : null
 
   const hasDiscount =
     variantPrice?.calculated_price &&
@@ -117,7 +129,12 @@ export default async function ProductCardModern({
                 </svg>
               </div>
             )}
-            {hasDiscount && (
+            {isOutlet && (
+              <div className="absolute top-1 left-1 bg-[#c4707f] text-white px-1.5 py-0.5 rounded-md text-[9px] font-bold">
+                -50%
+              </div>
+            )}
+            {!isOutlet && hasDiscount && (
               <div className="absolute top-1 left-1 bg-red-500 text-white px-1.5 py-0.5 rounded-md text-[9px] font-bold">
                 -{discountPercentage}%
               </div>
@@ -151,7 +168,16 @@ export default async function ProductCardModern({
             </h3>
             <div className="mt-1.5 flex items-center justify-between gap-2">
               <div className="flex items-baseline gap-1.5">
-                {hasDiscount ? (
+                {isOutlet ? (
+                  <>
+                    <span className="text-sm font-bold text-[#c4707f]">
+                      {outletPriceFormatted}
+                    </span>
+                    <span className="text-xs text-gray-400 line-through">
+                      {outletOriginalFormatted}
+                    </span>
+                  </>
+                ) : hasDiscount ? (
                   <>
                     <span className="text-sm font-bold text-red-600">
                       {cheapestPrice?.calculated_price}
@@ -252,7 +278,13 @@ export default async function ProductCardModern({
 
           {/* Badges haut gauche */}
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10">
-            {hasDiscount && (
+            {isOutlet && (
+              <div className="bg-[#c4707f] text-white px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-[11px] sm:text-xs font-bold tracking-wide shadow-sm flex items-center gap-1">
+                <span>OUTLET</span>
+                <span className="bg-white/20 px-1 rounded">-50%</span>
+              </div>
+            )}
+            {!isOutlet && hasDiscount && (
               <div className="bg-red-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
                 -{discountPercentage}%
               </div>
@@ -341,7 +373,19 @@ export default async function ProductCardModern({
           {/* Prix + CTA */}
           <div className="flex items-end justify-between gap-2 mt-auto pt-1.5">
             <div className="flex flex-col">
-              {hasDiscount ? (
+              {isOutlet ? (
+                <>
+                  <span className="text-[11px] text-gray-400 line-through leading-none">
+                    {outletOriginalFormatted}
+                  </span>
+                  <span className="text-base sm:text-lg font-bold text-[#c4707f] leading-tight">
+                    {outletPriceFormatted}
+                  </span>
+                  <span className="text-[10px] text-[#c4707f] font-semibold mt-0.5">
+                    Économisez 50% — Outlet
+                  </span>
+                </>
+              ) : hasDiscount ? (
                 <>
                   <span className="text-[11px] text-gray-400 line-through leading-none">
                     {cheapestPrice?.original_price}
