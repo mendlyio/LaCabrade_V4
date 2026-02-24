@@ -50,11 +50,33 @@ export const getCategoriesList = cache(async function (
 export const getCategoryByHandle = cache(async function (
   categoryHandle: string[]
 ) {
+  // Décoder les handles au cas où ils seraient encore encodés (apostrophes, accents)
+  const decoded = categoryHandle.map((h) => {
+    try {
+      return decodeURIComponent(h)
+    } catch {
+      return h
+    }
+  })
 
-  return sdk.store.category.list(
-    // TODO: Look into fixing the type
+  // Essayer avec le handle décodé en premier
+  let result = await sdk.store.category.list(
     // @ts-ignore
-    { handle: categoryHandle },
+    { handle: decoded },
     { next: { tags: ["categories"] } }
   )
+
+  // Si rien trouvé et le décodé diffère de l'original, essayer avec l'original
+  if (
+    (!result.product_categories || result.product_categories.length === 0) &&
+    JSON.stringify(decoded) !== JSON.stringify(categoryHandle)
+  ) {
+    result = await sdk.store.category.list(
+      // @ts-ignore
+      { handle: categoryHandle },
+      { next: { tags: ["categories"] } }
+    )
+  }
+
+  return result
 })

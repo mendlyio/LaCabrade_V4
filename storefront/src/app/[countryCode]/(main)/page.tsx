@@ -182,7 +182,7 @@ export default async function Home({
                   return (
                   <LocalizedClientLink
                     key={category.id}
-                    href={`/categories/${category.handle}`}
+                    href={`/categories/${encodeURIComponent(category.handle)}`}
                     className="flex-none w-[calc(100%-32px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] group/card relative block overflow-hidden rounded-2xl aspect-square bg-gray-200 shadow-sm ring-1 ring-black/5 transition-shadow duration-300 hover:shadow-xl"
                   >
                     <div

@@ -79,7 +79,7 @@ export default async function CategoryTemplateModern({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                     <LocalizedClientLink
-                      href={`/categories/${parent.handle}`}
+                      href={`/categories/${encodeURIComponent(parent.handle)}`}
                       className="hover:text-white transition-colors"
                     >
                       {parent.name}
@@ -135,7 +135,7 @@ export default async function CategoryTemplateModern({
                 {categoryChildren.map((child) => (
                   <div key={child.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                     <LocalizedClientLink
-                      href={`/categories/${child.handle}`}
+                      href={`/categories/${encodeURIComponent(child.handle)}`}
                       className="flex items-center gap-2 rounded-lg px-3 py-2 bg-gray-100 hover:bg-amber-600 border border-gray-200 hover:border-amber-600 transition-colors group"
                     >
                       <span className="flex-1 text-sm font-semibold text-gray-900 group-hover:text-white">
@@ -151,7 +151,7 @@ export default async function CategoryTemplateModern({
                         {child.category_children.map((grandChild) => (
                           <li key={grandChild.id} className="space-y-1">
                             <LocalizedClientLink
-                              href={`/categories/${grandChild.handle}`}
+                              href={`/categories/${encodeURIComponent(grandChild.handle)}`}
                               className="block rounded-md px-3 py-2 text-sm font-medium text-gray-800 hover:text-white hover:bg-amber-600 transition-colors"
                             >
                               {grandChild.name}
@@ -162,7 +162,7 @@ export default async function CategoryTemplateModern({
                                   {grandChild.category_children.map((greatGrandChild) => (
                                     <li key={greatGrandChild.id}>
                                       <LocalizedClientLink
-                                        href={`/categories/${greatGrandChild.handle}`}
+                                        href={`/categories/${encodeURIComponent(greatGrandChild.handle)}`}
                                         className="block rounded-md px-3 py-1 text-xs font-medium text-gray-700 hover:text-white hover:bg-amber-600 transition-colors"
                                       >
                                         {greatGrandChild.name}

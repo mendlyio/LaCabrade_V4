@@ -127,7 +127,7 @@ const ProductTemplateModern = async ({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                   <LocalizedClientLink
-                    href={`/categories/${category.handle}`}
+                    href={`/categories/${encodeURIComponent(category.handle)}`}
                     className="text-gray-400 hover:text-amber-600 transition-colors whitespace-nowrap"
                   >
                     {category.name}

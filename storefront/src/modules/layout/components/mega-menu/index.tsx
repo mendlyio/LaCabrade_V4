@@ -53,7 +53,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
   if (!hasChildren) {
     return (
       <LocalizedClientLink
-        href={`/categories/${category.handle}`}
+        href={`/categories/${encodeURIComponent(category.handle)}`}
         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 whitespace-nowrap ${
           isOutlet 
             ? "text-[#c4707f] hover:text-white hover:bg-[#c4707f]" 
@@ -125,7 +125,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                   {category.name}
                 </h3>
                 <LocalizedClientLink
-                  href={`/categories/${category.handle}`}
+                  href={`/categories/${encodeURIComponent(category.handle)}`}
                   onClick={() => setOpen(false)}
                   className="inline-flex items-center gap-2 rounded-full bg-amber-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition-colors"
                 >
@@ -146,7 +146,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                     <div key={child.id} className="min-w-0">
                       {/* Sous-catégorie parent */}
                       <LocalizedClientLink
-                        href={`/categories/${child.handle}`}
+                        href={`/categories/${encodeURIComponent(child.handle)}`}
                         onClick={() => setOpen(false)}
                         className="group flex items-center gap-2 mb-3 pb-2 border-b-2 border-gray-200 hover:border-amber-500 transition-colors"
                       >
@@ -162,7 +162,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                           {child.category_children.map((grandChild) => (
                             <li key={grandChild.id}>
                               <LocalizedClientLink
-                                href={`/categories/${grandChild.handle}`}
+                                href={`/categories/${encodeURIComponent(grandChild.handle)}`}
                                 onClick={() => setOpen(false)}
                                 className="group/item flex items-center gap-2 py-1.5 px-2 rounded-md text-sm text-gray-700 hover:text-white hover:bg-amber-600 transition-all"
                               >
@@ -176,7 +176,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                                   {grandChild.category_children.map((greatGrandChild) => (
                                     <li key={greatGrandChild.id}>
                                       <LocalizedClientLink
-                                        href={`/categories/${greatGrandChild.handle}`}
+                                        href={`/categories/${encodeURIComponent(greatGrandChild.handle)}`}
                                         onClick={() => setOpen(false)}
                                         className="block py-1 px-2 rounded text-xs text-gray-500 hover:text-white hover:bg-amber-500 transition-all truncate"
                                       >

@@ -58,17 +58,18 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    const { product_categories } = await getCategoryByHandle(
-      params.category
-    )
+    const { product_categories } = await getCategoryByHandle(params.category)
+
+    if (!product_categories || product_categories.length === 0) {
+      return { title: "Catégorie | La Cabrade" }
+    }
 
     const title = product_categories
       .map((category: StoreProductCategory) => category.name)
       .join(" | ")
 
-    const description =
-      product_categories[product_categories.length - 1].description ??
-      `${title} category.`
+    const lastCategory = product_categories[product_categories.length - 1]
+    const description = lastCategory?.description || `${title} — La Cabrade`
 
     return {
       title: `${title} | La Cabrade`,
@@ -77,8 +78,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         canonical: `${params.category.join("/")}`,
       },
     }
-  } catch (error) {
-    notFound()
+  } catch {
+    return { title: "Catégorie | La Cabrade" }
   }
 }
 
@@ -92,7 +93,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     notFound()
   }
 
-  if (!product_categories) {
+  if (!product_categories || product_categories.length === 0) {
     notFound()
   }
 

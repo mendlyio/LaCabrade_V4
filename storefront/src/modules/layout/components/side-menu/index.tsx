@@ -174,7 +174,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                                   <li key={category.id}>
                                     <div className="flex items-center gap-2">
                                       <LocalizedClientLink
-                                        href={`/categories/${category.handle}`}
+                                        href={`/categories/${encodeURIComponent(category.handle)}`}
                                         className={`flex-1 px-4 py-2 text-sm rounded-lg transition-colors font-medium ${
                                           category.handle === "outlet"
                                             ? "text-[#c4707f] hover:text-[#9e354a] hover:bg-[#c4707f]/10"
@@ -205,7 +205,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                                         {children.map((child: any) => (
                                           <li key={child.id} className="space-y-1">
                                             <LocalizedClientLink
-                                              href={`/categories/${child.handle}`}
+                                              href={`/categories/${encodeURIComponent(child.handle)}`}
                                               className="block px-2 py-1 text-sm font-medium text-gray-700 hover:text-amber-600 transition-colors"
                                               onClick={close}
                                             >
@@ -216,7 +216,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                                                 {child.category_children.map((grandChild: any) => (
                                                   <li key={grandChild.id}>
                                                     <LocalizedClientLink
-                                                      href={`/categories/${grandChild.handle}`}
+                                                      href={`/categories/${encodeURIComponent(grandChild.handle)}`}
                                                       className="block px-2 py-1 text-xs text-gray-600 hover:text-amber-600 transition-colors"
                                                       onClick={close}
                                                     >
@@ -227,7 +227,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                                                         {grandChild.category_children.map((greatGrandChild: any) => (
                                                           <li key={greatGrandChild.id}>
                                                             <LocalizedClientLink
-                                                              href={`/categories/${greatGrandChild.handle}`}
+                                                              href={`/categories/${encodeURIComponent(greatGrandChild.handle)}`}
                                                               className="block px-2 py-1 text-xs text-gray-500 hover:text-amber-600 transition-colors"
                                                               onClick={close}
                                                             >
