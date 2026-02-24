@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState, useTransition } from "react"
+import { useCallback, useState } from "react"
 import { HttpTypes } from "@medusajs/types"
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -13,6 +13,8 @@ type LoadMoreProductsProps = {
   regionId: string
   queryParams: Record<string, any>
   brandSlug?: string
+  /** Quand fourni, pagination côté client (pas de fetch API) — utilisé avec filtres */
+  allProducts?: HttpTypes.StoreProduct[]
 }
 
 const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
@@ -255,24 +257,38 @@ export default function LoadMoreProducts({
   regionId,
   queryParams,
   brandSlug,
+  allProducts,
 }: LoadMoreProductsProps) {
+  // Mode pagination client : on a déjà tous les produits (filtres), on révèle par lots
+  const isClientPagination = Boolean(allProducts && allProducts.length > 0)
+  const [displayCount, setDisplayCount] = useState(limit)
   const [products, setProducts] = useState<HttpTypes.StoreProduct[]>(initialProducts)
   const [page, setPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [newProductIds, setNewProductIds] = useState<Set<string>>(new Set())
 
-  // Sync avec les nouveaux produits initiaux si la key change (nouvelle recherche/filtre)
-  useEffect(() => {
-    setProducts(initialProducts)
-    setPage(1)
-  }, [initialProducts])
+  // Pas de useEffect : le key du parent force le remount quand les filtres changent.
+  // Un reset sur initialProducts causait des pertes d'état (produits chargés effacés).
 
-  const hasMore = products.length < totalCount
+  const displayedProducts = isClientPagination
+    ? (allProducts ?? []).slice(0, displayCount)
+    : products
+  const hasMore = isClientPagination
+    ? displayCount < (allProducts?.length ?? 0)
+    : products.length < totalCount
 
   const loadMore = useCallback(async () => {
     if (isLoading || !hasMore) return
-    setIsLoading(true)
 
+    // Mode client : pas de fetch, on révèle les produits suivants
+    if (isClientPagination) {
+      setNewProductIds(new Set((allProducts ?? []).slice(displayCount, displayCount + limit).map((p: any) => p.id)))
+      setTimeout(() => setNewProductIds(new Set()), 1000)
+      setDisplayCount((prev) => Math.min(prev + limit, allProducts?.length ?? prev))
+      return
+    }
+
+    setIsLoading(true)
     try {
       const nextPage = page + 1
       const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
@@ -332,13 +348,13 @@ export default function LoadMoreProducts({
     } finally {
       setIsLoading(false)
     }
-  }, [isLoading, hasMore, page, limit, regionId, queryParams])
+  }, [isLoading, hasMore, page, limit, regionId, queryParams, isClientPagination, allProducts, displayCount])
 
   return (
     <div>
       {/* Products Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
-        {products.map((product) => (
+        {displayedProducts.map((product) => (
           <ProductCardClient
             key={product.id}
             product={product}
@@ -351,13 +367,13 @@ export default function LoadMoreProducts({
       {hasMore && (
         <div className="flex flex-col items-center gap-3 mt-12">
           <p className="text-xs text-gray-400 font-medium">
-            {products.length} sur {totalCount} produits
+            {displayedProducts.length} sur {totalCount} produits
           </p>
           {/* Progress bar */}
           <div className="w-48 h-1 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-amber-500 rounded-full transition-all duration-500"
-              style={{ width: `${(products.length / totalCount) * 100}%` }}
+              style={{ width: `${(displayedProducts.length / totalCount) * 100}%` }}
             />
           </div>
           <button
@@ -386,7 +402,7 @@ export default function LoadMoreProducts({
       )}
 
       {/* All loaded */}
-      {!hasMore && products.length > 0 && totalCount > limit && (
+      {!hasMore && displayedProducts.length > 0 && totalCount > limit && (
         <div className="text-center mt-12">
           <p className="text-sm text-gray-400">
             Tous les {totalCount} produits sont affichés

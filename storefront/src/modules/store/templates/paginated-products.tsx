@@ -69,6 +69,7 @@ export default async function PaginatedProducts({
     queryParams,
     sortBy,
     countryCode,
+    prioritizeLcEquestrian: !!productsIds,
   })
 
   const totalPages = Math.ceil(count / PRODUCT_LIMIT)

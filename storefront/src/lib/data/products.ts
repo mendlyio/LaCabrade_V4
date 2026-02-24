@@ -92,17 +92,20 @@ export const getProductsList = cache(async function ({
 /**
  * This will fetch 100 products to the Next.js cache and sort them based on the sortBy parameter.
  * It will then return the paginated products based on the page and limit parameters.
+ * @param prioritizeLcEquestrian - page recherche : produits LC-Equestrian en premier
  */
 export const getProductsListWithSort = cache(async function ({
   page = 0,
   queryParams,
   sortBy = "created_at",
   countryCode,
+  prioritizeLcEquestrian = false,
 }: {
   page?: number
   queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
   sortBy?: SortOptions
   countryCode: string
+  prioritizeLcEquestrian?: boolean
 }): Promise<{
   response: { products: HttpTypes.StoreProduct[]; count: number }
   nextPage: number | null
@@ -117,11 +120,14 @@ export const getProductsListWithSort = cache(async function ({
     queryParams: {
       ...queryParams,
       limit: 100,
+      ...(prioritizeLcEquestrian && {
+        fields: "*variants.calculated_price,+variants.inventory_quantity,+images,+categories.handle,+categories.id",
+      }),
     },
     countryCode,
   })
 
-  const sortedProducts = sortProducts(products, sortBy)
+  const sortedProducts = sortProducts(products, sortBy, prioritizeLcEquestrian)
 
   const pageParam = (page - 1) * limit
 

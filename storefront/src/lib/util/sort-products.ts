@@ -1,6 +1,15 @@
 import { HttpTypes } from "@medusajs/types"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 
+const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
+
+function isLcEquestrian(product: HttpTypes.StoreProduct): boolean {
+  const categories = (product as any).categories || []
+  return categories.some((cat: any) =>
+    LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase())
+  )
+}
+
 interface MinPricedProduct extends HttpTypes.StoreProduct {
   _minPrice?: number
 }
@@ -9,11 +18,13 @@ interface MinPricedProduct extends HttpTypes.StoreProduct {
  * Helper function to sort products
  * @param products
  * @param sortBy
+ * @param prioritizeLcEquestrian - si true, les produits LC-Equestrian passent en premier (page recherche)
  * @returns products sorted by the specified option
  */
 export function sortProducts(
   products: HttpTypes.StoreProduct[],
-  sortBy: SortOptions
+  sortBy: SortOptions,
+  prioritizeLcEquestrian = false
 ): HttpTypes.StoreProduct[] {
   let sortedProducts = [...products] as MinPricedProduct[]
 
@@ -71,6 +82,17 @@ export function sortProducts(
           new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime()
         )
       })
+  }
+
+  // Page recherche : LC-Equestrian toujours en premier
+  if (prioritizeLcEquestrian) {
+    sortedProducts.sort((a, b) => {
+      const aIsLC = isLcEquestrian(a)
+      const bIsLC = isLcEquestrian(b)
+      if (aIsLC && !bIsLC) return -1
+      if (!aIsLC && bIsLC) return 1
+      return 0
+    })
   }
 
   return sortedProducts

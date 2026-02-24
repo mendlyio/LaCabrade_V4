@@ -366,6 +366,7 @@ export default async function PaginatedProductsModern({
           regionId={region.id}
           queryParams={queryParams}
           brandSlug={searchParams.brand || undefined}
+          allProducts={needsClientPagination ? filteredProducts : undefined}
         />
       ) : (
         <div className="text-center py-24 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
