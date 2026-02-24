@@ -99,7 +99,7 @@ export default function CGVPage() {
                 Ces délais sont donnés à titre indicatif et ne constituent pas un engagement contractuel. Les retards de livraison ne peuvent donner lieu à l'annulation de la commande, sauf en cas de retard supérieur à 30 jours.
               </p>
               <p>
-                La livraison est gratuite en Belgique pour toute commande de 100€ ou plus.
+                La livraison est gratuite en Belgique pour toute commande de 75€ ou plus.
               </p>
             </section>
 

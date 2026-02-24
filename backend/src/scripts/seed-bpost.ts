@@ -23,7 +23,7 @@ import {
 } from "@medusajs/medusa/core-flows"
 
 // Prix en euros (format attendu par l'affichage storefront)
-const FIXED_PRICE = 5    // 5,00 €
+const FIXED_PRICE = 6.9  // 6,90 €
 const EXPRESS_PRICE = 12.9 // 12,90 €
 
 export default async function seedBpostShipping({ container }: ExecArgs) {

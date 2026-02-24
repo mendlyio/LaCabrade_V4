@@ -100,7 +100,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
               </svg>
               <div className="font-semibold text-gray-900">Livraison gratuite</div>
-              <div className="text-sm text-gray-600">Dès 100€ d'achat</div>
+              <div className="text-sm text-gray-600">Dès 75€ d'achat</div>
             </div>
             <div className="flex flex-col items-center gap-2">
               <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

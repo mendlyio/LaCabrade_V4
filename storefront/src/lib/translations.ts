@@ -22,7 +22,7 @@ export const translations = {
     "nav.brands_title": "Nos marques",
     
     // Top Bar
-    "topbar.promo": "-10% pour les nouveaux clients avec le code BIENVENUE10 | Livraison gratuite dès 100€",
+    "topbar.promo": "-10% pour les nouveaux clients avec le code BIENVENUE10 | Livraison gratuite dès 75€",
     
     // Footer & Pages
     "footer.about": "À propos",
@@ -107,7 +107,7 @@ export const translations = {
     "nav.brands_title": "Onze merken",
     
     // Top Bar
-    "topbar.promo": "-10% voor nieuwe klanten met code WELKOM10 | Gratis levering vanaf €100",
+    "topbar.promo": "-10% voor nieuwe klanten met code WELKOM10 | Gratis levering vanaf €75",
     
     // Footer & Pages
     "footer.about": "Over ons",

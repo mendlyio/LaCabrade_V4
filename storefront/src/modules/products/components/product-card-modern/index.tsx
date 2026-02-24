@@ -5,6 +5,8 @@ import { getProductsById } from "@lib/data/products"
 import WishlistToggleButton from "@modules/common/components/wishlist-toggle-button"
 import Image from "next/image"
 
+const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
+
 export default async function ProductCardModern({
   product,
   region,
@@ -26,6 +28,12 @@ export default async function ProductCardModern({
   const { cheapestPrice, variantPrice } = getProductPrice({
     product: pricedProduct,
   })
+
+  // Détection LC-Equestrian (via catégories du produit de la liste ou du produit pricé)
+  const categories = (product as any).categories || (pricedProduct as any).categories || []
+  const isLcEquestrian = categories.some((cat: any) =>
+    LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase())
+  )
 
   const hasDiscount =
     variantPrice?.calculated_price &&
@@ -78,7 +86,11 @@ export default async function ProductCardModern({
         className="group block"
         data-testid="product-card"
       >
-        <div className="bg-white rounded-2xl border border-gray-100 hover:border-amber-200 shadow-sm hover:shadow-md transition-all duration-300 p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+        <div         className={`bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 p-3 sm:p-4 flex items-center gap-3 sm:gap-4 ${
+          isLcEquestrian
+            ? "border-2 border-amber-500 hover:border-amber-400 shadow-[0_0_12px_rgba(217,119,6,0.2)] hover:shadow-[0_0_18px_rgba(217,119,6,0.35)]"
+            : "border border-gray-100 hover:border-amber-200"
+        }`}>
           <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
             {product.thumbnail ? (
               <Image
@@ -120,12 +132,21 @@ export default async function ProductCardModern({
           </div>
 
           <div className="flex-1 min-w-0">
-            {collection && (
+            {isLcEquestrian && (
+              <div className="flex items-center gap-1 mb-0.5">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-amber-700 bg-amber-50 border border-amber-300 px-1.5 py-0.5 rounded-md">
+                  ★ LC Equestrian
+                </span>
+              </div>
+            )}
+            {collection && !isLcEquestrian && (
               <div className="text-[10px] uppercase tracking-widest text-gray-400 mb-0.5 truncate font-medium">
                 {collection}
               </div>
             )}
-            <h3 className="font-semibold text-gray-900 group-hover:text-amber-600 transition-colors text-sm leading-snug line-clamp-2">
+            <h3 className={`font-semibold transition-colors text-sm leading-snug line-clamp-2 ${
+              isLcEquestrian ? "text-gray-900 group-hover:text-amber-600" : "text-gray-900 group-hover:text-amber-600"
+            }`}>
               {product.title}
             </h3>
             <div className="mt-1.5 flex items-center justify-between gap-2">
@@ -166,10 +187,12 @@ export default async function ProductCardModern({
       data-testid="product-card"
     >
       <div
-        className={`bg-white rounded-2xl overflow-hidden transition-all duration-300 border h-full flex flex-col hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] ${
-          !isInStock
-            ? "border-gray-200 opacity-75 hover:opacity-100"
-            : "border-gray-100 hover:border-gray-200"
+        className={`rounded-2xl overflow-hidden transition-all duration-300 border-2 h-full flex flex-col ${
+          isLcEquestrian
+            ? "bg-gradient-to-b from-amber-50/40 to-white border-amber-500 shadow-[0_0_20px_rgba(217,119,6,0.25)] hover:shadow-[0_0_30px_rgba(217,119,6,0.45)] hover:border-amber-400"
+            : !isInStock
+              ? "bg-white border-gray-200 opacity-75 hover:opacity-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
+              : "bg-white border-gray-100 hover:border-gray-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
         }`}
       >
         {/* ── Image Container ── */}
@@ -256,10 +279,23 @@ export default async function ProductCardModern({
             </div>
           )}
 
-          {/* Wishlist - toujours visible */}
-          <div className="absolute top-2.5 right-2.5 z-10">
-            <WishlistToggleButton productId={product.id!} size="md" />
-          </div>
+          {/* LC Equestrian badge — coin supérieur droit */}
+          {isLcEquestrian && (
+            <div className="absolute top-2.5 right-2.5 z-20 flex flex-col items-end gap-1">
+              <div className="bg-amber-600 text-white px-2 py-1 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 border border-amber-400">
+                <span>★</span>
+                <span>LC Equestrian</span>
+              </div>
+              <WishlistToggleButton productId={product.id!} size="md" />
+            </div>
+          )}
+
+          {/* Wishlist - visible si NON LC-Equestrian */}
+          {!isLcEquestrian && (
+            <div className="absolute top-2.5 right-2.5 z-10">
+              <WishlistToggleButton productId={product.id!} size="md" />
+            </div>
+          )}
 
           {/* Nombre de variantes */}
           {variantCount > 1 && (
@@ -274,7 +310,11 @@ export default async function ProductCardModern({
         {/* ── Infos Produit ── */}
         <div className="p-3 sm:p-4 flex-1 flex flex-col gap-1">
           {/* Titre */}
-          <h3 className="font-semibold text-gray-900 group-hover:text-amber-600 transition-colors text-[13px] sm:text-sm leading-snug line-clamp-2 flex-1">
+          <h3 className={`font-semibold transition-colors text-[13px] sm:text-sm leading-snug line-clamp-2 flex-1 ${
+            isLcEquestrian
+              ? "text-gray-900 group-hover:text-amber-600"
+              : "text-gray-900 group-hover:text-amber-600"
+          }`}>
             {product.title}
           </h3>
 
@@ -321,7 +361,9 @@ export default async function ProductCardModern({
             </div>
 
             {/* Bouton flèche */}
-            <span className="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-amber-600 text-gray-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 group-hover:shadow-md">
+            <span className={`w-8 h-8 rounded-full bg-gray-100 text-gray-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 group-hover:shadow-md ${
+              isLcEquestrian ? "group-hover:bg-amber-600" : "group-hover:bg-amber-600"
+            }`}>
               <svg
                 className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5"
                 fill="none"

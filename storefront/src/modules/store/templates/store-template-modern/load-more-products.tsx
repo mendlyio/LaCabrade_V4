@@ -15,6 +15,8 @@ type LoadMoreProductsProps = {
   brandSlug?: string
 }
 
+const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
+
 // Carte produit côté client (pas de fetch serveur)
 function ProductCardClient({
   product,
@@ -47,16 +49,24 @@ function ProductCardClient({
   const images = product.images || []
   const hoverImage = images.length > 2 ? images[2]?.url : null
 
+  // Détection LC-Equestrian
+  const categories = (product as any).categories || []
+  const isLcEquestrian = categories.some((cat: any) =>
+    LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase())
+  )
+
   return (
     <LocalizedClientLink
       href={`/products/${product.handle}`}
       className="group block h-full"
     >
       <div
-        className={`bg-white rounded-2xl overflow-hidden transition-all duration-300 border h-full flex flex-col hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] ${
-          !isInStock
-            ? "border-gray-200 opacity-75 hover:opacity-100"
-            : "border-gray-100 hover:border-gray-200"
+        className={`rounded-2xl overflow-hidden transition-all duration-300 border-2 h-full flex flex-col ${
+          isLcEquestrian
+            ? "bg-gradient-to-b from-amber-50/40 to-white border-amber-500 shadow-[0_0_20px_rgba(217,119,6,0.25)] hover:shadow-[0_0_30px_rgba(217,119,6,0.45)] hover:border-amber-400"
+            : !isInStock
+              ? "bg-white border-gray-200 opacity-75 hover:opacity-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
+              : "bg-white border-gray-100 hover:border-gray-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
         } ${isNew ? "animate-fade-in" : ""}`}
       >
         {/* Image */}
@@ -92,7 +102,7 @@ function ProductCardClient({
             />
           )}
 
-          {/* Badges */}
+          {/* Badges haut gauche */}
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10">
             {hasDiscount && (
               <div className="bg-red-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
@@ -106,13 +116,21 @@ function ProductCardClient({
             )}
           </div>
 
-          {collection && (
+          {/* Badge LC Equestrian — coin supérieur droit */}
+          {isLcEquestrian ? (
+            <div className="absolute top-2.5 right-2.5 z-20">
+              <div className="bg-amber-600 text-white px-2 py-1 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 border border-amber-400">
+                <span>★</span>
+                <span>LC Equestrian</span>
+              </div>
+            </div>
+          ) : collection ? (
             <div className="absolute top-2.5 right-2.5 z-10">
               <div className="bg-white/80 backdrop-blur-md text-gray-600 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider shadow-sm">
                 {collection}
               </div>
             </div>
-          )}
+          ) : null}
 
           {!isInStock && (
             <div className="absolute inset-0 bg-gray-900/30 backdrop-blur-[1px] flex items-center justify-center z-10">
@@ -125,7 +143,11 @@ function ProductCardClient({
 
         {/* Infos */}
         <div className="p-3 sm:p-4 flex-1 flex flex-col gap-1">
-          <h3 className="font-semibold text-gray-900 group-hover:text-amber-600 transition-colors text-[13px] sm:text-sm leading-snug line-clamp-2 flex-1">
+          <h3 className={`font-semibold transition-colors text-[13px] sm:text-sm leading-snug line-clamp-2 flex-1 ${
+            isLcEquestrian
+              ? "text-gray-900 group-hover:text-amber-600"
+              : "text-gray-900 group-hover:text-amber-600"
+          }`}>
             {product.title}
           </h3>
 
@@ -156,7 +178,9 @@ function ProductCardClient({
               )}
             </div>
 
-            <span className="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-amber-600 text-gray-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 group-hover:shadow-md">
+            <span className={`w-8 h-8 rounded-full bg-gray-100 text-gray-400 group-hover:text-white flex items-center justify-center transition-all duration-300 flex-shrink-0 group-hover:shadow-md ${
+              isLcEquestrian ? "group-hover:bg-amber-600" : "group-hover:bg-amber-600"
+            }`}>
               <svg className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
@@ -206,7 +230,7 @@ export default function LoadMoreProducts({
       params.set("limit", String(limit))
       params.set("offset", String(page * limit))
       params.set("region_id", regionId)
-      params.set("fields", "*variants.calculated_price,+variants.inventory_quantity,+images,+metadata,+collection.title,+collection.handle")
+      params.set("fields", "*variants.calculated_price,+variants.inventory_quantity,+images,+metadata,+collection.title,+collection.handle,+categories.handle,+categories.name,+categories.id")
 
       // Pass through relevant query params
       if (queryParams.category_id) {

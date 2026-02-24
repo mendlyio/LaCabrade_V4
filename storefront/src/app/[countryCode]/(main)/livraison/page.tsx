@@ -2,7 +2,7 @@ import { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "Livraison - La Cabrade",
-  description: "Informations sur nos modes de livraison, délais et tarifs. Livraison gratuite dès 100€ en Belgique.",
+  description: "Informations sur nos modes de livraison, délais et tarifs. Livraison gratuite dès 75€ en Belgique.",
 }
 
 export default function LivraisonPage() {
@@ -21,7 +21,7 @@ export default function LivraisonPage() {
               Informations de livraison
             </h1>
             <p className="text-white/90 text-lg">
-              Livraison rapide et gratuite dès 100€ en Belgique. Découvrez tous nos modes de livraison.
+              Livraison rapide et gratuite dès 75€ en Belgique. Découvrez tous nos modes de livraison.
             </p>
           </div>
         </div>
@@ -34,7 +34,7 @@ export default function LivraisonPage() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Livraison GRATUITE</h2>
-              <p className="text-green-700 font-semibold">À partir de 100€ d'achat en Belgique</p>
+              <p className="text-green-700 font-semibold">À partir de 75€ d'achat en Belgique</p>
             </div>
           </div>
         </div>
@@ -50,7 +50,7 @@ export default function LivraisonPage() {
             <div className="space-y-4">
               <div className="border-l-4 border-amber-500 pl-4">
                 <h4 className="font-semibold text-gray-900 mb-1">Standard (3-5 jours)</h4>
-                <p className="text-gray-600 text-sm">GRATUIT dès 100€, sinon 7,50€</p>
+                <p className="text-gray-600 text-sm">GRATUIT dès 75€, sinon 6,90€</p>
               </div>
               <div className="border-l-4 border-orange-500 pl-4">
                 <h4 className="font-semibold text-gray-900 mb-1">Express (24-48h)</h4>
@@ -58,7 +58,7 @@ export default function LivraisonPage() {
               </div>
               <div className="border-l-4 border-blue-500 pl-4">
                 <h4 className="font-semibold text-gray-900 mb-1">Point relais</h4>
-                <p className="text-gray-600 text-sm">GRATUIT dès 75€, sinon 5,00€</p>
+                <p className="text-gray-600 text-sm">GRATUIT dès 75€, sinon 6,90€</p>
               </div>
             </div>
           </div>

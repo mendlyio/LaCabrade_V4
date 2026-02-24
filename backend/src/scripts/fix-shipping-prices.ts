@@ -17,7 +17,7 @@ import {
   remoteQueryObjectFromString,
 } from "@medusajs/framework/utils"
 
-const STANDARD_PRICE = 5    // 5,00 € (format euros)
+const STANDARD_PRICE = 6.9  // 6,90 € (format euros)
 const EXPRESS_PRICE = 12.9  // 12,90 € (format euros)
 
 export default async function fixShippingPrices({ container }: ExecArgs) {
@@ -71,5 +71,5 @@ export default async function fixShippingPrices({ container }: ExecArgs) {
   }
 
   logger.info("")
-  logger.info(`✅ ${updated} prix corrigés (Standard: 5€ | Express: 12,90€)`)
+  logger.info(`✅ ${updated} prix corrigés (Standard: 6,90€ | Express: 12,90€)`)
 }

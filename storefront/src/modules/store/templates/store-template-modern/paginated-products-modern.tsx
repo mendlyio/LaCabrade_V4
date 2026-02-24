@@ -84,7 +84,7 @@ export default async function PaginatedProductsModern({
     limit,
     offset: (page - 1) * limit,
     region_id: region.id,
-    fields: "*variants.calculated_price,+variants.inventory_quantity,+metadata,+collection.title,+collection.handle",
+    fields: "*variants.calculated_price,+variants.inventory_quantity,+metadata,+collection.title,+collection.handle,+categories.handle,+categories.name,+categories.id",
   }
 
   // Recherche
@@ -291,6 +291,22 @@ export default async function PaginatedProductsModern({
              variant.calculated_price.calculated_amount < variant.calculated_price.original_amount
     })
   }
+
+  // ─── Trier les produits LC-Equestrian en premier ───────────────────────────
+  // Les produits de la catégorie "LC-Equestrian" / "la-cabrade" remontent toujours en tête
+  const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
+  const isLcEquestrian = (p: any) =>
+    p.categories?.some((cat: any) =>
+      LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase())
+    ) ?? false
+
+  filteredProducts = [...filteredProducts].sort((a, b) => {
+    const aIsLC = isLcEquestrian(a)
+    const bIsLC = isLcEquestrian(b)
+    if (aIsLC && !bIsLC) return -1
+    if (!aIsLC && bIsLC) return 1
+    return 0
+  })
 
   // Mettre à jour le count total après filtrage
   const totalFilteredCount = filteredProducts.length

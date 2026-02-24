@@ -199,7 +199,7 @@ const CartDropdown = ({
                   </div>
                   <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 rounded-lg p-3">
                     <span>✓</span>
-                    <span>Livraison gratuite dès 100€</span>
+                    <span>Livraison gratuite dès 75€</span>
                   </div>
                   <LocalizedClientLink href="/cart" passHref>
                     <Button

@@ -23,6 +23,8 @@
     "seed:bpost:local": "REDIS_URL= medusa exec src/scripts/seed-bpost.ts",
     "fix:express-prices:local": "REDIS_URL= medusa exec src/scripts/fix-express-prices.ts",
     "fix:shipping-prices:local": "REDIS_URL= medusa exec src/scripts/fix-shipping-prices.ts",
+    "delete:medusa-demo": "medusa exec src/scripts/delete-medusa-demo-products.ts",
+    "delete:medusa-demo:local": "REDIS_URL= medusa exec src/scripts/delete-medusa-demo-products.ts",
     "seed:express": "medusa exec ./src/scripts/seed-express.ts",
     "repair:categories": "medusa exec ./src/scripts/repair-categories.ts",
     "ib": "init-backend",

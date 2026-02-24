@@ -31,10 +31,10 @@ export default function ConditionsLivraisonPage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-green-900 mb-1">
-                    Livraison gratuite dès 100€ d&apos;achat
+                    Livraison gratuite dès 75€ d&apos;achat
                   </h3>
                   <p className="text-green-800">
-                    En Belgique, pour les commandes supérieures à 100€
+                    En Belgique, pour les commandes supérieures à 75€
                   </p>
                 </div>
               </div>
@@ -53,7 +53,7 @@ export default function ConditionsLivraisonPage() {
                   <h3 className="font-semibold text-blue-900 mb-2">🇧🇪 Belgique</h3>
                   <p className="text-sm text-blue-800">
                     Livraison standard : 3-5 jours ouvrables<br />
-                    Gratuite dès 100€
+                    Gratuite dès 75€
                   </p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -88,11 +88,11 @@ export default function ConditionsLivraisonPage() {
                         Livraison directement à votre adresse par transporteur.
                       </p>
                       <div className="flex items-center gap-4 text-sm">
-                        <span className="text-amber-600 font-semibold">5-7€</span>
+                        <span className="text-amber-600 font-semibold">6,90€</span>
                         <span className="text-gray-500">•</span>
                         <span className="text-gray-600">3-5 jours ouvrables</span>
                         <span className="text-gray-500">•</span>
-                        <span className="text-green-600 font-medium">Gratuit dès 100€</span>
+                        <span className="text-green-600 font-medium">Gratuit dès 75€</span>
                       </div>
                     </div>
                   </div>
@@ -115,11 +115,11 @@ export default function ConditionsLivraisonPage() {
                         Retrait dans un point relais proche de chez vous.
                       </p>
                       <div className="flex items-center gap-4 text-sm">
-                        <span className="text-amber-600 font-semibold">3-5€</span>
+                        <span className="text-amber-600 font-semibold">6,90€</span>
                         <span className="text-gray-500">•</span>
                         <span className="text-gray-600">2-4 jours ouvrables</span>
                         <span className="text-gray-500">•</span>
-                        <span className="text-green-600 font-medium">Gratuit dès 100€</span>
+                        <span className="text-green-600 font-medium">Gratuit dès 75€</span>
                       </div>
                     </div>
                   </div>

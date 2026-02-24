@@ -16,7 +16,7 @@ export default function ProductTrustBadges() {
         </svg>
       ),
       title: "Livraison gratuite",
-      description: "Dès 100€ d'achat"
+      description: "Dès 75€ d'achat"
     },
     {
       icon: (

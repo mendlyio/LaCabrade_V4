@@ -36,7 +36,7 @@ export default function FAQPage() {
         },
         {
           q: "La livraison est-elle gratuite ?",
-          a: "Oui ! La livraison est gratuite en Belgique pour toute commande de 100€ ou plus. En dessous de 100€, les frais de livraison sont de 7,50€."
+          a: "Oui ! La livraison est gratuite en Belgique pour toute commande de 75€ ou plus. En dessous de 75€, les frais de livraison sont de 6,90€."
         },
         {
           q: "Livrez-vous à l'international ?",

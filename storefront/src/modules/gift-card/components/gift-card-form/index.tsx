@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { addGiftCardToCart, GiftCardVariant } from "@lib/data/gift-card"
 import GiftCardPreview from "../gift-card-preview"
 
@@ -12,6 +13,8 @@ interface GiftCardFormProps {
 type AmountOption = "25" | "50" | "100" | "custom"
 
 export default function GiftCardForm({ variants, countryCode }: GiftCardFormProps) {
+  const router = useRouter()
+
   // Form state
   const [selectedAmount, setSelectedAmount] = useState<AmountOption>("50")
   const [customAmount, setCustomAmount] = useState<string>("")
@@ -111,6 +114,8 @@ export default function GiftCardForm({ variants, countryCode }: GiftCardFormProp
         setMessage("")
         setCustomAmount("")
         setSelectedAmount("50")
+        // Rafraîchir le layout pour mettre à jour le panier dans la nav
+        router.refresh()
       } else {
         setToast({
           type: "error",
