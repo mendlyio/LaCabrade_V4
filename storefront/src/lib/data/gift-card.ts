@@ -1,7 +1,8 @@
 "use server"
 
 import { revalidateTag } from "next/cache"
-import { getOrSetCart } from "./cart"
+import { getAuthHeaders, getCartId, setCartId } from "./cookies"
+import { getRegion } from "./regions"
 import { sdk } from "@lib/config"
 
 const BACKEND_URL =
@@ -84,65 +85,124 @@ export async function getGiftCardProduct(
 }
 
 /**
+ * Récupère ou crée le panier via le SDK Medusa.
+ */
+async function getOrCreateCart(countryCode: string) {
+  const region = await getRegion(countryCode)
+  if (!region) throw new Error(`Région non trouvée pour: ${countryCode}`)
+
+  let cartId = getCartId()
+  if (cartId) {
+    try {
+      const { cart } = await sdk.store.cart.retrieve(
+        cartId,
+        {},
+        { next: { tags: ["cart"] }, ...getAuthHeaders() }
+      )
+      if (cart.region_id !== region.id) {
+        await sdk.store.cart.update(
+          cartId,
+          { region_id: region.id },
+          {},
+          getAuthHeaders()
+        )
+      }
+      return cart
+    } catch {
+      // Cart expiré ou invalide, en créer un nouveau
+    }
+  }
+
+  const { cart } = await sdk.store.cart.create(
+    { region_id: region.id },
+    {},
+    getAuthHeaders()
+  )
+  setCartId(cart.id)
+  revalidateTag("cart")
+  return cart
+}
+
+/**
  * Ajoute un bon cadeau au panier.
- * Utilise toujours l'endpoint backend custom pour garantir les metadata (destinataire, message).
+ *
+ * - Montant fixe (variantId) : utilise le SDK directement → plus fiable, pas de dépendance au workflow engine
+ * - Montant personnalisé : utilise l'endpoint backend custom (prix libre)
  */
 export async function addGiftCardToCart(
   input: GiftCardCartInput
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const cart = await getOrSetCart(input.countryCode)
-    if (!cart) {
-      return { success: false, error: "Impossible de récupérer le panier" }
+    const cart = await getOrCreateCart(input.countryCode)
+    if (!cart?.id) {
+      return { success: false, error: "Impossible de créer le panier" }
     }
 
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    }
-    if (PUBLISHABLE_KEY) {
-      headers["x-publishable-api-key"] = PUBLISHABLE_KEY
-    }
-
-    const body: Record<string, unknown> = {
-      cart_id: cart.id,
-      recipient_email: input.recipientEmail,
-      recipient_name: input.recipientName,
-      message: input.message || "",
+    const metadata: Record<string, unknown> = {
+      is_gift_card: true,
+      recipient_email: input.recipientEmail.trim().toLowerCase(),
+      recipient_name: input.recipientName.trim(),
+      gift_message: input.message?.trim() || "",
     }
 
+    // ── Montant fixe : SDK standard ──────────────────────────────────────────
     if (input.variantId) {
-      body.variant_id = input.variantId
-    } else if (input.customAmount) {
-      body.custom_amount = input.customAmount
-    } else {
-      return { success: false, error: "Veuillez sélectionner un montant" }
+      await sdk.store.cart.createLineItem(
+        cart.id,
+        {
+          variant_id: input.variantId,
+          quantity: 1,
+          metadata,
+        },
+        {},
+        getAuthHeaders()
+      )
+      revalidateTag("cart")
+      return { success: true }
     }
 
-    const res = await fetch(
-      `${BACKEND_URL}/store/custom/gift-card-add-to-cart`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
+    // ── Montant personnalisé : backend custom ────────────────────────────────
+    if (input.customAmount) {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
       }
-    )
+      if (PUBLISHABLE_KEY) {
+        headers["x-publishable-api-key"] = PUBLISHABLE_KEY
+      }
 
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({ message: "Erreur inconnue" }))
-      const msg =
-        error?.message || error?.error || `Erreur serveur (${res.status})`
-      return { success: false, error: msg }
+      const res = await fetch(
+        `${BACKEND_URL}/store/custom/gift-card-add-to-cart`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            cart_id: cart.id,
+            custom_amount: input.customAmount,
+            recipient_email: input.recipientEmail,
+            recipient_name: input.recipientName,
+            message: input.message || "",
+          }),
+        }
+      )
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Erreur inconnue" }))
+        return {
+          success: false,
+          error: err?.message || err?.error || `Erreur serveur (${res.status})`,
+        }
+      }
+
+      revalidateTag("cart")
+      return { success: true }
     }
 
-    revalidateTag("cart")
-    return { success: true }
+    return { success: false, error: "Veuillez sélectionner un montant" }
   } catch (error: any) {
     console.error("[GiftCard] Erreur ajout au panier:", error)
-    const msg =
-      error?.message ||
-      (error?.code === "ECONNREFUSED"
-        ? "Impossible de joindre le serveur. Vérifiez que le backend est démarré."
-        : "Erreur lors de l'ajout au panier")
-    return { success: false, error: msg }
+    return {
+      success: false,
+      error: error?.message || "Erreur lors de l'ajout au panier",
+    }
   }
 }
