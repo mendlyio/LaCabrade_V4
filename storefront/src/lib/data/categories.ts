@@ -59,23 +59,37 @@ export const getCategoryByHandle = cache(async function (
     }
   })
 
-  // Essayer avec le handle décodé en premier
-  let result = await sdk.store.category.list(
-    // @ts-ignore
-    { handle: decoded },
-    { next: { tags: ["categories"] } }
-  )
+  // Cas : un seul segment avec virgules (ex: "bonnets,-bandeaux,-echarpes-et-tours-de-cou")
+  // → lien mal formé (virgules au lieu de slashes), on essaie plusieurs interprétations
+  const candidates: string[][] = [decoded]
+  if (decoded.length === 1 && decoded[0].includes(",")) {
+    const segment = decoded[0]
+    // Option A : chemin imbriqué → ["bonnets", "bandeaux", "echarpes-et-tours-de-cou"]
+    const pathParts = segment.split(",").map((p) => p.replace(/^-+/, "").trim()).filter(Boolean)
+    if (pathParts.length > 1) candidates.push(pathParts)
+    // Option B : handle slugifié → "bonnets-bandeaux-echarpes-et-tours-de-cou"
+    const slugified = segment.replace(/,\s*-/g, "-").replace(/,/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")
+    if (slugified && slugified !== segment) candidates.push([slugified])
+  }
 
-  // Si rien trouvé et le décodé diffère de l'original, essayer avec l'original
-  if (
-    (!result.product_categories || result.product_categories.length === 0) &&
-    JSON.stringify(decoded) !== JSON.stringify(categoryHandle)
-  ) {
+  let result: Awaited<ReturnType<typeof sdk.store.category.list>> = { product_categories: [], count: 0, limit: 0, offset: 0 }
+  for (const handlesToTry of candidates) {
     result = await sdk.store.category.list(
       // @ts-ignore
-      { handle: categoryHandle },
+      { handle: handlesToTry },
       { next: { tags: ["categories"] } }
     )
+    if (result.product_categories && result.product_categories.length > 0) {
+      // Si plusieurs catégories (path), garder la feuille (dernier handle)
+      if (handlesToTry.length > 1) {
+        const leafHandle = handlesToTry[handlesToTry.length - 1]
+        const leaf = result.product_categories.find((c: any) => c.handle === leafHandle)
+        if (leaf) {
+          result = { ...result, product_categories: [leaf] }
+        }
+      }
+      break
+    }
   }
 
   return result
