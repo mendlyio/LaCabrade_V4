@@ -265,6 +265,7 @@ export default function LoadMoreProducts({
   const [products, setProducts] = useState<HttpTypes.StoreProduct[]>(initialProducts)
   const [page, setPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [newProductIds, setNewProductIds] = useState<Set<string>>(new Set())
 
   // Pas de useEffect : le key du parent force le remount quand les filtres changent.
@@ -282,25 +283,23 @@ export default function LoadMoreProducts({
 
     // Mode client : pas de fetch, on révèle les produits suivants
     if (isClientPagination) {
+      setError(null)
       setNewProductIds(new Set((allProducts ?? []).slice(displayCount, displayCount + limit).map((p: any) => p.id)))
       setTimeout(() => setNewProductIds(new Set()), 1000)
       setDisplayCount((prev) => Math.min(prev + limit, allProducts?.length ?? prev))
       return
     }
 
+    setError(null)
     setIsLoading(true)
     try {
       const nextPage = page + 1
-      const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
-      const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
-
       const params = new URLSearchParams()
       params.set("limit", String(limit))
       params.set("offset", String(page * limit))
       params.set("region_id", regionId)
       params.set("fields", "*variants.calculated_price,+variants.inventory_quantity,+images,+metadata,+collection.title,+collection.handle,+categories.handle,+categories.name,+categories.id")
 
-      // Pass through relevant query params
       if (queryParams.category_id) {
         const ids = Array.isArray(queryParams.category_id) ? queryParams.category_id : [queryParams.category_id]
         ids.forEach((id: string) => params.append("category_id[]", id))
@@ -312,21 +311,14 @@ export default function LoadMoreProducts({
       if (queryParams.q) params.set("q", queryParams.q)
       if (queryParams.order) params.set("order", queryParams.order)
 
-      const headers: Record<string, string> = {}
-      if (publishableKey) {
-        headers["x-publishable-api-key"] = publishableKey
-      }
-
-      const res = await fetch(`${backendUrl}/store/products?${params.toString()}`, {
-        headers,
-      })
-
-      if (!res.ok) throw new Error("Erreur chargement")
+      // Proxy via API Next.js pour éviter CORS (client → même origine → backend)
+      const res = await fetch(`/api/products/load-more?${params.toString()}`)
 
       const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || "Erreur chargement")
+
       let newProducts = data.products || []
 
-      // Filtrer par marque côté client si nécessaire
       if (brandSlug) {
         newProducts = newProducts.filter((product: any) => {
           const metadataBrand = product.metadata?.brand as string | undefined
@@ -336,15 +328,16 @@ export default function LoadMoreProducts({
         })
       }
 
-      // Track new products for animation
       const newIds = new Set(newProducts.map((p: any) => p.id))
       setNewProductIds(newIds)
       setTimeout(() => setNewProductIds(new Set()), 1000)
 
       setProducts((prev) => [...prev, ...newProducts])
       setPage(nextPage)
-    } catch (error) {
-      console.error("Erreur chargement produits:", error)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Une erreur est survenue"
+      setError(msg)
+      console.error("Erreur chargement produits:", err)
     } finally {
       setIsLoading(false)
     }
@@ -362,6 +355,20 @@ export default function LoadMoreProducts({
           />
         ))}
       </div>
+
+      {/* Message d'erreur */}
+      {error && (
+        <div className="mt-8 p-4 bg-red-50 border border-red-200 rounded-xl text-center">
+          <p className="text-sm text-red-700 mb-3">{error}</p>
+          <button
+            type="button"
+            onClick={() => { setError(null); loadMore() }}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
 
       {/* Load More */}
       {hasMore && (
