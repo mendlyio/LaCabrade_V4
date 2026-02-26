@@ -28,15 +28,23 @@ function ProductCardClient({
   product: HttpTypes.StoreProduct
   isNew?: boolean
 }) {
-  // ── Trouver le variant le moins cher ────────────────────────────────────
+  // ── Trouver le variant le moins cher (calculated_amount ou original_amount) ──
+  const getVariantPrice = (v: any) =>
+    v?.calculated_price?.calculated_amount ?? v?.calculated_price?.original_amount ?? Infinity
+
   const allPricedVariants = (product.variants || [])
-    .filter((v: any) => v.calculated_price?.calculated_amount != null) as any[]
+    .filter((v: any) => {
+      const p = getVariantPrice(v)
+      return p != null && p !== Infinity && Number.isFinite(p)
+    }) as any[]
 
   const cheapestVariant = allPricedVariants.sort(
-    (a, b) => a.calculated_price.calculated_amount - b.calculated_price.calculated_amount
+    (a, b) => getVariantPrice(a) - getVariantPrice(b)
   )[0]
 
-  const price: number | undefined = cheapestVariant?.calculated_price?.calculated_amount
+  const price: number | undefined = cheapestVariant
+    ? (cheapestVariant.calculated_price?.calculated_amount ?? cheapestVariant.calculated_price?.original_amount)
+    : undefined
   const originalPrice: number | undefined = cheapestVariant?.calculated_price?.original_amount
   const currencyCode: string = cheapestVariant?.calculated_price?.currency_code || "eur"
 

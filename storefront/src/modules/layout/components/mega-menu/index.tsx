@@ -76,10 +76,11 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
-      {/* Bouton trigger */}
-      <button
+      {/* Lien vers la page catégorie — clic = navigation */}
+      <LocalizedClientLink
+        href={`/categories/${encodeURIComponent(category.handle)}`}
         className={`
-          flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium outline-none
+          flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium
           transition-all duration-200 whitespace-nowrap
           ${isOutlet
             ? (open 
@@ -90,15 +91,14 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                 : 'text-gray-700 hover:text-white hover:bg-amber-600')
           }
         `}
-        onClick={() => setOpen(!open)}
       >
         <span>{category.name}</span>
         <ChevronDown
-          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+          className={`w-3.5 h-3.5 transition-transform duration-200 flex-shrink-0 ${
             open ? 'rotate-180' : ''
           }`}
         />
-      </button>
+      </LocalizedClientLink>
 
       {/* Overlay fond sombre */}
       {open && (
