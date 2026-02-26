@@ -1,10 +1,13 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { usePathname, useSearchParams } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import WishlistToggleButton from "@modules/common/components/wishlist-toggle-button"
+
+const STORE_SCROLL_KEY = "store-scroll"
 
 type LoadMoreProductsProps = {
   initialProducts: HttpTypes.StoreProduct[]
@@ -24,9 +27,11 @@ const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
 function ProductCardClient({
   product,
   isNew,
+  onProductClick,
 }: {
   product: HttpTypes.StoreProduct
   isNew?: boolean
+  onProductClick?: () => void
 }) {
   // ── Trouver le variant le moins cher (calculated_amount ou original_amount) ──
   const getVariantPrice = (v: any) =>
@@ -92,6 +97,7 @@ function ProductCardClient({
     <LocalizedClientLink
       href={`/products/${product.handle}`}
       className="group block h-full"
+      onClick={onProductClick}
     >
       <div
         className={`rounded-2xl overflow-hidden transition-all duration-300 border-2 h-full flex flex-col ${
@@ -274,6 +280,10 @@ export default function LoadMoreProducts({
   brandSlug,
   allProducts,
 }: LoadMoreProductsProps) {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const search = searchParams?.toString() ?? ""
+
   // Mode pagination client : on a déjà tous les produits (filtres), on révèle par lots
   const isClientPagination = Boolean(allProducts && allProducts.length > 0)
   const [displayCount, setDisplayCount] = useState(limit)
@@ -282,6 +292,69 @@ export default function LoadMoreProducts({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [newProductIds, setNewProductIds] = useState<Set<string>>(new Set())
+  const scrollRestoredRef = useRef(false)
+
+  const sessionKey = `${STORE_SCROLL_KEY}-${pathname}-${search}`
+
+  const saveScrollState = useCallback(() => {
+    if (typeof window === "undefined") return
+    try {
+      const data = {
+        scrollY: window.scrollY,
+        displayCount,
+        page,
+        isClientPagination,
+      }
+      sessionStorage.setItem(sessionKey, JSON.stringify(data))
+    } catch {
+      // sessionStorage peut être indisponible (navigation privée, etc.)
+    }
+  }, [sessionKey, displayCount, page, isClientPagination])
+
+  // Sauvegarde au scroll (debounced)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    let timeout: ReturnType<typeof setTimeout>
+    const handleScroll = () => {
+      clearTimeout(timeout)
+      timeout = setTimeout(saveScrollState, 300)
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => {
+      window.removeEventListener("scroll", handleScroll)
+      clearTimeout(timeout)
+    }
+  }, [saveScrollState])
+
+  // Restauration au retour arrière
+  useEffect(() => {
+    if (typeof window === "undefined" || scrollRestoredRef.current) return
+    try {
+      const raw = sessionStorage.getItem(sessionKey)
+      if (!raw) return
+      const data = JSON.parse(raw) as { scrollY?: number; displayCount?: number; page?: number; isClientPagination?: boolean }
+      scrollRestoredRef.current = true
+
+      if (data.isClientPagination && typeof data.displayCount === "number" && data.displayCount > limit) {
+        setDisplayCount(Math.min(data.displayCount, allProducts?.length ?? data.displayCount))
+      }
+      // Mode API : on restaure uniquement le scroll (pas les produits chargés)
+
+      const scrollY = typeof data.scrollY === "number" ? data.scrollY : 0
+      sessionStorage.removeItem(sessionKey)
+      if (scrollY > 0) {
+        // Délai pour laisser React mettre à jour le DOM (displayCount) avant de scroller
+        const timer = setTimeout(() => window.scrollTo(0, scrollY), 50)
+        return () => clearTimeout(timer)
+      }
+    } catch {
+      // Ignorer les erreurs de parsing
+    }
+  }, [sessionKey, limit, allProducts?.length])
+
+  const handleProductClick = useCallback(() => {
+    saveScrollState()
+  }, [saveScrollState])
 
   // Pas de useEffect : le key du parent force le remount quand les filtres changent.
   // Un reset sur initialProducts causait des pertes d'état (produits chargés effacés).
@@ -367,6 +440,7 @@ export default function LoadMoreProducts({
             key={product.id}
             product={product}
             isNew={newProductIds.has(product.id)}
+            onProductClick={handleProductClick}
           />
         ))}
       </div>
