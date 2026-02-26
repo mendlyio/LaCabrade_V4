@@ -199,7 +199,7 @@ export async function enrichLineItems(
     | null,
   regionId: string
 ) {
-  if (!lineItems) return []
+  if (!lineItems || !regionId) return lineItems ? [...lineItems] : []
 
   const productIds = lineItems
     .map((lineItem) => lineItem.product_id)
@@ -458,7 +458,9 @@ export async function placeOrder() {
 
   if (cartRes?.type === "order") {
     const countryCode =
-      cartRes.order.shipping_address?.country_code?.toLowerCase()
+      cartRes.order.shipping_address?.country_code?.toLowerCase() ||
+      cartRes.order.billing_address?.country_code?.toLowerCase() ||
+      "be"
     removeCartId()
     redirect(`/${countryCode}/order/confirmed/${cartRes?.order.id}`)
   }

@@ -7,7 +7,7 @@ import { retrieveOrder } from "@lib/data/orders"
 import { HttpTypes } from "@medusajs/types"
 
 type Props = {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }
 
 async function getOrder(id: string) {
@@ -17,7 +17,10 @@ async function getOrder(id: string) {
     return
   }
 
-  const enrichedItems = await enrichLineItems(order.items, order.region_id!)
+  const enrichedItems = await enrichLineItems(
+    order.items ?? [],
+    order.region_id ?? ""
+  )
 
   return {
     ...order,
@@ -31,7 +34,8 @@ export const metadata: Metadata = {
 }
 
 export default async function OrderConfirmedPage({ params }: Props) {
-  const order = await getOrder(params.id)
+  const { id } = await params
+  const order = await getOrder(id)
   if (!order) {
     return notFound()
   }
