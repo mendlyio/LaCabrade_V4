@@ -2,11 +2,29 @@ import { Metadata } from "next"
 import { getProductsList } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import { listCategories } from "@lib/data/categories"
+import { buildCategoryTree } from "@lib/util/category-tree"
 import { slugify } from "@lib/util/slugify"
 import HeroCarousel from "@modules/home/components/hero-carousel"
 import ScrollCarousel from "@modules/common/components/scroll-carousel"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ProductCardModern from "@modules/products/components/product-card-modern"
+
+/** IDs de la catégorie + tous ses descendants */
+function getCategoryAndDescendantIds(categoryId: string, categoryMap: Map<string, any>): Set<string> {
+  const ids = new Set<string>([categoryId])
+  const stack = [categoryId]
+  while (stack.length) {
+    const id = stack.pop()!
+    const node = categoryMap.get(id)
+    node?.category_children?.forEach((child: any) => {
+      if (child?.id) {
+        ids.add(child.id)
+        stack.push(child.id)
+      }
+    })
+  }
+  return ids
+}
 
 export const metadata: Metadata = {
   title: "La Cabrade - Sellerie Équestre | LC•EQUESTRIAN",
@@ -34,44 +52,61 @@ export default async function Home({
     console.error("Erreur lors de la récupération des catégories:", error)
   }
 
-  // Trouver les IDs de catégories pour LC Equestrian et Outlet
-  const lcCategory = allCategories.find((c: any) => 
-    c.handle === "la-cabrade" || c.handle === "lc-equestrian"
+  // Trouver les catégories LC Equestrian et Outlet
+  const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
+  const lcCategory = allCategories.find((c: any) =>
+    LC_EQUESTRIAN_HANDLES.includes((c.handle || "").toLowerCase())
   )
-  const outletCategory = allCategories.find((c: any) => 
-    c.handle === "outlet"
+  const outletCategory = allCategories.find((c: any) =>
+    (c.handle || "").toLowerCase() === "outlet"
   )
 
-  // Récupérer les produits LC Equestrian
+  const { map: categoryMap } = buildCategoryTree(allCategories)
+
+  // Récupérer les produits LC Equestrian — uniquement catégorie LC-Equestrian (et sous-catégories)
   let lcEquestrianProducts: any[] = []
-  try {
-    const result = await getProductsList({
-      queryParams: {
-        limit: 8,
-        region_id: region.id,
-        ...(lcCategory ? { category_id: [lcCategory.id] } : {}),
-      },
-      countryCode,
-    })
-    lcEquestrianProducts = result.response.products || []
-  } catch (error) {
-    console.error("Erreur lors de la récupération des produits LC Equestrian:", error)
+  if (lcCategory) {
+    try {
+      const allowedIds = getCategoryAndDescendantIds(lcCategory.id, categoryMap)
+      const result = await getProductsList({
+        queryParams: {
+          limit: 48,
+          region_id: region.id,
+          category_id: [lcCategory.id],
+          fields: "*variants.calculated_price,+variants.inventory_quantity,+images,+categories.handle,+categories.id",
+        } as any,
+        countryCode,
+      })
+      const raw = result.response.products || []
+      const isInLcCategory = (p: any) =>
+        (p.categories || []).some((cat: any) => cat?.id && allowedIds.has(cat.id))
+      lcEquestrianProducts = raw.filter(isInLcCategory).slice(0, 8)
+    } catch (error) {
+      console.error("Erreur lors de la récupération des produits LC Equestrian:", error)
+    }
   }
 
-  // Récupérer les produits outlet
+  // Récupérer les produits Outlet — uniquement catégorie Outlet (et sous-catégories)
   let outletProducts: any[] = []
-  try {
-    const result = await getProductsList({
-      queryParams: {
-        limit: 8,
-        region_id: region.id,
-        ...(outletCategory ? { category_id: [outletCategory.id] } : {}),
-      },
-      countryCode,
-    })
-    outletProducts = result.response.products || []
-  } catch (error) {
-    console.error("Erreur lors de la récupération des produits outlet:", error)
+  if (outletCategory) {
+    try {
+      const allowedIds = getCategoryAndDescendantIds(outletCategory.id, categoryMap)
+      const result = await getProductsList({
+        queryParams: {
+          limit: 48,
+          region_id: region.id,
+          category_id: [outletCategory.id],
+          fields: "*variants.calculated_price,+variants.inventory_quantity,+images,+categories.handle,+categories.id",
+        } as any,
+        countryCode,
+      })
+      const raw = result.response.products || []
+      const isInOutletCategory = (p: any) =>
+        (p.categories || []).some((cat: any) => cat?.id && allowedIds.has(cat.id))
+      outletProducts = raw.filter(isInOutletCategory).slice(0, 8)
+    } catch (error) {
+      console.error("Erreur lors de la récupération des produits outlet:", error)
+    }
   }
 
   // Filtrer les catégories principales pour la section catégories

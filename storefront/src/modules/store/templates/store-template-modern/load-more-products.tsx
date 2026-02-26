@@ -4,6 +4,7 @@ import { useCallback, useState } from "react"
 import { HttpTypes } from "@medusajs/types"
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import WishlistToggleButton from "@modules/common/components/wishlist-toggle-button"
 
 type LoadMoreProductsProps = {
   initialProducts: HttpTypes.StoreProduct[]
@@ -150,21 +151,27 @@ function ProductCardClient({
             </div>
           )}
 
-          {/* Badge LC Equestrian — coin supérieur droit */}
+          {/* Badge LC Equestrian + Wishlist — coin supérieur droit */}
           {isLcEquestrian ? (
-            <div className="absolute top-2.5 right-2.5 z-20">
+            <div className="absolute top-2.5 right-2.5 z-20 flex flex-col items-end gap-1">
               <div className="bg-amber-600 text-white px-2 py-1 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 border border-amber-400">
                 <span>★</span>
                 <span>LC Equestrian</span>
               </div>
+              <WishlistToggleButton productId={product.id!} size="md" />
             </div>
           ) : !isOutlet && collection ? (
-            <div className="absolute top-2.5 right-2.5 z-10">
+            <div className="absolute top-2.5 right-2.5 z-10 flex flex-col items-end gap-1">
               <div className="bg-white/80 backdrop-blur-md text-gray-600 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider shadow-sm">
                 {collection}
               </div>
+              <WishlistToggleButton productId={product.id!} size="md" />
             </div>
-          ) : null}
+          ) : (
+            <div className="absolute top-2.5 right-2.5 z-10">
+              <WishlistToggleButton productId={product.id!} size="md" />
+            </div>
+          )}
 
           {!isInStock && (
             <div className="absolute inset-0 bg-gray-900/30 backdrop-blur-[1px] flex items-center justify-center z-10">
