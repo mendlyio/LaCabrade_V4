@@ -11,21 +11,22 @@ type Props = {
 }
 
 async function getOrder(id: string) {
-  const order = await retrieveOrder(id)
+  try {
+    const order = await retrieveOrder(id)
+    if (!order) return null
 
-  if (!order) {
-    return
+    const enrichedItems = await enrichLineItems(
+      order.items ?? [],
+      order.region_id ?? ""
+    )
+
+    return {
+      ...order,
+      items: enrichedItems,
+    } as unknown as HttpTypes.StoreOrder
+  } catch {
+    return null
   }
-
-  const enrichedItems = await enrichLineItems(
-    order.items ?? [],
-    order.region_id ?? ""
-  )
-
-  return {
-    ...order,
-    items: enrichedItems,
-  } as unknown as HttpTypes.StoreOrder
 }
 
 export const metadata: Metadata = {

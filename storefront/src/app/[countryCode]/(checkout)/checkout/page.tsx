@@ -83,11 +83,12 @@ const PaymentMethods = () => (
 export default async function Checkout({
   params,
 }: {
-  params: { countryCode: string }
+  params: Promise<{ countryCode: string }>
 }) {
+  const { countryCode: paramCountry } = await params
   const cart = await fetchCart()
   const customer = await getCustomer()
-  const countryCode = params.countryCode || "be"
+  const countryCode = paramCountry || "be"
 
   const itemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0
 

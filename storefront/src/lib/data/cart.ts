@@ -456,13 +456,13 @@ export async function placeOrder() {
     })
     .catch(medusaError)
 
-  if (cartRes?.type === "order") {
+  if (cartRes?.type === "order" && cartRes?.order?.id) {
     const countryCode =
       cartRes.order.shipping_address?.country_code?.toLowerCase() ||
       cartRes.order.billing_address?.country_code?.toLowerCase() ||
       "be"
     removeCartId()
-    redirect(`/${countryCode}/order/confirmed/${cartRes?.order.id}`)
+    redirect(`/${countryCode}/order/confirmed/${cartRes.order.id}`)
   }
 
   return cartRes.cart
