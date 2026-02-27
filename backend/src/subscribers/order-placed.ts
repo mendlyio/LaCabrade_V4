@@ -9,7 +9,6 @@ export default async function customOrderPlacedEmailHandler({
   event: { data },
   container,
 }: SubscriberArgs<any>) {
-  const notificationModuleService: INotificationModuleService = container.resolve(Modules.NOTIFICATION)
   const orderModuleService: IOrderModuleService = container.resolve(Modules.ORDER)
   
   const order = await orderModuleService.retrieveOrder(data.id, { 
@@ -29,6 +28,7 @@ export default async function customOrderPlacedEmailHandler({
 
   // 1. Envoyer l'email de confirmation
   try {
+    const notificationModuleService: INotificationModuleService = container.resolve(Modules.NOTIFICATION)
     await notificationModuleService.createNotifications({
       to: order.email,
       channel: 'email',
@@ -48,8 +48,11 @@ export default async function customOrderPlacedEmailHandler({
     })
     
     console.log(`✅ Order confirmation email sent for order ${order.id}`)
-  } catch (error) {
-    console.error('❌ Error sending order confirmation notification:', error)
+  } catch (error: any) {
+    console.error('❌ Error sending order confirmation notification:', error?.message ?? error)
+    if (error?.code === 'MODULE_NOT_FOUND' || error?.message?.includes('NOTIFICATION')) {
+      console.warn('💡 Vérifiez que RESEND_API_KEY et RESEND_FROM_EMAIL sont définis en production (Railway).')
+    }
   }
 
   // 2. Synchroniser avec Odoo

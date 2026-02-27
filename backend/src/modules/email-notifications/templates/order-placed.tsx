@@ -47,13 +47,31 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
           Order Date: {new Date(order.created_at).toLocaleDateString()}
         </Text>
         <Text style={{ margin: '0 0 20px' }}>
-          Total: {order.summary.raw_current_order_total.value} {order.currency_code}
+          Total: {String(order.summary?.raw_current_order_total?.value ?? order.total ?? 0)} {order.currency_code}
         </Text>
 
         <Hr style={{ margin: '20px 0' }} />
 
+        {(order as any).shipping_methods?.length > 0 && (
+          <>
+            <Text style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 10px' }}>
+              Livraison
+            </Text>
+            <Text style={{ margin: '0 0 5px' }}>
+              {(order as any).shipping_methods[0].name}
+              {(order as any).shipping_methods[0].amount > 0 && ` (${(order as any).shipping_methods[0].amount} €)`}
+            </Text>
+            {(order as any).metadata?.pickup_location && (
+              <Text style={{ margin: '0 0 5px' }}>
+                Retrait: {(order as any).metadata.pickup_location.name} - {(order as any).metadata.pickup_location.address}
+              </Text>
+            )}
+            <Hr style={{ margin: '20px 0' }} />
+          </>
+        )}
+
         <Text style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 10px' }}>
-          Shipping Address
+          Adresse de livraison
         </Text>
         <Text style={{ margin: '0 0 5px' }}>
           {shippingAddress.address_1}
