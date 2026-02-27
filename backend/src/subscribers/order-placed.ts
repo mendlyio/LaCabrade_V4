@@ -29,25 +29,42 @@ export default async function customOrderPlacedEmailHandler({
   // 1. Envoyer l'email de confirmation
   try {
     const notificationModuleService: INotificationModuleService = container.resolve(Modules.NOTIFICATION)
+    const orderData = {
+      emailOptions: {
+        replyTo: 'info@lacabrade.be',
+        subject: `Confirmation de votre commande #${(order as any).display_id || order.id}`
+      },
+      order: {
+        ...order,
+        display_id: (order as any).display_id || order.id
+      },
+      shippingAddress,
+      preview: 'Merci pour votre commande !'
+    }
+
+    // Email au client
     await notificationModuleService.createNotifications({
       to: order.email,
       channel: 'email',
       template: EmailTemplates.ORDER_PLACED,
+      data: orderData
+    })
+
+    // Email à l'équipe gestion des commandes
+    await notificationModuleService.createNotifications({
+      to: 'contact@la-cabrade.be',
+      channel: 'email',
+      template: EmailTemplates.ORDER_PLACED,
       data: {
+        ...orderData,
         emailOptions: {
-          replyTo: 'info@lacabrade.be',
-          subject: `Confirmation de votre commande #${(order as any).display_id || order.id}`
-        },
-        order: {
-          ...order,
-          display_id: (order as any).display_id || order.id
-        },
-        shippingAddress,
-        preview: 'Merci pour votre commande !'
+          ...orderData.emailOptions,
+          subject: `[La Cabrade] Nouvelle commande #${(order as any).display_id || order.id}`
+        }
       }
     })
     
-    console.log(`✅ Order confirmation email sent for order ${order.id}`)
+    console.log(`✅ Order confirmation email sent for order ${order.id} (client + contact@la-cabrade.be)`)
   } catch (error: any) {
     console.error('❌ Error sending order confirmation notification:', error?.message ?? error)
     if (error?.code === 'MODULE_NOT_FOUND' || error?.message?.includes('NOTIFICATION')) {
