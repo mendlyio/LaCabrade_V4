@@ -84,11 +84,29 @@ export default async function CheckoutForm({
     productSets = prod as [HttpTypes.StoreProduct[], HttpTypes.StoreProduct[]]
   } catch (err) {
     console.error("[CheckoutForm] Erreur lors du chargement:", err)
-    return null
+    return (
+      <div className="p-6 bg-amber-50 border border-amber-200 rounded-xl">
+        <p className="text-amber-800 font-medium">
+          Impossible de charger les options de livraison. Vérifiez que votre adresse est complète et réessayez.
+        </p>
+        <p className="text-sm text-amber-700 mt-2">
+          Si le problème persiste, contactez-nous ou videz votre panier et réessayez.
+        </p>
+      </div>
+    )
   }
 
   if (!shippingMethods || !paymentMethods) {
-    return null
+    return (
+      <div className="p-6 bg-amber-50 border border-amber-200 rounded-xl">
+        <p className="text-amber-800 font-medium">
+          Les options de livraison ne sont pas disponibles pour votre panier.
+        </p>
+        <p className="text-sm text-amber-700 mt-2">
+          Assurez-vous d&apos;avoir renseigné une adresse de livraison valide. Certains articles peuvent ne pas être livrables à votre adresse.
+        </p>
+      </div>
+    )
   }
 
   const [upsellProducts, lastChanceProducts] = productSets
