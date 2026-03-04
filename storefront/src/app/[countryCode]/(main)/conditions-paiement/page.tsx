@@ -137,7 +137,7 @@ export default function ConditionsPaiementPage() {
               </p>
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <p className="text-gray-600">
-                  <strong>Email :</strong> <a href="mailto:info@lacabrade.be" className="text-amber-600 hover:text-amber-700 underline">info@lacabrade.be</a><br />
+                  <strong>Email :</strong> <a href="mailto:info@sellerie-lacabrade.be" className="text-amber-600 hover:text-amber-700 underline">info@sellerie-lacabrade.be</a><br />
                   <strong>Téléphone :</strong> <a href="tel:+3243586099" className="text-amber-600 hover:text-amber-700 underline">+32 (0)4/358.60.99</a>
                 </p>
               </div>

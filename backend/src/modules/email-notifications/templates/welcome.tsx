@@ -133,7 +133,7 @@ export const WelcomeTemplate: React.FC<WelcomeTemplateProps> & {
           Une question ? Notre équipe est là pour vous aider !
         </Text>
         <Text style={{ fontSize: '14px', color: '#6B7280', textAlign: 'center', margin: '0 0 20px' }}>
-          📧 <a href="mailto:info@lacabrade.be" style={{ color: '#D97706' }}>info@lacabrade.be</a>
+          📧 <a href="mailto:info@sellerie-lacabrade.be" style={{ color: '#D97706' }}>info@sellerie-lacabrade.be</a>
         </Text>
 
         <Text style={{ fontSize: '14px', color: '#6B7280', textAlign: 'center', margin: '20px 0 0' }}>

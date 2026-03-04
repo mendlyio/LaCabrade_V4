@@ -38,9 +38,10 @@ MINIO_ACCESS_KEY=your-access-key
 MINIO_SECRET_KEY=your-secret-key
 MINIO_BUCKET=medusa-media
 
-# Email - Resend (choisir entre Resend OU SendGrid)
+# Email - Resend (domaine vérifié: sellerie-lacabrade.be)
 RESEND_API_KEY=re_xxxxxxxxxxxx
-RESEND_FROM_EMAIL=noreply@votredomaine.com
+RESEND_FROM_EMAIL=noreply@sellerie-lacabrade.be
+CONTACT_EMAIL=contact@sellerie-lacabrade.be
 
 # Email - SendGrid (alternative à Resend)
 SENDGRID_API_KEY=SG.xxxxxxxxxxxx

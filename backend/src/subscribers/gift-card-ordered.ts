@@ -147,7 +147,7 @@ export default async function giftCardOrderedHandler({
             template: EmailTemplates.GIFT_CARD_DELIVERY,
             data: {
               emailOptions: {
-                replyTo: "info@lacabrade.be",
+                replyTo: "info@sellerie-lacabrade.be",
                 subject: `🎁 Vous avez reçu un Bon Cadeau La Cabrade de ${amount}€ !`,
                 attachments: [
                   {

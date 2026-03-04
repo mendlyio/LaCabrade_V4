@@ -31,7 +31,7 @@ export default async function customOrderPlacedEmailHandler({
     const notificationModuleService: INotificationModuleService = container.resolve(Modules.NOTIFICATION)
     const orderData = {
       emailOptions: {
-        replyTo: 'info@lacabrade.be',
+        replyTo: 'info@sellerie-lacabrade.be',
         subject: `Confirmation de votre commande #${(order as any).display_id || order.id}`
       },
       order: {
@@ -52,7 +52,7 @@ export default async function customOrderPlacedEmailHandler({
 
     // Email à l'équipe gestion des commandes
     await notificationModuleService.createNotifications({
-      to: 'contact@la-cabrade.be',
+      to: 'contact@sellerie-lacabrade.be',
       channel: 'email',
       template: EmailTemplates.ORDER_PLACED,
       data: {
@@ -64,7 +64,7 @@ export default async function customOrderPlacedEmailHandler({
       }
     })
     
-    console.log(`✅ Order confirmation email sent for order ${order.id} (client + contact@la-cabrade.be)`)
+    console.log(`✅ Order confirmation email sent for order ${order.id} (client + contact@sellerie-lacabrade.be)`)
   } catch (error: any) {
     console.error('❌ Error sending order confirmation notification:', error?.message ?? error)
     if (error?.code === 'MODULE_NOT_FOUND' || error?.message?.includes('NOTIFICATION')) {

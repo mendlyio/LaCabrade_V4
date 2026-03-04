@@ -98,7 +98,7 @@ Pour activer les pastilles sur un produit, ajouter dans les metadata :
 Les emails utilisent **Resend** avec la configuration dans `.env` :
 ```env
 RESEND_API_KEY=your_key
-RESEND_FROM_EMAIL=info@lacabrade.be
+RESEND_FROM_EMAIL=noreply@sellerie-lacabrade.be
 ```
 
 ---
@@ -162,7 +162,7 @@ Tous les templates et composants respectent la charte graphique de La Cabrade :
 ```env
 # Emails
 RESEND_API_KEY=your_resend_key
-RESEND_FROM_EMAIL=info@lacabrade.be
+RESEND_FROM_EMAIL=noreply@sellerie-lacabrade.be
 
 # Base de données (déjà configuré)
 DATABASE_URL=postgresql://...

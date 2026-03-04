@@ -91,7 +91,7 @@ export async function POST(
 
     // Envoyer l'email à l'équipe via Resend
     await notificationModuleService.createNotifications({
-      to: process.env.CONTACT_EMAIL || "contact@lacabrade.com",
+      to: process.env.CONTACT_EMAIL || "contact@sellerie-lacabrade.be",
       channel: "email",
       template: "contact-form",
       data: {
