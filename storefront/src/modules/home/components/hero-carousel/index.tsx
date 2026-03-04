@@ -17,7 +17,7 @@ const HeroCarousel = () => {
     },
     {
       id: 2,
-      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/header-2.webp",
+      image: "https://ik.imagekit.io/kodt9cn6f/Slide-LC-Equestrian.webp",
       alt: "LC Equestrian",
       buttonText: "LC Equestrian",
       buttonHref: "/lc-equestrian",

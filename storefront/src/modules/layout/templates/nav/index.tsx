@@ -51,7 +51,7 @@ export default async function Nav() {
                 data-testid="nav-store-link"
               >
                 <img 
-                  src="https://ik.imagekit.io/kodt9cn6f/Cabrade/Logo-cabrade.webp" 
+                  src="https://ik.imagekit.io/kodt9cn6f/Logo-cabrade.webp" 
                   alt="La Cabrade" 
                   className="h-10 sm:h-12 lg:h-14 w-auto object-contain"
                 />

@@ -15,7 +15,7 @@ export default async function Footer() {
           <div className="space-y-4">
             <div>
               <img 
-                src="https://ik.imagekit.io/kodt9cn6f/Cabrade/Logo-cabrade.webp" 
+                src="https://ik.imagekit.io/kodt9cn6f/Logo-cabrade-white.webp" 
                 alt="La Cabrade" 
                 className="h-14 w-auto object-contain"
               />

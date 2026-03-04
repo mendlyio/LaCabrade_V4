@@ -116,15 +116,15 @@ export default async function Home({
   const mainCategories = parentCategories.slice(0, 8)
 
   const categoryImages: Record<string, string> = {
-    cheval: "https://ik.imagekit.io/kodt9cn6f/Cabrade/cheval.webp",
+    cheval: "https://ik.imagekit.io/kodt9cn6f/cheval.webp",
     cavalier: "https://ik.imagekit.io/kodt9cn6f/Cabrade/cavalier.webp",
     "soin-et-alimentation":
-      "https://ik.imagekit.io/kodt9cn6f/Cabrade/soin%20et%20alimentation.webp?updatedAt=1770375198653",
+      "https://ik.imagekit.io/kodt9cn6f/soins.webp",
     "soins-et-alimentation":
-      "https://ik.imagekit.io/kodt9cn6f/Cabrade/soin%20et%20alimentation.webp?updatedAt=1770375198653",
+      "https://ik.imagekit.io/kodt9cn6f/soins.webp",
     "son-et-alimentation":
-      "https://ik.imagekit.io/kodt9cn6f/Cabrade/soin%20et%20alimentation.webp?updatedAt=1770375198653",
-    ecurie: "https://ik.imagekit.io/kodt9cn6f/Cabrade/ecurie.webp",
+      "https://ik.imagekit.io/kodt9cn6f/soins.webp",
+    ecurie: "https://ik.imagekit.io/kodt9cn6f/ecurie.webp",
     outlet: "https://ik.imagekit.io/kodt9cn6f/Cabrade/outlet.webp",
   }
 
