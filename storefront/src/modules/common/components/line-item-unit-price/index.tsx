@@ -17,7 +17,7 @@ const LineItemUnitPrice = ({
     original_price_number,
     calculated_price_number,
     percentage_diff,
-  } = getPricesForVariant(item.variant) ?? {}
+  } = getPricesForVariant(item.variant, item.unit_price) ?? {}
   const hasReducedPrice = calculated_price_number < original_price_number
 
   return (

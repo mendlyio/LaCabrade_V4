@@ -37,8 +37,13 @@ const ItemsPreviewTemplate = ({ items }: ItemsTemplateProps) => {
         const { handle } = item.variant?.product ?? {}
         const currency_code = (item as any).currency_code || "eur"
 
-        // Bon cadeau personnalisé : stocké en centimes. Produits Odoo : en euros.
-        const isGiftCard = !!(item.metadata as any)?.is_gift_card
+        // Bon cadeau : stocké en centimes. Détection par metadata, titre ou handle produit.
+        const isGiftCard =
+          !!(item.metadata as any)?.is_gift_card ||
+          (item.product_title || "")
+            .toLowerCase()
+            .includes("bon cadeau") ||
+          (item.variant?.product as any)?.handle === "bon-cadeau"
         const divisor = isGiftCard ? 100 : 1
         const unitPrice = (item.unit_price ?? 0) / divisor
         const comparePrice = ((item as any).compare_at_unit_price ?? 0) / divisor

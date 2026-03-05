@@ -254,7 +254,10 @@ export function lineItemToTrackingItem(
 ): TrackingItem {
   const unitPrice = item.unit_price ?? 0
   const qty = item.quantity ?? 1
-  const isGiftCard = !!(item.metadata as any)?.is_gift_card
+  const isGiftCard =
+    !!(item.metadata as any)?.is_gift_card ||
+    ((item as any).product_title || "").toLowerCase().includes("bon cadeau") ||
+    ((item as any).variant?.product as any)?.handle === "bon-cadeau"
   const price = isGiftCard ? toEuros(unitPrice) : unitPrice
   const name = productTitle || item.title || item.variant_title || "Produit"
 
@@ -289,7 +292,12 @@ export function cartToTrackingCart(
     return lineItemToTrackingItem(item, productTitle)
   })
 
-  const hasGiftCard = items.some((i) => (i.metadata as any)?.is_gift_card)
+  const hasGiftCard = items.some(
+    (i) =>
+      (i.metadata as any)?.is_gift_card ||
+      ((i as any).product_title || "").toLowerCase().includes("bon cadeau") ||
+      ((i as any).variant?.product as any)?.handle === "bon-cadeau"
+  )
   const value =
     subtotal != null && !hasGiftCard
       ? subtotal

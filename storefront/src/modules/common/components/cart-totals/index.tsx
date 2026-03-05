@@ -45,14 +45,24 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
               : typeof item.unit_price === "number"
                 ? (item.unit_price || 0) * (item.quantity || 0)
                 : 0
-          const isGiftCard = !!(item as any).metadata?.is_gift_card
+          const isGiftCard =
+            !!(item as any).metadata?.is_gift_card ||
+            ((item as any).product_title || "").toLowerCase().includes("bon cadeau") ||
+            ((item as any).variant?.product as any)?.handle === "bon-cadeau"
           const value = isGiftCard ? (lineSubtotal || 0) / 100 : (lineSubtotal || 0)
           return acc + value
         }, 0)
       : null
 
   const displayedSubtotal = itemsSubtotal ?? subtotal ?? 0
-  const hasGiftCardInItems = Array.isArray(items) && items.some((i: any) => i.metadata?.is_gift_card)
+  const hasGiftCardInItems =
+    Array.isArray(items) &&
+    items.some(
+      (i: any) =>
+        i.metadata?.is_gift_card ||
+        (i.product_title || "").toLowerCase().includes("bon cadeau") ||
+        i.variant?.product?.handle === "bon-cadeau"
+    )
 
   // Vérifier si le client bénéficie de l'exonération TVA intracommunautaire
   const vatNumber = (metadata as any)?.vat_number || null
