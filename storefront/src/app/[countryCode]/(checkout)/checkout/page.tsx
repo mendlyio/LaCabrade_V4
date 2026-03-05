@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import Wrapper from "@modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
+import CheckoutTracker from "@modules/common/components/tracking/checkout-tracker"
 import { enrichLineItems, retrieveCart } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { getCustomer } from "@lib/data/customer"
@@ -94,6 +95,7 @@ export default async function Checkout({
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <CheckoutTracker cart={cart} />
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="content-container py-3 sm:py-4">

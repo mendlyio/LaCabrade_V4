@@ -10,6 +10,7 @@ import OptionSelect from "@modules/products/components/product-actions/option-se
 
 import MobileActions from "./mobile-actions"
 import { addToCart } from "@lib/data/cart"
+import { trackGA4AddToCart, trackMetaAddToCart } from "@lib/tracking"
 import { HttpTypes } from "@medusajs/types"
 
 type ProductActionsProps = {
@@ -205,6 +206,21 @@ export default function ProductActions({
       quantity: 1,
       countryCode,
     })
+
+    const amount = (selectedVariant as any)?.calculated_price?.calculated_amount
+    const currency = (selectedVariant as any)?.calculated_price?.currency_code ?? "EUR"
+    if (amount != null) {
+      const item = {
+        item_id: selectedVariant.id,
+        item_name: product.title ?? "Produit",
+        price: amount / 100,
+        quantity: 1,
+        item_variant: selectedVariant.title,
+        item_category: (product as any).categories?.[0]?.name,
+      }
+      trackGA4AddToCart(item, currency)
+      trackMetaAddToCart(item, currency)
+    }
 
     setIsAdding(false)
   }

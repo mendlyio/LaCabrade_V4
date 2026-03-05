@@ -2,6 +2,7 @@ import { Heading } from "@medusajs/ui"
 import { cookies } from "next/headers"
 
 import CartTotals from "@modules/common/components/cart-totals"
+import PurchaseTracker from "@modules/common/components/tracking/purchase-tracker"
 import Help from "@modules/order/components/help"
 import Items from "@modules/order/components/items"
 import OnboardingCta from "@modules/order/components/onboarding-cta"
@@ -22,6 +23,7 @@ export default async function OrderCompletedTemplate({
 
   return (
     <div className="py-6 min-h-[calc(100vh-64px)]">
+      <PurchaseTracker order={order} />
       <div className="content-container flex flex-col justify-center items-center gap-y-10 max-w-4xl h-full w-full">
         {isOnboarding && <OnboardingCta orderId={order.id} />}
         <div

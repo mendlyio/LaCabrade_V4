@@ -3,14 +3,18 @@
 import Script from "next/script"
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
+const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
 
 export const GoogleConsentMode = () => {
-  if (!GA_MEASUREMENT_ID) return null
+  const hasGA = !!GA_MEASUREMENT_ID
+  const hasMeta = !!META_PIXEL_ID
+
+  if (!hasGA && !hasMeta) return null
 
   return (
     <>
-      {/* 1. Consent default AVANT gtag.js - obligatoire RGPD / Consent v2 */}
-      <Script id="google-consent-default" strategy="beforeInteractive">
+      {/* 1. Consent default AVANT scripts - obligatoire RGPD / Consent v2 */}
+      <Script id="consent-default" strategy="beforeInteractive">
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
@@ -23,23 +27,46 @@ export const GoogleConsentMode = () => {
           });
         `}
       </Script>
-      {/* 2. Charger gtag.js depuis Google */}
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
-        strategy="afterInteractive"
-      />
-      {/* 3. Config GA4 */}
-      <Script id="google-ga-config" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', '${GA_MEASUREMENT_ID}', {
-            page_path: window.location.pathname,
-            anonymize_ip: true
-          });
-        `}
-      </Script>
+
+      {/* 2. GA4 */}
+      {hasGA && (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+            strategy="afterInteractive"
+          />
+          <Script id="google-ga-config" strategy="afterInteractive">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA_MEASUREMENT_ID}', {
+                page_path: window.location.pathname,
+                anonymize_ip: true
+              });
+            `}
+          </Script>
+        </>
+      )}
+
+      {/* 3. Meta Pixel */}
+      {hasMeta && (
+        <Script id="meta-pixel" strategy="afterInteractive">
+          {`
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('consent', 'revoke');
+            fbq('init', '${META_PIXEL_ID}');
+            fbq('track', 'PageView');
+          `}
+        </Script>
+      )}
     </>
   )
 }

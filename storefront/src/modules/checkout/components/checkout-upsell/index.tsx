@@ -2,6 +2,7 @@
 
 import { addToCart } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
+import { trackGA4AddToCart, trackMetaAddToCart } from "@lib/tracking"
 import { HttpTypes } from "@medusajs/types"
 import Thumbnail from "@modules/products/components/thumbnail"
 import { useParams } from "next/navigation"
@@ -31,7 +32,21 @@ const CheckoutUpsell = ({ products, cartItems, currencyCode, stepNumber = 3 }: C
     setLoadingId(product.id)
     try {
       await addToCart({ variantId: variant.id, quantity: 1, countryCode })
-      setAddedIds(prev => new Set(prev).add(product.id))
+      setAddedIds((prev) => new Set(prev).add(product.id))
+
+      const rawAmount = (variant as any)?.calculated_price?.calculated_amount
+      if (rawAmount != null) {
+        const item = {
+          item_id: variant.id,
+          item_name: product.title ?? "Produit",
+          price: rawAmount / 100,
+          quantity: 1,
+          item_variant: variant.title,
+          item_category: (product as any).categories?.[0]?.name,
+        }
+        trackGA4AddToCart(item, currencyCode)
+        trackMetaAddToCart(item, currencyCode)
+      }
     } catch (e) {
       console.error("Erreur ajout upsell:", e)
     } finally {

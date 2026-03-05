@@ -4,6 +4,7 @@ import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { addGiftCardToCart, GiftCardVariant } from "@lib/data/gift-card"
 import GiftCardPreview from "../gift-card-preview"
+import { trackGA4AddToCart, trackMetaAddToCart } from "@lib/tracking"
 
 interface GiftCardFormProps {
   variants: GiftCardVariant[]
@@ -104,6 +105,17 @@ export default function GiftCardForm({ variants, countryCode }: GiftCardFormProp
       })
 
       if (result.success) {
+        const amount = isCustom ? Number(customAmount) : (variant?.calculated_price?.calculated_amount != null ? variant.calculated_price.calculated_amount / 100 : Number(selectedAmount))
+        const item = {
+          item_id: variant?.id ?? `gift-card-${amount}`,
+          item_name: "Bon Cadeau",
+          price: amount,
+          quantity: 1,
+          item_variant: `${amount}€`,
+        }
+        trackGA4AddToCart(item, "EUR")
+        trackMetaAddToCart(item, "EUR")
+
         setToast({
           type: "success",
           message: "Bon cadeau ajouté au panier !",
@@ -114,7 +126,6 @@ export default function GiftCardForm({ variants, countryCode }: GiftCardFormProp
         setMessage("")
         setCustomAmount("")
         setSelectedAmount("50")
-        // Rafraîchir le layout pour mettre à jour le panier dans la nav
         router.refresh()
       } else {
         setToast({

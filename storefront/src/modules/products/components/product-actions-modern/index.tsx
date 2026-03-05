@@ -6,6 +6,7 @@ import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
 import { addToCart } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
+import { trackGA4AddToCart, trackMetaAddToCart } from "@lib/tracking"
 
 type ProductActionsModernProps = {
   product: HttpTypes.StoreProduct
@@ -155,7 +156,7 @@ export default function ProductActionsModern({
   // Ajouter au panier
   const handleAddToCart = async () => {
     if (!selectedVariant?.id) return
-    
+
     setIsAdding(true)
     try {
       await addToCart({
@@ -165,6 +166,22 @@ export default function ProductActionsModern({
       })
       setAddedToCart(true)
       setTimeout(() => setAddedToCart(false), 3000)
+
+      // Tracking e-commerce
+      const amount = (selectedVariant as any)?.calculated_price?.calculated_amount
+      const currency = (selectedVariant as any)?.calculated_price?.currency_code ?? "EUR"
+      if (amount != null) {
+        const item = {
+          item_id: selectedVariant.id,
+          item_name: product.title ?? "Produit",
+          price: amount / 100,
+          quantity,
+          item_variant: selectedVariant.title,
+          item_category: (product as any).categories?.[0]?.name,
+        }
+        trackGA4AddToCart(item, currency)
+        trackMetaAddToCart(item, currency)
+      }
     } catch (error) {
       console.error("Erreur lors de l'ajout au panier:", error)
     } finally {

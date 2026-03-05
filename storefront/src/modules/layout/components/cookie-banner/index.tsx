@@ -37,16 +37,22 @@ export default function CookieBanner() {
     setShowBanner(false)
   }
 
-  // Fonction pour communiquer avec Google Consent Mode v2
+  // Fonction pour communiquer avec Google Consent Mode v2 et Meta Pixel
   const updateGoogleConsent = (granted: boolean) => {
-    if (typeof window !== "undefined" && (window as any).gtag) {
-      const status = granted ? 'granted' : 'denied'
-      ;(window as any).gtag('consent', 'update', {
-        'ad_storage': status,
-        'analytics_storage': status,
-        'ad_user_data': status,
-        'ad_personalization': status
+    if (typeof window === "undefined") return
+    const status = granted ? "granted" : "denied"
+
+    if ((window as any).gtag) {
+      ;(window as any).gtag("consent", "update", {
+        ad_storage: status,
+        analytics_storage: status,
+        ad_user_data: status,
+        ad_personalization: status,
       })
+    }
+
+    if ((window as any).fbq) {
+      ;(window as any).fbq("consent", granted ? "grant" : "revoke")
     }
   }
 

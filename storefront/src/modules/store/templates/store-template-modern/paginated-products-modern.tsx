@@ -7,6 +7,7 @@ import { buildCategoryTree } from "@lib/util/category-tree"
 import ProductCardModern from "@modules/products/components/product-card-modern"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import LoadMoreProducts from "./load-more-products"
+import ViewItemListTracker from "@modules/common/components/tracking/view-item-list-tracker"
 
 type SearchParams = {
   sortBy?: string
@@ -347,7 +348,20 @@ export default async function PaginatedProductsModern({
 
       {/* Products Grid — "Charger plus" dynamique */}
       {products.length > 0 ? (
-        <LoadMoreProducts
+        <>
+          <ViewItemListTracker
+            products={products}
+            listName={
+              searchParams.category
+                ? (categories || []).find((c) => c.handle === searchParams.category)?.name || "Catégorie"
+                : searchParams.collection
+                  ? (collections || []).find((c) => c.handle === searchParams.collection)?.title || "Collection"
+                  : searchParams.q
+                    ? "Recherche"
+                    : "Boutique"
+            }
+          />
+          <LoadMoreProducts
           key={[
             searchParams.q,
             searchParams.category,
@@ -368,6 +382,7 @@ export default async function PaginatedProductsModern({
           brandSlug={searchParams.brand || undefined}
           allProducts={needsClientPagination ? filteredProducts : undefined}
         />
+        </>
       ) : (
         <div className="text-center py-24 bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
           <div className="mb-6">

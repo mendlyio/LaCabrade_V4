@@ -2,6 +2,7 @@
 
 import { addLastChanceItem } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
+import { trackGA4AddToCart, trackMetaAddToCart } from "@lib/tracking"
 import { HttpTypes } from "@medusajs/types"
 import Thumbnail from "@modules/products/components/thumbnail"
 import { useParams } from "next/navigation"
@@ -62,8 +63,22 @@ const LastChanceUpsell = ({
         variantId: variant.id,
         countryCode,
       })
-      // Promo utilisée → on masque le composant après ajout
       setPromoUsed(true)
+
+      const rawAmount = (variant as any)?.calculated_price?.calculated_amount
+      if (rawAmount != null) {
+        const discountedPrice = (rawAmount / 100) * (1 - DISCOUNT_PERCENT / 100)
+        const item = {
+          item_id: variant.id,
+          item_name: product.title ?? "Produit",
+          price: discountedPrice,
+          quantity: 1,
+          item_variant: variant.title,
+          item_category: (product as any).categories?.[0]?.name,
+        }
+        trackGA4AddToCart(item, currencyCode)
+        trackMetaAddToCart(item, currencyCode)
+      }
     } catch (e) {
       console.error("Erreur ajout last chance:", e)
     } finally {
