@@ -67,7 +67,7 @@ const LastChanceUpsell = ({
 
       const rawAmount = (variant as any)?.calculated_price?.calculated_amount
       if (rawAmount != null) {
-        const discountedPrice = (rawAmount / 100) * (1 - DISCOUNT_PERCENT / 100)
+        const discountedPrice = rawAmount * (1 - DISCOUNT_PERCENT / 100)
         const item = {
           item_id: variant.id,
           item_name: product.title ?? "Produit",
@@ -99,10 +99,9 @@ const LastChanceUpsell = ({
     const variant = product.variants?.[0]
     const rawPrice = (variant as any)?.calculated_price?.calculated_amount
     if (rawPrice != null) {
-      const price = rawPrice / 100
       return {
-        original: price,
-        discounted: Math.round(price * (1 - DISCOUNT_PERCENT / 100) * 100) / 100,
+        original: rawPrice,
+        discounted: Math.round(rawPrice * (1 - DISCOUNT_PERCENT / 100) * 100) / 100,
       }
     }
     return null

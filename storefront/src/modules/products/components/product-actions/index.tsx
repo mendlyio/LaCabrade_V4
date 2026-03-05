@@ -213,7 +213,7 @@ export default function ProductActions({
       const item = {
         item_id: selectedVariant.id,
         item_name: product.title ?? "Produit",
-        price: amount / 100,
+        price: amount,
         quantity: 1,
         item_variant: selectedVariant.title,
         item_category: (product as any).categories?.[0]?.name,

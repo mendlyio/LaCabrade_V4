@@ -21,7 +21,7 @@ export default function ViewItemListTracker({
     const items = products.slice(0, 20).map((p, idx) => {
       const v = p.variants?.[0]
       const amount = (v as any)?.calculated_price?.calculated_amount ?? 0
-      const price = amount / 100
+      const price = amount
       const category = (p as any).categories?.[0]?.name
 
       return {

@@ -39,7 +39,7 @@ const CheckoutUpsell = ({ products, cartItems, currencyCode, stepNumber = 3 }: C
         const item = {
           item_id: variant.id,
           item_name: product.title ?? "Produit",
-          price: rawAmount / 100,
+          price: rawAmount,
           quantity: 1,
           item_variant: variant.title,
           item_category: (product as any).categories?.[0]?.name,
@@ -67,7 +67,7 @@ const CheckoutUpsell = ({ products, cartItems, currencyCode, stepNumber = 3 }: C
     const variant = product.variants?.[0]
     const rawPrice = (variant as any)?.calculated_price?.calculated_amount
     if (rawPrice != null) {
-      return convertToLocale({ amount: rawPrice / 100, currency_code: currencyCode })
+      return convertToLocale({ amount: rawPrice, currency_code: currencyCode })
     }
     return null
   }

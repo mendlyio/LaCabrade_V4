@@ -167,14 +167,14 @@ export default function ProductActionsModern({
       setAddedToCart(true)
       setTimeout(() => setAddedToCart(false), 3000)
 
-      // Tracking e-commerce
+      // Tracking e-commerce (produits Odoo en euros)
       const amount = (selectedVariant as any)?.calculated_price?.calculated_amount
       const currency = (selectedVariant as any)?.calculated_price?.currency_code ?? "EUR"
       if (amount != null) {
         const item = {
           item_id: selectedVariant.id,
           item_name: product.title ?? "Produit",
-          price: amount / 100,
+          price: amount,
           quantity,
           item_variant: selectedVariant.title,
           item_category: (product as any).categories?.[0]?.name,

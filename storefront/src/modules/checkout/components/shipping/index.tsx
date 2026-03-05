@@ -10,7 +10,7 @@ import StorePickup from "@modules/checkout/components/store-pickup"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { setShippingMethod } from "@lib/data/cart"
-import { formatAmountFromCents } from "@lib/util/money"
+import { formatAmount } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 
 /**
@@ -168,7 +168,7 @@ const Shipping: React.FC<ShippingProps> = ({
                         "text-amber-700": isSelected,
                         "text-gray-600": !isSelected,
                       })}>
-                        {formatAmountFromCents(
+                        {formatAmount(
                           (option as any)?.calculated_price?.calculated_amount ?? option.amount,
                           cart?.currency_code ?? "eur"
                         )}
@@ -224,7 +224,7 @@ const Shipping: React.FC<ShippingProps> = ({
                 {selectedShippingMethod?.name}
               </p>
               <p className="text-sm text-gray-600 mt-0.5">
-                {formatAmountFromCents(
+                {formatAmount(
                   (selectedShippingMethod as any)?.calculated_price?.calculated_amount ?? selectedShippingMethod?.amount,
                   cart?.currency_code ?? "eur"
                 )}

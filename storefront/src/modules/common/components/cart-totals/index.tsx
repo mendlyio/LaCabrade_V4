@@ -1,6 +1,6 @@
 "use client"
 
-import { formatAmountFromCents } from "@lib/util/money"
+import { formatAmount, formatAmountFromCents } from "@lib/util/money"
 import React from "react"
 
 type CartTotalsProps = {
@@ -45,21 +45,35 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
               : typeof item.unit_price === "number"
                 ? (item.unit_price || 0) * (item.quantity || 0)
                 : 0
-          return acc + (lineSubtotal || 0)
+          const isGiftCard = !!(item as any).metadata?.is_gift_card
+          const value = isGiftCard ? (lineSubtotal || 0) / 100 : (lineSubtotal || 0)
+          return acc + value
         }, 0)
       : null
 
   const displayedSubtotal = itemsSubtotal ?? subtotal ?? 0
+  const hasGiftCardInItems = Array.isArray(items) && items.some((i: any) => i.metadata?.is_gift_card)
 
   // Vérifier si le client bénéficie de l'exonération TVA intracommunautaire
   const vatNumber = (metadata as any)?.vat_number || null
   const customerCountry = shipping_address?.country_code?.toLowerCase()
   const isIntraCommunityExempt = !!(vatNumber && customerCountry && customerCountry !== "be")
 
-  // Si exonération intracommunautaire, le total affiché doit déduire la TVA
   const displayedTaxTotal = isIntraCommunityExempt ? 0 : (tax_total ?? 0)
   const vatDeduction = isIntraCommunityExempt ? (tax_total ?? 0) : 0
-  const displayedTotal = isIntraCommunityExempt ? ((total ?? 0) - vatDeduction) : (total ?? 0)
+  const giftCardDeduction = gift_card_total != null ? gift_card_total / 100 : 0
+
+  // Recalculer le total si panier mixte (produits en euros + bon cadeau en centimes)
+  const displayedTotal =
+    hasGiftCardInItems && itemsSubtotal != null
+      ? itemsSubtotal -
+        (discount_total ?? 0) +
+        (shipping_total ?? 0) +
+        displayedTaxTotal -
+        giftCardDeduction
+      : isIntraCommunityExempt
+        ? (total ?? 0) - vatDeduction
+        : (total ?? 0)
 
   return (
     <div>
@@ -67,7 +81,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
         <div className="flex items-center justify-between">
           <span className="text-gray-600">Sous-total</span>
           <span className="font-medium text-gray-900" data-testid="cart-subtotal" data-value={displayedSubtotal || 0}>
-            {formatAmountFromCents(displayedSubtotal, currency_code)}
+            {formatAmount(displayedSubtotal, currency_code)}
           </span>
         </div>
 
@@ -79,7 +93,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
               data-testid="cart-discount"
               data-value={discount_total || 0}
             >
-              - {formatAmountFromCents(discount_total ?? 0, currency_code)}
+              - {formatAmount(discount_total ?? 0, currency_code)}
             </span>
           </div>
         )}
@@ -88,7 +102,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
           <span className="text-gray-600">Livraison</span>
           <span className="font-medium text-gray-900" data-testid="cart-shipping" data-value={shipping_total || 0}>
             {shipping_total
-              ? formatAmountFromCents(shipping_total, currency_code)
+              ? formatAmount(shipping_total, currency_code)
               : <span className="text-gray-400 italic text-xs">Calculé à l'étape suivante</span>
             }
           </span>
@@ -107,12 +121,12 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
             {isIntraCommunityExempt ? (
               <span className="flex items-center gap-1.5">
                 <span className="line-through text-gray-400 text-xs">
-                  {formatAmountFromCents(tax_total ?? 0, currency_code)}
+                  {formatAmount(tax_total ?? 0, currency_code)}
                 </span>
-                <span>{formatAmountFromCents(0, currency_code)}</span>
+                <span>{formatAmount(0, currency_code)}</span>
               </span>
             ) : (
-              formatAmountFromCents(tax_total ?? 0, currency_code)
+              formatAmount(tax_total ?? 0, currency_code)
             )}
           </span>
         </div>
@@ -157,7 +171,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
           data-testid="cart-total"
           data-value={displayedTotal || 0}
         >
-          {formatAmountFromCents(displayedTotal, currency_code)}
+          {formatAmount(displayedTotal, currency_code)}
         </span>
       </div>
 

@@ -32,9 +32,19 @@ export const convertToLocale = ({
 }
 
 /**
- * Formate un montant en centimes vers l'affichage (euros).
- * Medusa stocke les montants en plus petite unité (centimes pour EUR).
+ * Formate un montant pour l'affichage.
+ * Les produits Odoo et totaux panier sont en EUROS.
+ * Utiliser formatAmountFromCents uniquement pour les montants en centimes (ex: bon cadeau).
  */
+export const formatAmount = (
+  amount: number | null | undefined,
+  currencyCode: string,
+  locale = "fr-FR"
+): string => {
+  return convertToLocale({ amount: Number(amount ?? 0), currency_code: currencyCode, locale })
+}
+
+/** Pour les montants stockés en centimes (ex: bon cadeau custom). */
 export const formatAmountFromCents = (
   amount: number | null | undefined,
   currencyCode: string,

@@ -247,13 +247,15 @@ export function lineItemToTrackingItem(
     unit_price?: number
     quantity?: number
     subtotal?: number
+    metadata?: Record<string, unknown>
   },
   productTitle?: string,
   categoryName?: string
 ): TrackingItem {
   const unitPrice = item.unit_price ?? 0
   const qty = item.quantity ?? 1
-  const price = toEuros(unitPrice)
+  const isGiftCard = !!(item.metadata as any)?.is_gift_card
+  const price = isGiftCard ? toEuros(unitPrice) : unitPrice
   const name = productTitle || item.title || item.variant_title || "Produit"
 
   return {
@@ -276,6 +278,7 @@ export function cartToTrackingCart(
     unit_price?: number
     quantity?: number
     subtotal?: number
+    metadata?: Record<string, unknown>
     variant?: { product?: { title?: string } }
   }>,
   currency = "EUR",
@@ -286,8 +289,11 @@ export function cartToTrackingCart(
     return lineItemToTrackingItem(item, productTitle)
   })
 
+  const hasGiftCard = items.some((i) => (i.metadata as any)?.is_gift_card)
   const value =
-    subtotal != null ? toEuros(subtotal) : trackingItems.reduce((s, i) => s + i.price * i.quantity, 0)
+    subtotal != null && !hasGiftCard
+      ? subtotal
+      : trackingItems.reduce((s, i) => s + i.price * i.quantity, 0)
 
   return {
     currency,

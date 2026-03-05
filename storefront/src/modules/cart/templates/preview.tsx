@@ -37,11 +37,14 @@ const ItemsPreviewTemplate = ({ items }: ItemsTemplateProps) => {
         const { handle } = item.variant?.product ?? {}
         const currency_code = (item as any).currency_code || "eur"
 
-        // Prix (Medusa renvoie en centimes)
-        const unitPrice = (item.unit_price ?? 0) / 100
-        const comparePrice = ((item as any).compare_at_unit_price ?? 0) / 100
+        // Bon cadeau personnalisé : stocké en centimes. Produits Odoo : en euros.
+        const isGiftCard = !!(item.metadata as any)?.is_gift_card
+        const divisor = isGiftCard ? 100 : 1
+        const unitPrice = (item.unit_price ?? 0) / divisor
+        const comparePrice = ((item as any).compare_at_unit_price ?? 0) / divisor
         const hasDiscount = comparePrice && comparePrice > unitPrice
-        const lineTotal = item.subtotal != null ? item.subtotal / 100 : unitPrice * item.quantity
+        const lineTotal =
+          item.subtotal != null ? item.subtotal / divisor : unitPrice * item.quantity
 
         // Adjustments (promotions, etc.)
         const adjustmentsSum = (item.adjustments || []).reduce(

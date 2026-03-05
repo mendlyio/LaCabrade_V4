@@ -1,4 +1,4 @@
-import { formatAmountFromCents } from "@lib/util/money"
+import { formatAmount } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 
 type OrderSummaryProps = {
@@ -11,7 +11,7 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
       return
     }
 
-    return formatAmountFromCents(amount, order.currency_code)
+    return formatAmount(amount, order.currency_code)
   }
 
   return (

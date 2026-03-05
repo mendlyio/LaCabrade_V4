@@ -26,7 +26,7 @@ export default function ViewItemTracker({
 
     fired.current = true
 
-    const price = amount / 100
+    const price = amount
     const category = (product as any).categories?.[0]?.name
 
     const item = {
