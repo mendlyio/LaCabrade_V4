@@ -4,10 +4,12 @@ import { convertToLocale } from "./money"
 
 export const getPricesForVariant = (variant: any) => {
   const cp = variant?.calculated_price
-  const amount = cp?.calculated_amount ?? cp?.original_amount
-  if (amount == null || !Number.isFinite(amount)) {
+  const rawAmount = cp?.calculated_amount ?? cp?.original_amount
+  if (rawAmount == null || !Number.isFinite(rawAmount)) {
     return null
   }
+  // Medusa renvoie les montants en centimes
+  const amount = rawAmount / 100
 
   return {
     calculated_price_number: amount,
@@ -15,15 +17,15 @@ export const getPricesForVariant = (variant: any) => {
       amount,
       currency_code: cp.currency_code,
     }),
-    original_price_number: cp.original_amount,
+    original_price_number: cp.original_amount != null ? cp.original_amount / 100 : undefined,
     original_price: convertToLocale({
-      amount: cp.original_amount ?? amount,
+      amount: cp.original_amount != null ? cp.original_amount / 100 : amount,
       currency_code: cp.currency_code,
     }),
     currency_code: cp.currency_code,
     price_type: (variant?.calculated_price as any)?.calculated_price?.price_list_type,
     percentage_diff: getPercentageDiff(
-      cp.original_amount,
+      cp.original_amount != null ? cp.original_amount / 100 : amount,
       amount
     ),
   }

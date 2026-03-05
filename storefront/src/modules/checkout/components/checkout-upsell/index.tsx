@@ -50,9 +50,9 @@ const CheckoutUpsell = ({ products, cartItems, currencyCode, stepNumber = 3 }: C
 
   const getPrice = (product: HttpTypes.StoreProduct) => {
     const variant = product.variants?.[0]
-    const price = (variant as any)?.calculated_price?.calculated_amount
-    if (price != null) {
-      return convertToLocale({ amount: price, currency_code: currencyCode })
+    const rawPrice = (variant as any)?.calculated_price?.calculated_amount
+    if (rawPrice != null) {
+      return convertToLocale({ amount: rawPrice / 100, currency_code: currencyCode })
     }
     return null
   }

@@ -82,11 +82,12 @@ const LastChanceUpsell = ({
 
   const getPrice = (product: HttpTypes.StoreProduct) => {
     const variant = product.variants?.[0]
-    const price = (variant as any)?.calculated_price?.calculated_amount
-    if (price != null) {
+    const rawPrice = (variant as any)?.calculated_price?.calculated_amount
+    if (rawPrice != null) {
+      const price = rawPrice / 100
       return {
         original: price,
-        discounted: Math.round(price * (1 - DISCOUNT_PERCENT / 100)),
+        discounted: Math.round(price * (1 - DISCOUNT_PERCENT / 100) * 100) / 100,
       }
     }
     return null

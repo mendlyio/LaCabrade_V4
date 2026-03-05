@@ -154,7 +154,7 @@ export async function POST(
         return
       }
 
-      // Convertir en centimes
+      // Montant en centimes (Medusa attend la plus petite unité : 50€ = 5000)
       const amountInCents = Math.round(custom_amount * 100)
 
       // Ajouter le line item avec un prix personnalisé directement via le cart module
@@ -170,6 +170,7 @@ export async function POST(
           variant_sku: `GC-CUSTOM-${amountInCents}`,
           quantity: 1,
           unit_price: amountInCents,
+          is_custom_price: true,
           is_tax_inclusive: true,
           metadata: giftCardMetadata,
         },

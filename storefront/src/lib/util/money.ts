@@ -10,8 +10,7 @@ type ConvertToLocaleParams = {
 
 /**
  * Formate un montant monétaire pour l'affichage.
- * Medusa v2 store API renvoie les montants directement en unités d'affichage (euros),
- * sans conversion nécessaire.
+ * Medusa v2 store API renvoie les montants en centimes (plus petite unité).
  */
 export const convertToLocale = ({
   amount,
@@ -33,13 +32,14 @@ export const convertToLocale = ({
 }
 
 /**
- * Alias de convertToLocale — maintenu pour compatibilité.
- * Les montants Medusa v2 sont déjà en euros dans l'API store, aucune division nécessaire.
+ * Formate un montant en centimes vers l'affichage (euros).
+ * Medusa stocke les montants en plus petite unité (centimes pour EUR).
  */
 export const formatAmountFromCents = (
   amount: number | null | undefined,
   currencyCode: string,
   locale = "fr-FR"
 ): string => {
-  return convertToLocale({ amount: Number(amount ?? 0), currency_code: currencyCode, locale })
+  const value = Number(amount ?? 0) / 100
+  return convertToLocale({ amount: value, currency_code: currencyCode, locale })
 }
