@@ -3,18 +3,26 @@
 import { useState, useEffect } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
+export const SHOW_COOKIE_BANNER_EVENT = "show-cookie-banner"
+
 export default function CookieBanner() {
   const [showBanner, setShowBanner] = useState(false)
 
   useEffect(() => {
-    // Check if cookie_consent cookie exists
     const consent = getCookie("cookie_consent")
     if (!consent) {
       setShowBanner(true)
     } else if (consent === "true") {
-      // Si déjà accepté au chargement, on réaffirme le consentement à Google
       updateGoogleConsent(true)
     }
+  }, [])
+
+  useEffect(() => {
+    const handleShowBanner = () => {
+      setShowBanner(true)
+    }
+    window.addEventListener(SHOW_COOKIE_BANNER_EVENT, handleShowBanner)
+    return () => window.removeEventListener(SHOW_COOKIE_BANNER_EVENT, handleShowBanner)
   }, [])
 
   const acceptCookies = () => {
@@ -56,7 +64,7 @@ export default function CookieBanner() {
             En cliquant sur "Tout accepter", vous consentez à notre utilisation des cookies. 
             Vous pouvez refuser ou gérer vos préférences à tout moment.
             <br className="hidden md:block" />
-            <LocalizedClientLink href="/privacy-policy" className="text-amber-500 hover:text-amber-400 underline mt-1 inline-block">
+            <LocalizedClientLink href="/protection-donnees" className="text-amber-500 hover:text-amber-400 underline mt-1 inline-block">
               Lire notre politique de confidentialité
             </LocalizedClientLink>
           </p>
@@ -89,7 +97,7 @@ function setCookie(name: string, value: string, days: number) {
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000))
     expires = "; expires=" + date.toUTCString()
   }
-  document.cookie = name + "=" + (value || "") + expires + "; path=/"
+  document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax"
 }
 
 function getCookie(name: string) {

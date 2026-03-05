@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import ManageCookiesLink from "@modules/layout/components/manage-cookies-link"
 
 export const metadata: Metadata = {
   title: "Politique relative aux Cookies - La Cabrade",
@@ -16,7 +17,7 @@ export default function CookiesPage() {
             {/* Introduction */}
             <section>
               <p className="text-lg">
-                Le site lacabrade.com utilise des cookies pour améliorer votre expérience de navigation et analyser l'utilisation de notre site. Cette politique vous explique ce que sont les cookies, comment nous les utilisons et comment vous pouvez les gérer.
+                Notre site (lacabrade.be) utilise des cookies pour améliorer votre expérience de navigation et analyser l'utilisation de notre site. Cette politique vous explique ce que sont les cookies, comment nous les utilisons et comment vous pouvez les gérer.
               </p>
             </section>
 
@@ -114,10 +115,16 @@ export default function CookiesPage() {
                       <td className="px-4 py-3">Mémorisation du pays/langue</td>
                     </tr>
                     <tr>
+                      <td className="px-4 py-3">cookie_consent</td>
+                      <td className="px-4 py-3">Fonctionnel</td>
+                      <td className="px-4 py-3">365 jours</td>
+                      <td className="px-4 py-3">Mémorisation de votre choix de consentement aux cookies</td>
+                    </tr>
+                    <tr>
                       <td className="px-4 py-3">_ga</td>
                       <td className="px-4 py-3">Performance</td>
                       <td className="px-4 py-3">13 mois</td>
-                      <td className="px-4 py-3">Google Analytics - statistiques</td>
+                      <td className="px-4 py-3">Google Analytics - statistiques (si accepté)</td>
                     </tr>
                   </tbody>
                 </table>
@@ -166,7 +173,7 @@ export default function CookiesPage() {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Votre consentement</h2>
               <p>
-                Lors de votre première visite sur notre site, un bandeau vous informe de la présence de cookies et vous demande votre consentement pour les cookies non essentiels. Vous pouvez à tout moment modifier vos préférences en cliquant sur le lien "Gérer mes cookies" en bas de page.
+                Lors de votre première visite sur notre site, un bandeau vous informe de la présence de cookies et vous demande votre consentement pour les cookies non essentiels. Vous pouvez à tout moment modifier vos préférences en cliquant sur le lien <ManageCookiesLink className="text-amber-600 hover:text-amber-700 underline font-medium">Gérer mes cookies</ManageCookiesLink> en bas de page.
               </p>
             </section>
 
@@ -177,7 +184,7 @@ export default function CookiesPage() {
                 Pour toute question concernant notre utilisation des cookies, vous pouvez nous contacter à :
               </p>
               <p className="mt-3">
-                <strong className="text-gray-900">Email :</strong> <a href="mailto:contact@lacabrade.com" className="text-amber-600 hover:text-amber-700 underline">contact@lacabrade.com</a><br />
+                <strong className="text-gray-900">Email :</strong> <a href="mailto:contact@sellerie-lacabrade.be" className="text-amber-600 hover:text-amber-700 underline">contact@sellerie-lacabrade.be</a><br />
                 <strong className="text-gray-900">Téléphone :</strong> +32 (0)4/358.60.99
               </p>
             </section>

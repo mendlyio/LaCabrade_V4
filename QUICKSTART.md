@@ -96,6 +96,9 @@ pnpm run db:migrate
 
 # Seed initial data
 pnpm run seed
+
+# Seed produit Bon Cadeau (requis pour la page /bon-cadeau)
+pnpm run seed:gift-card
 ```
 
 ### Storefront

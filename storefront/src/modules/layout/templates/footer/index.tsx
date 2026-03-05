@@ -1,5 +1,6 @@
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import NewsletterBanner from "@modules/layout/components/newsletter-banner"
+import ManageCookiesLink from "@modules/layout/components/manage-cookies-link"
 
 export default async function Footer() {
   return (
@@ -258,6 +259,10 @@ export default async function Footer() {
             >
               Données personnelles
             </LocalizedClientLink>
+            <span className="text-gray-600">|</span>
+            <ManageCookiesLink className="hover:text-amber-400 transition-colors">
+              Gérer mes cookies
+            </ManageCookiesLink>
           </div>
         </div>
       </div>

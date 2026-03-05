@@ -2,15 +2,18 @@
 
 import Script from "next/script"
 
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
+
 export const GoogleConsentMode = () => {
+  if (!GA_MEASUREMENT_ID) return null
+
   return (
     <>
-      <Script id="google-consent-mode" strategy="afterInteractive">
+      {/* 1. Consent default AVANT gtag.js - obligatoire RGPD / Consent v2 */}
+      <Script id="google-consent-default" strategy="beforeInteractive">
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
-          
-          // 1. Définir le consentement par défaut sur REFUSÉ (Obligation RGPD)
           gtag('consent', 'default', {
             'ad_storage': 'denied',
             'analytics_storage': 'denied',
@@ -18,15 +21,25 @@ export const GoogleConsentMode = () => {
             'ad_personalization': 'denied',
             'wait_for_update': 500
           });
-          
-          // 2. Charger le script de base
+        `}
+      </Script>
+      {/* 2. Charger gtag.js depuis Google */}
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+        strategy="afterInteractive"
+      />
+      {/* 3. Config GA4 */}
+      <Script id="google-ga-config" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
-          gtag('config', 'GA_MEASUREMENT_ID', {
-             page_path: window.location.pathname,
+          gtag('config', '${GA_MEASUREMENT_ID}', {
+            page_path: window.location.pathname,
+            anonymize_ip: true
           });
         `}
       </Script>
     </>
   )
 }
-

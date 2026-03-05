@@ -125,7 +125,7 @@ export async function POST(
       // On cherche le produit gift card pour avoir les infos de base
       const giftCardProducts = await productModuleService.listProducts(
         { handle: "bon-cadeau" },
-        { relations: ["variants"] }
+        { relations: ["variants"], take: 1 }
       )
 
       if (!giftCardProducts.length) {
@@ -134,11 +134,23 @@ export async function POST(
       }
 
       const giftCardProduct = giftCardProducts[0]
-      // Utiliser le premier variant comme référence
-      const referenceVariant = giftCardProduct.variants?.[0]
+
+      // Récupérer le variant : listProducts peut ne pas charger la relation "variants"
+      // selon la config Medusa, on utilise listProductVariants en fallback
+      let referenceVariant = giftCardProduct.variants?.[0]
+      if (!referenceVariant) {
+        const variants = await productModuleService.listProductVariants(
+          { product_id: giftCardProduct.id },
+          { take: 1 }
+        )
+        referenceVariant = variants[0]
+      }
 
       if (!referenceVariant) {
-        res.status(500).json({ message: "Aucun variant trouvé pour le produit Bon Cadeau" })
+        res.status(500).json({
+          message:
+            "Aucun variant trouvé pour le produit Bon Cadeau. Exécutez le script de seed : npx medusa exec src/scripts/seed-gift-card.ts",
+        })
         return
       }
 
