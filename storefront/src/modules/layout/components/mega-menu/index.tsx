@@ -148,7 +148,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                       <LocalizedClientLink
                         href={`/categories/${encodeURIComponent(child.handle)}`}
                         onClick={() => setOpen(false)}
-                        className="group flex items-center gap-2 mb-3 pb-2 border-b-2 border-gray-200 hover:border-amber-500 transition-colors"
+                        className="group flex items-center gap-2 mb-3 pb-2 border-b-2 border-gray-300 hover:border-amber-500 transition-colors rounded px-2 py-1 -mx-2 -mt-1 bg-gray-50 hover:bg-amber-50"
                       >
                         <span className="text-sm font-bold text-gray-900 group-hover:text-amber-700 transition-colors truncate">
                           {child.name}

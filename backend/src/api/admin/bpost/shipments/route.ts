@@ -33,18 +33,33 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       reference,
     })
 
+    // Récupérer l'étiquette Bpost
+    let labelUrl = ""
+    try {
+      if (result.shipmentId) {
+        const labelResult = await svc.getLabel(result.shipmentId)
+        labelUrl = labelResult.labelUrl || ""
+      }
+    } catch (e: any) {
+      console.warn("[Bpost] Impossible de récupérer l'étiquette:", e?.message)
+    }
+
     // Save metadata on order
     const updated = await orderService.updateOrders([{
       id: order_id,
       metadata: {
-        ...order.metadata,
+        ...(order.metadata as object || {}),
         bpost_shipment_id: result.shipmentId,
         bpost_tracking: result.trackingNumber,
-        bpost_label_url: result.labelUrl,
+        bpost_label_url: labelUrl || result.labelUrl,
       }
     }])
 
-    return res.json({ success: true, shipment: result, order: updated })
+    return res.json({
+      success: true,
+      shipment: { ...result, labelUrl: labelUrl || result.labelUrl },
+      order: updated,
+    })
   } catch (e: any) {
     return res.status(500).json({ success: false, message: e.message })
   }

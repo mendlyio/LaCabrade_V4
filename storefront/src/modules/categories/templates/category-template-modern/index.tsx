@@ -136,7 +136,7 @@ export default async function CategoryTemplateModern({
                   <div key={child.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                     <LocalizedClientLink
                       href={`/categories/${encodeURIComponent(child.handle)}`}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 bg-gray-100 hover:bg-amber-600 border border-gray-200 hover:border-amber-600 transition-colors group"
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 bg-gray-100 hover:bg-amber-600 border-2 border-gray-300 hover:border-amber-600 transition-colors group"
                     >
                       <span className="flex-1 text-sm font-semibold text-gray-900 group-hover:text-white">
                         {child.name}
