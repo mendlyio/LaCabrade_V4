@@ -3,7 +3,7 @@
 import { Popover, Transition } from "@headlessui/react"
 import { XMark, ChevronDown } from "@medusajs/icons"
 import { useToggleState } from "@medusajs/ui"
-import { Fragment, useState } from "react"
+import { Fragment, useEffect, useRef, useState } from "react"
 
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CountrySelect from "../country-select"
@@ -32,7 +32,20 @@ type SideMenuProps = {
 const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
   const toggleState = useToggleState()
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
+  const closeRef = useRef<(() => void) | null>(null)
+  const menuPanelRef = useRef<HTMLDivElement>(null)
   const t = useTranslate()
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (closeRef.current && menuPanelRef.current && !menuPanelRef.current.contains(target)) {
+        closeRef.current()
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
   
   const { roots } = buildCategoryTree(categories)
   const parentCategories = roots.filter((cat) => (cat as any).is_active !== false)
@@ -51,7 +64,9 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
     <div className="h-full">
       <div className="flex items-center h-full">
         <Popover className="h-full flex">
-          {({ open, close }) => (
+          {({ open, close }) => {
+            closeRef.current = close
+            return (
             <>
               <div className="relative flex h-full">
                 <Popover.Button
@@ -78,14 +93,8 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                 leaveTo="opacity-0"
               >
                 <Popover.Panel className="fixed inset-0 z-40 lg:hidden">
-                  {/* Overlay */}
-                  <div 
-                    className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-                    onClick={close}
-                  />
-                  
                   {/* Menu Panel */}
-                  <div className="absolute left-0 top-0 bottom-0 w-[85%] max-w-sm bg-white shadow-2xl animate-slide-in-left">
+                  <div ref={menuPanelRef} className="absolute left-0 top-0 bottom-0 w-[85%] max-w-sm bg-white shadow-2xl animate-slide-in-left">
                     <div className="flex flex-col h-full">
                       {/* Header */}
                       <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-white">
@@ -350,7 +359,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                 </Popover.Panel>
               </Transition>
             </>
-          )}
+          )}}
         </Popover>
       </div>
     </div>
