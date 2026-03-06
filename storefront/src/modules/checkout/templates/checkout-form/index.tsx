@@ -1,6 +1,6 @@
 import { listCartShippingMethods } from "@lib/data/fulfillment"
 import { listCartPaymentMethods } from "@lib/data/payment"
-import { getProductsList } from "@lib/data/products"
+import { getProductByHandle, getProductsList } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import { HttpTypes } from "@medusajs/types"
 import Addresses from "@modules/checkout/components/addresses"
@@ -10,48 +10,70 @@ import Shipping from "@modules/checkout/components/shipping"
 import CheckoutUpsell from "@modules/checkout/components/checkout-upsell"
 import CheckoutStepRouter from "@modules/checkout/components/checkout-step-router"
 
+/** Produits fixes pour "Complétez votre commande" (étape 3 checkout) */
+const CHECKOUT_UPSELL_HANDLES = [
+  "73197-cure-pied-nala-lc-equestrian-odoo-23066",
+  "filet-foin-kimi-lc-equestrian-odoo-22530",
+  "licol-condor-lc-equestrian-odoo-22531",
+  "cloches-caoutchouc-tania-lc-equestrian-odoo-22532",
+  "cloches-caoutchouc-mouton-soraya-lc-equestrian-odoo-22534",
+]
+
+/** Produits fixes pour "Vérification et validation" (étape 5 checkout - Last chance) */
+const LAST_CHANCE_HANDLES = [
+  "care-brush-on-rose-and-green-tea-stubben-odoo-12639",
+  "gants-grip-widow-lc-equestrian-odoo-22529",
+  "chaussettes-thermo-willow-br-odoo-21618",
+  "bonbons-pour-chevaux-sellerie-la-cabrade-odoo-20384",
+  "74214-brosse-douce-exclusive-waldhausen-odoo-23273",
+]
+
 async function fetchUpsellProducts(
   cart: HttpTypes.StoreCart,
   countryCode: string
-): Promise<HttpTypes.StoreProduct[]> {
+): Promise<[HttpTypes.StoreProduct[], HttpTypes.StoreProduct[]]> {
   try {
     const region = await getRegion(countryCode)
-    if (!region) return []
+    if (!region) return [[], []]
 
-    const result = await getProductsList({
-      pageParam: 1,
-      queryParams: {
-        limit: 20,
-        region_id: region.id,
-        fields: "*variants.calculated_price,+variants.inventory_quantity",
-      },
-      countryCode,
-    })
-
-    const products = result?.response?.products || []
-    const cartProductIds = cart.items?.map((item) => item.product_id) || []
-
-    const filtered = products
-      .filter((p) => !cartProductIds.includes(p.id))
+    // "Complétez votre commande" = produits fixes LC Equestrian
+    const upsellRaw = await Promise.all(
+      CHECKOUT_UPSELL_HANDLES.map((h) => getProductByHandle(h, region.id))
+    )
+    let upsell = upsellRaw
+      .filter((p): p is HttpTypes.StoreProduct => p != null)
       .filter((p) => {
         const variant = p.variants?.[0] as any
         const price = variant?.calculated_price?.calculated_amount
         return price != null && price > 0
       })
-      .sort((a, b) => {
-        const priceA = (a.variants?.[0] as any)?.calculated_price?.calculated_amount || 0
-        const priceB = (b.variants?.[0] as any)?.calculated_price?.calculated_amount || 0
-        return priceA - priceB
+    // Garder l'ordre défini par CHECKOUT_UPSELL_HANDLES
+    upsell = CHECKOUT_UPSELL_HANDLES
+      .map((h) => upsell.find((p) => (p.handle || "").toLowerCase() === h.toLowerCase()))
+      .filter((p): p is HttpTypes.StoreProduct => p != null)
+
+    const cartProductIds = cart.items?.map((item) => item.product_id) || []
+    upsell = upsell.filter((p) => !cartProductIds.includes(p.id))
+
+    // "Vérification et validation" (Last chance) = produits fixes
+    const lastChanceRaw = await Promise.all(
+      LAST_CHANCE_HANDLES.map((h) => getProductByHandle(h, region.id))
+    )
+    let lastChance = lastChanceRaw
+      .filter((p): p is HttpTypes.StoreProduct => p != null)
+      .filter((p) => {
+        const variant = p.variants?.[0] as any
+        const price = variant?.calculated_price?.calculated_amount
+        return price != null && price > 0
       })
+    lastChance = LAST_CHANCE_HANDLES
+      .map((h) => lastChance.find((p) => (p.handle || "").toLowerCase() === h.toLowerCase()))
+      .filter((p): p is HttpTypes.StoreProduct => p != null)
+    lastChance = lastChance.filter((p) => !cartProductIds.includes(p.id) && !upsell.some((u) => u.id === p.id))
 
-    // Upsell "complétez votre commande" = les 8 moins chers
-    const upsell = filtered.slice(0, 8)
-    // Last chance = 6 aléatoires parmi les 10 suivants (pour varier)
-    const lastChance = filtered.slice(0, 12).sort(() => Math.random() - 0.5).slice(0, 6)
-
-    return [upsell, lastChance] as any
+    return [upsell, lastChance]
   } catch {
-    return [[], []] as any
+    return [[], []]
   }
 }
 

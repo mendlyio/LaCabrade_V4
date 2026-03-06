@@ -13,6 +13,7 @@ import LineItemUnitPrice from "@modules/common/components/line-item-unit-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Spinner from "@modules/common/icons/spinner"
 import Thumbnail from "@modules/products/components/thumbnail"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 type ItemProps = {
@@ -23,6 +24,7 @@ type ItemProps = {
 const Item = ({ item, type = "full" }: ItemProps) => {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   const { handle } = item.variant?.product ?? {}
 
@@ -30,16 +32,17 @@ const Item = ({ item, type = "full" }: ItemProps) => {
     setError(null)
     setUpdating(true)
 
-    await updateLineItem({
-      lineId: item.id,
-      quantity,
-    })
-      .catch((err) => {
-        setError(err.message)
+    try {
+      await updateLineItem({
+        lineId: item.id,
+        quantity,
       })
-      .finally(() => {
-        setUpdating(false)
-      })
+      router.refresh()
+    } catch (err: any) {
+      setError(err?.message ?? "Erreur")
+    } finally {
+      setUpdating(false)
+    }
   }
 
   const maxQtyFromInventory = 10

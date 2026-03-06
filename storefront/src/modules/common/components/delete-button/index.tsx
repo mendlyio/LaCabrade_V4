@@ -1,7 +1,10 @@
+"use client"
+
 import { deleteLineItem } from "@lib/data/cart"
 import Spinner from "@medusajs/icons/dist/esm/spinner"
 import Trash from "@medusajs/icons/dist/esm/trash"
 import { clx } from "@medusajs/ui"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 const DeleteButton = ({
@@ -14,12 +17,16 @@ const DeleteButton = ({
   className?: string
 }) => {
   const [isDeleting, setIsDeleting] = useState(false)
+  const router = useRouter()
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (lineId: string) => {
     setIsDeleting(true)
-    await deleteLineItem(id).catch((err) => {
+    try {
+      await deleteLineItem(lineId)
+      router.refresh()
+    } catch (err) {
       setIsDeleting(false)
-    })
+    }
   }
 
   return (
@@ -32,6 +39,7 @@ const DeleteButton = ({
       <button
         className="flex gap-x-1 text-ui-fg-subtle hover:text-ui-fg-base cursor-pointer"
         onClick={() => handleDelete(id)}
+        disabled={isDeleting}
       >
         {isDeleting ? <Spinner className="animate-spin" /> : <Trash />}
         <span>{children}</span>
