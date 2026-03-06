@@ -85,7 +85,7 @@ export default async function PaginatedProductsModern({
     limit,
     offset: (page - 1) * limit,
     region_id: region.id,
-    fields: "*variants.calculated_price,+variants.inventory_quantity,+metadata,+collection.title,+collection.handle,+categories.handle,+categories.name,+categories.id",
+    fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+metadata,+collection.title,+collection.handle,+categories.handle,+categories.name,+categories.id",
   }
 
   // Recherche

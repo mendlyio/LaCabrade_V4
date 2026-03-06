@@ -58,36 +58,14 @@ export default async function StoreTemplateModern({
       <div className="bg-[#9e354a] text-white py-12 mb-8">
         <div className="content-container">
           <div className="max-w-3xl">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 flex items-center gap-3">
-              {searchParams.q ? (
-                <>
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  Résultats pour "{searchParams.q}"
-                </>
-              ) : searchParams.category ? (
-                <>
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                  </svg>
-                  {(categories || []).find(c => c.handle === searchParams.category)?.name || "Catégorie"}
-                </>
-              ) : searchParams.collection ? (
-                <>
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                  </svg>
-                  {(collections || []).find(c => c.handle === searchParams.collection)?.title || "Collection"}
-                </>
-              ) : (
-                <>
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                  </svg>
-                  Notre Boutique
-                </>
-              )}
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              {searchParams.q
+                ? `Résultats pour "${searchParams.q}"`
+                : searchParams.category
+                ? (categories || []).find(c => c.handle === searchParams.category)?.name || "Catégorie"
+                : searchParams.collection
+                ? (collections || []).find(c => c.handle === searchParams.collection)?.title || "Collection"
+                : "Notre Boutique"}
             </h1>
             <p className="text-lg text-white/90">
               {searchParams.q 

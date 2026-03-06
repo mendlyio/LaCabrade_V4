@@ -247,12 +247,16 @@ export default function ProductActionsModern({
 
     if (amount == null) return null
 
+    // Promotion normale : API renvoie calculated_amount (réduit) et original_amount (avant réduction)
     const hasDiscount = original != null && original > amount
     const discountPct = hasDiscount
       ? Math.round(((original! - amount) / original!) * 100)
       : 0
 
-    const outletAmount = isOutlet ? amount * 0.5 : null
+    // Outlet : si la promotion est déjà appliquée par l'API, on utilise ces valeurs.
+    // Sinon (prix de base), on applique -50% nous-mêmes.
+    const outletAmount = isOutlet && !hasDiscount ? amount * 0.5 : null
+    const outletOriginal = isOutlet && !hasDiscount ? amount : (isOutlet && hasDiscount ? original : null)
 
     return {
       amount,
@@ -261,9 +265,11 @@ export default function ProductActionsModern({
       hasDiscount,
       discountPct,
       outletAmount,
+      outletOriginal,
       formatted: convertToLocale({ amount, currency_code: currency }),
       formattedOriginal: original != null ? convertToLocale({ amount: original, currency_code: currency }) : null,
       formattedOutlet: outletAmount != null ? convertToLocale({ amount: outletAmount, currency_code: currency }) : null,
+      formattedOutletOriginal: outletOriginal != null ? convertToLocale({ amount: outletOriginal, currency_code: currency }) : null,
     }
   }, [selectedVariant, product.variants, isOutlet])
 
@@ -276,14 +282,11 @@ export default function ProductActionsModern({
             <div className="space-y-1.5">
               <div className="flex items-baseline gap-3">
                 <span className="text-3xl md:text-4xl font-bold text-[#c4707f]">
-                  {priceData.formattedOutlet}
+                  {priceData.formattedOutlet ?? priceData.formatted}
                 </span>
                 <span className="text-xl text-gray-400 line-through">
-                  {priceData.formatted}
+                  {priceData.formattedOutletOriginal ?? priceData.formattedOriginal ?? priceData.formatted}
                 </span>
-              </div>
-              <div className="inline-flex items-center gap-2 bg-[#c4707f]/10 text-[#c4707f] px-3 py-1 rounded-full text-sm font-bold">
-                Prix Outlet — économisez 50%
               </div>
               <p className="text-xs text-gray-500">
                 La remise est appliquée automatiquement dans votre panier.

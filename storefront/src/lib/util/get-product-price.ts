@@ -38,26 +38,40 @@ export const getPricesForVariant = (variant: any, lineItemUnitPrice?: number) =>
     }
   }
 
-  const rawAmount = cp?.calculated_amount ?? cp?.original_amount
+  let rawAmount = cp?.calculated_amount ?? cp?.original_amount
+  let currencyCode = cp?.currency_code ?? "eur"
+
+  // Fallback : si calculated_price est vide (ex: produit sans prix pour la région),
+  // utiliser variant.prices[0] si disponible (montant en centimes pour Medusa)
+  if ((rawAmount == null || !Number.isFinite(rawAmount)) && variant?.prices?.length) {
+    const firstPrice = variant.prices[0] as { amount?: number; currency_code?: string } | undefined
+    const pAmount = firstPrice?.amount
+    if (pAmount != null && Number.isFinite(pAmount) && pAmount > 0) {
+      // Medusa stocke en centimes (minor units) ; convertir en euros pour l'affichage
+      rawAmount = pAmount / 100
+      currencyCode = (firstPrice?.currency_code || "eur").toLowerCase()
+    }
+  }
+
   if (rawAmount == null || !Number.isFinite(rawAmount)) {
     return null
   }
   const divisor = isGiftCard ? 100 : 1
   const amount = rawAmount / divisor
-  const originalAmount = cp.original_amount != null ? cp.original_amount / divisor : amount
+  const originalAmount = cp?.original_amount != null ? cp.original_amount / divisor : amount
 
   return {
     calculated_price_number: amount,
     calculated_price: convertToLocale({
       amount,
-      currency_code: cp.currency_code,
+      currency_code: currencyCode,
     }),
     original_price_number: originalAmount,
     original_price: convertToLocale({
       amount: originalAmount,
-      currency_code: cp.currency_code,
+      currency_code: currencyCode,
     }),
-    currency_code: cp.currency_code,
+    currency_code: currencyCode,
     price_type: (variant?.calculated_price as any)?.calculated_price?.price_list_type,
     percentage_diff: getPercentageDiff(originalAmount, amount),
   }
@@ -79,8 +93,16 @@ export function getProductPrice({
       return null
     }
 
-    const getAmount = (v: any) =>
-      v?.calculated_price?.calculated_amount ?? v?.calculated_price?.original_amount ?? Infinity
+    // Retourne le montant en euros pour le tri (calculated_price = euros, prices = centimes)
+    const getAmount = (v: any) => {
+      const cp = v?.calculated_price?.calculated_amount ?? v?.calculated_price?.original_amount
+      if (cp != null && Number.isFinite(cp)) return cp
+      // Fallback : variant.prices (montant en centimes dans Medusa)
+      const p = v?.prices?.[0]?.amount
+      if (p != null && Number.isFinite(p) && p > 0) return p / 100
+
+      return Infinity
+    }
 
     const cheapestVariant: any = product.variants
       .filter((v: any) => {

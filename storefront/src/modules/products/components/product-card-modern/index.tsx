@@ -292,7 +292,7 @@ export default async function ProductCardModern({
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10">
             {isOutlet && (
               <div className="bg-[#c4707f] text-white px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-[11px] sm:text-xs font-bold tracking-wide shadow-sm flex items-center gap-1">
-                <span>OUTLET</span>
+                <span>SALE</span>
                 <span className="bg-white/20 px-1 rounded">-50%</span>
               </div>
             )}
@@ -303,7 +303,7 @@ export default async function ProductCardModern({
             )}
             {isNew && (
               <div className="bg-emerald-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
-                Nouveau
+                NEW
               </div>
             )}
             {isLowStock && (
@@ -323,23 +323,20 @@ export default async function ProductCardModern({
             </div>
           )}
 
-          {/* LC Equestrian badge — coin supérieur droit */}
+          {/* LC Equestrian badge — coin inférieur droit */}
           {isLcEquestrian && (
-            <div className="absolute top-2.5 right-2.5 z-20 flex flex-col items-end gap-1">
+            <div className="absolute bottom-2.5 right-2.5 z-20">
               <div className="bg-amber-600 text-white px-2 py-1 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 border border-amber-400">
                 <span>★</span>
                 <span>LC Equestrian</span>
               </div>
-              <WishlistToggleButton productId={product.id!} size="md" />
             </div>
           )}
 
-          {/* Wishlist - visible si NON LC-Equestrian */}
-          {!isLcEquestrian && (
-            <div className="absolute top-2.5 right-2.5 z-10">
-              <WishlistToggleButton productId={product.id!} size="md" />
-            </div>
-          )}
+          {/* Wishlist — coin supérieur droit */}
+          <div className="absolute top-2.5 right-2.5 z-10">
+            <WishlistToggleButton productId={product.id!} size="md" />
+          </div>
 
           {/* Nombre de variantes */}
           {variantCount > 1 && (
@@ -392,9 +389,6 @@ export default async function ProductCardModern({
                   </span>
                   <span className="text-base sm:text-lg font-bold text-[#c4707f] leading-tight">
                     {outletPriceFormatted}
-                  </span>
-                  <span className="text-[10px] text-[#c4707f] font-semibold mt-0.5">
-                    Économisez 50% — Outlet
                   </span>
                 </>
               ) : hasDiscount ? (

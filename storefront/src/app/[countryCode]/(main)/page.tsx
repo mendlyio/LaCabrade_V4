@@ -52,13 +52,10 @@ export default async function Home({
     console.error("Erreur lors de la récupération des catégories:", error)
   }
 
-  // Trouver les catégories LC Equestrian et Outlet
+  // Trouver la catégorie LC Equestrian
   const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
   const lcCategory = allCategories.find((c: any) =>
     LC_EQUESTRIAN_HANDLES.includes((c.handle || "").toLowerCase())
-  )
-  const outletCategory = allCategories.find((c: any) =>
-    (c.handle || "").toLowerCase() === "outlet"
   )
 
   const { map: categoryMap } = buildCategoryTree(allCategories)
@@ -73,7 +70,7 @@ export default async function Home({
           limit: 48,
           region_id: region.id,
           category_id: [lcCategory.id],
-          fields: "*variants.calculated_price,+variants.inventory_quantity,+images,+categories.handle,+categories.id",
+          fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images,+categories.handle,+categories.id",
         } as any,
         countryCode,
       })
@@ -86,34 +83,36 @@ export default async function Home({
     }
   }
 
-  // Récupérer les produits Outlet — uniquement catégorie Outlet (et sous-catégories)
-  let outletProducts: any[] = []
-  if (outletCategory) {
-    try {
-      const allowedIds = getCategoryAndDescendantIds(outletCategory.id, categoryMap)
-      const result = await getProductsList({
-        queryParams: {
-          limit: 48,
-          region_id: region.id,
-          category_id: [outletCategory.id],
-          fields: "*variants.calculated_price,+variants.inventory_quantity,+images,+categories.handle,+categories.id",
-        } as any,
-        countryCode,
-      })
-      const raw = result.response.products || []
-      const isInOutletCategory = (p: any) =>
-        (p.categories || []).some((cat: any) => cat?.id && allowedIds.has(cat.id))
-      outletProducts = raw.filter(isInOutletCategory).slice(0, 8)
-    } catch (error) {
-      console.error("Erreur lors de la récupération des produits outlet:", error)
-    }
+  // Récupérer les nouveautés — produits triés par date de création (plus récents en premier)
+  let newProducts: any[] = []
+  try {
+    const result = await getProductsList({
+      queryParams: {
+        limit: 8,
+        region_id: region.id,
+        order: "-created_at",
+        fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images,+categories.handle,+categories.id",
+      } as any,
+      countryCode,
+    })
+    newProducts = result.response.products || []
+  } catch (error) {
+    console.error("Erreur lors de la récupération des nouveautés:", error)
   }
 
   // Filtrer les catégories principales pour la section catégories
   const parentCategories = allCategories.filter(
     (c: any) => c.parent_category_id == null && c.is_active !== false
   )
-  const mainCategories = parentCategories.slice(0, 8)
+  // Outlet en dernière position
+  const sorted = [...parentCategories].sort((a: any, b: any) => {
+    const aIsOutlet = (a.handle || "").toLowerCase() === "outlet"
+    const bIsOutlet = (b.handle || "").toLowerCase() === "outlet"
+    if (aIsOutlet && !bIsOutlet) return 1
+    if (!aIsOutlet && bIsOutlet) return -1
+    return 0
+  })
+  const mainCategories = sorted.slice(0, 8)
 
   const categoryImages: Record<string, string> = {
     cheval: "https://ik.imagekit.io/kodt9cn6f/cheval.webp",
@@ -336,20 +335,20 @@ export default async function Home({
         </div>
       </section>
 
-      {/* Section Outlet */}
+      {/* Section Nouveautés */}
       <section className="py-16 bg-gray-50">
         <div className="content-container">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Outlet</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Nouveautés</h2>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-              Notre sélection d'articles à prix tout doux
+              Découvrez nos derniers produits équestres
             </p>
           </div>
-          {outletProducts.length > 0 ? (
+          {newProducts.length > 0 ? (
             <>
               <ScrollCarousel className="-mx-4 px-4">
                 <div className="flex gap-3 sm:gap-4 pb-4">
-                  {outletProducts.map((product) => (
+                  {newProducts.map((product) => (
                     <div 
                       key={product.id} 
                       className="flex-none w-[calc(50%-6px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(25%-12px)] xl:w-[calc(20%-13px)]"
@@ -364,10 +363,10 @@ export default async function Home({
               </ScrollCarousel>
               <div className="text-center mt-8">
                 <LocalizedClientLink
-                  href="/categories/outlet"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#c4707f] hover:bg-[#b5616f] text-white font-semibold rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
+                  href="/nouveautes"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-all duration-300 shadow-md hover:shadow-lg"
                 >
-                  Voir tous les outlets
+                  Voir toutes les nouveautés
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
@@ -377,7 +376,7 @@ export default async function Home({
           ) : (
             <div className="text-center py-12 bg-white rounded-xl">
               <p className="text-gray-600 mb-6">
-                Nos promotions arrivent bientôt !<br />
+                Nos nouveautés arrivent bientôt !<br />
                 Surveillez cette section pour ne rien manquer.
               </p>
             </div>

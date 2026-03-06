@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const regionId = searchParams.get("region_id")
     const fields =
       searchParams.get("fields") ||
-      "*variants.calculated_price,+variants.inventory_quantity,+images,+metadata,+collection.title,+collection.handle,+categories.handle,+categories.name,+categories.id"
+      "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images,+metadata,+collection.title,+collection.handle,+categories.handle,+categories.name,+categories.id"
 
     if (!regionId) {
       return NextResponse.json(

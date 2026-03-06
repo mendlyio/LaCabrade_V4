@@ -53,10 +53,7 @@ export default async function NouveautesPage({ params, searchParams }: Props) {
       <div className="bg-amber-600 text-white py-12 mb-8">
         <div className="content-container">
           <div className="max-w-3xl">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 flex items-center gap-3">
-              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
-              </svg>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
               Nouveautés
             </h1>
             <p className="text-lg text-white/90">

@@ -173,7 +173,7 @@ const ProductTemplateModern = async ({
             <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
               {showNewBadge && (
                 <div className="bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg uppercase tracking-wider">
-                  Nouveau
+                  NEW
                 </div>
               )}
               {isPromo && (

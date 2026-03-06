@@ -18,7 +18,7 @@ export default async function RelatedProductsModern({
   // Récupérer les produits liés (même collection ou même catégorie)
   const queryParams: any = {
     limit: 12,
-    fields: "*variants.calculated_price,+variants.inventory_quantity",
+    fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices",
   }
 
   // Essayer d'abord par collection

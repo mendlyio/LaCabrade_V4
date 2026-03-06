@@ -17,7 +17,7 @@ export const getProductsById = cache(async function ({
       {
         id: ids,
         region_id: regionId,
-        fields: "*variants.calculated_price,+variants.inventory_quantity,+images",
+        fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images",
       },
       { next: { tags: ["products"] } }
     )
@@ -33,7 +33,7 @@ export const getProductByHandle = cache(async function (
       {
         handle,
         region_id: regionId,
-        fields: "*variants.calculated_price,+variants.inventory_quantity,+categories",
+        fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+categories",
       },
       { next: { tags: ["products"] } }
     )
@@ -70,7 +70,7 @@ export const getProductsList = cache(async function ({
         limit,
         offset,
         region_id: region.id,
-        fields: "*variants.calculated_price",
+        fields: "*variants.calculated_price,+variants.prices",
         ...queryParams,
       },
       { next: { tags: ["products"] } }
@@ -121,7 +121,7 @@ export const getProductsListWithSort = cache(async function ({
       ...queryParams,
       limit: 100,
       ...(prioritizeLcEquestrian && {
-        fields: "*variants.calculated_price,+variants.inventory_quantity,+images,+categories.handle,+categories.id",
+        fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images,+categories.handle,+categories.id",
       }),
     },
     countryCode,

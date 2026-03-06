@@ -33,32 +33,37 @@ function ProductCardClient({
   isNew?: boolean
   onProductClick?: () => void
 }) {
-  // ── Trouver le variant le moins cher (calculated_amount ou original_amount) ──
-  const getVariantPrice = (v: any) =>
-    v?.calculated_price?.calculated_amount ?? v?.calculated_price?.original_amount ?? Infinity
+  // ── Trouver le variant le moins cher (calculated_price ou fallback variant.prices) ──
+  // calculated_amount = euros ; variant.prices[0].amount = centimes
+  const getVariantPriceInEuros = (v: any) => {
+    const cp = v?.calculated_price?.calculated_amount ?? v?.calculated_price?.original_amount
+    if (cp != null && Number.isFinite(cp)) return cp
+    const p = v?.prices?.[0]?.amount
+    if (p != null && Number.isFinite(p) && p > 0) return p / 100
+    return Infinity
+  }
 
   const allPricedVariants = (product.variants || [])
     .filter((v: any) => {
-      const p = getVariantPrice(v)
+      const p = getVariantPriceInEuros(v)
       return p != null && p !== Infinity && Number.isFinite(p)
     }) as any[]
 
   const cheapestVariant = allPricedVariants.sort(
-    (a, b) => getVariantPrice(a) - getVariantPrice(b)
+    (a, b) => getVariantPriceInEuros(a) - getVariantPriceInEuros(b)
   )[0]
 
   const price: number | undefined = cheapestVariant
-    ? (cheapestVariant.calculated_price?.calculated_amount ?? cheapestVariant.calculated_price?.original_amount)
+    ? (cheapestVariant.calculated_price?.calculated_amount ?? cheapestVariant.calculated_price?.original_amount ?? (cheapestVariant.prices?.[0]?.amount != null ? cheapestVariant.prices[0].amount / 100 : undefined))
     : undefined
   const originalPrice: number | undefined = cheapestVariant?.calculated_price?.original_amount
-  const currencyCode: string = cheapestVariant?.calculated_price?.currency_code || "eur"
+  const currencyCode: string = (cheapestVariant?.calculated_price?.currency_code ?? cheapestVariant?.prices?.[0]?.currency_code ?? "eur").toLowerCase()
 
   // "Dès X€" si plusieurs prix différents parmi les variants
   const hasPriceRange =
     allPricedVariants.length > 1 &&
-    allPricedVariants.some(
-      (v) => v.calculated_price.calculated_amount !== price
-    )
+    price != null &&
+    allPricedVariants.some((v) => Math.abs(getVariantPriceInEuros(v) - price) > 0.001)
 
   const hasDiscount = price != null && originalPrice != null && price < originalPrice
   const discountPct = hasDiscount
@@ -159,22 +164,24 @@ function ProductCardClient({
           {isOutlet && (
             <div className="absolute top-2.5 left-2.5 z-20">
               <div className="bg-[#c4707f] text-white px-2.5 py-1 rounded-lg text-[11px] font-bold tracking-wide shadow-sm flex items-center gap-1">
-                <span>OUTLET</span>
+                <span>SALE</span>
                 <span className="bg-white/20 px-1 rounded">-50%</span>
               </div>
             </div>
           )}
 
-          {/* Badge LC Equestrian + Wishlist — coin supérieur droit */}
-          {isLcEquestrian ? (
-            <div className="absolute top-2.5 right-2.5 z-20 flex flex-col items-end gap-1">
+          {/* Badge LC Equestrian — coin inférieur droit */}
+          {isLcEquestrian && (
+            <div className="absolute bottom-2.5 right-2.5 z-20">
               <div className="bg-amber-600 text-white px-2 py-1 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 border border-amber-400">
                 <span>★</span>
                 <span>LC Equestrian</span>
               </div>
-              <WishlistToggleButton productId={product.id!} size="md" />
             </div>
-          ) : !isOutlet && collection ? (
+          )}
+
+          {/* Collection + Wishlist — coin supérieur droit (collection masquée si LC Equestrian) */}
+          {!isOutlet && collection && !isLcEquestrian ? (
             <div className="absolute top-2.5 right-2.5 z-10 flex flex-col items-end gap-1">
               <div className="bg-white/80 backdrop-blur-md text-gray-600 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider shadow-sm">
                 {collection}
@@ -222,9 +229,6 @@ function ProductCardClient({
                   </span>
                   <span className="text-base sm:text-lg font-bold text-[#c4707f] leading-tight">
                     {outletPriceFormatted}
-                  </span>
-                  <span className="text-[10px] text-[#c4707f] font-semibold mt-0.5">
-                    Économisez 50%
                   </span>
                 </>
               ) : hasDiscount ? (
@@ -293,6 +297,8 @@ export default function LoadMoreProducts({
   const [error, setError] = useState<string | null>(null)
   const [newProductIds, setNewProductIds] = useState<Set<string>>(new Set())
   const scrollRestoredRef = useRef(false)
+  /** Restauration mode API : on doit recharger les produits avant de scroller */
+  const [pendingRestore, setPendingRestore] = useState<{ scrollY: number; targetPage: number } | null>(null)
 
   const sessionKey = `${STORE_SCROLL_KEY}-${pathname}-${search}`
 
@@ -338,12 +344,18 @@ export default function LoadMoreProducts({
       if (data.isClientPagination && typeof data.displayCount === "number" && data.displayCount > limit) {
         setDisplayCount(Math.min(data.displayCount, allProducts?.length ?? data.displayCount))
       }
-      // Mode API : on restaure uniquement le scroll (pas les produits chargés)
 
       const scrollY = typeof data.scrollY === "number" ? data.scrollY : 0
+
+      // Mode API + Load More utilisé : recharger les produits avant de scroller
+      if (!data.isClientPagination && typeof data.page === "number" && data.page > 1 && scrollY > 0) {
+        setPendingRestore({ scrollY, targetPage: data.page })
+        sessionStorage.removeItem(sessionKey)
+        return
+      }
+
       sessionStorage.removeItem(sessionKey)
       if (scrollY > 0) {
-        // Délai pour laisser React mettre à jour le DOM (displayCount) avant de scroller
         const timer = setTimeout(() => window.scrollTo(0, scrollY), 50)
         return () => clearTimeout(timer)
       }
@@ -351,6 +363,56 @@ export default function LoadMoreProducts({
       // Ignorer les erreurs de parsing
     }
   }, [sessionKey, limit, allProducts?.length])
+
+  // Restauration mode API : recharger les produits chargés via "Voir plus" puis scroller
+  useEffect(() => {
+    if (!pendingRestore || isClientPagination) return
+    const { scrollY, targetPage } = pendingRestore
+
+    const fetchRestoredProducts = async () => {
+      const additionalLimit = (targetPage - 1) * limit
+      const params = new URLSearchParams()
+      params.set("limit", String(additionalLimit))
+      params.set("offset", String(limit))
+      params.set("region_id", regionId)
+      params.set("fields", "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images,+metadata,+collection.title,+collection.handle,+categories.handle,+categories.name,+categories.id")
+      if (queryParams.category_id) {
+        const ids = Array.isArray(queryParams.category_id) ? queryParams.category_id : [queryParams.category_id]
+        ids.forEach((id: string) => params.append("category_id[]", id))
+      }
+      if (queryParams.collection_id) {
+        const ids = Array.isArray(queryParams.collection_id) ? queryParams.collection_id : [queryParams.collection_id]
+        ids.forEach((id: string) => params.append("collection_id[]", id))
+      }
+      if (queryParams.q) params.set("q", queryParams.q)
+      if (queryParams.order) params.set("order", queryParams.order)
+
+      try {
+        const res = await fetch(`/api/products/load-more?${params.toString()}`)
+        const data = await res.json()
+        if (!res.ok) throw new Error(data?.error || "Erreur chargement")
+        let newProducts = data.products || []
+        if (brandSlug) {
+          newProducts = newProducts.filter((product: any) => {
+            const metadataBrand = product.metadata?.brand as string | undefined
+            const collectionBrand = product.collection?.title
+            const productBrand = metadataBrand || collectionBrand || ""
+            return slugifyBrand(productBrand) === brandSlug
+          })
+        }
+        setProducts((prev) => [...prev, ...newProducts])
+        setPage(targetPage)
+        // Délai pour laisser React rendre les nouveaux produits avant de scroller
+        setTimeout(() => window.scrollTo(0, scrollY), 100)
+      } catch (err) {
+        console.error("Erreur restauration scroll:", err)
+      } finally {
+        setPendingRestore(null)
+      }
+    }
+
+    fetchRestoredProducts()
+  }, [pendingRestore, isClientPagination, limit, regionId, queryParams, brandSlug])
 
   const handleProductClick = useCallback(() => {
     saveScrollState()
@@ -386,7 +448,7 @@ export default function LoadMoreProducts({
       params.set("limit", String(limit))
       params.set("offset", String(page * limit))
       params.set("region_id", regionId)
-      params.set("fields", "*variants.calculated_price,+variants.inventory_quantity,+images,+metadata,+collection.title,+collection.handle,+categories.handle,+categories.name,+categories.id")
+      params.set("fields", "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images,+metadata,+collection.title,+collection.handle,+categories.handle,+categories.name,+categories.id")
 
       if (queryParams.category_id) {
         const ids = Array.isArray(queryParams.category_id) ? queryParams.category_id : [queryParams.category_id]
