@@ -2,8 +2,8 @@ import { Metadata } from "next"
 import Image from "next/image"
 
 export const metadata: Metadata = {
-  title: "À propos de La Cabrade | Sellerie équestre à Fléron",
-  description: "Découvrez l'histoire de La Cabrade, notre équipe passionnée et nos valeurs. Sellerie d'équitation près de Liège depuis plusieurs années.",
+  title: "À propos de nous | La Cabrade - Sellerie équestre à Fléron",
+  description: "Depuis près de 50 ans, La Cabrade accompagne les cavaliers et leurs chevaux avec passion et expertise. Découvrez notre histoire, notre équipe et nos valeurs.",
 }
 
 export default function AProposPage() {
@@ -43,6 +43,13 @@ export default function AProposPage() {
         "Amélie, notre secrétaire attitrée, veille au bon fonctionnement du bureau au quotidien. Elle met de temps en temps ses compétences créatives au service du magasin en réalisant certains de nos visuels.",
       accent: "from-slate-100 to-gray-100",
     },
+    {
+      name: "AMÉLIE D. – La suppléante 🤭",
+      role: "Conseil & vente",
+      description:
+        "Professeure de mathématiques en secondaire et cavalière depuis plus de 30 ans, Amélie met sa rigueur et son enthousiasme au service du magasin. Quelques jours par mois, elle nous accompagne dans les missions du quotidien : conseil, vente, shooting… Toujours fiable et dynamique, elle apporte son sens du détail et sa bonne humeur pour que tout soit parfaitement carré — à l&apos;écurie comme en boutique ✨",
+      accent: "from-violet-100 to-purple-100",
+    },
   ]
 
   return (
@@ -52,10 +59,10 @@ export default function AProposPage() {
         <div className="content-container">
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              À propos de La Cabrade
+              À propos de nous
             </h1>
             <p className="text-xl text-gray-600 leading-relaxed">
-              Votre sellerie de confiance à Fléron, près de Liège. Depuis plusieurs années, nous accompagnons les cavaliers et les passionnés d&apos;équitation avec des produits de qualité et des conseils d&apos;experts.
+              Depuis près de 50 ans, notre sellerie accompagne les cavaliers et leurs chevaux avec passion et expertise. Implantée à Fléron, au cœur de la région liégeoise, notre magasin est devenu une adresse incontournable pour tous les amoureux d&apos;équitation.
             </p>
           </div>
         </div>
@@ -72,13 +79,16 @@ export default function AProposPage() {
                 </h2>
                 <div className="prose prose-lg text-gray-600 space-y-4">
                   <p>
-                    La Cabrade est née de la passion pour l&apos;équitation et du désir de créer un lieu de référence pour tous les cavaliers de la région liégeoise.
+                    En juillet 2022, Mélissa a pris la tête de La Cabrade, insufflant une nouvelle dynamique tout en préservant les valeurs qui font notre force depuis des décennies : qualité, service et passion. Épaulée par son papa et entourée d&apos;une équipe engagée, Mélissa veille chaque jour à vous offrir un accueil chaleureux et des conseils personnalisés.
                   </p>
                   <p>
-                    Notre magasin situé à Fléron propose une large gamme de produits pour le cheval et le cavalier : selles, bridons, tapis, protections, vêtements d&apos;équitation et bien plus encore.
+                    Dans cette volonté d&apos;évolution et d&apos;innovation, nous développons également notre propre marque : LC EQUESTRIAN. Pensée par des cavaliers, pour des cavaliers, elle allie technicité, confort, qualité des matières et élégance. À travers LC EQUESTRIAN, nous souhaitons proposer des produits qui répondent réellement à vos besoins, tout en restant abordables.
                   </p>
                   <p>
-                    Nous sélectionnons avec soin chaque produit pour vous garantir qualité, confort et durabilité. Notre équipe est là pour vous conseiller et vous accompagner dans vos choix.
+                    Notre ambition ? Continuer à faire évoluer notre sellerie, en magasin comme en ligne, tout en restant fidèles à notre identité familiale et à la confiance que vous nous accordez depuis tant d&apos;années.
+                  </p>
+                  <p>
+                    Merci de faire partie de notre histoire — et à très bientôt, en boutique ou sur notre site ! 🐴
                   </p>
                 </div>
               </div>
