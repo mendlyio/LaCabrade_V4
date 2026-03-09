@@ -9,23 +9,37 @@ import PickupPoints from "@modules/checkout/components/pickup-points"
 import StorePickup from "@modules/checkout/components/store-pickup"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
-import { setShippingMethod } from "@lib/data/cart"
+import { setShippingMethod, clearShippingMetadata } from "@lib/data/cart"
 import { formatAmount } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 
 /**
  * Détecte si une option de livraison correspond au retrait en magasin.
- * On se base sur le nom (contient "retrait" ou "magasin") ou sur data.mode.
  */
 function isStorePickupOption(
   option: HttpTypes.StoreCartShippingOption
 ): boolean {
   const name = (option.name ?? "").toLowerCase()
-  const mode = ((option as any).data?.mode ?? "").toLowerCase()
+  const mode = ((option as any).data?.mode ?? (option as any).metadata?.mode ?? "").toLowerCase()
   return (
     mode === "store_pickup" ||
     (name.includes("retrait") && name.includes("magasin")) ||
     (name.includes("click") && name.includes("collect"))
+  )
+}
+
+/** Bpost Point Relais (mode pickup) */
+function isBpostPickupOption(option: HttpTypes.StoreCartShippingOption): boolean {
+  const isBpost = (option.provider_id ?? "").toLowerCase().includes("bpost")
+  const mode = ((option as any).data?.mode ?? (option as any).metadata?.mode ?? "").toLowerCase()
+  return isBpost && mode === "pickup"
+}
+
+/** Bpost Domicile (mode home) — toute option Bpost qui n'est pas Point Relais */
+function isBpostHomeOption(option: HttpTypes.StoreCartShippingOption): boolean {
+  return (
+    (option.provider_id ?? "").toLowerCase().includes("bpost") &&
+    !isBpostPickupOption(option)
   )
 }
 
@@ -62,14 +76,33 @@ const Shipping: React.FC<ShippingProps> = ({
   }
 
   const set = async (id: string) => {
+    const newOption = availableShippingMethods?.find((o) => o.id === id)
+    if (!newOption) return
+
     setIsLoading(true)
-    await setShippingMethod({ cartId: cart.id, shippingMethodId: id })
-      .catch((err) => {
-        setError(err.message)
+    setError(null)
+
+    try {
+      await setShippingMethod({ cartId: cart.id, shippingMethodId: id })
+
+      // Réinitialiser les métadonnées à chaque changement de méthode
+      // pour éviter que l'adresse Point Relais reste quand on passe en Domicile
+      const goingToBpostPickup = isBpostPickupOption(newOption)
+      const goingToBpostHome = isBpostHomeOption(newOption)
+
+      await clearShippingMetadata({
+        cartId: cart.id,
+        clearBpostPickup: true,
+        clearPickupLocation: true,
+        resetShippingToBilling: goingToBpostHome,
       })
-      .finally(() => {
-        setIsLoading(false)
-      })
+
+      router.refresh()
+    } catch (err: any) {
+      setError(err?.message ?? "Erreur lors du changement")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -180,16 +213,16 @@ const Shipping: React.FC<ShippingProps> = ({
             </RadioGroup>
           </div>
 
-          {/* Bpost : Points relais */}
+          {/* Bpost : Points relais — key pour forcer remount à chaque changement de méthode */}
           {selectedShippingMethod?.provider_id?.toLowerCase?.().includes("bpost") &&
             ((selectedShippingMethod as any)?.metadata?.mode === "pickup" || 
              (selectedShippingMethod as any)?.data?.mode === "pickup") && (
-            <PickupPoints cart={cart} />
+            <PickupPoints key={selectedShippingMethod.id} cart={cart} />
           )}
 
-          {/* Retrait en magasin : sélection du point de retrait */}
+          {/* Retrait en magasin : sélection du point de retrait — key pour remount à chaque changement */}
           {selectedShippingMethod && isStorePickupOption(selectedShippingMethod) && (
-            <StorePickup cart={cart} />
+            <StorePickup key={selectedShippingMethod.id} cart={cart} />
           )}
 
           <ErrorMessage

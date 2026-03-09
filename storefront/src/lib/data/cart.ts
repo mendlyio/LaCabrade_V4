@@ -184,7 +184,7 @@ export async function deleteLineItem(lineId: string) {
   }
 
   await sdk.store.cart
-    .deleteLineItem(cartId, lineId, getAuthHeaders())
+    .deleteLineItem(cartId, lineId, {}, getAuthHeaders())
     .then(() => {
       revalidateTag("cart")
     })
@@ -269,6 +269,47 @@ export async function setShippingMethod({
  * Sauvegarde le lieu de retrait en magasin dans les métadonnées du panier.
  * Passer `null` pour effacer la sélection.
  */
+/**
+ * Nettoie les métadonnées de livraison lors d'un changement de méthode.
+ * À appeler quand l'utilisateur change de Bpost Point Relais ↔ Domicile ou retrait magasin.
+ */
+export async function clearShippingMetadata({
+  cartId,
+  clearBpostPickup = true,
+  clearPickupLocation = true,
+  resetShippingToBilling = false,
+}: {
+  cartId: string
+  clearBpostPickup?: boolean
+  clearPickupLocation?: boolean
+  resetShippingToBilling?: boolean
+}) {
+  const backendUrl =
+    process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
+  const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (publishableKey) headers["x-publishable-api-key"] = publishableKey
+
+  const res = await fetch(`${backendUrl}/store/custom/clear-shipping-metadata`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      cart_id: cartId,
+      clear_bpost_pickup: clearBpostPickup,
+      clear_pickup_location: clearPickupLocation,
+      reset_shipping_to_billing: resetShippingToBilling,
+    }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: "Erreur inconnue" }))
+    throw new Error(err.message || "Erreur lors de la réinitialisation")
+  }
+
+  revalidateTag("cart")
+}
+
 export async function setPickupLocation({
   cartId,
   pickupLocation,

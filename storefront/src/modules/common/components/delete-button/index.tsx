@@ -25,6 +25,8 @@ const DeleteButton = ({
       await deleteLineItem(lineId)
       router.refresh()
     } catch (err) {
+      console.error("Erreur lors de la suppression:", err)
+    } finally {
       setIsDeleting(false)
     }
   }
