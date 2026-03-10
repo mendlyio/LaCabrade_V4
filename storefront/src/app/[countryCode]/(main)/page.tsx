@@ -32,6 +32,9 @@ export const metadata: Metadata = {
     "Vivez l'équitation comme vous l'aimez, sans compromis. Des prix justes, du matériel fiable, et toute l'émotion d'une sellerie pensée pour les passionnés.",
 }
 
+// Revalidation pour que les mises à jour (ex: slider CTA) soient prises en compte
+export const revalidate = 60
+
 export default async function Home({
   params: { countryCode },
 }: {
