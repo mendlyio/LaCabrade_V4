@@ -225,9 +225,16 @@ const medusaConfig = {
             enabled: true,
             fields: ['id', 'title', 'description', 'handle', 'variant_sku', 'thumbnail'],
             indexSettings: {
-              searchableAttributes: ['title', 'description', 'variant_sku'],
+              searchableAttributes: ['title', 'description', 'handle', 'variant_sku'],
               displayedAttributes: ['id', 'handle', 'title', 'description', 'variant_sku', 'thumbnail'],
               filterableAttributes: ['id', 'handle'],
+              typoTolerance: {
+                enabled: true,
+                minWordSizeForTypos: {
+                  oneTypo: 4,
+                  twoTypos: 8
+                }
+              }
             },
             primaryKey: 'id',
           }

@@ -1,8 +1,11 @@
 import { HttpTypes } from "@medusajs/types"
 import { getProductsList } from "@lib/data/products"
+import { listCategories } from "@lib/data/categories"
 import ProductCardModern from "@modules/products/components/product-card-modern"
 import ScrollCarousel from "@modules/common/components/scroll-carousel"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+
+const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
 
 type RelatedProductsModernProps = {
   product: HttpTypes.StoreProduct
@@ -15,16 +18,30 @@ export default async function RelatedProductsModern({
   countryCode,
   region,
 }: RelatedProductsModernProps) {
-  // Récupérer les produits liés (même collection ou même catégorie)
+  // Récupérer uniquement les produits de la catégorie LC-Equestrian
+  let categoryId: string | null = null
+  try {
+    const categories = await listCategories()
+    const lcCategory = categories?.find(
+      (c: any) => LC_EQUESTRIAN_HANDLES.includes((c.handle ?? "").toLowerCase())
+    )
+    if (lcCategory) {
+      categoryId = lcCategory.id
+    }
+  } catch (error) {
+    console.error("Erreur récupération catégorie LC Equestrian:", error)
+  }
+
   const queryParams: any = {
     limit: 12,
     fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices",
   }
 
-  // Essayer d'abord par collection
-  if (product.collection_id) {
-    queryParams.collection_id = [product.collection_id]
+  if (!categoryId) {
+    return null
   }
+
+  queryParams.category_id = [categoryId]
 
   const { response } = await getProductsList({
     queryParams,
@@ -66,7 +83,7 @@ export default async function RelatedProductsModern({
       {relatedProducts.length > 4 && (
         <div className="mt-10 text-center">
           <LocalizedClientLink
-            href={product.collection ? `/collections/${product.collection.handle}` : '/store'}
+            href="/lc-equestrian"
             className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 text-sm md:text-base"
           >
             <span>Voir plus de produits</span>

@@ -90,9 +90,10 @@ export default async function PaginatedProductsModern({
     fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+metadata,+collection.title,+collection.handle,+categories.handle,+categories.name,+categories.id",
   }
 
-  // Recherche
-  if (searchParams.q) {
-    queryParams.q = searchParams.q
+  // Recherche : normaliser "anti mouche" → "anti-mouche" pour matcher les produits (handles, titres avec tirets)
+  const rawQuery = searchParams.q?.trim()
+  if (rawQuery && rawQuery.length >= 2) {
+    queryParams.q = rawQuery.replace(/\s+/g, "-")
   }
 
   // Catégorie - convertir handle en ID
