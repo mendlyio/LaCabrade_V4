@@ -20,7 +20,7 @@ const HeroCarousel = () => {
       image: "https://ik.imagekit.io/kodt9cn6f/Slide-LC-Equestrian.webp",
       alt: "LC Equestrian",
       buttonText: "LC Equestrian",
-      buttonHref: "/categories/LC-Equestrian",
+      buttonHref: "/lc-equestrian",
       buttonStyle: "bg-white text-amber-700 hover:bg-amber-50 border-2 border-white",
     },
     {

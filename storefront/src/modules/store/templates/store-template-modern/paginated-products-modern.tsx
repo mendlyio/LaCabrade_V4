@@ -62,7 +62,9 @@ export default async function PaginatedProductsModern({
     searchParams.in_stock === "true" ||
     searchParams.on_sale === "true"
   const hasBrandFilter = !!searchParams.brand
-  const limit = hasClientSideFilters ? 50 : 12
+  // Pages catégorie : on récupère tous les produits pour trier LC-Equestrian en premier
+  const hasCategoryFilter = !!searchParams.category
+  const limit = hasClientSideFilters || hasCategoryFilter ? 50 : 12
 
   // Récupérer les catégories et collections pour convertir les handles en IDs
   let categories: any[] = []
@@ -180,10 +182,10 @@ export default async function PaginatedProductsModern({
   }
 
   // ─── Récupérer les produits ───
-  // Pour le filtre marque, on récupère TOUS les produits (paginated) pour un filtrage fiable
+  // Pour filtre marque OU page catégorie : on récupère TOUS les produits pour trier LC-Equestrian en premier
   let result
   try {
-    if (hasBrandFilter) {
+    if (hasBrandFilter || hasCategoryFilter) {
       // Fetch ALL products in batches and filter by brand server-side
       const batchSize = 100
       let allProducts: any[] = []
@@ -206,19 +208,22 @@ export default async function PaginatedProductsModern({
         batchOffset += batchSize
       } while (batchOffset < totalProducts)
 
-      // Filtrer par marque côté serveur
-      const normalizedBrand = slugify(searchParams.brand!)
-      const brandProducts = allProducts.filter((product) => {
-        const metadataBrand = product.metadata?.brand as string | undefined
-        const collectionBrand = product.collection?.title
-        const productBrand = metadataBrand || collectionBrand || ""
-        return slugify(productBrand) === normalizedBrand
-      })
+      // Filtrer par marque côté serveur (si filtre marque actif)
+      let finalProducts = allProducts
+      if (hasBrandFilter) {
+        const normalizedBrand = slugify(searchParams.brand!)
+        finalProducts = allProducts.filter((product) => {
+          const metadataBrand = product.metadata?.brand as string | undefined
+          const collectionBrand = product.collection?.title
+          const productBrand = metadataBrand || collectionBrand || ""
+          return slugify(productBrand) === normalizedBrand
+        })
+      }
 
       result = {
         response: {
-          products: brandProducts,
-          count: brandProducts.length,
+          products: finalProducts,
+          count: finalProducts.length,
         },
       }
     } else {
@@ -312,9 +317,9 @@ export default async function PaginatedProductsModern({
   // Mettre à jour le count total après filtrage
   const totalFilteredCount = filteredProducts.length
   
-  // Si on a des filtres côté client (prix, stock, promo) ou marque, paginer les résultats filtrés
+  // Si on a des filtres côté client (prix, stock, promo), marque ou page catégorie, paginer les résultats filtrés
   const displayLimit = 12 // Toujours afficher 12 produits par page
-  const needsClientPagination = hasClientSideFilters || hasBrandFilter
+  const needsClientPagination = hasClientSideFilters || hasBrandFilter || hasCategoryFilter
   const startIndex = (page - 1) * displayLimit
   const endIndex = startIndex + displayLimit
   

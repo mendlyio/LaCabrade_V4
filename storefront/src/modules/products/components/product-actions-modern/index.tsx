@@ -189,11 +189,11 @@ export default function ProductActionsModern({
     }
   }
 
-  // Obtenir les options disponibles
+  // Obtenir les options disponibles (exclure "Default: Default" quand pas de choix réel)
   const productOptions = useMemo(() => {
     if (!product.variants || !product.options) return []
 
-    return product.options.map((option) => {
+    const options = product.options.map((option) => {
       const values = product.variants!
         .map((v) => v.options?.find((o) => o.option_id === option.id)?.value)
         .filter(Boolean)
@@ -203,6 +203,16 @@ export default function ProductActionsModern({
         ...option,
         values,
       }
+    })
+
+    // Ne pas afficher les options "Default" avec une seule valeur "Default" (pas de choix réel)
+    return options.filter((opt) => {
+      const title = (opt.title ?? "").toLowerCase()
+      const vals = opt.values ?? []
+      if (title === "default" && vals.length === 1 && (vals[0] ?? "").toLowerCase() === "default") {
+        return false
+      }
+      return true
     })
   }, [product])
 

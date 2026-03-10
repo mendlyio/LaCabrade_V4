@@ -31,7 +31,16 @@ const CartDropdown = ({
       return acc + item.quantity
     }, 0) || 0
 
-  const subtotal = cartState?.subtotal ?? 0
+  const hasGiftCard = cartState?.items?.some(
+    (i: any) =>
+      i?.metadata?.is_gift_card ||
+      (i?.product_title || "").toLowerCase().includes("bon cadeau") ||
+      (i?.title || "").toLowerCase().includes("bon cadeau") ||
+      (i?.variant_sku || "").startsWith("GC-") ||
+      (i?.variant?.product as any)?.handle === "bon-cadeau"
+  )
+  const subtotalRaw = cartState?.subtotal ?? 0
+  const subtotal = hasGiftCard ? subtotalRaw / 100 : subtotalRaw
   const itemRef = useRef<number>(totalItems || 0)
 
   const timedOpen = () => {
@@ -191,10 +200,7 @@ const CartDropdown = ({
                       data-testid="cart-subtotal"
                       data-value={subtotal}
                     >
-                      {formatAmount(
-                        subtotal,
-                        cartState.currency_code ?? "eur"
-                      )}
+                      {formatAmount(subtotal, cartState.currency_code ?? "eur")}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 rounded-lg p-3">

@@ -36,6 +36,14 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
     shipping_address,
   } = totals
 
+  const isGiftCardItem = (i: any) =>
+    !!i?.metadata?.is_gift_card ||
+    ((i?.product_title || "").toLowerCase().includes("bon cadeau")) ||
+    ((i?.title || "").toLowerCase().includes("bon cadeau")) ||
+    ((i?.variant_title || "").toLowerCase().includes("bon cadeau")) ||
+    ((i?.variant_sku || "").startsWith("GC-")) ||
+    (i?.variant?.product as any)?.handle === "bon-cadeau"
+
   const itemsSubtotal =
     Array.isArray(items) && items.length
       ? items.reduce((acc, item) => {
@@ -45,45 +53,44 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
               : typeof item.unit_price === "number"
                 ? (item.unit_price || 0) * (item.quantity || 0)
                 : 0
-          const isGiftCard =
-            !!(item as any).metadata?.is_gift_card ||
-            ((item as any).product_title || "").toLowerCase().includes("bon cadeau") ||
-            ((item as any).variant?.product as any)?.handle === "bon-cadeau"
+          const isGiftCard = isGiftCardItem(item)
           const value = isGiftCard ? (lineSubtotal || 0) / 100 : (lineSubtotal || 0)
           return acc + value
         }, 0)
       : null
 
-  const displayedSubtotal = itemsSubtotal ?? subtotal ?? 0
   const hasGiftCardInItems =
-    Array.isArray(items) &&
-    items.some(
-      (i: any) =>
-        i.metadata?.is_gift_card ||
-        (i.product_title || "").toLowerCase().includes("bon cadeau") ||
-        i.variant?.product?.handle === "bon-cadeau"
-    )
+    Array.isArray(items) && items.some((i: any) => isGiftCardItem(i))
+
+  // Quand le panier contient un bon cadeau : Medusa retourne total/subtotal en centimes
+  const toEuros = (cents: number | null | undefined) => (cents ?? 0) / 100
+  const displayedSubtotal =
+    itemsSubtotal ?? (hasGiftCardInItems && subtotal != null ? toEuros(subtotal) : (subtotal ?? 0))
 
   // Vérifier si le client bénéficie de l'exonération TVA intracommunautaire
   const vatNumber = (metadata as any)?.vat_number || null
   const customerCountry = shipping_address?.country_code?.toLowerCase()
   const isIntraCommunityExempt = !!(vatNumber && customerCountry && customerCountry !== "be")
 
-  const displayedTaxTotal = isIntraCommunityExempt ? 0 : (tax_total ?? 0)
-  const vatDeduction = isIntraCommunityExempt ? (tax_total ?? 0) : 0
   const giftCardDeduction = gift_card_total != null ? gift_card_total / 100 : 0
+  const displayedTaxTotal =
+    isIntraCommunityExempt ? 0 : (hasGiftCardInItems ? toEuros(tax_total) : (tax_total ?? 0))
+  const vatDeduction = isIntraCommunityExempt ? (hasGiftCardInItems ? toEuros(tax_total) : (tax_total ?? 0)) : 0
 
   // Recalculer le total si panier mixte (produits en euros + bon cadeau en centimes)
+  // Quand hasGiftCardInItems : discount, shipping, tax, total de l'API sont en centimes
   const displayedTotal =
     hasGiftCardInItems && itemsSubtotal != null
       ? itemsSubtotal -
-        (discount_total ?? 0) +
-        (shipping_total ?? 0) +
-        displayedTaxTotal -
+        toEuros(discount_total) +
+        toEuros(shipping_total) +
+        (isIntraCommunityExempt ? 0 : toEuros(tax_total)) -
         giftCardDeduction
-      : isIntraCommunityExempt
-        ? (total ?? 0) - vatDeduction
-        : (total ?? 0)
+      : hasGiftCardInItems && total != null
+        ? toEuros(total) - (isIntraCommunityExempt ? toEuros(tax_total) : 0)
+        : isIntraCommunityExempt
+          ? (total ?? 0) - vatDeduction
+          : (total ?? 0)
 
   return (
     <div>
@@ -101,18 +108,18 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
             <span
               className="font-medium text-green-600"
               data-testid="cart-discount"
-              data-value={discount_total || 0}
+              data-value={hasGiftCardInItems ? toEuros(discount_total) : (discount_total || 0)}
             >
-              - {formatAmount(discount_total ?? 0, currency_code)}
+              - {formatAmount(hasGiftCardInItems ? toEuros(discount_total) : (discount_total ?? 0), currency_code)}
             </span>
           </div>
         )}
 
         <div className="flex items-center justify-between">
           <span className="text-gray-600">Livraison</span>
-          <span className="font-medium text-gray-900" data-testid="cart-shipping" data-value={shipping_total || 0}>
+          <span className="font-medium text-gray-900" data-testid="cart-shipping" data-value={hasGiftCardInItems ? toEuros(shipping_total) : (shipping_total || 0)}>
             {shipping_total
-              ? formatAmount(shipping_total, currency_code)
+              ? formatAmount(hasGiftCardInItems ? toEuros(shipping_total) : shipping_total, currency_code)
               : <span className="text-gray-400 italic text-xs">Calculé à l'étape suivante</span>
             }
           </span>
@@ -131,12 +138,12 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
             {isIntraCommunityExempt ? (
               <span className="flex items-center gap-1.5">
                 <span className="line-through text-gray-400 text-xs">
-                  {formatAmount(tax_total ?? 0, currency_code)}
+                  {formatAmount(hasGiftCardInItems ? toEuros(tax_total) : (tax_total ?? 0), currency_code)}
                 </span>
                 <span>{formatAmount(0, currency_code)}</span>
               </span>
             ) : (
-              formatAmount(tax_total ?? 0, currency_code)
+              formatAmount(hasGiftCardInItems ? toEuros(tax_total) : (tax_total ?? 0), currency_code)
             )}
           </span>
         </div>
