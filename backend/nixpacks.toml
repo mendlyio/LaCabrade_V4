@@ -15,4 +15,6 @@ NPM_CONFIG_LOGLEVEL = "error"
 NPM_CONFIG_FETCH_RETRIES = "5"
 NPM_CONFIG_FETCH_RETRY_MINTIMEOUT = "20000"
 NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT = "120000"
+# Force copy of node_modules (symlink can break in Docker at runtime)
+FORCE_COPY_NODE_MODULES = "1"
 

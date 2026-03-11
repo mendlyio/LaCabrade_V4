@@ -47,10 +47,10 @@ export default function AProposPage() {
       image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/amelie.webp",
     },
     {
-      name: "AMÉLIE D. – La suppléante 🤭",
+      name: "AMÉLIE L. – La suppléante 🤭",
       role: "Conseil & vente",
       description:
-        "Professeure de mathématiques en secondaire et cavalière depuis plus de 30 ans, Amélie met sa rigueur et son enthousiasme au service du magasin. Quelques jours par mois, elle nous accompagne dans les missions du quotidien : conseil, vente, shooting… Toujours fiable et dynamique, elle apporte son sens du détail et sa bonne humeur pour que tout soit parfaitement carré — à l&apos;écurie comme en boutique ✨",
+        "Professeure de mathématiques en secondaire et cavalière depuis plus de 30 ans, Amélie L. met sa rigueur et son enthousiasme quelques jours par mois au service du magasin. Elle apporte son sens du détail et sa bonne humeur pour que tout soit parfaitement carré, à l'écurie comme en boutique.",
       accent: "from-violet-100 to-purple-100",
     },
   ]

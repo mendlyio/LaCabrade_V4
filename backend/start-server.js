@@ -5,12 +5,25 @@
  * Gère les problèmes de connexion au démarrage sur Railway
  */
 
-const { spawn, execSync } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+const { spawn } = require('child_process');
 const { Client } = require('pg');
 
 const MAX_RETRIES = 15;
 const RETRY_DELAY = 5000; // 5 secondes
-const POSTGRES_INITIAL_WAIT = 10000; // 10 secondes d'attente initiale
+// Sur Railway, Postgres est souvent déjà prêt - réduire l'attente initiale
+const POSTGRES_INITIAL_WAIT = process.env.RAILWAY_HEALTHCHECK_TIMEOUT_SEC ? 3000 : 10000;
+
+// S'assurer que node_modules/.bin est dans le PATH (critique pour Docker/Railway)
+function ensurePath() {
+  const cwd = process.cwd();
+  const binPath = path.join(cwd, 'node_modules', '.bin');
+  if (fs.existsSync(binPath)) {
+    process.env.PATH = `${binPath}:${process.env.PATH || ''}`;
+    console.log('   PATH includes node_modules/.bin');
+  }
+}
 
 // Vérifier les variables d'environnement critiques
 function checkEnvironment() {
@@ -72,16 +85,20 @@ async function waitForPostgres() {
   return false;
 }
 
-// Exécuter une commande avec retry
+// Exécuter une commande avec retry (utilise npx pour init-backend)
 async function runCommandWithRetry(command, args, retries = MAX_RETRIES) {
+  const cmd = command === 'init-backend' ? 'npx' : command;
+  const cmdArgs = command === 'init-backend' ? ['init-backend'] : args;
+  
   for (let i = 0; i < retries; i++) {
-    console.log(`🔧 Running: ${command} ${args.join(' ')} (attempt ${i + 1}/${retries})`);
+    console.log(`🔧 Running: ${cmd} ${cmdArgs.join(' ')} (attempt ${i + 1}/${retries})`);
     
     try {
       await new Promise((resolve, reject) => {
-        const proc = spawn(command, args, {
+        const proc = spawn(cmd, cmdArgs, {
           stdio: 'inherit',
           shell: true,
+          env: process.env,
         });
         
         proc.on('close', (code) => {
@@ -117,6 +134,8 @@ async function main() {
   console.log(`   Node version: ${process.version}`);
   console.log(`   Working directory: ${process.cwd()}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'not set'}\n`);
+  
+  ensurePath();
   
   // Étape 1 : Vérifier les variables d'environnement
   checkEnvironment();
@@ -156,10 +175,16 @@ async function main() {
     console.log(`   Node memory limit: ${memoryLimit} MB`);
   }
   
-  const proc = spawn('medusa', ['start', '--verbose'], {
+  const medusaServerPath = path.join(process.cwd(), '.medusa', 'server');
+  if (!fs.existsSync(medusaServerPath)) {
+    console.error('❌ .medusa/server not found. Build may have failed.');
+    process.exit(1);
+  }
+  
+  const proc = spawn('npx', ['medusa', 'start', '--verbose'], {
     stdio: 'inherit',
     shell: true,
-    cwd: '.medusa/server',
+    cwd: medusaServerPath,
     env: process.env,
   });
   

@@ -73,31 +73,49 @@ if (fs.existsSync(srcPath)) {
   console.log('✅ src directory copied successfully (excluding .disabled files)');
 }
 
-// Link node_modules from parent (MUCH faster than npm install)
-console.log('Linking node_modules to .medusa/server...');
+// Link or copy node_modules - sur Railway/Docker, la copie est plus fiable que le symlink
+console.log('Setting up node_modules for .medusa/server...');
 const parentNodeModules = path.join(process.cwd(), 'node_modules');
 const serverNodeModules = path.join(MEDUSA_SERVER_PATH, 'node_modules');
+const forceCopy = process.env.FORCE_COPY_NODE_MODULES || process.env.NIXPACKS || process.env.CI;
 
-try {
-  // Remove existing node_modules in server if any
+function copyNodeModules() {
+  if (!fs.existsSync(parentNodeModules)) {
+    throw new Error('node_modules not found in project root');
+  }
   if (fs.existsSync(serverNodeModules)) {
     fs.rmSync(serverNodeModules, { recursive: true, force: true });
   }
-  
-  // Create symlink to parent's node_modules (instant, no download needed)
-  fs.symlinkSync(parentNodeModules, serverNodeModules, 'dir');
-  console.log('✅ node_modules linked successfully (symlink)');
-} catch (symlinkError) {
-  console.log('Symlink failed, trying copy instead...');
+  fs.mkdirSync(path.dirname(serverNodeModules), { recursive: true });
+  fs.cpSync(parentNodeModules, serverNodeModules, { recursive: true });
+  console.log('✅ node_modules copied successfully');
+}
+
+if (forceCopy) {
+  console.log('Using copy (Nixpacks/CI/Railway detected)...');
+  copyNodeModules();
+} else {
   try {
-    // Fallback: copy node_modules (slower but works on all systems)
-    execSync(`cp -r "${parentNodeModules}" "${serverNodeModules}"`, { 
-      stdio: 'inherit',
-      timeout: 300000 // 5 minutes max
-    });
-    console.log('✅ node_modules copied successfully');
-  } catch (copyError) {
-    console.error('⚠️ Warning: Could not link/copy node_modules:', copyError.message);
-    // Don't throw - try to continue anyway
+    if (fs.existsSync(serverNodeModules)) {
+      fs.rmSync(serverNodeModules, { recursive: true, force: true });
+    }
+    fs.symlinkSync(parentNodeModules, serverNodeModules, 'dir');
+    console.log('✅ node_modules linked successfully (symlink)');
+  } catch (symlinkError) {
+    console.log('Symlink failed, copying instead...');
+    try {
+      copyNodeModules();
+    } catch (copyError) {
+      try {
+        execSync(`cp -r "${parentNodeModules}" "${serverNodeModules}"`, {
+          stdio: 'inherit',
+          timeout: 300000,
+        });
+        console.log('✅ node_modules copied via cp');
+      } catch (execError) {
+        console.error('❌ Failed to link/copy node_modules:', execError.message);
+        throw new Error('postBuild: node_modules setup failed.');
+      }
+    }
   }
 }
