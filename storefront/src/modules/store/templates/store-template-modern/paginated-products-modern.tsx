@@ -70,7 +70,8 @@ export default async function PaginatedProductsModern({
   const sortBy = searchParams.sortBy || '-created_at'
   const needsClientSideSort =
     sortBy === 'price_asc' || sortBy === 'price_desc' || sortBy === 'title_asc' || sortBy === 'title_desc'
-  const limit = hasClientSideFilters || hasCategoryFilter || needsClientSideSort ? 50 : 12
+  const hasSearchQuery = !!(searchParams.q?.trim() && searchParams.q.trim().length >= 2)
+  const limit = hasClientSideFilters || hasCategoryFilter || needsClientSideSort || hasSearchQuery ? 100 : 12
 
   // Récupérer les catégories et collections pour convertir les handles en IDs
   let categories: any[] = []
@@ -186,7 +187,7 @@ export default async function PaginatedProductsModern({
   // Pour filtre marque, page catégorie OU tri prix/titre : on récupère TOUS les produits et on trie côté client
   let result
   try {
-    if (hasBrandFilter || hasCategoryFilter || needsClientSideSort) {
+    if (hasBrandFilter || hasCategoryFilter || needsClientSideSort || hasSearchQuery) {
       // Fetch ALL products in batches and filter by brand server-side
       const batchSize = 100
       let allProducts: any[] = []
@@ -285,6 +286,17 @@ export default async function PaginatedProductsModern({
   // Filtrage côté client pour les fonctionnalités non supportées par l'API
   let filteredProducts = [...products]
 
+  // Recherche : filtrer par titre/handle car l'API Medusa renvoie des faux positifs (ex: "gant" → bottes)
+  if (rawQuery && rawQuery.length >= 2) {
+    const qLower = rawQuery.toLowerCase()
+    filteredProducts = filteredProducts.filter((p) => {
+      const title = (p.title || "").toLowerCase()
+      const handle = (p.handle || "").toLowerCase()
+      const variantTitles = (p.variants || []).map((v: any) => (v.title || "").toLowerCase()).join(" ")
+      return title.includes(qLower) || handle.includes(qLower) || variantTitles.includes(qLower)
+    })
+  }
+
   // Note: le filtre par marque est déjà appliqué côté serveur (fetch complet)
 
   // Filtre par prix
@@ -317,13 +329,14 @@ export default async function PaginatedProductsModern({
     })
   }
 
-  // ─── Trier les produits LC-Equestrian en premier (uniquement en mode "Nouveautés" sans filtre) ───
-  // Dès qu'un filtre est actif (tri, prix, stock, promo, marque, catégorie), on respecte le choix de l'utilisateur
+  // ─── Trier les produits LC-Equestrian en premier (catégories + boutique sans filtre) ───
+  // Sur une page catégorie (ex: Cavalier), LC-Equestrian en priorité par défaut.
+  // Dès qu'un filtre utilisateur est actif (tri, prix, stock, promo, marque, recherche), on respecte le choix.
+  // Note: hasCategoryFilter n'est PAS un "filtre actif" — c'est la navigation normale vers une catégorie.
   const userHasActiveFilter =
     needsClientSideSort ||
     hasClientSideFilters ||
     hasBrandFilter ||
-    hasCategoryFilter ||
     !!searchParams.q
   const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
   const isLcEquestrian = (p: any) =>
@@ -344,9 +357,9 @@ export default async function PaginatedProductsModern({
   // Mettre à jour le count total après filtrage
   const totalFilteredCount = filteredProducts.length
   
-  // Si on a des filtres côté client (prix, stock, promo), marque, page catégorie ou tri prix/titre, paginer les résultats filtrés
+  // Si on a des filtres côté client (prix, stock, promo), marque, page catégorie, tri ou recherche, paginer les résultats filtrés
   const displayLimit = 12 // Toujours afficher 12 produits par page
-  const needsClientPagination = hasClientSideFilters || hasBrandFilter || hasCategoryFilter || needsClientSideSort
+  const needsClientPagination = hasClientSideFilters || hasBrandFilter || hasCategoryFilter || needsClientSideSort || hasSearchQuery
   const startIndex = (page - 1) * displayLimit
   const endIndex = startIndex + displayLimit
   

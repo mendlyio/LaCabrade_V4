@@ -7,7 +7,7 @@ import { StoreProductCategory, StoreRegion } from "@medusajs/types"
 import CategoryTemplateModern from "@modules/categories/templates/category-template-modern"
 
 type Props = {
-  params: { category: string[]; countryCode: string }
+  params: Promise<{ category: string[]; countryCode: string }>
   searchParams: {
     sortBy?: string
     page?: string
@@ -58,7 +58,8 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    const { product_categories } = await getCategoryByHandle(params.category)
+    const { category } = await params
+    const { product_categories } = await getCategoryByHandle(category)
 
     if (!product_categories || product_categories.length === 0) {
       return { title: "Catégorie | La Cabrade" }
@@ -75,7 +76,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${title} | La Cabrade`,
       description,
       alternates: {
-        canonical: `${params.category.join("/")}`,
+        canonical: `${category.join("/")}`,
       },
     }
   } catch {
@@ -84,9 +85,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
+  const { category, countryCode } = await params
   let product_categories
   try {
-    const result = await getCategoryByHandle(params.category)
+    const result = await getCategoryByHandle(category)
     product_categories = result?.product_categories
   } catch (error) {
     console.error("Erreur lors de la récupération des catégories:", error)
@@ -101,7 +103,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     <CategoryTemplateModern
       categories={product_categories}
       searchParams={searchParams}
-      countryCode={params.countryCode}
+      countryCode={countryCode}
     />
   )
 }

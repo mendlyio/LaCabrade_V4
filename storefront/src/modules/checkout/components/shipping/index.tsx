@@ -92,13 +92,16 @@ const Shipping: React.FC<ShippingProps> = ({
 
     setIsLoading(true)
     try {
-      const goingToBpostHome = isBpostHomeOption(newOption)
+      // Réinitialiser l'adresse de livraison vers la facturation quand on quitte
+      // le point relais ou le retrait magasin pour toute option nécessitant l'adresse client
+      const requiresCustomerAddress =
+        !isBpostPickupOption(newOption) && !isStorePickupOption(newOption)
 
       await clearShippingMetadata({
         cartId: cart.id,
         clearBpostPickup: true,
         clearPickupLocation: true,
-        resetShippingToBilling: goingToBpostHome,
+        resetShippingToBilling: requiresCustomerAddress,
       })
 
       await setShippingMethod({ cartId: cart.id, shippingMethodId: id })
