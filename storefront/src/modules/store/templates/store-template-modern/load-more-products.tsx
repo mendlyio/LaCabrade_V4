@@ -90,7 +90,9 @@ function ProductCardClient({
   const isLcEquestrian = categories.some((cat: any) =>
     LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase())
   )
-  const isOutlet = categories.some((cat: any) => cat.handle?.toLowerCase() === "outlet")
+  const isOutlet = categories.some((cat: any) =>
+    ["outlet", "outlet-727"].includes((cat.handle || "").toLowerCase())
+  )
 
   // Prix outlet : -50% affiché (la promotion OUTLET_50 gère le checkout)
   const outletOriginalNumber = isOutlet ? (price ?? 0) : 0

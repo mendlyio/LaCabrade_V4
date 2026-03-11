@@ -1,6 +1,6 @@
 "use client"
 
-import { addToCart } from "@lib/data/cart"
+import { addToCart, addOutletItem } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
 import { trackGA4AddToCart, trackMetaAddToCart } from "@lib/tracking"
 import { HttpTypes } from "@medusajs/types"
@@ -29,12 +29,23 @@ const CheckoutUpsell = ({ products, cartItems, currencyCode, stepNumber = 3 }: C
     const variant = product.variants?.[0]
     if (!variant) return
 
+    const categories = (product as any).categories || []
+    const isOutlet = categories.some((cat: any) =>
+      ["outlet", "outlet-727"].includes((cat.handle || "").toLowerCase())
+    )
+
     setLoadingId(product.id)
     try {
-      await addToCart({ variantId: variant.id, quantity: 1, countryCode })
+      if (isOutlet) {
+        await addOutletItem({ variantId: variant.id, quantity: 1, countryCode })
+      } else {
+        await addToCart({ variantId: variant.id, quantity: 1, countryCode })
+      }
       setAddedIds((prev) => new Set(prev).add(product.id))
 
-      const rawAmount = (variant as any)?.calculated_price?.calculated_amount
+      const rawAmount = isOutlet
+        ? ((variant as any)?.calculated_price?.calculated_amount ?? (variant as any)?.calculated_price?.original_amount ?? 0) * 0.5
+        : (variant as any)?.calculated_price?.calculated_amount
       if (rawAmount != null) {
         const item = {
           item_id: variant.id,
@@ -65,7 +76,13 @@ const CheckoutUpsell = ({ products, cartItems, currencyCode, stepNumber = 3 }: C
 
   const getPrice = (product: HttpTypes.StoreProduct) => {
     const variant = product.variants?.[0]
-    const rawPrice = (variant as any)?.calculated_price?.calculated_amount
+    const categories = (product as any).categories || []
+    const isOutlet = categories.some((cat: any) =>
+      ["outlet", "outlet-727"].includes((cat.handle || "").toLowerCase())
+    )
+    const rawPrice = isOutlet
+      ? ((variant as any)?.calculated_price?.calculated_amount ?? (variant as any)?.calculated_price?.original_amount ?? 0) * 0.5
+      : (variant as any)?.calculated_price?.calculated_amount
     if (rawPrice != null) {
       return convertToLocale({ amount: rawPrice, currency_code: currencyCode })
     }

@@ -46,7 +46,9 @@ export default async function ProductCardModern({
   const isLcEquestrian = categories.some((cat: any) =>
     LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase())
   )
-  const isOutlet = categories.some((cat: any) => cat.handle?.toLowerCase() === "outlet")
+  const isOutlet = categories.some((cat: any) =>
+    ["outlet", "outlet-727"].includes((cat.handle || "").toLowerCase())
+  )
 
   // Prix outlet : -50% appliqué visuellement (la promotion gère le checkout)
   const outletOriginalNumber = isOutlet ? (cheapestPrice?.calculated_price_number ?? 0) : 0

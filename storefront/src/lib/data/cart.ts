@@ -149,6 +149,55 @@ export async function addLastChanceItem({
   return res.json()
 }
 
+export async function addOutletItem({
+  variantId,
+  quantity,
+  countryCode,
+}: {
+  variantId: string
+  quantity?: number
+  countryCode: string
+}) {
+  if (!variantId) {
+    throw new Error("Missing variant ID")
+  }
+
+  const cart = await getOrSetCart(countryCode)
+  if (!cart) {
+    throw new Error("Error retrieving or creating cart")
+  }
+
+  const backendUrl =
+    process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  }
+
+  const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+  if (publishableKey) {
+    headers["x-publishable-api-key"] = publishableKey
+  }
+
+  const res = await fetch(`${backendUrl}/store/custom/outlet-add-to-cart`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      cart_id: cart.id,
+      variant_id: variantId,
+      quantity: quantity ?? 1,
+    }),
+  })
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: "Erreur inconnue" }))
+    throw new Error(error.message || "Erreur lors de l'ajout outlet")
+  }
+
+  revalidateTag("cart")
+  return res.json()
+}
+
 export async function updateLineItem({
   lineId,
   quantity,

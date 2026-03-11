@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { HttpTypes } from "@medusajs/types"
 import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
-import { addToCart } from "@lib/data/cart"
+import { addToCart, addOutletItem } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
 import { trackGA4AddToCart, trackMetaAddToCart } from "@lib/tracking"
 
@@ -159,16 +159,26 @@ export default function ProductActionsModern({
 
     setIsAdding(true)
     try {
-      await addToCart({
-        variantId: selectedVariant.id,
-        quantity,
-        countryCode,
-      })
+      if (isOutlet) {
+        await addOutletItem({
+          variantId: selectedVariant.id,
+          quantity,
+          countryCode,
+        })
+      } else {
+        await addToCart({
+          variantId: selectedVariant.id,
+          quantity,
+          countryCode,
+        })
+      }
       setAddedToCart(true)
       setTimeout(() => setAddedToCart(false), 3000)
 
       // Tracking e-commerce (produits Odoo en euros)
-      const amount = (selectedVariant as any)?.calculated_price?.calculated_amount
+      const amount = isOutlet
+        ? ((selectedVariant as any)?.calculated_price?.calculated_amount ?? (selectedVariant as any)?.calculated_price?.original_amount ?? 0) * 0.5
+        : (selectedVariant as any)?.calculated_price?.calculated_amount
       const currency = (selectedVariant as any)?.calculated_price?.currency_code ?? "EUR"
       if (amount != null) {
         const item = {
@@ -243,7 +253,9 @@ export default function ProductActionsModern({
 
   // ── Prix réactif ────────────────────────────────────────────────────────────
   const categories = (product as any).categories || []
-  const isOutlet = categories.some((cat: any) => cat.handle?.toLowerCase() === "outlet")
+  const isOutlet = categories.some((cat: any) =>
+    ["outlet", "outlet-727"].includes((cat.handle || "").toLowerCase())
+  )
 
   const priceData = useMemo(() => {
     // Utiliser le variant sélectionné si disponible, sinon le variant le moins cher
