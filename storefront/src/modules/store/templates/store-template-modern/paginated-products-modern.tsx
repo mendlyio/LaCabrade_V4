@@ -232,11 +232,12 @@ export default async function PaginatedProductsModern({
       }
 
       // Tri par prix/titre côté client (l'API Medusa a des bugs avec order=variants.calculated_price)
+      // Sur page catégorie : LC-Equestrian reste prioritaire tout en respectant le tri choisi
       if (needsClientSideSort) {
         finalProducts = sortProducts(
           finalProducts,
           sortBy as "price_asc" | "price_desc" | "title_asc" | "title_desc" | "created_at",
-          false
+          hasCategoryFilter
         )
       }
 

@@ -340,16 +340,24 @@ const Shipping: React.FC<ShippingProps> = ({
                   cart?.currency_code ?? "eur"
                 )}
               </p>
-              {/* Afficher le magasin de retrait si applicable */}
-              {(cart.metadata?.pickup_location as any)?.name && (
+              {/* Adresse affichée selon le mode : point relais / retrait magasin / domicile */}
+              {selectedShippingMethod && isStorePickupOption(selectedShippingMethod) && (cart.metadata?.pickup_location as any)?.name && (
                 <p className="text-sm text-amber-700 font-medium mt-2">
                   📍 {(cart.metadata.pickup_location as any).name}
                 </p>
               )}
-              {/* Afficher le point relais Bpost si applicable */}
-              {(cart.metadata?.bpost_pickup_point as any)?.Name && (
+              {selectedShippingMethod && isBpostPickupOption(selectedShippingMethod) && (cart.metadata?.bpost_pickup_point as any)?.Name && (
                 <p className="text-sm text-amber-700 font-medium mt-2">
                   📍 {(cart.metadata.bpost_pickup_point as any).Name}
+                </p>
+              )}
+              {selectedShippingMethod && !isStorePickupOption(selectedShippingMethod) && !isBpostPickupOption(selectedShippingMethod) && cart?.shipping_address && (
+                <p className="text-sm text-gray-700 mt-2">
+                  📍 {[
+                    cart.shipping_address.address_1,
+                    cart.shipping_address.postal_code,
+                    cart.shipping_address.city,
+                  ].filter(Boolean).join(", ")}
                 </p>
               )}
             </div>
