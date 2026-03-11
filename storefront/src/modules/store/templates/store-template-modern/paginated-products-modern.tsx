@@ -1,6 +1,7 @@
 import { getRegion } from "@lib/data/regions"
 import { getProductsList } from "@lib/data/products"
 import { slugify } from "@lib/util/slugify"
+import { sortProducts } from "@lib/util/sort-products"
 import { listCategories } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
 import { buildCategoryTree } from "@lib/util/category-tree"
@@ -64,7 +65,12 @@ export default async function PaginatedProductsModern({
   const hasBrandFilter = !!searchParams.brand
   // Pages catégorie : on récupère tous les produits pour trier LC-Equestrian en premier
   const hasCategoryFilter = !!searchParams.category
-  const limit = hasClientSideFilters || hasCategoryFilter ? 50 : 12
+  // Tri par prix/titre : l'API Medusa a des bugs avec order=variants.calculated_price,
+  // on récupère tout et on trie côté client
+  const sortBy = searchParams.sortBy || '-created_at'
+  const needsClientSideSort =
+    sortBy === 'price_asc' || sortBy === 'price_desc' || sortBy === 'title_asc' || sortBy === 'title_desc'
+  const limit = hasClientSideFilters || hasCategoryFilter || needsClientSideSort ? 50 : 12
 
   // Récupérer les catégories et collections pour convertir les handles en IDs
   let categories: any[] = []
@@ -165,28 +171,19 @@ export default async function PaginatedProductsModern({
 
   // Note: Les filtres de prix, stock et promotions seront appliqués côté client après récupération
 
-  // Tri
-  const sortBy = searchParams.sortBy || '-created_at'
-  
-  // Le tri est appliqué directement dans queryParams.order
-  if (sortBy === 'price_asc') {
-    queryParams.order = 'variants.calculated_price'
-  } else if (sortBy === 'price_desc') {
-    queryParams.order = '-variants.calculated_price'
-  } else if (sortBy === 'title_asc') {
-    queryParams.order = 'title'
-  } else if (sortBy === 'title_desc') {
-    queryParams.order = '-title'
+  // Le tri par prix/titre est fait côté client (needsClientSideSort). Sinon on passe order à l'API.
+  if (!needsClientSideSort) {
+    queryParams.order = '-created_at'
   } else {
-    // Par défaut, tri par date de création décroissante (plus récents en premier)
+    // L'API peut ne pas supporter ces champs correctement, on trie côté client
     queryParams.order = '-created_at'
   }
 
   // ─── Récupérer les produits ───
-  // Pour filtre marque OU page catégorie : on récupère TOUS les produits pour trier LC-Equestrian en premier
+  // Pour filtre marque, page catégorie OU tri prix/titre : on récupère TOUS les produits et on trie côté client
   let result
   try {
-    if (hasBrandFilter || hasCategoryFilter) {
+    if (hasBrandFilter || hasCategoryFilter || needsClientSideSort) {
       // Fetch ALL products in batches and filter by brand server-side
       const batchSize = 100
       let allProducts: any[] = []
@@ -219,6 +216,15 @@ export default async function PaginatedProductsModern({
           const productBrand = metadataBrand || collectionBrand || ""
           return slugify(productBrand) === normalizedBrand
         })
+      }
+
+      // Tri par prix/titre côté client (l'API Medusa a des bugs avec order=variants.calculated_price)
+      if (needsClientSideSort) {
+        finalProducts = sortProducts(
+          finalProducts,
+          sortBy as "price_asc" | "price_desc" | "title_asc" | "title_desc" | "created_at",
+          false
+        )
       }
 
       result = {
@@ -318,9 +324,9 @@ export default async function PaginatedProductsModern({
   // Mettre à jour le count total après filtrage
   const totalFilteredCount = filteredProducts.length
   
-  // Si on a des filtres côté client (prix, stock, promo), marque ou page catégorie, paginer les résultats filtrés
+  // Si on a des filtres côté client (prix, stock, promo), marque, page catégorie ou tri prix/titre, paginer les résultats filtrés
   const displayLimit = 12 // Toujours afficher 12 produits par page
-  const needsClientPagination = hasClientSideFilters || hasBrandFilter || hasCategoryFilter
+  const needsClientPagination = hasClientSideFilters || hasBrandFilter || hasCategoryFilter || needsClientSideSort
   const startIndex = (page - 1) * displayLimit
   const endIndex = startIndex + displayLimit
   

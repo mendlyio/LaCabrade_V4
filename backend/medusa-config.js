@@ -225,7 +225,9 @@ const medusaConfig = {
             enabled: true,
             fields: ['id', 'title', 'description', 'handle', 'variant_sku', 'thumbnail'],
             indexSettings: {
-              searchableAttributes: ['title', 'description', 'handle', 'variant_sku'],
+              // Ne pas inclure 'description' : elle provoque des faux positifs
+              // (ex: "gants" matche "À utiliser avec des gants" dans des produits non pertinents)
+              searchableAttributes: ['title', 'handle', 'variant_sku'],
               displayedAttributes: ['id', 'handle', 'title', 'description', 'variant_sku', 'thumbnail'],
               filterableAttributes: ['id', 'handle'],
               typoTolerance: {

@@ -66,23 +66,14 @@ const HeroCarousel = () => {
         ))}
       </div>
 
-      {/* Bouton par slide — positionné en bas */}
+      {/* Bouton CTA — un seul rendu pour la slide courante (évite les clics sur le mauvais lien) */}
       <div className="absolute bottom-20 sm:bottom-24 left-0 right-0 z-20 flex justify-center px-4">
-        {slides.map((slide, index) => (
-          <div
-            key={slide.id}
-            className={`transition-opacity duration-700 ${
-              index === currentSlide ? 'opacity-100' : 'opacity-0 absolute'
-            }`}
-          >
-            <LocalizedClientLink
-              href={slide.buttonHref}
-              className={`inline-flex px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-semibold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${slide.buttonStyle}`}
-            >
-              {slide.buttonText}
-            </LocalizedClientLink>
-          </div>
-        ))}
+        <LocalizedClientLink
+          href={slides[currentSlide].buttonHref}
+          className={`inline-flex px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-semibold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${slides[currentSlide].buttonStyle}`}
+        >
+          {slides[currentSlide].buttonText}
+        </LocalizedClientLink>
       </div>
 
       {/* Indicateurs de slides */}

@@ -121,7 +121,11 @@ export default function FiltersModern({ brands }: FiltersModernProps) {
             </label>
             <select
               value={searchParams.get('sortBy') || '-created_at'}
-              onChange={(e) => updateFilters({ sortBy: e.target.value === '-created_at' ? null : e.target.value })}
+              onChange={(e) => {
+                const newSort = e.target.value === '-created_at' ? null : e.target.value
+                // Réinitialiser la page à 1 quand on change le tri
+                updateFilters({ sortBy: newSort, page: null })
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm bg-white"
             >
               <option value="-created_at">Nouveautés</option>

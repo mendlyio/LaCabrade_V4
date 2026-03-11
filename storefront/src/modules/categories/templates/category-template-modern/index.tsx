@@ -92,12 +92,6 @@ export default async function CategoryTemplateModern({
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
               {category.name}
             </h1>
-            
-            {category.description && (
-              <p className="text-lg text-white/90 mb-4">
-                {category.description}
-              </p>
-            )}
 
             {activeFilters > 0 && (
               <div className="mt-4 flex items-center gap-2 text-sm">
@@ -110,6 +104,17 @@ export default async function CategoryTemplateModern({
           </div>
         </div>
       </div>
+
+      {/* Description — pleine largeur */}
+      {category.description && (
+        <div className="w-full px-6 py-8 bg-white/80">
+          <div className="max-w-[1440px] mx-auto">
+            <p className="text-base text-gray-700 leading-relaxed max-w-none">
+              {category.description}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Sous-catégories — repliable */}
       {categoryChildren.length > 0 && (
