@@ -74,6 +74,10 @@ export const getCategoryByHandle = cache(async function (
     }
   }
 
+  const slugifiedForMatch = decoded.length === 1 && decoded[0].includes(",")
+    ? decoded[0].replace(/,\s*-/g, "-").replace(/,/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")
+    : null
+
   let result: Awaited<ReturnType<typeof sdk.store.category.list>> = { product_categories: [], count: 0, limit: 0, offset: 0 }
   for (const handlesToTry of candidates) {
     result = await sdk.store.category.list(
@@ -88,6 +92,21 @@ export const getCategoryByHandle = cache(async function (
         const leaf = result.product_categories.find((c: any) => c.handle === leafHandle)
         if (leaf) {
           result = { ...result, product_categories: [leaf] }
+        }
+      }
+      // Cas "bonnets" (cheval) vs "bonnets, bandeaux, écharpes et tours de cou" (cavalier) :
+      // l'API peut retourner "bonnets" à tort. On ne garde que si le handle correspond vraiment.
+      if (slugifiedForMatch && slugifiedForMatch.includes("-") && result.product_categories.length > 0) {
+        const best = result.product_categories.find(
+          (c: any) =>
+            c.handle === slugifiedForMatch ||
+            (c.handle?.startsWith(slugifiedForMatch + "-") && /-\d+$/.test(c.handle || ""))
+        )
+        if (!best) {
+          // Mauvais match (ex: API a retourné "bonnets" au lieu de "bonnets-bandeaux-...")
+          result = { ...result, product_categories: [] }
+        } else {
+          result = { ...result, product_categories: [best] }
         }
       }
       break

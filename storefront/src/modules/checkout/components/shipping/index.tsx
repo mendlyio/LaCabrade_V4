@@ -82,15 +82,11 @@ const Shipping: React.FC<ShippingProps> = ({
     router.push(pathname + "?step=payment", { scroll: false })
   }
 
-  const scrollToDeliveryOptions = () => {
-    deliveryOptionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-  }
-
   const set = async (id: string) => {
     const newOption = availableShippingMethods?.find((o) => o.id === id)
     if (!newOption) return
 
-    // Feedback immédiat : afficher la sélection tout de suite
+    // Feedback immédiat : afficher la sélection tout de suite (ne pas effacer avant que le cart soit à jour)
     setPendingMethodId(id)
     setError(null)
 
@@ -108,14 +104,21 @@ const Shipping: React.FC<ShippingProps> = ({
       await setShippingMethod({ cartId: cart.id, shippingMethodId: id })
 
       router.refresh()
+      // Ne pas effacer pendingMethodId ici : on le garde jusqu'à ce que le cart soit rafraîchi
     } catch (err: any) {
       setError(err?.message ?? "Erreur lors du changement")
       setPendingMethodId(null)
     } finally {
       setIsLoading(false)
-      setPendingMethodId(null)
     }
   }
+
+  // Effacer pendingMethodId une fois que le cart reflète notre sélection
+  useEffect(() => {
+    if (pendingMethodId && selectedShippingMethod?.id === pendingMethodId) {
+      setPendingMethodId(null)
+    }
+  }, [pendingMethodId, selectedShippingMethod?.id])
 
   useEffect(() => {
     setError(null)
@@ -245,20 +248,50 @@ const Shipping: React.FC<ShippingProps> = ({
             ((displayedMethod as any)?.metadata?.mode === "pickup" || 
              (displayedMethod as any)?.data?.mode === "pickup") && (
             <div className="mt-4">
-              <div className="flex items-center justify-between gap-3 mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-sm text-amber-800">
-                  Choisissez un point relais ou changez de mode de livraison.
+              <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800 mb-2">
+                  Choisissez un point relais.
                 </p>
-                <Button
-                  variant="secondary"
-                  size="small"
-                  onClick={scrollToDeliveryOptions}
-                  className="shrink-0 text-amber-700 border-amber-300 hover:bg-amber-100"
-                >
-                  Changer de mode
-                </Button>
+                {/* Liens directs pour changer de mode sans bouton */}
+                <div className="flex flex-wrap gap-2">
+                  {(Array.isArray(availableShippingMethods) ? availableShippingMethods : [])
+                    .filter((o) => o.id !== displayedMethod?.id && (isBpostHomeOption(o) || isBpostPickupOption(o)))
+                    .map((o) => (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => set(o.id)}
+                        disabled={isLoading}
+                        className="text-sm font-medium text-amber-700 hover:text-amber-900 hover:underline underline-offset-2 transition-colors disabled:opacity-50"
+                      >
+                        → {o.name}
+                      </button>
+                    ))}
+                </div>
               </div>
               <PickupPoints key={displayedMethod.id} cart={cart} />
+            </div>
+          )}
+
+          {/* Bpost Domicile : lien pour passer au Point Relais */}
+          {displayedMethod && isBpostHomeOption(displayedMethod) && (
+            <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-sm text-gray-700 mb-2">Préférez un point relais ?</p>
+              <div className="flex flex-wrap gap-2">
+                {(Array.isArray(availableShippingMethods) ? availableShippingMethods : [])
+                  .filter(isBpostPickupOption)
+                  .map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => set(o.id)}
+                      disabled={isLoading}
+                      className="text-sm font-medium text-amber-700 hover:text-amber-900 hover:underline underline-offset-2 transition-colors disabled:opacity-50"
+                    >
+                      → {o.name}
+                    </button>
+                  ))}
+              </div>
             </div>
           )}
 
