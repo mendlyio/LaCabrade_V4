@@ -61,15 +61,12 @@ export const getCategoryByHandle = cache(async function (
 
   // Cas : un seul segment avec virgules (ex: "bonnets,-bandeaux,-echarpes-et-tours-de-cou")
   // → C'est le handle slugifié d'une catégorie parente comme "bonnets, bandeaux, écharpes et tours de cou"
-  //   (à ne PAS confondre avec la sous-catégorie "bonnets"). On priorise le handle slugifié.
-  //   L'option "chemin" ["bonnets", "bandeaux", "echarpes-et-tours-de-cou"] est retirée car elle
-  //   faisait matcher à tort la catégorie "bonnets" via l'API Medusa.
+  //   Prioriser le slugifié pour éviter de matcher "bonnets" à tort ; puis essayer le handle exact (virgules).
   const candidates: string[][] = [decoded]
   if (decoded.length === 1 && decoded[0].includes(",")) {
     const segment = decoded[0]
     const slugified = segment.replace(/,\s*-/g, "-").replace(/,/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")
     if (slugified && slugified !== segment) {
-      // Prioriser le slugifié pour éviter de matcher "bonnets" à tort
       candidates.unshift([slugified])
     }
   }
@@ -80,9 +77,11 @@ export const getCategoryByHandle = cache(async function (
 
   let result: Awaited<ReturnType<typeof sdk.store.category.list>> = { product_categories: [], count: 0, limit: 0, offset: 0 }
   for (const handlesToTry of candidates) {
+    // L'API Medusa accepte handle en string ou string[] ; essayer les deux formats
+    const handleParam = handlesToTry.length === 1 ? handlesToTry[0] : handlesToTry
     result = await sdk.store.category.list(
       // @ts-ignore
-      { handle: handlesToTry },
+      { handle: handleParam },
       { next: { tags: ["categories"] } }
     )
     if (result.product_categories && result.product_categories.length > 0) {
@@ -113,20 +112,27 @@ export const getCategoryByHandle = cache(async function (
     }
   }
 
-  // Fallback : handles avec suffixe ID (ex: bonnets-bandeaux-echarpes-et-tours-de-cou-123)
+  // Fallback : parcourir toutes les catégories pour matcher le handle (ex: virgules, suffixe ID)
   const slugifiedCandidate = decoded.length === 1 && decoded[0].includes(",")
     ? decoded[0].replace(/,\s*-/g, "-").replace(/,/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")
-    : null
-  if (
-    result.product_categories?.length === 0 &&
-    slugifiedCandidate &&
-    slugifiedCandidate.length > 10
-  ) {
+    : decoded.length === 1
+      ? decoded[0]
+      : null
+  const originalCandidate = decoded.length === 1 ? decoded[0] : null
+
+  if (result.product_categories?.length === 0 && (slugifiedCandidate || originalCandidate)) {
     const all = await listCategories()
     const match = all.find(
-      (c: any) =>
-        c.handle === slugifiedCandidate ||
-        (c.handle?.startsWith(slugifiedCandidate + "-") && /-\d+$/.test(c.handle))
+      (c: any) => {
+        const h = c.handle || ""
+        // Match exact
+        if (h === slugifiedCandidate || h === originalCandidate) return true
+        // Match avec suffixe ID (ex: bonnets-bandeaux-echarpes-et-tours-de-cou-123)
+        if (slugifiedCandidate && h.startsWith(slugifiedCandidate + "-") && /-\d+$/.test(h)) return true
+        // Match handle avec virgules (ex: bonnets,-bandeaux,-echarpes-et-tours-de-cou)
+        if (originalCandidate && originalCandidate.includes(",") && h === originalCandidate) return true
+        return false
+      }
     )
     if (match) {
       result = { ...result, product_categories: [match] }
