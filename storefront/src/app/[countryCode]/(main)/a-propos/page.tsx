@@ -14,6 +14,7 @@ export default function AProposPage() {
       description:
         "Mélissa a repris la sellerie en juillet 2022, depuis, elle met tout son cœur dans cette aventure. Toujours à l’écoute et de bon conseil, elle met un point d’honneur à satisfaire les besoins de sa clientèle.",
       accent: "from-pink-100 to-rose-100",
+      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/melissa.webp",
     },
     {
       name: "FLORIANE - L’ultra polyvalente 🤩",
@@ -28,6 +29,7 @@ export default function AProposPage() {
       description:
         "Elle est une véritable perle en matière de communication et de création de contenu. Elena sublime nos produits sur les réseaux sociaux grâce à son œil avisé et à sa créativité débordante.",
       accent: "from-green-100 to-emerald-100",
+      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/elena.webp",
     },
     {
       name: "CLARA - La motivée 😁",
@@ -42,6 +44,7 @@ export default function AProposPage() {
       description:
         "Amélie, notre secrétaire attitrée, veille au bon fonctionnement du bureau au quotidien. Elle met de temps en temps ses compétences créatives au service du magasin en réalisant certains de nos visuels.",
       accent: "from-slate-100 to-gray-100",
+      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/amelie.webp",
     },
     {
       name: "AMÉLIE D. – La suppléante 🤭",
@@ -127,11 +130,21 @@ export default function AProposPage() {
                   className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow"
                 >
                   <div className={`relative h-64 bg-gradient-to-br ${member.accent}`}>
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                      <svg className="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    </div>
+                    {member.image ? (
+                      <Image
+                        src={member.image}
+                        alt={member.name}
+                        fill
+                        className="object-cover"
+                        sizes="(min-width: 768px) 33vw, (min-width: 1024px) 25vw, 100vw"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                        <svg className="w-20 h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
                   <div className="p-6">
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">

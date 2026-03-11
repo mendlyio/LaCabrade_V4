@@ -11,9 +11,13 @@ export const getAuthHeaders = (): { authorization: string } | {} => {
   return {}
 }
 
+/** Durée de session : 30 jours (reste connecté) */
+const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 30
+
 export const setAuthToken = (token: string) => {
   cookies().set("_medusa_jwt", token, {
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: AUTH_COOKIE_MAX_AGE,
+    path: "/",
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",

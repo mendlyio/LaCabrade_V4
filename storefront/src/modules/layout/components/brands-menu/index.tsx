@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment } from "react"
+import { Fragment, useRef } from "react"
 import { Popover, Transition } from "@headlessui/react"
 import { ChevronDown } from "@medusajs/icons"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -13,6 +13,15 @@ type BrandsMenuProps = {
 
 const BrandsMenu = ({ brands }: BrandsMenuProps) => {
   const t = useTranslate()
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const handleMenuEnter = () => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+  }
+
+  const handleMenuLeave = (close: () => void) => {
+    timeoutRef.current = setTimeout(() => close(), 100)
+  }
 
   // Si pas de marques, ne rien afficher ou un lien simple
   if (!brands || brands.length === 0) {
@@ -29,7 +38,11 @@ const BrandsMenu = ({ brands }: BrandsMenuProps) => {
   return (
     <Popover className="relative">
       {({ open, close }) => (
-        <>
+        <div
+          className="relative"
+          onMouseEnter={handleMenuEnter}
+          onMouseLeave={() => handleMenuLeave(close)}
+        >
           <Popover.Button
             className={`
               flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium outline-none
@@ -91,7 +104,7 @@ const BrandsMenu = ({ brands }: BrandsMenuProps) => {
               </div>
             </Popover.Panel>
           </Transition>
-        </>
+        </div>
       )}
     </Popover>
   )

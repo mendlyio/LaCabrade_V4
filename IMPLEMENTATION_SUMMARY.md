@@ -113,7 +113,7 @@ Toutes créées avec structure professionnelle, placeholder Lorem Ipsum à compl
 
 **Fichiers :** `/backend/src/subscribers/*`
 
-**Configuration :** Tous les emails utilisent `info@lacabrade.be` en reply-to
+**Configuration :** Tous les emails utilisent `info@sellerie-lacabrade.be` en reply-to
 
 #### 2.3 Module Alertes Retour en Stock
 
@@ -269,7 +269,7 @@ npm run build
 
 **Provider :** Resend  
 **From :** `RESEND_FROM_EMAIL` (depuis variables d'env)  
-**Reply-To :** info@lacabrade.be
+**Reply-To :** info@sellerie-lacabrade.be
 
 **Templates configurés :**
 - ORDER_PLACED

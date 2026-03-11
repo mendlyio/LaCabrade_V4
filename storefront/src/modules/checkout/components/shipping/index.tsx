@@ -83,11 +83,9 @@ const Shipping: React.FC<ShippingProps> = ({
     setError(null)
 
     try {
-      await setShippingMethod({ cartId: cart.id, shippingMethodId: id })
-
-      // Réinitialiser les métadonnées à chaque changement de méthode
-      // pour éviter que l'adresse Point Relais reste quand on passe en Domicile
-      const goingToBpostPickup = isBpostPickupOption(newOption)
+      // IMPORTANT: Nettoyer les métadonnées AVANT de changer la méthode.
+      // Sinon, les données Bpost (point relais) ou retrait magasin peuvent
+      // bloquer le changement de méthode côté backend.
       const goingToBpostHome = isBpostHomeOption(newOption)
 
       await clearShippingMetadata({
@@ -96,6 +94,8 @@ const Shipping: React.FC<ShippingProps> = ({
         clearPickupLocation: true,
         resetShippingToBilling: goingToBpostHome,
       })
+
+      await setShippingMethod({ cartId: cart.id, shippingMethodId: id })
 
       router.refresh()
     } catch (err: any) {
@@ -217,7 +217,12 @@ const Shipping: React.FC<ShippingProps> = ({
           {selectedShippingMethod?.provider_id?.toLowerCase?.().includes("bpost") &&
             ((selectedShippingMethod as any)?.metadata?.mode === "pickup" || 
              (selectedShippingMethod as any)?.data?.mode === "pickup") && (
-            <PickupPoints key={selectedShippingMethod.id} cart={cart} />
+            <div className="mt-4">
+              <p className="text-xs text-gray-500 mb-2">
+                Vous pouvez changer de mode de livraison en cliquant sur une autre option ci-dessus.
+              </p>
+              <PickupPoints key={selectedShippingMethod.id} cart={cart} />
+            </div>
           )}
 
           {/* Retrait en magasin : sélection du point de retrait — key pour remount à chaque changement */}

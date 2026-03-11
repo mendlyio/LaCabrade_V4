@@ -240,14 +240,14 @@ Ajouter dans `/storefront/src/modules/layout/components/side-menu/index.tsx` :
     +32 (0)4/358.60.99
   </a>
   <a 
-    href="mailto:info@lacabrade.be" 
+    href="mailto:info@sellerie-lacabrade.be" 
     className="flex items-center gap-3 text-gray-700 hover:text-amber-600"
   >
     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
       <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
       <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
     </svg>
-    info@lacabrade.be
+    info@sellerie-lacabrade.be
   </a>
 </div>
 ```
@@ -347,7 +347,7 @@ Modifier `/storefront/src/modules/layout/templates/nav/index.tsx` pour :
 - [ ] **Nouveaux points de dépôt** (voir Trello mentionné)
 
 #### 2. Configuration & Infrastructure
-- [ ] **Changement de domaine** : `sellerielacabrade.be`
+- [ ] **Changement de domaine** : `sellerie-lacabrade.be`
   - [ ] Configuration DNS
   - [ ] Mise à jour Railway
   - [ ] Certificat SSL
@@ -515,7 +515,7 @@ npx playwright test
 3. **Réseaux sociaux** : URLs exactes Facebook, Instagram, TikTok ?
 
 ### ✅ Décisions
-4. **Domaine** : Confirmation pour `sellerielacabrade.be` ? Qui gère le DNS ?
+4. **Domaine** : Confirmation pour `sellerie-lacabrade.be` ? Qui gère le DNS ?
 5. **Charte graphique** : Changement de logo confirmé ? Nouveau logo disponible quand ?
 6. **Points de dépôt** : Pouvez-vous partager le Trello mentionné ?
 

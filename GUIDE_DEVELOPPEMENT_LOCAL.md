@@ -306,7 +306,7 @@ node create-admin.sh
 
 Ou directement :
 ```bash
-npx medusa user -e admin@lacabrade.be -p motdepasse123
+npx medusa user -e admin@sellerie-lacabrade.be -p motdepasse123
 ```
 
 ---

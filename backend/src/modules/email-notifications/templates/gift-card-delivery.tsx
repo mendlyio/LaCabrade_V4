@@ -161,7 +161,7 @@ export const GiftCardDeliveryTemplate: React.FC<GiftCardDeliveryTemplateProps> &
         </Text>
 
         <Text style={{ fontSize: '13px', color: '#555', margin: '0 0 5px', lineHeight: '1.6' }}>
-          1. Rendez-vous sur <Link href="https://lacabrade.be" style={{ color: '#9e354a' }}>lacabrade.be</Link> ou en magasin à Fléron
+          1. Rendez-vous sur <Link href="https://www.sellerie-lacabrade.be" style={{ color: '#9e354a' }}>sellerie-lacabrade.be</Link> ou en magasin à Fléron
         </Text>
         <Text style={{ fontSize: '13px', color: '#555', margin: '0 0 5px', lineHeight: '1.6' }}>
           2. Faites votre shopping parmi plus de 5000 produits d&apos;équitation

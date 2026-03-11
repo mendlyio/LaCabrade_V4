@@ -106,6 +106,11 @@ export const BPOST_PRIVATE_KEY = process.env.BPOST_PRIVATE_KEY;
 export const BPOST_WEBHOOK_SECRET = process.env.BPOST_WEBHOOK_SECRET;
 
 /**
+ * (optional) Storefront URL for password reset links, etc.
+ */
+export const STORE_URL = process.env.STORE_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.BPOST_SHOP_URL || 'https://www.sellerie-lacabrade.be'
+
+/**
  * Worker mode
  */
 export const WORKER_MODE =

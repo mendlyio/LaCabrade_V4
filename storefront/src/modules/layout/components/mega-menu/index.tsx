@@ -17,11 +17,15 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
 
   const handleEnter = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    setOpen(true)
   }
 
   const handleLeave = () => {
-    timeoutRef.current = setTimeout(() => setOpen(false), 150)
+    timeoutRef.current = setTimeout(() => setOpen(false), 100)
+  }
+
+  const handleTriggerClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setOpen((prev) => !prev)
   }
 
   const [panelTop, setPanelTop] = useState(160)
@@ -73,12 +77,12 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
     <div
       ref={containerRef}
       className="static"
-      onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
-      {/* Lien vers la page catégorie — clic = navigation */}
+      {/* Trigger — clic ouvre le menu (sous-catégories), lien vers page catégorie */}
       <LocalizedClientLink
         href={`/categories/${encodeURIComponent(category.handle)}`}
+        onClick={handleTriggerClick}
         className={`
           flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium
           transition-all duration-200 whitespace-nowrap

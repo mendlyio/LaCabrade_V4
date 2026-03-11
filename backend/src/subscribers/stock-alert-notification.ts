@@ -58,7 +58,7 @@ export default async function stockAlertNotificationHandler({
     console.log(`[StockAlert] Found ${alerts.length} alert(s) for product ${product.id}`)
 
     // Construire l'URL du produit
-    const productUrl = `${process.env.STORE_URL || 'https://lacabrade.be'}/products/${product.handle}`
+    const productUrl = `${process.env.STORE_URL || 'https://www.sellerie-lacabrade.be'}/products/${product.handle}`
 
     // Envoyer un email à chaque personne en attente
     for (const alert of alerts) {

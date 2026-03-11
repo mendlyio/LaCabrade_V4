@@ -108,6 +108,38 @@ export async function signup(_currentState: unknown, formData: FormData) {
   }
 }
 
+export async function requestPasswordReset(_currentState: unknown, formData: FormData) {
+  const email = formData.get("email") as string
+  if (!email?.trim()) return "Veuillez entrer votre adresse email."
+
+  try {
+    await sdk.auth.resetPassword("customer", "emailpass", {
+      identifier: email.trim(),
+    })
+    return "success"
+  } catch (error: any) {
+    return error?.message ?? "Une erreur est survenue. Réessayez."
+  }
+}
+
+export async function resetPasswordWithToken(
+  token: string,
+  email: string,
+  newPassword: string
+) {
+  try {
+    await sdk.auth.updateProvider(
+      "customer",
+      "emailpass",
+      { email, password: newPassword },
+      token
+    )
+    return null
+  } catch (error: any) {
+    return error?.message ?? "Le lien a peut-être expiré. Demandez une nouvelle réinitialisation."
+  }
+}
+
 export async function login(_currentState: unknown, formData: FormData) {
   const email = formData.get("email") as string
   const password = formData.get("password") as string

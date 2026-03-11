@@ -102,7 +102,8 @@ export default async function PaginatedProductsModern({
     queryParams.q = rawQuery.replace(/\s+/g, "-")
   }
 
-  // Catégorie - convertir handle en ID
+  // Catégorie - convertir handle en ID + IDs autorisés pour filtrage strict côté client
+  let allowedCategoryIds = new Set<string>()
   if (searchParams.category) {
     const category = categories?.find(cat => cat.handle === searchParams.category)
     if (category) {
@@ -130,7 +131,9 @@ export default async function PaginatedProductsModern({
         return ids
       }
 
-      queryParams.category_id = collectCategoryIds(category.id)
+      const categoryIds = collectCategoryIds(category.id)
+      categoryIds.forEach((id) => allowedCategoryIds.add(id))
+      queryParams.category_id = categoryIds
     } else {
       // Si la catégorie n'existe pas, retourner un résultat vide au lieu de tous les produits
       console.warn(`⚠️ Catégorie non trouvée pour le handle: ${searchParams.category}`)
@@ -215,6 +218,15 @@ export default async function PaginatedProductsModern({
           const collectionBrand = product.collection?.title
           const productBrand = metadataBrand || collectionBrand || ""
           return slugify(productBrand) === normalizedBrand
+        })
+      }
+
+      // Filtrer par catégorie côté client (strict) — évite le mélange entre catégories similaires
+      // ex: "bonnets" (cheval) vs "bonnets, bandeaux, écharpes" (cavalier)
+      if (hasCategoryFilter && allowedCategoryIds.size > 0) {
+        finalProducts = finalProducts.filter((product) => {
+          const productCategoryIds = (product.categories || []).map((c: any) => c?.id).filter(Boolean)
+          return productCategoryIds.some((id: string) => allowedCategoryIds.has(id))
         })
       }
 

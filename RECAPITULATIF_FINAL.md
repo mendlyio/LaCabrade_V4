@@ -13,7 +13,7 @@
 - [x] Barre de recherche visible et fonctionnelle
 - [x] Menu responsive avec side-menu mobile
 - [x] Wishlist et panier dans le header
-- [x] **Menu mobile : Téléphone (+32 4/358.60.99) et email (info@lacabrade.be) cliquables en bas**
+- [x] **Menu mobile : Téléphone (+32 4/358.60.99) et email (info@sellerie-lacabrade.be) cliquables en bas**
 
 #### ✅ Footer
 - [x] 5 colonnes : Logo, Catégories, Collections, Service Client, Infos

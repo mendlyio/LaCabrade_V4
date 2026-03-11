@@ -111,7 +111,7 @@ export const WelcomeTemplate: React.FC<WelcomeTemplateProps> & {
 
         <Section style={{ textAlign: 'center', margin: '30px 0' }}>
           <Button
-            href="https://lacabrade.be/store"
+            href="https://www.sellerie-lacabrade.be/store"
             style={{
               backgroundColor: '#D97706',
               color: '#ffffff',

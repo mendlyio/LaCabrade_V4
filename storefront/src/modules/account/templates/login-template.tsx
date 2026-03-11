@@ -3,10 +3,12 @@
 import { useState } from "react"
 import Register from "@modules/account/components/register"
 import Login from "@modules/account/components/login"
+import ForgotPassword from "@modules/account/components/forgot-password"
 
 export enum LOGIN_VIEW {
   SIGN_IN = "sign-in",
   REGISTER = "register",
+  FORGOT_PASSWORD = "forgot-password",
 }
 
 const LoginTemplate = () => {
@@ -26,7 +28,9 @@ const LoginTemplate = () => {
           <p className="text-gray-600 mt-2">
             {currentView === "sign-in" 
               ? "Connectez-vous à votre compte" 
-              : "Créez votre compte"}
+              : currentView === "forgot-password"
+                ? "Réinitialisez votre mot de passe"
+                : "Créez votre compte"}
           </p>
         </div>
 
@@ -59,6 +63,8 @@ const LoginTemplate = () => {
           <div className="p-6 sm:p-8">
             {currentView === "sign-in" ? (
               <Login setCurrentView={setCurrentView} />
+            ) : currentView === "forgot-password" ? (
+              <ForgotPassword setCurrentView={setCurrentView} />
             ) : (
               <Register setCurrentView={setCurrentView} />
             )}

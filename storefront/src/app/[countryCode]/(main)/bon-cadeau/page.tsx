@@ -183,7 +183,7 @@ export default async function BonCadeauPage({ params }: Props) {
                   ),
                   title: "En ligne et en magasin",
                   description:
-                    "Utilisable sur lacabrade.be et dans notre magasin à Fléron",
+                    "Utilisable sur sellerie-lacabrade.be et dans notre magasin à Fléron",
                 },
                 {
                   icon: (

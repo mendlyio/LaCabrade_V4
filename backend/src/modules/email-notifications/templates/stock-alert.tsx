@@ -124,7 +124,7 @@ export const StockAlertTemplate: React.FC<StockAlertTemplateProps> & {
 
 StockAlertTemplate.PreviewProps = {
   productTitle: 'Selle Dressage Cuir Premium',
-  productUrl: 'https://lacabrade.be/products/selle-dressage-premium',
+  productUrl: 'https://www.sellerie-lacabrade.be/products/selle-dressage-premium',
   productImage: 'https://via.placeholder.com/300x300',
   customerEmail: 'client@example.com'
 } as StockAlertPreviewProps

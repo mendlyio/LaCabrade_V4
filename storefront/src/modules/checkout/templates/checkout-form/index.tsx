@@ -17,6 +17,7 @@ const CHECKOUT_UPSELL_HANDLES = [
   "licol-condor-lc-equestrian-odoo-22531",
   "cloches-caoutchouc-tania-lc-equestrian-odoo-22532",
   "cloches-caoutchouc-mouton-soraya-lc-equestrian-odoo-22534",
+  "chaussettes-jolie-lc-equestrian-odoo-22648",
 ]
 
 /** Produits fixes pour "Vérification et validation" (étape 5 checkout - Last chance) */
@@ -26,6 +27,8 @@ const LAST_CHANCE_HANDLES = [
   "chaussettes-thermo-willow-br-odoo-21618",
   "bonbons-pour-chevaux-sellerie-la-cabrade-odoo-20384",
   "74214-brosse-douce-exclusive-waldhausen-odoo-23273",
+  "baume-de-warendorf-s-r-odoo-12709",
+  "ponge-xl-qhp-odoo-21413",
 ]
 
 async function fetchUpsellProducts(

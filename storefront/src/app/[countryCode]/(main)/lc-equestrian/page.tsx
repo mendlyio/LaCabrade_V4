@@ -2,8 +2,26 @@ import { Metadata } from "next"
 import { getProductsList } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import { listCategories } from "@lib/data/categories"
+import { buildCategoryTree } from "@lib/util/category-tree"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ProductCardModern from "@modules/products/components/product-card-modern"
+
+/** IDs de la catégorie + tous ses descendants (sous-catégories) */
+function getCategoryAndDescendantIds(categoryId: string, categoryMap: Map<string, any>): Set<string> {
+  const ids = new Set<string>([categoryId])
+  const stack = [categoryId]
+  while (stack.length) {
+    const id = stack.pop()!
+    const node = categoryMap.get(id)
+    node?.category_children?.forEach((child: any) => {
+      if (child?.id) {
+        ids.add(child.id)
+        stack.push(child.id)
+      }
+    })
+  }
+  return ids
+}
 
 export const metadata: Metadata = {
   title: "LC Equestrian - Équipements équestres de qualité | La Cabrade",
@@ -22,32 +40,41 @@ export default async function LcEquestrianPage({
     return null
   }
 
-  // Trouver la catégorie LC Equestrian / la-cabrade
-  let categoryId: string | null = null
+  // Uniquement la catégorie LC Equestrian (pas "la-cabrade" qui inclut d'autres produits)
+  let lcCategory: { id: string } | null = null
+  let allowedIds = new Set<string>()
   try {
-    const categories = await listCategories()
-    const lcCategory = categories?.find(
-      (c: any) => c.handle === "la-cabrade" || c.handle === "lc-equestrian"
-    )
+    const categories = await listCategories() || []
+    const { map: categoryMap } = buildCategoryTree(categories)
+    // Seulement lc-equestrian ou lc_equestrian — jamais la-cabrade
+    lcCategory =
+      categories.find((c: any) => (c.handle || "").toLowerCase() === "lc-equestrian") ||
+      categories.find((c: any) => (c.handle || "").toLowerCase() === "lc_equestrian") ||
+      null
     if (lcCategory) {
-      categoryId = lcCategory.id
+      allowedIds = getCategoryAndDescendantIds(lcCategory.id, categoryMap)
     }
   } catch (error) {
     console.error("Erreur lors de la récupération de la catégorie LC Equestrian:", error)
   }
 
-  // Récupérer les produits de la catégorie
+  // Récupérer les produits et filtrer strictement côté client
   let products: any[] = []
   try {
     const result = await getProductsList({
       queryParams: {
-        limit: 50,
+        limit: 100,
         region_id: region.id,
-        ...(categoryId ? { category_id: [categoryId] } : {}),
-      },
+        ...(lcCategory ? { category_id: [lcCategory.id] } : {}),
+        fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images,+categories.handle,+categories.id",
+      } as any,
       countryCode,
     })
-    products = result.response.products || []
+    const raw = result.response.products || []
+    // Ne garder que les produits qui ont la catégorie LC Equestrian (ou ses sous-catégories)
+    const isInLcEquestrian = (p: any) =>
+      (p.categories || []).some((cat: any) => cat?.id && allowedIds.has(cat.id))
+    products = lcCategory ? raw.filter(isInLcEquestrian) : []
   } catch (error) {
     console.error("Erreur lors de la récupération des produits LC Equestrian:", error)
   }

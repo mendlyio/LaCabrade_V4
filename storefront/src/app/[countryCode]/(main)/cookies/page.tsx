@@ -17,7 +17,7 @@ export default function CookiesPage() {
             {/* Introduction */}
             <section>
               <p className="text-lg">
-                Notre site (lacabrade.be) utilise des cookies pour améliorer votre expérience de navigation et analyser l'utilisation de notre site. Cette politique vous explique ce que sont les cookies, comment nous les utilisons et comment vous pouvez les gérer.
+                Notre site (sellerie-lacabrade.be) utilise des cookies pour améliorer votre expérience de navigation et analyser l'utilisation de notre site. Cette politique vous explique ce que sont les cookies, comment nous les utilisons et comment vous pouvez les gérer.
               </p>
             </section>
 

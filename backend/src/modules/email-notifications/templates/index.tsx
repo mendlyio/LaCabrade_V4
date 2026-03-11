@@ -6,6 +6,7 @@ import { OrderShippedTemplate, ORDER_SHIPPED, isOrderShippedTemplateData } from 
 import { WelcomeTemplate, WELCOME, isWelcomeTemplateData } from './welcome'
 import { StockAlertTemplate, STOCK_ALERT, isStockAlertTemplateData } from './stock-alert'
 import { GiftCardDeliveryTemplate, GIFT_CARD_DELIVERY, isGiftCardDeliveryData } from './gift-card-delivery'
+import { PasswordResetTemplate, PASSWORD_RESET, isPasswordResetTemplateData } from './password-reset'
 
 export const EmailTemplates = {
   INVITE_USER,
@@ -14,6 +15,7 @@ export const EmailTemplates = {
   WELCOME,
   STOCK_ALERT,
   GIFT_CARD_DELIVERY,
+  PASSWORD_RESET,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -74,6 +76,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <GiftCardDeliveryTemplate {...data} />
 
+    case EmailTemplates.PASSWORD_RESET:
+      if (!isPasswordResetTemplateData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.PASSWORD_RESET}"`
+        )
+      }
+      return <PasswordResetTemplate {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -82,4 +93,4 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
   }
 }
 
-export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, WelcomeTemplate, StockAlertTemplate, GiftCardDeliveryTemplate }
+export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, WelcomeTemplate, StockAlertTemplate, GiftCardDeliveryTemplate, PasswordResetTemplate }

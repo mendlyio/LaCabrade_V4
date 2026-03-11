@@ -126,7 +126,7 @@ export async function generateGiftCardPDF(data: GiftCardPDFData): Promise<Buffer
 
   // --- Mentions légales ---
   const legalLines = [
-    "Valable 1 an à compter de la date d'émission • Utilisable en ligne sur lacabrade.be et en magasin",
+    "Valable 1 an à compter de la date d'émission • Utilisable en ligne sur sellerie-lacabrade.be et en magasin",
     "Ce bon cadeau est personnel et ne peut être échangé contre de l'argent.",
   ]
 

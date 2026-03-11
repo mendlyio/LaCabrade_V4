@@ -128,6 +128,8 @@ export default async function Home({
       "https://ik.imagekit.io/kodt9cn6f/soins.webp",
     ecurie: "https://ik.imagekit.io/kodt9cn6f/ecurie.webp",
     outlet: "https://ik.imagekit.io/kodt9cn6f/Cabrade/outlet.webp",
+    "lc-equestrian": "https://ik.imagekit.io/kodt9cn6f/Cabrade/Lc-equestrian.webp",
+    "la-cabrade": "https://ik.imagekit.io/kodt9cn6f/Cabrade/Lc-equestrian.webp",
   }
 
   const getCategoryImage = (category: any) => {
