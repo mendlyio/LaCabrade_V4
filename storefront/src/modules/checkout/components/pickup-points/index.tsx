@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button, Input, Text, Heading, clx } from "@medusajs/ui"
 import { StoreCart } from "@medusajs/types"
 import { MapPin, CheckCircleSolid } from "@medusajs/icons"
@@ -48,6 +49,7 @@ const PickupPointSkeleton = () => (
 
 const PickupPoints = ({ cart }: PickupPointsProps) => {
   const t = useTranslate()
+  const router = useRouter()
   const [postalCode, setPostalCode] = useState(
     cart.shipping_address?.postal_code || ""
   )
@@ -58,6 +60,7 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
   )
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectingPointId, setSelectingPointId] = useState<string | null>(null)
 
   // Charger les points initiaux si code postal présent
   useEffect(() => {
@@ -114,7 +117,9 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
   /*  Sélection via le Route Handler Next.js                          */
   /* ---------------------------------------------------------------- */
   const selectPoint = async (point: PickupPoint) => {
-    setLoading(true)
+    setSelectingPointId(point.Id)
+    setSelectedPointId(point.Id)
+    setError(null)
     try {
       const res = await fetch("/api/bpost/select", {
         method: "POST",
@@ -127,11 +132,12 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
 
       if (!res.ok) throw new Error("Erreur sauvegarde")
 
-      setSelectedPointId(point.Id)
+      router.refresh()
     } catch (e) {
       setError(t("bpost.no_results" as any))
+      setSelectedPointId((cart.metadata?.bpost_pickup_point as any)?.Id || null)
     } finally {
-      setLoading(false)
+      setSelectingPointId(null)
     }
   }
 
@@ -200,10 +206,11 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
         <div className="grid grid-cols-1 gap-3 mt-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
           {filteredPoints.map((point) => {
             const isSelected = selectedPointId === point.Id
+            const isSelecting = selectingPointId === point.Id
             return (
               <div
                 key={point.Id}
-                onClick={() => !loading && selectPoint(point)}
+                onClick={() => !loading && !selectingPointId && selectPoint(point)}
                 className={clx(
                   "p-4 border rounded-md cursor-pointer transition-all hover:shadow-md",
                   isSelected
@@ -226,9 +233,16 @@ const PickupPoints = ({ cart }: PickupPointsProps) => {
                       {point.Address.PostalCode} {point.Address.City}
                     </Text>
                   </div>
-                  {isSelected && (
-                    <span className="text-xs font-bold text-amber-600 bg-white px-2 py-1 rounded border border-amber-200">
-                      {t("bpost.selected" as any)}
+                  {(isSelected || isSelecting) && (
+                    <span className="text-xs font-bold text-amber-600 bg-white px-2 py-1 rounded border border-amber-200 flex items-center gap-1">
+                      {isSelecting ? (
+                        <>
+                          <span className="w-3 h-3 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+                          Enregistrement...
+                        </>
+                      ) : (
+                        t("bpost.selected" as any)
+                      )}
                     </span>
                   )}
                 </div>

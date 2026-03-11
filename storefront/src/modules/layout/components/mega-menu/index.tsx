@@ -17,15 +17,11 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
 
   const handleEnter = () => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    setOpen(true)
   }
 
   const handleLeave = () => {
     timeoutRef.current = setTimeout(() => setOpen(false), 100)
-  }
-
-  const handleTriggerClick = (e: React.MouseEvent) => {
-    e.preventDefault()
-    setOpen((prev) => !prev)
   }
 
   const [panelTop, setPanelTop] = useState(160)
@@ -77,12 +73,12 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
     <div
       ref={containerRef}
       className="static"
+      onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
-      {/* Trigger — clic ouvre le menu (sous-catégories), lien vers page catégorie */}
+      {/* Trigger — clic navigue vers la page, survol affiche le dropdown */}
       <LocalizedClientLink
         href={`/categories/${encodeURIComponent(category.handle)}`}
-        onClick={handleTriggerClick}
         className={`
           flex items-center gap-1 px-4 py-2 rounded-lg text-sm font-medium
           transition-all duration-200 whitespace-nowrap
@@ -114,14 +110,18 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
       )}
 
       {/* Dropdown Panel — positionné en fixed pour ne jamais sortir */}
+      {/* onMouseEnter sur l'extérieur pour annuler la fermeture quand on arrive depuis le trigger */}
+      {/* onMouseLeave sur le contenu (max-w-7xl) pour fermer quand on sort à gauche/droite */}
       {open && (
         <div
           className="fixed left-0 right-0 z-[60]"
           style={{ top: `${panelTop}px` }}
           onMouseEnter={handleEnter}
-          onMouseLeave={handleLeave}
         >
-          <div className="max-w-7xl mx-auto px-4">
+          <div
+            className="max-w-7xl mx-auto px-4"
+            onMouseLeave={handleLeave}
+          >
             <div className="bg-white rounded-b-2xl shadow-2xl ring-1 ring-black/10 overflow-hidden">
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-b border-gray-100">

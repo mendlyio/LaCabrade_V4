@@ -66,7 +66,7 @@ export default async function CategoryTemplateModern({
       {/* Hero Section */}
       <div className="bg-[#9e354a] text-white py-12 mb-8">
         <div className="content-container">
-          <div className="max-w-3xl">
+          <div className="w-full">
             {/* Breadcrumbs */}
             {parents && parents.length > 0 && (
               <div className="flex items-center gap-2 text-sm text-amber-100 mb-4">

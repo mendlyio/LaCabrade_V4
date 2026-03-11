@@ -46,7 +46,7 @@ export default async function CollectionTemplateModern({
       {/* Hero Section */}
       <div className="bg-[#9e354a] text-white py-12 mb-8">
         <div className="content-container">
-          <div className="max-w-3xl">
+          <div className="w-full">
             {/* Breadcrumbs */}
             <div className="flex items-center gap-2 text-sm text-amber-100 mb-4">
               <LocalizedClientLink href="/store" className="hover:text-white transition-colors">

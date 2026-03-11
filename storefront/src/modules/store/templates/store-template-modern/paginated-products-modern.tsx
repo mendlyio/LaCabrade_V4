@@ -96,10 +96,11 @@ export default async function PaginatedProductsModern({
     fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+metadata,+collection.title,+collection.handle,+categories.handle,+categories.name,+categories.id",
   }
 
-  // Recherche : normaliser "anti mouche" → "anti-mouche" pour matcher les produits (handles, titres avec tirets)
+  // Recherche : uniquement sur le titre du produit (title $ilike)
   const rawQuery = searchParams.q?.trim()
   if (rawQuery && rawQuery.length >= 2) {
-    queryParams.q = rawQuery.replace(/\s+/g, "-")
+    queryParams.title = { $ilike: `%${rawQuery}%` }
+    queryParams.title_search = rawQuery // pour load-more (sérialisation URL)
   }
 
   // Catégorie - convertir handle en ID + IDs autorisés pour filtrage strict côté client
@@ -317,21 +318,23 @@ export default async function PaginatedProductsModern({
     })
   }
 
-  // ─── Trier les produits LC-Equestrian en premier ───────────────────────────
-  // Les produits de la catégorie "LC-Equestrian" / "la-cabrade" remontent toujours en tête
+  // ─── Trier les produits LC-Equestrian en premier (uniquement en mode "Nouveautés") ───
+  // Quand l'utilisateur a choisi prix/titre, on respecte son tri (ne pas écraser)
   const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
   const isLcEquestrian = (p: any) =>
     p.categories?.some((cat: any) =>
       LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase())
     ) ?? false
 
-  filteredProducts = [...filteredProducts].sort((a, b) => {
-    const aIsLC = isLcEquestrian(a)
-    const bIsLC = isLcEquestrian(b)
-    if (aIsLC && !bIsLC) return -1
-    if (!aIsLC && bIsLC) return 1
-    return 0
-  })
+  if (!needsClientSideSort) {
+    filteredProducts = [...filteredProducts].sort((a, b) => {
+      const aIsLC = isLcEquestrian(a)
+      const bIsLC = isLcEquestrian(b)
+      if (aIsLC && !bIsLC) return -1
+      if (!aIsLC && bIsLC) return 1
+      return 0
+    })
+  }
 
   // Mettre à jour le count total après filtrage
   const totalFilteredCount = filteredProducts.length

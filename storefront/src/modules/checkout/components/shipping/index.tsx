@@ -8,7 +8,7 @@ import ErrorMessage from "@modules/checkout/components/error-message"
 import PickupPoints from "@modules/checkout/components/pickup-points"
 import StorePickup from "@modules/checkout/components/store-pickup"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { setShippingMethod, clearShippingMetadata } from "@lib/data/cart"
 import { formatAmount } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
@@ -54,6 +54,9 @@ const Shipping: React.FC<ShippingProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** Sélection optimiste : affichée immédiatement au clic, avant la réponse API */
+  const [pendingMethodId, setPendingMethodId] = useState<string | null>(null)
+  const deliveryOptionsRef = useRef<HTMLDivElement>(null)
 
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -65,6 +68,10 @@ const Shipping: React.FC<ShippingProps> = ({
     (method) => method.id === cart.shipping_methods?.at(-1)?.shipping_option_id
   )
 
+  /** Valeur affichée : optimiste si en cours, sinon la valeur du panier */
+  const displayedMethodId = pendingMethodId ?? selectedShippingMethod?.id
+  const displayedMethod = availableShippingMethods?.find((o) => o.id === displayedMethodId)
+
   const hasShipping = (cart.shipping_methods?.length ?? 0) > 0
 
   const handleEdit = () => {
@@ -75,17 +82,20 @@ const Shipping: React.FC<ShippingProps> = ({
     router.push(pathname + "?step=payment", { scroll: false })
   }
 
+  const scrollToDeliveryOptions = () => {
+    deliveryOptionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
+
   const set = async (id: string) => {
     const newOption = availableShippingMethods?.find((o) => o.id === id)
     if (!newOption) return
 
-    setIsLoading(true)
+    // Feedback immédiat : afficher la sélection tout de suite
+    setPendingMethodId(id)
     setError(null)
 
+    setIsLoading(true)
     try {
-      // IMPORTANT: Nettoyer les métadonnées AVANT de changer la méthode.
-      // Sinon, les données Bpost (point relais) ou retrait magasin peuvent
-      // bloquer le changement de méthode côté backend.
       const goingToBpostHome = isBpostHomeOption(newOption)
 
       await clearShippingMetadata({
@@ -100,13 +110,24 @@ const Shipping: React.FC<ShippingProps> = ({
       router.refresh()
     } catch (err: any) {
       setError(err?.message ?? "Erreur lors du changement")
+      setPendingMethodId(null)
     } finally {
       setIsLoading(false)
+      setPendingMethodId(null)
     }
   }
 
   useEffect(() => {
     setError(null)
+  }, [isOpen])
+
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => {
+        deliveryOptionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+      }, 150)
+      return () => clearTimeout(timer)
+    }
   }, [isOpen])
 
   return (
@@ -158,21 +179,24 @@ const Shipping: React.FC<ShippingProps> = ({
 
       {isOpen ? (
         <div data-testid="delivery-options-container">
-          <div className="pb-6">
-            <RadioGroup value={selectedShippingMethod?.id} onChange={set}>
+          <div ref={deliveryOptionsRef} className="pb-6">
+            <RadioGroup value={displayedMethodId ?? ""} onChange={set}>
               <div className="space-y-3">
                 {(Array.isArray(availableShippingMethods) ? availableShippingMethods : []).map((option) => {
-                  const isSelected = option.id === selectedShippingMethod?.id
+                  const isSelected = option.id === displayedMethodId
+                  const isOptionLoading = isSelected && isLoading
                   return (
                     <RadioGroup.Option
                       key={option.id}
                       value={option.id}
                       data-testid="delivery-option-radio"
                       className={clx(
-                        "relative flex items-center justify-between cursor-pointer py-4 px-5 border-2 rounded-xl transition-all duration-200",
+                        "relative flex items-center justify-between py-4 px-5 border-2 rounded-xl transition-all duration-200",
                         {
                           "border-amber-500 bg-amber-50 shadow-sm": isSelected,
                           "border-gray-200 hover:border-gray-300 hover:bg-gray-50": !isSelected,
+                          "cursor-pointer": !isLoading,
+                          "cursor-wait opacity-90": isOptionLoading,
                         }
                       )}
                     >
@@ -184,8 +208,11 @@ const Shipping: React.FC<ShippingProps> = ({
                             "border-gray-300": !isSelected,
                           }
                         )}>
-                          {isSelected && (
+                          {isSelected && !isOptionLoading && (
                             <div className="w-2.5 h-2.5 rounded-full bg-amber-600" />
+                          )}
+                          {isOptionLoading && (
+                            <div className="w-3 h-3 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
                           )}
                         </div>
                         <div>
@@ -213,21 +240,31 @@ const Shipping: React.FC<ShippingProps> = ({
             </RadioGroup>
           </div>
 
-          {/* Bpost : Points relais — key pour forcer remount à chaque changement de méthode */}
-          {selectedShippingMethod?.provider_id?.toLowerCase?.().includes("bpost") &&
-            ((selectedShippingMethod as any)?.metadata?.mode === "pickup" || 
-             (selectedShippingMethod as any)?.data?.mode === "pickup") && (
+          {/* Bpost : Points relais — affiché dès la sélection (optimiste) */}
+          {displayedMethod?.provider_id?.toLowerCase?.().includes("bpost") &&
+            ((displayedMethod as any)?.metadata?.mode === "pickup" || 
+             (displayedMethod as any)?.data?.mode === "pickup") && (
             <div className="mt-4">
-              <p className="text-xs text-gray-500 mb-2">
-                Vous pouvez changer de mode de livraison en cliquant sur une autre option ci-dessus.
-              </p>
-              <PickupPoints key={selectedShippingMethod.id} cart={cart} />
+              <div className="flex items-center justify-between gap-3 mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-sm text-amber-800">
+                  Choisissez un point relais ou changez de mode de livraison.
+                </p>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={scrollToDeliveryOptions}
+                  className="shrink-0 text-amber-700 border-amber-300 hover:bg-amber-100"
+                >
+                  Changer de mode
+                </Button>
+              </div>
+              <PickupPoints key={displayedMethod.id} cart={cart} />
             </div>
           )}
 
-          {/* Retrait en magasin : sélection du point de retrait — key pour remount à chaque changement */}
-          {selectedShippingMethod && isStorePickupOption(selectedShippingMethod) && (
-            <StorePickup key={selectedShippingMethod.id} cart={cart} />
+          {/* Retrait en magasin : sélection du point de retrait */}
+          {displayedMethod && isStorePickupOption(displayedMethod) && (
+            <StorePickup key={displayedMethod.id} cart={cart} />
           )}
 
           <ErrorMessage
@@ -271,6 +308,12 @@ const Shipping: React.FC<ShippingProps> = ({
               {(cart.metadata?.pickup_location as any)?.name && (
                 <p className="text-sm text-amber-700 font-medium mt-2">
                   📍 {(cart.metadata.pickup_location as any).name}
+                </p>
+              )}
+              {/* Afficher le point relais Bpost si applicable */}
+              {(cart.metadata?.bpost_pickup_point as any)?.Name && (
+                <p className="text-sm text-amber-700 font-medium mt-2">
+                  📍 {(cart.metadata.bpost_pickup_point as any).Name}
                 </p>
               )}
             </div>

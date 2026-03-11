@@ -37,12 +37,15 @@ export async function GET(request: NextRequest) {
     backendUrl.searchParams.set("fields", fields)
 
     // Paramètres optionnels
+    const titleSearch = searchParams.get("title_search")
     const q = searchParams.get("q")
     const order = searchParams.get("order")
     const categoryIds = searchParams.getAll("category_id[]")
     const collectionIds = searchParams.getAll("collection_id[]")
 
-    if (q) backendUrl.searchParams.set("q", q)
+    // Recherche sur le titre uniquement (title $ilike)
+    if (titleSearch) backendUrl.searchParams.set("title[$ilike]", `%${titleSearch}%`)
+    else if (q) backendUrl.searchParams.set("q", q)
     if (order) backendUrl.searchParams.set("order", order)
     categoryIds.forEach((id) => backendUrl.searchParams.append("category_id[]", id))
     collectionIds.forEach((id) => backendUrl.searchParams.append("collection_id[]", id))

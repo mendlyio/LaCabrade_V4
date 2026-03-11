@@ -57,7 +57,7 @@ export default async function StoreTemplateModern({
       {/* Hero Section */}
       <div className="bg-[#9e354a] text-white py-12 mb-8">
         <div className="content-container">
-          <div className="max-w-3xl">
+          <div className="w-full">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
               {searchParams.q
                 ? `Résultats pour "${searchParams.q}"`

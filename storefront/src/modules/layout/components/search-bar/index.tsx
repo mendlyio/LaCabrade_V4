@@ -7,6 +7,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 
 // Suggestions populaires pour une boutique équestre
 const popularSearches = [
+  "Gants",
   "Selles de dressage",
   "Bottes d'équitation",
   "Tapis de selle",
