@@ -96,11 +96,10 @@ export default async function PaginatedProductsModern({
     fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+metadata,+collection.title,+collection.handle,+categories.handle,+categories.name,+categories.id",
   }
 
-  // Recherche : uniquement sur le titre du produit (title $ilike)
+  // Recherche : paramètre q de Medusa (titre, description, SKU, variantes, collections)
   const rawQuery = searchParams.q?.trim()
   if (rawQuery && rawQuery.length >= 2) {
-    queryParams.title = { $ilike: `%${rawQuery}%` }
-    queryParams.title_search = rawQuery // pour load-more (sérialisation URL)
+    queryParams.q = rawQuery
   }
 
   // Catégorie - convertir handle en ID + IDs autorisés pour filtrage strict côté client
@@ -318,15 +317,21 @@ export default async function PaginatedProductsModern({
     })
   }
 
-  // ─── Trier les produits LC-Equestrian en premier (uniquement en mode "Nouveautés") ───
-  // Quand l'utilisateur a choisi prix/titre, on respecte son tri (ne pas écraser)
+  // ─── Trier les produits LC-Equestrian en premier (uniquement en mode "Nouveautés" sans filtre) ───
+  // Dès qu'un filtre est actif (tri, prix, stock, promo, marque, catégorie), on respecte le choix de l'utilisateur
+  const userHasActiveFilter =
+    needsClientSideSort ||
+    hasClientSideFilters ||
+    hasBrandFilter ||
+    hasCategoryFilter ||
+    !!searchParams.q
   const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
   const isLcEquestrian = (p: any) =>
     p.categories?.some((cat: any) =>
       LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase())
     ) ?? false
 
-  if (!needsClientSideSort) {
+  if (!userHasActiveFilter) {
     filteredProducts = [...filteredProducts].sort((a, b) => {
       const aIsLC = isLcEquestrian(a)
       const bIsLC = isLcEquestrian(b)

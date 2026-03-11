@@ -384,8 +384,7 @@ export default function LoadMoreProducts({
         const ids = Array.isArray(queryParams.collection_id) ? queryParams.collection_id : [queryParams.collection_id]
         ids.forEach((id: string) => params.append("collection_id[]", id))
       }
-      if (queryParams.title_search) params.set("title_search", queryParams.title_search)
-      else if (queryParams.q) params.set("q", queryParams.q)
+      if (queryParams.q) params.set("q", queryParams.q)
       if (queryParams.order) params.set("order", queryParams.order)
 
       try {
@@ -459,8 +458,7 @@ export default function LoadMoreProducts({
         const ids = Array.isArray(queryParams.collection_id) ? queryParams.collection_id : [queryParams.collection_id]
         ids.forEach((id: string) => params.append("collection_id[]", id))
       }
-      if (queryParams.title_search) params.set("title_search", queryParams.title_search)
-      else if (queryParams.q) params.set("q", queryParams.q)
+      if (queryParams.q) params.set("q", queryParams.q)
       if (queryParams.order) params.set("order", queryParams.order)
 
       // Proxy via API Next.js pour éviter CORS (client → même origine → backend)
