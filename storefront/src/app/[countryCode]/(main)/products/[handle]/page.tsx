@@ -1,9 +1,9 @@
 import { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 
 import ProductTemplateModern from "@modules/products/templates/product-template-modern"
 import { getRegion, listRegions } from "@lib/data/regions"
-import { getProductByHandle, getProductsList } from "@lib/data/products"
+import { getProductByHandle, getProductsList, GIFT_CARD_PRODUCT_HANDLE } from "@lib/data/products"
 
 type Props = {
   params: { countryCode: string; handle: string }
@@ -37,10 +37,12 @@ export async function generateStaticParams() {
 
     const staticParams = countryCodes
       ?.map((countryCode) =>
-        products.map((product) => ({
-          countryCode,
-          handle: product.handle,
-        }))
+        products
+          .filter((p) => p.handle !== GIFT_CARD_PRODUCT_HANDLE)
+          .map((product) => ({
+            countryCode,
+            handle: product.handle,
+          }))
       )
       .flat()
 
@@ -52,8 +54,11 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { handle } = params
-  const region = await getRegion(params.countryCode)
+  const { handle, countryCode } = params
+  if (handle === GIFT_CARD_PRODUCT_HANDLE) {
+    return { title: "Bon Cadeau | La Cabrade" }
+  }
+  const region = await getRegion(countryCode)
 
   if (!region) {
     notFound()
@@ -77,6 +82,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductPage({ params }: Props) {
+  if (params.handle === GIFT_CARD_PRODUCT_HANDLE) {
+    redirect(`/${params.countryCode}/bon-cadeau`)
+  }
+
   const region = await getRegion(params.countryCode)
 
   if (!region) {

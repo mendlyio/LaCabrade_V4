@@ -93,6 +93,12 @@ export default async function CategoryTemplateModern({
               {category.name}
             </h1>
 
+            {category.description && (
+              <p className="text-base md:text-lg text-white/95 leading-relaxed mb-4">
+                {category.description}
+              </p>
+            )}
+
             {activeFilters > 0 && (
               <div className="mt-4 flex items-center gap-2 text-sm">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,17 +110,6 @@ export default async function CategoryTemplateModern({
           </div>
         </div>
       </div>
-
-      {/* Description — pleine largeur */}
-      {category.description && (
-        <div className="w-full px-6 py-8 bg-white/80">
-          <div className="max-w-[1440px] mx-auto">
-            <p className="text-base text-gray-700 leading-relaxed max-w-none">
-              {category.description}
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Sous-catégories — repliable */}
       {categoryChildren.length > 0 && (

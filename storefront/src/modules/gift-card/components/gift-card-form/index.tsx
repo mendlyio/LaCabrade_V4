@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { addGiftCardToCart, GiftCardVariant } from "@lib/data/gift-card"
 import GiftCardPreview from "../gift-card-preview"
@@ -42,13 +42,17 @@ export default function GiftCardForm({ variants, countryCode }: GiftCardFormProp
     [variants]
   )
 
-  // Get display amount
+  // Get display amount (en euros). calculated_amount de l'API est en centimes.
   const getDisplayAmount = useCallback((): number => {
     if (selectedAmount === "custom") {
       return Number(customAmount) || 0
     }
+    const variant = getVariantForAmount(selectedAmount)
+    if (variant?.calculated_price?.calculated_amount != null) {
+      return variant.calculated_price.calculated_amount / 100
+    }
     return Number(selectedAmount)
-  }, [selectedAmount, customAmount])
+  }, [selectedAmount, customAmount, getVariantForAmount])
 
   // Validation
   const validate = useCallback((): boolean => {
@@ -145,12 +149,34 @@ export default function GiftCardForm({ variants, countryCode }: GiftCardFormProp
     }
   }
 
-  const amountOptions = [
-    { value: "25" as const, label: "25€", popular: false },
-    { value: "50" as const, label: "50€", popular: true },
-    { value: "100" as const, label: "100€", popular: false },
-    { value: "custom" as const, label: "Autre", popular: false },
-  ]
+  // Options de montant : depuis les variants (calculated_amount en centimes → /100 pour l'affichage)
+  const amountOptions = useMemo(() => {
+    const fixed: { value: AmountOption; label: string; popular: boolean }[] = []
+    const skuToAmount: Record<string, AmountOption> = {
+      "GC-025": "25",
+      "GC-050": "50",
+      "GC-100": "100",
+    }
+    for (const v of variants) {
+      const key = skuToAmount[v.sku || ""]
+      if (key && v.calculated_price?.calculated_amount != null) {
+        const euros = Math.round(v.calculated_price.calculated_amount / 100)
+        if (!fixed.find((o) => o.value === key)) {
+          fixed.push({ value: key as AmountOption, label: `${euros}€`, popular: key === "50" })
+        }
+      }
+    }
+    fixed.sort((a, b) => Number(a.value) - Number(b.value))
+    if (fixed.length === 0) {
+      return [
+        { value: "25" as const, label: "25€", popular: false },
+        { value: "50" as const, label: "50€", popular: true },
+        { value: "100" as const, label: "100€", popular: false },
+        { value: "custom" as const, label: "Autre", popular: false },
+      ]
+    }
+    return [...fixed, { value: "custom" as const, label: "Autre", popular: false }]
+  }, [variants])
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">

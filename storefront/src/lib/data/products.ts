@@ -5,6 +5,9 @@ import { getRegion } from "./regions"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { sortProducts } from "@lib/util/sort-products"
 
+/** Produit Bon Cadeau (ref GC-025) - caché des listes, visible uniquement sur /bon-cadeau */
+export const GIFT_CARD_PRODUCT_HANDLE = "bon-cadeau"
+
 export const getProductsById = cache(async function ({
   ids,
   regionId,
@@ -72,16 +75,19 @@ export const getProductsList = cache(async function ({
         region_id: region.id,
         fields: "*variants.calculated_price,+variants.prices",
         ...queryParams,
+        is_giftcard: false,
       },
       { next: { tags: ["products"] } }
     )
     .then(({ products, count }) => {
-      const nextPage = count > offset + limit ? pageParam + 1 : null
+      const filtered = products.filter((p) => p.handle !== GIFT_CARD_PRODUCT_HANDLE)
+      const filteredCount = count - (products.length - filtered.length)
+      const nextPage = filteredCount > offset + limit ? pageParam + 1 : null
 
       return {
         response: {
-          products,
-          count,
+          products: filtered,
+          count: filteredCount,
         },
         nextPage: nextPage,
         queryParams,

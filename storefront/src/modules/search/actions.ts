@@ -1,10 +1,12 @@
 "use server"
 
 import { SEARCH_INDEX_NAME, searchClient } from "@lib/search-client"
+import { GIFT_CARD_PRODUCT_HANDLE } from "@lib/data/products"
 
 interface Hits {
   readonly objectID?: string
   id?: string
+  handle?: string
   [x: string | number | symbol]: unknown
 }
 
@@ -20,11 +22,12 @@ export async function search(query: string) {
     any
   >
   const { hits } = results[0] as { hits: Hits[] }
+  const filtered = hits.filter((h) => h.handle !== GIFT_CARD_PRODUCT_HANDLE)
 
   // In case you want to use Algolia instead of MeiliSearch, uncomment the following lines and delete the above lines.
 
   // const index = searchClient.initIndex(SEARCH_INDEX_NAME)
   // const { hits } = (await index.search(query)) as { hits: Hits[] }
 
-  return hits
+  return filtered
 }
