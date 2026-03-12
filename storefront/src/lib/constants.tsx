@@ -22,6 +22,14 @@ export const paymentInfoMap: Record<
     title: "Bancontact",
     icon: <Bancontact />,
   },
+  "pp_stripe-klarna_stripe-klarna-alma": {
+    title: "Klarna",
+    icon: <CreditCard />,
+  },
+  "pp_stripe-alma_stripe-klarna-alma": {
+    title: "Alma",
+    icon: <CreditCard />,
+  },
   pp_paypal_paypal: {
     title: "PayPal",
     icon: <PayPal />,
