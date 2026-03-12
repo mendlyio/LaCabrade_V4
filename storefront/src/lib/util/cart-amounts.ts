@@ -55,9 +55,63 @@ export type CartAmountsInput = {
   discount_total?: number | null
   gift_card_total?: number | null
   total?: number | null
-  items?: Array<unknown>
+  items?: Array<{
+    unit_price?: number | null
+    subtotal?: number | null
+    quantity?: number | null
+    metadata?: Record<string, unknown> | null
+    product_title?: string | null
+    title?: string | null
+    variant_sku?: string | null
+    variant?: { product?: { handle?: string } }
+  }>
   metadata?: Record<string, unknown> | null
   shipping_address?: { country_code?: string | null } | null
+}
+
+/** Calcule le total articles en euros à partir des line items (Odoo=euros, bon cadeau=centimes). */
+function getItemsTotalEurosFromItems(cart: CartAmountsInput | null | undefined): number | null {
+  const items = cart?.items
+  if (!items?.length) return null
+  let sum = 0
+  for (const item of items) {
+    const isGiftCard = isGiftCardItem(item)
+    const lineTotal =
+      item.subtotal != null
+        ? lineItemAmountToEuros(item.subtotal, isGiftCard)
+        : lineItemAmountToEuros(item.unit_price, isGiftCard) * (item.quantity ?? 1)
+    sum += lineTotal
+  }
+  return sum
+}
+
+/** Total articles en euros (display). Utilise items si dispo, sinon item_total. */
+function getItemsTotalEuros(cart: CartAmountsInput | null | undefined): number {
+  if (!cart) return 0
+  const fromItems = getItemsTotalEurosFromItems(cart)
+  if (fromItems != null) return fromItems
+  const itemTotal = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0)
+  return toDisplayEuros(itemTotal)
+}
+
+/** Total articles en centimes (paiement). Utilise items si dispo, sinon item_total. */
+function getItemsTotalCents(cart: CartAmountsInput | null | undefined): number {
+  if (!cart) return 0
+  const items = cart.items
+  if (items?.length) {
+    let sum = 0
+    for (const item of items) {
+      const isGiftCard = isGiftCardItem(item)
+      const lineCents =
+        item.subtotal != null
+          ? toPaymentCents(item.subtotal, isGiftCard)
+          : toPaymentCents(item.unit_price, isGiftCard) * (item.quantity ?? 1)
+      sum += lineCents
+    }
+    return sum
+  }
+  const itemTotal = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0)
+  return toPaymentCents(itemTotal)
 }
 
 /**
@@ -84,16 +138,40 @@ export function getItemsTotalTvacEuros(
 /**
  * Sous-total articles pour affichage (dropdown, etc.).
  * TVAC normal, HT si exonération intracommunautaire.
+ * Utilise les line items quand disponibles (Odoo=euros, bon cadeau=centimes).
  */
 export function getItemsDisplayTotalEuros(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
-  const itemTotal = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0)
-  const itemEuros = toDisplayEuros(itemTotal)
+  let itemEuros = getItemsTotalEuros(cart)
   if (isIntraCommunityExempt(cart)) {
     const itemTax = cart.item_tax_total ?? cart.tax_total ?? 0
     return Math.max(0, itemEuros - toDisplayEuros(itemTax))
   }
   return itemEuros
+}
+
+/** TVA belge standard 21 %. TVA = TTC × 0.21 / 1.21 */
+const VAT_RATE = 0.21
+
+/**
+ * Calcule la TVA à afficher (en euros).
+ * Si tax_total fourni par l'API > 0 : on l'utilise.
+ * Sinon : calcul à partir du total TTC (TVA = TTC × 21% / 1.21).
+ */
+export function getDisplayTaxEuros(cart: CartAmountsInput | null | undefined): number {
+  if (!cart) return 0
+  if (isIntraCommunityExempt(cart)) return 0
+
+  const apiTax = cart.tax_total ?? cart.item_tax_total ?? 0
+  if (apiTax > 0) return toDisplayEuros(apiTax)
+
+  const itemTotalEuros = getItemsTotalEuros(cart)
+  const shippingEuros = toDisplayEuros(cart.shipping_total)
+  const discountEuros = toDisplayEuros(cart.discount_total)
+  const giftCardDeduction = toDisplayEuros(cart.gift_card_total, true)
+  const totalTTC = itemTotalEuros + shippingEuros - discountEuros - giftCardDeduction
+
+  return Math.round(totalTTC * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
 }
 
 /**
@@ -105,8 +183,7 @@ export function getDisplayTotalTvacEuros(cart: CartAmountsInput | null | undefin
   const exempt = isIntraCommunityExempt(cart)
   const giftCardDeduction = toDisplayEuros(cart.gift_card_total, true)
 
-  const itemTotal = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0)
-  const itemTotalEuros = toDisplayEuros(itemTotal)
+  const itemTotalEuros = getItemsTotalEuros(cart)
   const shippingEuros = toDisplayEuros(cart.shipping_total)
   const discountEuros = toDisplayEuros(cart.discount_total)
 
@@ -126,8 +203,7 @@ export function getPaymentAmountCents(cart: CartAmountsInput | null | undefined)
   if (!cart) return 0
   const exempt = isIntraCommunityExempt(cart)
 
-  const itemTotal = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0)
-  const itemCents = toPaymentCents(itemTotal)
+  const itemCents = getItemsTotalCents(cart)
   const shippingCents = toPaymentCents(cart.shipping_total)
   const discountCents = toPaymentCents(cart.discount_total)
   const giftCardCents = toPaymentCents(cart.gift_card_total, true)

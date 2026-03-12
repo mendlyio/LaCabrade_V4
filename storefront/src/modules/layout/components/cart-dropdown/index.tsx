@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { Fragment, useEffect, useRef, useState } from "react"
 
 import {
+  getDisplayTaxEuros,
   getItemsDisplayTotalEuros,
   isIntraCommunityExempt,
 } from "@lib/util/cart-amounts"
@@ -35,9 +36,11 @@ const CartDropdown = ({
       return acc + item.quantity
     }, 0) || 0
 
-  // Tous les montants API sont en centimes. Affichage TVAC (TTC) uniforme.
-  const itemsDisplayTotal = getItemsDisplayTotalEuros(cartState as any)
-  const exempt = isIntraCommunityExempt(cartState as any)
+  // Montants Odoo en euros. Affichage TVAC (TTC) uniforme.
+  const cartInput = cartState as any
+  const itemsDisplayTotal = getItemsDisplayTotalEuros(cartInput)
+  const taxDisplayTotal = getDisplayTaxEuros(cartInput)
+  const exempt = isIntraCommunityExempt(cartInput)
   const itemRef = useRef<number>(totalItems || 0)
 
   const timedOpen = () => {
@@ -202,6 +205,14 @@ const CartDropdown = ({
                       {formatAmount(itemsDisplayTotal, cartState.currency_code ?? "eur")}
                     </span>
                   </div>
+                  {!exempt && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">TVA</span>
+                      <span className="font-medium text-gray-900" data-testid="cart-taxes" data-value={taxDisplayTotal}>
+                        {formatAmount(taxDisplayTotal, cartState.currency_code ?? "eur")}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 rounded-lg p-3">
                     <span>✓</span>
                     <span>Livraison gratuite dès 75€</span>

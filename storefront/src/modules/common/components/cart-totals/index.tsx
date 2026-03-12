@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  getDisplayTaxEuros,
   getDisplayTotalTvacEuros,
   getItemsDisplayTotalEuros,
   isIntraCommunityExempt,
@@ -56,6 +57,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
     discount_total,
     gift_card_total,
     total,
+    items,
     metadata,
     shipping_address,
   }
@@ -71,7 +73,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
   const giftCardDeduction = (gift_card_total ?? 0) / 100
 
   // TVA affichée : 0 si exempt, sinon tax_total (euros)
-  const displayedTaxTotal = exempt ? 0 : (tax_total ?? 0)
+  const displayedTaxTotal = getDisplayTaxEuros(cartInput)
 
   // Total TVAC (ou HT si exempt)
   const displayedTotal = getDisplayTotalTvacEuros(cartInput)
@@ -124,7 +126,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
             {exempt ? (
               <span className="flex items-center gap-1.5">
                 <span className="line-through text-gray-400 text-xs">
-                  {formatAmount(tax_total ?? 0, currency_code)}
+                  {formatAmount(displayedTotal * 0.21, currency_code)}
                 </span>
                 <span>{formatAmount(0, currency_code)}</span>
               </span>

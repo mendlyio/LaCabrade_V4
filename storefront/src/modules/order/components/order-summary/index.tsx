@@ -1,4 +1,4 @@
-import { formatAmount } from "@lib/util/money"
+import { formatAmount, formatAmountFromCents } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 
 type OrderSummaryProps = {
@@ -31,8 +31,8 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
           )}
           {order.gift_card_total > 0 && (
             <div className="flex items-center justify-between">
-              <span>Discount</span>
-              <span>- {getAmount(order.gift_card_total)}</span>
+              <span>Carte cadeau</span>
+              <span>- {formatAmountFromCents(order.gift_card_total, order.currency_code)}</span>
             </div>
           )}
           <div className="flex items-center justify-between">

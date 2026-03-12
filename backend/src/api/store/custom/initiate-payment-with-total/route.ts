@@ -56,9 +56,12 @@ export async function POST(
     const workflowEngine = req.scope.resolve(Modules.WORKFLOW_ENGINE) as any
 
     // 1. Mettre à jour le montant de la payment collection avec le total TTC du frontend
+    // Le frontend envoie des centimes ; Medusa/Stripe attendent des euros (major units).
+    // Le provider Stripe multiplie par 100 pour obtenir les centimes.
+    const amountEuros = amount / 100
     await paymentModuleService.updatePaymentCollections(
       { id: payment_collection_id },
-      { amount }
+      { amount: amountEuros }
     )
 
     // 2. Créer la session de paiement (workflow standard)
@@ -80,7 +83,7 @@ export async function POST(
     )
 
     res.status(200).json({
-      payment_collection: paymentCollection || { id: payment_collection_id, amount },
+      payment_collection: paymentCollection || { id: payment_collection_id, amount: amountEuros },
     })
   } catch (error: any) {
     console.error("[initiate-payment-with-total] Erreur:", error)
