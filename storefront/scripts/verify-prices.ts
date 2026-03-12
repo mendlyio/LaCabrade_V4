@@ -1,6 +1,7 @@
 /**
  * Vérifie la logique des prix (Odoo 59,95€) à travers tout le flux.
  * Usage: npx tsx scripts/verify-prices.ts
+ * @see cart-amounts.ts
  */
 
 // Simule cart-amounts
