@@ -165,7 +165,7 @@ const medusaConfig = {
       options: {
         providers: [
           {
-            resolve: '@medusajs/payment-stripe',
+            resolve: './src/modules/stripe-payment-provider',
             id: 'stripe',
             options: {
               apiKey: STRIPE_API_KEY,
