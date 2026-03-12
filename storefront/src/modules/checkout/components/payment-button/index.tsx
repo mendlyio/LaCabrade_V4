@@ -126,33 +126,39 @@ const StripePaymentButton = ({
     }
 
     if (isRedirect) {
-      // Klarna, Alma, iDEAL, etc. : redirection vers le prestataire
       const returnUrl = typeof window !== "undefined"
         ? `${window.location.origin}${window.location.pathname}?step=review`
         : ""
-      const { error } = await stripe.confirmPayment({
-        clientSecret: session.data.client_secret as string,
-        confirmParams: {
-          return_url: returnUrl,
-          payment_method_data: {
-            billing_details: {
-              name: `${cart.billing_address?.first_name ?? ""} ${cart.billing_address?.last_name ?? ""}`.trim(),
-              address: {
-                city: cart.billing_address?.city ?? undefined,
-                country: cart.billing_address?.country_code ?? undefined,
-                line1: cart.billing_address?.address_1 ?? undefined,
-                line2: cart.billing_address?.address_2 ?? undefined,
-                postal_code: cart.billing_address?.postal_code ?? undefined,
-                state: cart.billing_address?.province ?? undefined,
-              },
-              email: cart.email ?? undefined,
-              phone: cart.billing_address?.phone ?? undefined,
-            },
-          },
-        },
-      })
-      if (error) {
-        setErrorMessage(error.message ?? null)
+      const providerId = session?.provider_id ?? ""
+
+      try {
+        let result: { error?: { message?: string } }
+        if (providerId.includes("klarna")) {
+          result = await stripe.confirmKlarnaPayment(
+            session.data.client_secret as string,
+            { return_url: returnUrl }
+          )
+        } else if (providerId.includes("ideal")) {
+          result = await stripe.confirmIdealPayment(
+            session.data.client_secret as string,
+            { return_url: returnUrl }
+          )
+        } else if (providerId.includes("bancontact")) {
+          result = await stripe.confirmBancontactPayment(
+            session.data.client_secret as string,
+            { return_url: returnUrl }
+          )
+        } else {
+          result = await stripe.confirmPayment({
+            clientSecret: session.data.client_secret as string,
+            confirmParams: { return_url: returnUrl },
+          })
+        }
+        if (result?.error) {
+          setErrorMessage(result.error.message ?? "Une erreur est survenue. Réessayez.")
+        }
+      } catch (err: any) {
+        setErrorMessage(err?.message ?? "Une erreur est survenue. Réessayez.")
       }
       setSubmitting(false)
       return

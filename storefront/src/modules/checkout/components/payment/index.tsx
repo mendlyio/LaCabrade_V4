@@ -84,16 +84,19 @@ const Payment = ({
 
   const handleSubmit = async () => {
     setIsLoading(true)
+    setError(null)
     try {
+      const needNewSession = !activeSession || activeSession.provider_id !== selectedPaymentMethod
       const shouldInputCard =
         isStripeFunc(selectedPaymentMethod) &&
         !isStripeRedirect(selectedPaymentMethod) &&
         !activeSession
 
-      if (!activeSession) {
+      if (needNewSession) {
         await initiatePaymentSession(cart, {
           provider_id: selectedPaymentMethod,
         })
+        router.refresh()
       }
 
       if (!shouldInputCard) {
@@ -105,7 +108,7 @@ const Payment = ({
         )
       }
     } catch (err: any) {
-      setError(err.message)
+      setError(err?.message ?? "Une erreur est survenue. Réessayez.")
     } finally {
       setIsLoading(false)
     }
