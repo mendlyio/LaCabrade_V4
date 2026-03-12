@@ -20,19 +20,23 @@ export async function POST(
   res: MedusaResponse
 ): Promise<void> {
   try {
-    const {
-      cart_id,
-      payment_collection_id,
-      provider_id,
-      amount,
-      data = {},
-    } = req.body as {
-      cart_id: string
+    const body = req.body as {
+      cart_id?: string
       payment_collection_id: string
       provider_id: string
       amount: number
       data?: Record<string, unknown>
+      customer_id?: string
+      context?: Record<string, unknown>
     }
+    const {
+      payment_collection_id,
+      provider_id,
+      amount,
+      data = {},
+      customer_id,
+      context,
+    } = body
 
     if (!payment_collection_id || !provider_id) {
       res.status(400).json({
@@ -63,8 +67,8 @@ export async function POST(
         payment_collection_id,
         provider_id,
         data,
-        customer_id: req.body.customer_id,
-        context: req.body.context,
+        customer_id,
+        context,
       },
       transactionId: `init-payment-${payment_collection_id}-${Date.now()}`,
     })
