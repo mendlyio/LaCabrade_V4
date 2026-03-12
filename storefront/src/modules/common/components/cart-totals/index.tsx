@@ -73,24 +73,35 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
   const isIntraCommunityExempt = !!(vatNumber && customerCountry && customerCountry !== "be")
 
   const giftCardDeduction = gift_card_total != null ? gift_card_total / 100 : 0
+
+  // TVA par défaut 21% quand tax_total n'est pas encore calculé (ex: avant adresse de livraison)
+  const DEFAULT_VAT_RATE = 0.21
+  const taxFromApi = hasGiftCardInItems ? toEuros(tax_total) : (tax_total ?? 0)
+  const hasTaxFromApi = taxFromApi != null && taxFromApi > 0
+  const baseForVat = displayedSubtotal - (hasGiftCardInItems ? toEuros(discount_total) : (discount_total ?? 0))
+  const defaultVat = baseForVat * DEFAULT_VAT_RATE
+
   const displayedTaxTotal =
-    isIntraCommunityExempt ? 0 : (hasGiftCardInItems ? toEuros(tax_total) : (tax_total ?? 0))
+    isIntraCommunityExempt ? 0 : (hasTaxFromApi ? taxFromApi : defaultVat)
   const vatDeduction = isIntraCommunityExempt ? (hasGiftCardInItems ? toEuros(tax_total) : (tax_total ?? 0)) : 0
 
   // Recalculer le total si panier mixte (produits en euros + bon cadeau en centimes)
   // Quand hasGiftCardInItems : discount, shipping, tax, total de l'API sont en centimes
+  const effectiveTaxForTotal = isIntraCommunityExempt ? 0 : (hasTaxFromApi ? taxFromApi : defaultVat)
   const displayedTotal =
     hasGiftCardInItems && itemsSubtotal != null
       ? itemsSubtotal -
         toEuros(discount_total) +
         toEuros(shipping_total) +
-        (isIntraCommunityExempt ? 0 : toEuros(tax_total)) -
+        effectiveTaxForTotal -
         giftCardDeduction
       : hasGiftCardInItems && total != null
-        ? toEuros(total) - (isIntraCommunityExempt ? toEuros(tax_total) : 0)
+        ? toEuros(total) - (isIntraCommunityExempt ? toEuros(tax_total) : 0) + (!isIntraCommunityExempt && !hasTaxFromApi ? effectiveTaxForTotal : 0)
         : isIntraCommunityExempt
           ? (total ?? 0) - vatDeduction
-          : (total ?? 0)
+          : hasTaxFromApi
+            ? (total ?? 0)
+            : displayedSubtotal - (hasGiftCardInItems ? toEuros(discount_total) : (discount_total ?? 0)) + (hasGiftCardInItems ? toEuros(shipping_total) : (shipping_total ?? 0)) + effectiveTaxForTotal - giftCardDeduction
 
   return (
     <div>
@@ -127,7 +138,9 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
 
         <div className="flex items-center justify-between">
           <span className="text-gray-600 flex items-center gap-1">
-            TVA
+            TVA {!hasTaxFromApi && !isIntraCommunityExempt && (
+              <span className="text-[10px] text-gray-400 font-normal">(21% par défaut)</span>
+            )}
             {isIntraCommunityExempt && (
               <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-medium">
                 Exonéré
@@ -143,7 +156,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
                 <span>{formatAmount(0, currency_code)}</span>
               </span>
             ) : (
-              formatAmount(hasGiftCardInItems ? toEuros(tax_total) : (tax_total ?? 0), currency_code)
+              formatAmount(displayedTaxTotal, currency_code)
             )}
           </span>
         </div>
