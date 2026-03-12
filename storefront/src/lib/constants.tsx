@@ -22,14 +22,6 @@ export const paymentInfoMap: Record<
     title: "Bancontact",
     icon: <Bancontact />,
   },
-  "pp_stripe-klarna_stripe-klarna-alma": {
-    title: "Klarna",
-    icon: <CreditCard />,
-  },
-  "pp_stripe-alma_stripe-klarna-alma": {
-    title: "Alma",
-    icon: <CreditCard />,
-  },
   pp_paypal_paypal: {
     title: "PayPal",
     icon: <PayPal />,
@@ -41,23 +33,9 @@ export const paymentInfoMap: Record<
   // Add more payment providers here
 }
 
-// Inclut tous les providers Stripe : carte, Klarna, Alma, iDEAL, Bancontact, etc.
+// Inclut tous les providers Stripe : carte, Klarna, Alma, etc. (Payment Element)
 export const isStripe = (providerId?: string) => {
   return providerId?.startsWith("pp_stripe")
-}
-
-// Méthodes de paiement par redirection (pas de CardElement)
-export const isStripeRedirect = (providerId?: string) => {
-  if (!providerId) return false
-  return (
-    providerId.includes("klarna") ||
-    providerId.includes("alma") ||
-    providerId.includes("ideal") ||
-    providerId.includes("bancontact") ||
-    providerId.includes("giropay") ||
-    providerId.includes("blik") ||
-    providerId.includes("przelewy24")
-  )
 }
 export const isPaypal = (providerId?: string) => {
   return providerId?.startsWith("pp_paypal")

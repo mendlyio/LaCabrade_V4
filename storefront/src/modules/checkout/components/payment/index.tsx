@@ -1,16 +1,15 @@
 "use client"
 
-import { useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { useCallback, useContext, useEffect, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { RadioGroup } from "@headlessui/react"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import { CheckCircleSolid, CreditCard } from "@medusajs/icons"
 import { Button, Container, Heading, Text, clx } from "@medusajs/ui"
-import { CardElement } from "@stripe/react-stripe-js"
-import { StripeCardElementOptions } from "@stripe/stripe-js"
+import { PaymentElement } from "@stripe/react-stripe-js"
 
 import PaymentContainer from "@modules/checkout/components/payment-container"
-import { isStripe as isStripeFunc, isStripeRedirect, paymentInfoMap } from "@lib/constants"
+import { isStripe as isStripeFunc, paymentInfoMap } from "@lib/constants"
 import { StripeContext } from "@modules/checkout/components/payment-wrapper"
 import { initiatePaymentSession } from "@lib/data/cart"
 
@@ -26,12 +25,25 @@ const Payment = ({
   )
 
   const [isLoading, setIsLoading] = useState(false)
+  const [isSwitching, setIsSwitching] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [cardBrand, setCardBrand] = useState<string | null>(null)
-  const [cardComplete, setCardComplete] = useState(false)
+  const [paymentElementReady, setPaymentElementReady] = useState(false)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
     activeSession?.provider_id ?? ""
   )
+
+  // Réinitialiser paymentElementReady quand la session change (nouveau Payment Element)
+  useEffect(() => {
+    setPaymentElementReady(false)
+  }, [activeSession?.id])
+
+  // Synchroniser la sélection quand la session du panier change (ex: retour arrière, refresh)
+  // Ne pas écraser pendant un changement en cours (isSwitching)
+  useEffect(() => {
+    if (!isSwitching && activeSession?.provider_id && activeSession.provider_id !== selectedPaymentMethod) {
+      setSelectedPaymentMethod(activeSession.provider_id)
+    }
+  }, [activeSession?.provider_id, isSwitching, selectedPaymentMethod])
 
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -47,24 +59,6 @@ const Payment = ({
 
   const paymentReady =
     (activeSession && cart?.shipping_methods.length !== 0) || paidByGiftcard
-
-  const useOptions: StripeCardElementOptions = useMemo(() => {
-    return {
-      style: {
-        base: {
-          fontFamily: "Inter, sans-serif",
-          color: "#1f2937",
-          fontSize: "14px",
-          "::placeholder": {
-            color: "rgb(156 163 175)",
-          },
-        },
-      },
-      classes: {
-        base: "pt-3 pb-1 block w-full h-11 px-4 mt-0 bg-white border-2 border-gray-200 rounded-lg appearance-none focus:outline-none focus:border-amber-500 hover:border-gray-300 transition-all duration-200",
-      },
-    }
-  }, [])
 
   const createQueryString = useCallback(
     (name: string, value: string) => {
@@ -82,15 +76,34 @@ const Payment = ({
     })
   }
 
+  const handlePaymentMethodChange = useCallback(
+    async (newProviderId: string) => {
+      if (newProviderId === activeSession?.provider_id) {
+        setSelectedPaymentMethod(newProviderId)
+        return
+      }
+      setError(null)
+      setIsSwitching(true)
+      const previousProviderId = activeSession?.provider_id ?? ""
+      setSelectedPaymentMethod(newProviderId)
+      try {
+        await initiatePaymentSession(cart, { provider_id: newProviderId })
+        await router.refresh()
+      } catch (err: any) {
+        setError(err?.message ?? "Impossible de changer de moyen de paiement. Réessayez.")
+        setSelectedPaymentMethod(previousProviderId)
+      } finally {
+        setIsSwitching(false)
+      }
+    },
+    [cart, activeSession?.provider_id, router]
+  )
+
   const handleSubmit = async () => {
     setIsLoading(true)
     setError(null)
     try {
       const needNewSession = !activeSession || activeSession.provider_id !== selectedPaymentMethod
-      const shouldInputCard =
-        isStripeFunc(selectedPaymentMethod) &&
-        !isStripeRedirect(selectedPaymentMethod) &&
-        !activeSession
 
       if (needNewSession) {
         await initiatePaymentSession(cart, {
@@ -99,14 +112,10 @@ const Payment = ({
         router.refresh()
       }
 
-      if (!shouldInputCard) {
-        return router.push(
-          pathname + "?" + createQueryString("step", "review"),
-          {
-            scroll: false,
-          }
-        )
-      }
+      return router.push(
+        pathname + "?" + createQueryString("step", "review"),
+        { scroll: false }
+      )
     } catch (err: any) {
       setError(err?.message ?? "Une erreur est survenue. Réessayez.")
     } finally {
@@ -168,12 +177,12 @@ const Payment = ({
             <>
               <RadioGroup
                 value={selectedPaymentMethod}
-                onChange={(value: string) => setSelectedPaymentMethod(value)}
+                onChange={handlePaymentMethodChange}
               >
                 <div className="space-y-3">
                   {availablePaymentMethods
                     .sort((a, b) => {
-                      return a.provider_id > b.provider_id ? 1 : -1
+                      return (a.id ?? a.provider_id ?? "") > (b.id ?? b.provider_id ?? "") ? 1 : -1
                     })
                     .map((paymentMethod) => {
                       return (
@@ -182,27 +191,22 @@ const Payment = ({
                           paymentProviderId={paymentMethod.id}
                           key={paymentMethod.id}
                           selectedPaymentOptionId={selectedPaymentMethod}
+                          disabled={isSwitching}
                         />
                       )
                     })}
                 </div>
               </RadioGroup>
 
-              {isStripe && !isStripeRedirect(activeSession?.provider_id) && stripeReady && (
+              {isStripe && stripeReady && (
                 <div className="mt-5 transition-all duration-150 ease-in-out">
-                  <p className="text-sm font-medium text-gray-700 mb-3">
-                    Informations de carte bancaire
-                  </p>
-                  <CardElement
-                    options={useOptions as StripeCardElementOptions}
-                    onChange={(e) => {
-                      setCardBrand(
-                        e.brand &&
-                          e.brand.charAt(0).toUpperCase() + e.brand.slice(1)
-                      )
-                      setError(e.error?.message || null)
-                      setCardComplete(e.complete)
+                  <PaymentElement
+                    options={{
+                      layout: "tabs",
+                      wallets: { applePay: "auto", googlePay: "auto" },
                     }}
+                    onReady={() => setPaymentElementReady(true)}
+                    onChange={(e) => setError(e.error?.message || null)}
                   />
                 </div>
               )}
@@ -222,28 +226,32 @@ const Payment = ({
             data-testid="payment-method-error-message"
           />
 
+          {isSwitching && (
+            <p className="text-sm text-amber-600 mt-2">
+              Changement de moyen de paiement en cours...
+            </p>
+          )}
           <Button
             size="large"
             className={`mt-6 w-full font-semibold py-3.5 px-6 rounded-lg transition-all duration-200 text-base ${
-              (isStripe && !cardComplete) || (!selectedPaymentMethod && !paidByGiftcard)
+              (isStripe && !paymentElementReady) || (!selectedPaymentMethod && !paidByGiftcard) || isSwitching
                 ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                 : "bg-amber-600 hover:bg-amber-700 text-white shadow-md hover:shadow-lg"
             }`}
             onClick={handleSubmit}
             isLoading={isLoading}
             disabled={
-              (isStripe && !isStripeRedirect(selectedPaymentMethod) && !cardComplete) ||
-              (!selectedPaymentMethod && !paidByGiftcard)
+              (isStripe && !paymentElementReady) ||
+              (!selectedPaymentMethod && !paidByGiftcard) ||
+              isSwitching
             }
             data-testid="submit-payment-button"
           >
-            {!activeSession && isStripeFunc(selectedPaymentMethod)
-              ? "Entrer les détails de la carte"
-              : "Continuer vers la vérification"}
+            Continuer vers la vérification
           </Button>
-          {(isStripe && !isStripeRedirect(selectedPaymentMethod) && !cardComplete) && selectedPaymentMethod && (
+          {(isStripe && !paymentElementReady) && selectedPaymentMethod && (
             <p className="text-xs text-gray-500 text-center mt-2">
-              Veuillez remplir les informations de carte ci-dessus
+              Veuillez remplir les informations de paiement ci-dessus
             </p>
           )}
           {!selectedPaymentMethod && !paidByGiftcard && (
@@ -282,8 +290,8 @@ const Payment = ({
                     )}
                   </Container>
                   <Text>
-                    {isStripeFunc(selectedPaymentMethod) && cardBrand
-                      ? cardBrand
+                    {isStripeFunc(selectedPaymentMethod)
+                      ? "Carte / Klarna / Alma"
                       : "Prêt pour le paiement"}
                   </Text>
                 </div>

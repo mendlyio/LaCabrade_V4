@@ -9,7 +9,7 @@ import ErrorMessage from "../error-message"
 import Spinner from "@modules/common/icons/spinner"
 import { placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
-import { isManual, isPaypal, isStripe, isStripeRedirect } from "@lib/constants"
+import { isManual, isPaypal, isStripe } from "@lib/constants"
 
 type PaymentButtonProps = {
   cart: HttpTypes.StoreCart
@@ -107,116 +107,41 @@ const StripePaymentButton = ({
 
   const stripe = useStripe()
   const elements = useElements()
-  const card = elements?.getElement("card")
 
   const session = cart.payment_collection?.payment_sessions?.find(
     (s) => s.status === "pending"
   )
-  const isRedirect = isStripeRedirect(session?.provider_id)
 
-  // Pour carte : stripe + elements + card requis. Pour redirect (Klarna/Alma) : stripe seul
-  const disabled = !stripe || (!isRedirect && (!elements || !card)) ? true : false
+  const disabled = !stripe || !elements
 
   const handlePayment = async () => {
     setSubmitting(true)
 
-    if (!stripe || !session?.data?.client_secret || !cart) {
+    if (!stripe || !elements || !session?.data?.client_secret || !cart) {
       setSubmitting(false)
       return
     }
 
-    if (isRedirect) {
-      const returnUrl = typeof window !== "undefined"
-        ? `${window.location.origin}${window.location.pathname}?step=review`
-        : ""
-      const providerId = session?.provider_id ?? ""
+    const returnUrl = typeof window !== "undefined"
+      ? `${window.location.origin}${window.location.pathname}?step=review`
+      : ""
 
-      try {
-        let result: { error?: { message?: string } }
-        if (providerId.includes("klarna")) {
-          result = await stripe.confirmKlarnaPayment(
-            session.data.client_secret as string,
-            { return_url: returnUrl }
-          )
-        } else if (providerId.includes("ideal")) {
-          result = await stripe.confirmIdealPayment(
-            session.data.client_secret as string,
-            { return_url: returnUrl }
-          )
-        } else if (providerId.includes("bancontact")) {
-          result = await stripe.confirmBancontactPayment(
-            session.data.client_secret as string,
-            { return_url: returnUrl }
-          )
-        } else {
-          result = await stripe.confirmPayment({
-            clientSecret: session.data.client_secret as string,
-            confirmParams: { return_url: returnUrl },
-          })
-        }
-        if (result?.error) {
-          setErrorMessage(result.error.message ?? "Une erreur est survenue. Réessayez.")
-        }
-      } catch (err: any) {
-        setErrorMessage(err?.message ?? "Une erreur est survenue. Réessayez.")
+    try {
+      const { error } = await stripe.confirmPayment({
+        elements,
+        confirmParams: { return_url: returnUrl },
+        redirect: "if_required",
+      })
+      if (error) {
+        setErrorMessage(error.message ?? "Une erreur est survenue. Réessayez.")
+      } else {
+        await onPaymentCompleted()
       }
+    } catch (err: any) {
+      setErrorMessage(err?.message ?? "Une erreur est survenue. Réessayez.")
+    } finally {
       setSubmitting(false)
-      return
     }
-
-    // Carte bancaire
-    if (!elements || !card) {
-      setSubmitting(false)
-      return
-    }
-
-    await stripe
-      .confirmCardPayment(session.data.client_secret as string, {
-        payment_method: {
-          card: card,
-          billing_details: {
-            name:
-              cart.billing_address?.first_name +
-              " " +
-              cart.billing_address?.last_name,
-            address: {
-              city: cart.billing_address?.city ?? undefined,
-              country: cart.billing_address?.country_code ?? undefined,
-              line1: cart.billing_address?.address_1 ?? undefined,
-              line2: cart.billing_address?.address_2 ?? undefined,
-              postal_code: cart.billing_address?.postal_code ?? undefined,
-              state: cart.billing_address?.province ?? undefined,
-            },
-            email: cart.email,
-            phone: cart.billing_address?.phone ?? undefined,
-          },
-        },
-      })
-      .then(({ error, paymentIntent }) => {
-        if (error) {
-          const pi = error.payment_intent
-
-          if (
-            (pi && pi.status === "requires_capture") ||
-            (pi && pi.status === "succeeded")
-          ) {
-            onPaymentCompleted()
-          }
-
-          setErrorMessage(error.message || null)
-          return
-        }
-
-        if (
-          (paymentIntent && paymentIntent.status === "requires_capture") ||
-          paymentIntent.status === "succeeded"
-        ) {
-          return onPaymentCompleted()
-        }
-
-        return
-      })
-      .finally(() => setSubmitting(false))
   }
 
   return (
@@ -229,7 +154,7 @@ const StripePaymentButton = ({
         data-testid={dataTestId}
         className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-4 px-8 rounded-lg transition-colors w-full text-lg"
       >
-        {isRedirect ? "Continuer vers le paiement" : "🎉 Valider la commande"}
+        🎉 Valider la commande
       </Button>
       <ErrorMessage
         error={errorMessage}

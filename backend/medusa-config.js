@@ -170,14 +170,7 @@ const medusaConfig = {
             options: {
               apiKey: STRIPE_API_KEY,
               webhookSecret: STRIPE_WEBHOOK_SECRET,
-            },
-          },
-          {
-            resolve: './src/modules/stripe-klarna-alma',
-            id: 'stripe-klarna-alma',
-            options: {
-              apiKey: STRIPE_API_KEY,
-              webhookSecret: STRIPE_WEBHOOK_SECRET,
+              automaticPaymentMethods: true,
             },
           },
         ],
