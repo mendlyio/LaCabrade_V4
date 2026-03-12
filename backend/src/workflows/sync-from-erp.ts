@@ -8,8 +8,8 @@ import {
 import {
   createProductsWorkflow,
   updateProductsWorkflow,
+  upsertVariantPricesWorkflow,
 } from "@medusajs/medusa/core-flows"
-import { upsertVariantPricesWorkflow } from "@medusajs/core-flows"
 import {
   CreateProductWorkflowInputDTO,
   UpdateProductWorkflowInputDTO,
