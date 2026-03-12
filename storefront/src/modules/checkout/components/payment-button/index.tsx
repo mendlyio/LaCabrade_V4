@@ -126,10 +126,35 @@ const StripePaymentButton = ({
       ? `${window.location.origin}${window.location.pathname}?step=review`
       : ""
 
+    // Bancontact, iDEAL, Klarna, etc. exigent billing_details.name
+    const billingName =
+      [cart.billing_address?.first_name, cart.billing_address?.last_name]
+        .filter(Boolean)
+        .join(" ")
+        .trim() || cart.email || "Client"
+
+    const confirmParams: Record<string, unknown> = { return_url: returnUrl }
+    const billingDetails: Record<string, unknown> = {
+      name: billingName,
+      ...(cart.email && { email: cart.email }),
+      ...(cart.billing_address?.phone && { phone: cart.billing_address.phone }),
+      ...(cart.billing_address?.address_1 && {
+        address: {
+          line1: cart.billing_address.address_1,
+          line2: cart.billing_address.address_2 || undefined,
+          city: cart.billing_address.city,
+          postal_code: cart.billing_address.postal_code,
+          country: cart.billing_address.country_code,
+          state: cart.billing_address.province || undefined,
+        },
+      }),
+    }
+    confirmParams.payment_method_data = { billing_details: billingDetails }
+
     try {
       const { error } = await stripe.confirmPayment({
         elements,
-        confirmParams: { return_url: returnUrl },
+        confirmParams,
         redirect: "if_required",
       })
       if (error) {
