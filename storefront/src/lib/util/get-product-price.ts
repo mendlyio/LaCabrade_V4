@@ -13,28 +13,33 @@ function isGiftCardVariant(variant: any): boolean {
 /**
  * Retourne le prix en euros pour affichage.
  * @param lineItemUnitPrice - Odoo = euros, bon cadeau = centimes
+ * @param lineItemCompareAtUnitPrice - Prix barré (outlet, last chance)
  */
-export const getPricesForVariant = (variant: any, lineItemUnitPrice?: number) => {
+export const getPricesForVariant = (
+  variant: any,
+  lineItemUnitPrice?: number,
+  lineItemCompareAtUnitPrice?: number
+) => {
   const isGiftCard = isGiftCardVariant(variant)
   const cp = variant?.calculated_price
 
   // Line item (panier) : Odoo en euros, bon cadeau en centimes
   if (lineItemUnitPrice != null && Number.isFinite(lineItemUnitPrice)) {
     const amount = lineItemAmountToEuros(lineItemUnitPrice, isGiftCard)
+    const compareAt = lineItemCompareAtUnitPrice != null && Number.isFinite(lineItemCompareAtUnitPrice)
+      ? lineItemAmountToEuros(lineItemCompareAtUnitPrice, isGiftCard)
+      : amount
+    const hasReduction = compareAt > amount
+    const originalAmount = hasReduction ? compareAt : amount
+    const currencyCode = cp?.currency_code ?? "eur"
     return {
       calculated_price_number: amount,
-      calculated_price: convertToLocale({
-        amount,
-        currency_code: cp?.currency_code ?? "eur",
-      }),
-      original_price_number: amount,
-      original_price: convertToLocale({
-        amount,
-        currency_code: cp?.currency_code ?? "eur",
-      }),
-      currency_code: cp?.currency_code ?? "eur",
+      calculated_price: convertToLocale({ amount, currency_code: currencyCode }),
+      original_price_number: originalAmount,
+      original_price: convertToLocale({ amount: originalAmount, currency_code: currencyCode }),
+      currency_code: currencyCode,
       price_type: undefined,
-      percentage_diff: 0,
+      percentage_diff: hasReduction ? getPercentageDiff(originalAmount, amount) : 0,
     }
   }
 

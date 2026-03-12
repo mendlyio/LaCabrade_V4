@@ -12,8 +12,11 @@ type LineItemPriceProps = {
 }
 
 const LineItemPrice = ({ item, style = "default" }: LineItemPriceProps) => {
+  const compareAt =
+    (item as any).compare_at_unit_price ??
+    (item.metadata as any)?.outlet_original_price
   const { currency_code, calculated_price_number, original_price_number } =
-    getPricesForVariant(item.variant, item.unit_price) ?? {}
+    getPricesForVariant(item.variant, item.unit_price, compareAt) ?? {}
 
   const isGiftCard = isGiftCardItem(item as any)
   const adjustmentsSum = (item.adjustments || []).reduce(

@@ -22,6 +22,7 @@
     "clean-shipping-options:local": "REDIS_URL= medusa exec src/scripts/clean-shipping-options.ts",
     "seed:bpost": "medusa exec src/scripts/seed-bpost.ts",
     "seed:gift-card": "medusa exec src/scripts/seed-gift-card.ts",
+    "seed:outlet-promotion": "medusa exec src/scripts/seed-outlet-promotion.ts",
     "seed:bpost:local": "REDIS_URL= medusa exec src/scripts/seed-bpost.ts",
     "fix:express-prices:local": "REDIS_URL= medusa exec src/scripts/fix-express-prices.ts",
     "fix:shipping-prices:local": "REDIS_URL= medusa exec src/scripts/fix-shipping-prices.ts",

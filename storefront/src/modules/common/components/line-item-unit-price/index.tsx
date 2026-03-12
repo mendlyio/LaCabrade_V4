@@ -11,13 +11,16 @@ const LineItemUnitPrice = ({
   item,
   style = "default",
 }: LineItemUnitPriceProps) => {
+  const compareAt =
+    (item as any).compare_at_unit_price ??
+    (item.metadata as any)?.outlet_original_price
   const {
     original_price,
     calculated_price,
     original_price_number,
     calculated_price_number,
     percentage_diff,
-  } = getPricesForVariant(item.variant, item.unit_price) ?? {}
+  } = getPricesForVariant(item.variant, item.unit_price, compareAt) ?? {}
   const hasReducedPrice = calculated_price_number < original_price_number
 
   return (

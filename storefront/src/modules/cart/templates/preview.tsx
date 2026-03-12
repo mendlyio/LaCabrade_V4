@@ -44,7 +44,9 @@ const ItemsPreviewTemplate = ({ items }: ItemsTemplateProps) => {
 
         // Odoo = euros, bon cadeau = centimes
         const unitPrice = lineItemAmountToEuros(item.unit_price, isGiftCard)
-        const comparePrice = lineItemAmountToEuros((item as any).compare_at_unit_price, isGiftCard)
+        const compareAtRaw =
+          (item as any).compare_at_unit_price ?? (item.metadata as any)?.outlet_original_price
+        const comparePrice = lineItemAmountToEuros(compareAtRaw, isGiftCard)
         const hasDiscount = comparePrice && comparePrice > unitPrice
         const lineTotal =
           item.subtotal != null
