@@ -2,10 +2,12 @@
 
 import { Heading, Text, clx } from "@medusajs/ui"
 import { HttpTypes } from "@medusajs/types"
+import { useEffect, useRef } from "react"
 
 import PaymentButton from "../payment-button"
 import LastChanceUpsell from "../last-chance-upsell"
 import { useSearchParams } from "next/navigation"
+import { placeOrder } from "@lib/data/cart"
 
 const Review = ({
   cart,
@@ -15,8 +17,20 @@ const Review = ({
   lastChanceProducts?: HttpTypes.StoreProduct[]
 }) => {
   const searchParams = useSearchParams()
+  const hasHandledReturn = useRef(false)
 
   const isOpen = searchParams.get("step") === "review"
+
+  // Retour depuis Klarna/Alma : Stripe ajoute redirect_status=succeeded
+  useEffect(() => {
+    if (hasHandledReturn.current) return
+    const redirectStatus = searchParams.get("redirect_status")
+    const paymentIntent = searchParams.get("payment_intent")
+    if ((redirectStatus === "succeeded" || redirectStatus === "processing") && paymentIntent) {
+      hasHandledReturn.current = true
+      placeOrder().catch(() => { hasHandledReturn.current = false })
+    }
+  }, [searchParams])
 
   const paidByGiftcard =
     cart?.gift_cards && cart?.gift_cards?.length > 0 && cart?.total === 0

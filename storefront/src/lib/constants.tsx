@@ -41,9 +41,23 @@ export const paymentInfoMap: Record<
   // Add more payment providers here
 }
 
-// This only checks if it is native stripe for card payments, it ignores the other stripe-based providers
+// Inclut tous les providers Stripe : carte, Klarna, Alma, iDEAL, Bancontact, etc.
 export const isStripe = (providerId?: string) => {
-  return providerId?.startsWith("pp_stripe_")
+  return providerId?.startsWith("pp_stripe")
+}
+
+// Méthodes de paiement par redirection (pas de CardElement)
+export const isStripeRedirect = (providerId?: string) => {
+  if (!providerId) return false
+  return (
+    providerId.includes("klarna") ||
+    providerId.includes("alma") ||
+    providerId.includes("ideal") ||
+    providerId.includes("bancontact") ||
+    providerId.includes("giropay") ||
+    providerId.includes("blik") ||
+    providerId.includes("przelewy24")
+  )
 }
 export const isPaypal = (providerId?: string) => {
   return providerId?.startsWith("pp_paypal")

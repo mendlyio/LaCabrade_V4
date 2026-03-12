@@ -10,7 +10,7 @@ import { CardElement } from "@stripe/react-stripe-js"
 import { StripeCardElementOptions } from "@stripe/stripe-js"
 
 import PaymentContainer from "@modules/checkout/components/payment-container"
-import { isStripe as isStripeFunc, paymentInfoMap } from "@lib/constants"
+import { isStripe as isStripeFunc, isStripeRedirect, paymentInfoMap } from "@lib/constants"
 import { StripeContext } from "@modules/checkout/components/payment-wrapper"
 import { initiatePaymentSession } from "@lib/data/cart"
 
@@ -86,7 +86,9 @@ const Payment = ({
     setIsLoading(true)
     try {
       const shouldInputCard =
-        isStripeFunc(selectedPaymentMethod) && !activeSession
+        isStripeFunc(selectedPaymentMethod) &&
+        !isStripeRedirect(selectedPaymentMethod) &&
+        !activeSession
 
       if (!activeSession) {
         await initiatePaymentSession(cart, {
@@ -183,7 +185,7 @@ const Payment = ({
                 </div>
               </RadioGroup>
 
-              {isStripe && stripeReady && (
+              {isStripe && !isStripeRedirect(activeSession?.provider_id) && stripeReady && (
                 <div className="mt-5 transition-all duration-150 ease-in-out">
                   <p className="text-sm font-medium text-gray-700 mb-3">
                     Informations de carte bancaire
@@ -227,7 +229,7 @@ const Payment = ({
             onClick={handleSubmit}
             isLoading={isLoading}
             disabled={
-              (isStripe && !cardComplete) ||
+              (isStripe && !isStripeRedirect(selectedPaymentMethod) && !cardComplete) ||
               (!selectedPaymentMethod && !paidByGiftcard)
             }
             data-testid="submit-payment-button"
@@ -236,7 +238,7 @@ const Payment = ({
               ? "Entrer les détails de la carte"
               : "Continuer vers la vérification"}
           </Button>
-          {(isStripe && !cardComplete) && selectedPaymentMethod && (
+          {(isStripe && !isStripeRedirect(selectedPaymentMethod) && !cardComplete) && selectedPaymentMethod && (
             <p className="text-xs text-gray-500 text-center mt-2">
               Veuillez remplir les informations de carte ci-dessus
             </p>
