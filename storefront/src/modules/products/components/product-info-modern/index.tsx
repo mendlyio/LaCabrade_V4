@@ -10,7 +10,9 @@ type ProductInfoModernProps = {
 export default function ProductInfoModern({ product, region }: ProductInfoModernProps) {
   // Détection Outlet (pour le badge)
   const categories = (product as any).categories || []
-  const isOutlet = categories.some((cat: any) => cat.handle?.toLowerCase() === "outlet")
+  const isOutlet = categories.some((cat: any) =>
+    (cat.handle || "").toLowerCase().startsWith("outlet")
+  )
 
   // Extraire la marque depuis les métadonnées ou la collection
   const brand = product.metadata?.brand as string | undefined || product.collection?.title

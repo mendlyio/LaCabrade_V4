@@ -254,7 +254,7 @@ export default function ProductActionsModern({
   // ── Prix réactif ────────────────────────────────────────────────────────────
   const categories = (product as any).categories || []
   const isOutlet = categories.some((cat: any) =>
-    ["outlet", "outlet-727"].includes((cat.handle || "").toLowerCase())
+    (cat.handle || "").toLowerCase().startsWith("outlet")
   )
 
   const priceData = useMemo(() => {

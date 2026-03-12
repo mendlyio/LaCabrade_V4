@@ -31,7 +31,7 @@ const CheckoutUpsell = ({ products, cartItems, currencyCode, stepNumber = 3 }: C
 
     const categories = (product as any).categories || []
     const isOutlet = categories.some((cat: any) =>
-      ["outlet", "outlet-727"].includes((cat.handle || "").toLowerCase())
+      (cat.handle || "").toLowerCase().startsWith("outlet")
     )
 
     setLoadingId(product.id)
@@ -78,7 +78,7 @@ const CheckoutUpsell = ({ products, cartItems, currencyCode, stepNumber = 3 }: C
     const variant = product.variants?.[0]
     const categories = (product as any).categories || []
     const isOutlet = categories.some((cat: any) =>
-      ["outlet", "outlet-727"].includes((cat.handle || "").toLowerCase())
+      (cat.handle || "").toLowerCase().startsWith("outlet")
     )
     const rawPrice = isOutlet
       ? ((variant as any)?.calculated_price?.calculated_amount ?? (variant as any)?.calculated_price?.original_amount ?? 0) * 0.5
