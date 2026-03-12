@@ -39,8 +39,10 @@ const StripeWrapper: React.FC<StripeWrapperProps> = ({
     )
   }
 
+  // key force le remount quand la session change → Payment Element reçoit le bon client_secret
+  const clientSecret = paymentSession?.data?.client_secret as string
   return (
-    <Elements options={options} stripe={stripePromise}>
+    <Elements key={clientSecret} options={options} stripe={stripePromise}>
       {children}
     </Elements>
   )

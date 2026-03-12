@@ -201,6 +201,7 @@ const Payment = ({
               {isStripe && stripeReady && (
                 <div className="mt-5 transition-all duration-150 ease-in-out">
                   <PaymentElement
+                    key={activeSession?.id}
                     options={{
                       layout: "tabs",
                       wallets: { applePay: "auto", googlePay: "auto" },
