@@ -3,23 +3,22 @@ import { getPercentageDiff } from "./get-precentage-diff"
 import { convertToLocale } from "./money"
 
 /**
- * Les produits Odoo sont stockés en EUROS (ex: 50 pour 50€).
- * Le bon cadeau (produit + custom) utilise les centimes.
+ * Tous les produits (Odoo, bon cadeau) sont en TVAC.
  */
 function isGiftCardVariant(variant: any): boolean {
   return (variant?.product as any)?.handle === "bon-cadeau"
 }
 
 /**
- * @param variant - Le variant du produit
- * @param lineItemUnitPrice - Prix unitaire du line item (panier/commande). Pour bon cadeau custom, prioritaire car unit_price peut différer du variant.
+ * Retourne le prix en euros pour affichage.
+ * @param lineItemUnitPrice - Prix unitaire du line item (panier). Prioritaire, toujours en centimes.
  */
 export const getPricesForVariant = (variant: any, lineItemUnitPrice?: number) => {
   const isGiftCard = isGiftCardVariant(variant)
   const cp = variant?.calculated_price
 
-  // Bon cadeau custom : utiliser unit_price du line item (stocké en centimes)
-  if (isGiftCard && lineItemUnitPrice != null && Number.isFinite(lineItemUnitPrice)) {
+  // Line item (panier) : unit_price est en centimes pour tous les produits
+  if (lineItemUnitPrice != null && Number.isFinite(lineItemUnitPrice)) {
     const amount = lineItemUnitPrice / 100
     return {
       calculated_price_number: amount,
@@ -41,13 +40,10 @@ export const getPricesForVariant = (variant: any, lineItemUnitPrice?: number) =>
   let rawAmount = cp?.calculated_amount ?? cp?.original_amount
   let currencyCode = cp?.currency_code ?? "eur"
 
-  // Fallback : si calculated_price est vide (ex: produit sans prix pour la région),
-  // utiliser variant.prices[0] si disponible (montant en centimes pour Medusa)
   if ((rawAmount == null || !Number.isFinite(rawAmount)) && variant?.prices?.length) {
     const firstPrice = variant.prices[0] as { amount?: number; currency_code?: string } | undefined
     const pAmount = firstPrice?.amount
     if (pAmount != null && Number.isFinite(pAmount) && pAmount > 0) {
-      // Medusa stocke en centimes (minor units) ; convertir en euros pour l'affichage
       rawAmount = pAmount / 100
       currencyCode = (firstPrice?.currency_code || "eur").toLowerCase()
     }
@@ -56,21 +52,16 @@ export const getPricesForVariant = (variant: any, lineItemUnitPrice?: number) =>
   if (rawAmount == null || !Number.isFinite(rawAmount)) {
     return null
   }
+
   const divisor = isGiftCard ? 100 : 1
   const amount = rawAmount / divisor
   const originalAmount = cp?.original_amount != null ? cp.original_amount / divisor : amount
 
   return {
     calculated_price_number: amount,
-    calculated_price: convertToLocale({
-      amount,
-      currency_code: currencyCode,
-    }),
+    calculated_price: convertToLocale({ amount, currency_code: currencyCode }),
     original_price_number: originalAmount,
-    original_price: convertToLocale({
-      amount: originalAmount,
-      currency_code: currencyCode,
-    }),
+    original_price: convertToLocale({ amount: originalAmount, currency_code: currencyCode }),
     currency_code: currencyCode,
     price_type: (variant?.calculated_price as any)?.calculated_price?.price_list_type,
     percentage_diff: getPercentageDiff(originalAmount, amount),

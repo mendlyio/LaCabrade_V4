@@ -5,6 +5,10 @@ import { Button } from "@medusajs/ui"
 import { usePathname } from "next/navigation"
 import { Fragment, useEffect, useRef, useState } from "react"
 
+import {
+  getItemsDisplayTotalEuros,
+  isIntraCommunityExempt,
+} from "@lib/util/cart-amounts"
 import { formatAmount } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import DeleteButton from "@modules/common/components/delete-button"
@@ -31,22 +35,9 @@ const CartDropdown = ({
       return acc + item.quantity
     }, 0) || 0
 
-  const hasGiftCard = cartState?.items?.some(
-    (i: any) =>
-      i?.metadata?.is_gift_card ||
-      (i?.product_title || "").toLowerCase().includes("bon cadeau") ||
-      (i?.title || "").toLowerCase().includes("bon cadeau") ||
-      (i?.variant_sku || "").startsWith("GC-") ||
-      (i?.variant?.product as any)?.handle === "bon-cadeau"
-  )
-  const subtotalRaw = cartState?.subtotal ?? 0
-  const subtotalHT = hasGiftCard ? subtotalRaw / 100 : subtotalRaw
-  const taxTotal = cartState?.tax_total ?? 0
-  const taxFromApi = hasGiftCard ? taxTotal / 100 : taxTotal
-  const itemTotalRaw = cartState?.item_total ?? 0
-  const itemTotal = hasGiftCard ? itemTotalRaw / 100 : itemTotalRaw
-  const VAT_RATE = 0.21
-  const subtotal = itemTotal > 0 ? itemTotal : taxFromApi > 0 ? subtotalHT + taxFromApi : subtotalHT * (1 + VAT_RATE)
+  // Tous les montants API sont en centimes. Affichage TVAC (TTC) uniforme.
+  const itemsDisplayTotal = getItemsDisplayTotalEuros(cartState as any)
+  const exempt = isIntraCommunityExempt(cartState as any)
   const itemRef = useRef<number>(totalItems || 0)
 
   const timedOpen = () => {
@@ -199,14 +190,16 @@ const CartDropdown = ({
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">
                       Sous-total{" "}
-                      <span className="text-xs">(TVA 21% incl.)</span>
+                      <span className="text-xs">
+                        {exempt ? "HT (exonéré)" : "TVAC"}
+                      </span>
                     </span>
                     <span
                       className="text-xl font-bold text-gray-900"
                       data-testid="cart-subtotal"
-                      data-value={subtotal}
+                      data-value={itemsDisplayTotal}
                     >
-                      {formatAmount(subtotal, cartState.currency_code ?? "eur")}
+                      {formatAmount(itemsDisplayTotal, cartState.currency_code ?? "eur")}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 rounded-lg p-3">

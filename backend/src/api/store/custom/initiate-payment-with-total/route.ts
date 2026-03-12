@@ -11,7 +11,7 @@ import { Modules } from "@medusajs/framework/utils"
  *   cart_id: string
  *   payment_collection_id: string
  *   provider_id: string
- *   amount: number  // Total TTC à charger (ex: 79.38)
+ *   amount: number  // Total TVAC à charger en centimes (ex: 7938 pour 79,38€)
  *   data?: Record<string, unknown>  // Options Stripe (payment_method_types, etc.)
  * }
  */
@@ -47,7 +47,7 @@ export async function POST(
 
     if (typeof amount !== "number" || amount <= 0) {
       res.status(400).json({
-        message: "amount doit être un nombre positif (total TTC en euros)",
+        message: "amount doit être un nombre positif (total TVAC en centimes)",
       })
       return
     }

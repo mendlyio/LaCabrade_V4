@@ -37,23 +37,16 @@ const ItemsPreviewTemplate = ({ items }: ItemsTemplateProps) => {
         const { handle } = item.variant?.product ?? {}
         const currency_code = (item as any).currency_code || "eur"
 
-        // Bon cadeau : stocké en centimes. Détection par metadata, titre ou handle produit.
-        const isGiftCard =
-          !!(item.metadata as any)?.is_gift_card ||
-          (item.product_title || "")
-            .toLowerCase()
-            .includes("bon cadeau") ||
-          (item.variant?.product as any)?.handle === "bon-cadeau"
-        const divisor = isGiftCard ? 100 : 1
-        const unitPrice = (item.unit_price ?? 0) / divisor
-        const comparePrice = ((item as any).compare_at_unit_price ?? 0) / divisor
+        // Tous les montants API (unit_price, subtotal) sont en centimes → /100 pour affichage TVAC.
+        const unitPrice = (item.unit_price ?? 0) / 100
+        const comparePrice = ((item as any).compare_at_unit_price ?? 0) / 100
         const hasDiscount = comparePrice && comparePrice > unitPrice
         const lineTotal =
-          item.subtotal != null ? item.subtotal / divisor : unitPrice * item.quantity
+          item.subtotal != null ? item.subtotal / 100 : unitPrice * item.quantity
 
-        // Adjustments (promotions, etc.)
+        // Adjustments (promotions, etc.) — amount peut être en centimes
         const adjustmentsSum = (item.adjustments || []).reduce(
-          (acc, adj) => adj.amount + acc,
+          (acc, adj) => acc + (adj.amount / 100),
           0
         )
         const finalTotal = lineTotal - adjustmentsSum
