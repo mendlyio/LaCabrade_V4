@@ -390,14 +390,18 @@ export async function setPickupLocation({
     .catch(medusaError)
 }
 
-/** Moyens de paiement forcés pour pp_stripe_stripe */
-const STRIPE_PAYMENT_METHOD_TYPES = [
+/** Moyens de paiement pour pp_stripe_stripe (montant >= 50€) */
+const STRIPE_PAYMENT_METHOD_TYPES_FULL = [
   "card", // Carte bancaire + Apple Pay / Google Pay (via wallets)
   "bancontact",
   "klarna",
   "alma",
   "link",
 ]
+
+/** Klarna, Alma, Link ont un minimum ~50€. En dessous : carte + Bancontact uniquement. */
+const STRIPE_PAYMENT_METHOD_TYPES_LOW_AMOUNT = ["card", "bancontact"]
+const STRIPE_MIN_AMOUNT_CENTS = 5000 // 50€
 
 export async function initiatePaymentSession(
   cart: HttpTypes.StoreCart,
@@ -416,16 +420,18 @@ export async function initiatePaymentSession(
   const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
   if (publishableKey) headers["x-publishable-api-key"] = publishableKey
 
+  const amount = getPaymentAmountFromCart(cart as any)
   const stripeData =
     data.provider_id === "pp_stripe_stripe"
       ? {
-          payment_method_types: STRIPE_PAYMENT_METHOD_TYPES,
+          payment_method_types:
+            amount >= STRIPE_MIN_AMOUNT_CENTS
+              ? STRIPE_PAYMENT_METHOD_TYPES_FULL
+              : STRIPE_PAYMENT_METHOD_TYPES_LOW_AMOUNT,
           automatic_payment_methods: { enabled: false },
           capture_method: "automatic",
         }
       : {}
-
-  const amount = getPaymentAmountFromCart(cart as any)
   const paymentCollectionId = (cart as any).payment_collection?.id
 
   if (paymentCollectionId && amount > 0) {
