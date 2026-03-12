@@ -1,36 +1,76 @@
 diff --git a/node_modules/@medusajs/core-flows/dist/cart/workflows/create-payment-collection-for-cart.js b/node_modules/@medusajs/core-flows/dist/cart/workflows/create-payment-collection-for-cart.js
-index 7173b5a..6fa84c3 100644
+index 7173b5a..de5d7c1 100644
 --- a/node_modules/@medusajs/core-flows/dist/cart/workflows/create-payment-collection-for-cart.js
 +++ b/node_modules/@medusajs/core-flows/dist/cart/workflows/create-payment-collection-for-cart.js
-@@ -84,7 +84,7 @@ exports.createPaymentCollectionForCartWorkflow = (0, workflows_sdk_1.createWorkf
+@@ -74,6 +74,11 @@ exports.createPaymentCollectionForCartWorkflow = (0, workflows_sdk_1.createWorkf
+             "currency_code",
+             "total",
+             "raw_total",
++            "subtotal",
++            "tax_total",
++            "shipping_total",
++            "discount_total",
++            "item_total",
+             "payment_collection.id",
+         ],
+         variables: { id: input.cart_id },
+@@ -82,9 +87,13 @@ exports.createPaymentCollectionForCartWorkflow = (0, workflows_sdk_1.createWorkf
+     });
+     (0, workflows_sdk_1.parallelize)((0, validate_cart_1.validateCartStep)({ cart }), (0, exports.validateExistingPaymentCollectionStep)({ cart }));
      const paymentData = (0, workflows_sdk_1.transform)({ cart }, ({ cart }) => {
++        const base = cart.total ?? cart.raw_total;
++        const itemTotal = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0);
++        const withTax = itemTotal + (cart.shipping_total ?? 0) - (cart.discount_total ?? 0);
++        const amount = (typeof withTax === "number" && withTax > 0 && withTax >= base) ? withTax : base;
          return {
              currency_code: cart.currency_code,
 -            amount: cart.raw_total,
-+            amount: cart.total ?? cart.raw_total,
++            amount: amount,
          };
      });
      const created = (0, create_payment_collection_1.createPaymentCollectionsStep)([paymentData]);
 diff --git a/node_modules/@medusajs/core-flows/dist/cart/workflows/refresh-payment-collection.js b/node_modules/@medusajs/core-flows/dist/cart/workflows/refresh-payment-collection.js
-index 5d8ea20..06af9fc 100644
+index 5d8ea20..ff36247 100644
 --- a/node_modules/@medusajs/core-flows/dist/cart/workflows/refresh-payment-collection.js
 +++ b/node_modules/@medusajs/core-flows/dist/cart/workflows/refresh-payment-collection.js
-@@ -79,7 +79,8 @@ exports.refreshPaymentCollectionForCartWorkflow = (0, workflows_sdk_1.createWork
+@@ -54,6 +54,11 @@ exports.refreshPaymentCollectionForCartWorkflow = (0, workflows_sdk_1.createWork
+                 "currency_code",
+                 "total",
+                 "raw_total",
++                "subtotal",
++                "tax_total",
++                "shipping_total",
++                "discount_total",
++                "item_total",
+                 "payment_collection.id",
+                 "payment_collection.raw_amount",
+                 "payment_collection.amount",
+@@ -79,7 +84,11 @@ exports.refreshPaymentCollectionForCartWorkflow = (0, workflows_sdk_1.createWork
          cart,
      });
      (0, workflows_sdk_1.when)("should-update-payment-collection", { cart, shouldExecute }, ({ cart, shouldExecute }) => {
 -        const valueIsEqual = utils_1.MathBN.eq(cart.payment_collection?.raw_amount ?? -1, cart.raw_total);
-+        const cartTotal = cart.total ?? cart.raw_total;
++        const base = cart.total ?? cart.raw_total;
++        const itemTotal = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0);
++        const withTax = itemTotal + (cart.shipping_total ?? 0) - (cart.discount_total ?? 0);
++        const cartTotal = (typeof withTax === "number" && withTax > 0 && withTax >= base) ? withTax : base;
 +        const valueIsEqual = utils_1.MathBN.eq(cart.payment_collection?.raw_amount ?? -1, cartTotal);
          if (valueIsEqual) {
              return cart.payment_collection.currency_code !== cart.currency_code;
          }
-@@ -99,7 +100,7 @@ exports.refreshPaymentCollectionForCartWorkflow = (0, workflows_sdk_1.createWork
+@@ -96,10 +105,14 @@ exports.refreshPaymentCollectionForCartWorkflow = (0, workflows_sdk_1.createWork
+             if (!(0, utils_1.isPresent)(cart.payment_collection?.id)) {
+                 return;
+             }
++            const base = cart.total ?? cart.raw_total;
++            const itemTotal = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0);
++            const withTax = itemTotal + (cart.shipping_total ?? 0) - (cart.discount_total ?? 0);
++            const amount = (typeof withTax === "number" && withTax > 0 && withTax >= base) ? withTax : base;
              return {
                  selector: { id: cart.payment_collection.id },
                  update: {
 -                    amount: cart.raw_total,
-+                    amount: cart.total ?? cart.raw_total,
++                    amount: amount,
                      currency_code: cart.currency_code,
                  },
              };
