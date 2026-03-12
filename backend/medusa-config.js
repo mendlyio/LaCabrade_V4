@@ -29,7 +29,7 @@ import {
   BPOST_PUBLIC_KEY,
   BPOST_PRIVATE_KEY,
   BPOST_WEBHOOK_SECRET
-} from './src/lib/constants.ts';
+} from './src/lib/constants.js';
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
