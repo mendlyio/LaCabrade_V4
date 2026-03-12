@@ -84,9 +84,13 @@ const ProductTemplateModern = async ({
       return path
     })
     .filter((p) => p.length > 0)
-  const isOutlet = allPaths.some((path) =>
-    path.some((cat) => (cat.handle || "").toLowerCase().startsWith("outlet"))
-  )
+  const isOutlet =
+    allPaths.some((path) =>
+      path.some((cat) => (cat.handle || "").toLowerCase().startsWith("outlet"))
+    ) ||
+    // Fallback : metadata.odoo_category (sync Odoo) ou catégorie Medusa assignée manuellement
+    (product.metadata?.odoo_category &&
+      String(product.metadata.odoo_category).toLowerCase().includes("outlet"))
 
   // Vérifier si le produit est en promotion
   const hasDiscount = product.variants?.some((v) => {
