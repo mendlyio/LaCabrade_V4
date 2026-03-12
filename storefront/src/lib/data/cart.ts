@@ -389,6 +389,15 @@ export async function setPickupLocation({
     .catch(medusaError)
 }
 
+/** Moyens de paiement forcés pour pp_stripe_stripe */
+const STRIPE_PAYMENT_METHOD_TYPES = [
+  "card", // Carte bancaire + Apple Pay / Google Pay (via wallets)
+  "bancontact",
+  "klarna",
+  "alma",
+  "link",
+]
+
 export async function initiatePaymentSession(
   cart: HttpTypes.StoreCart,
   data: {
@@ -396,8 +405,17 @@ export async function initiatePaymentSession(
     context?: Record<string, unknown>
   }
 ) {
+  const body: { provider_id: string; data?: Record<string, unknown> } = {
+    provider_id: data.provider_id,
+  }
+  if (data.provider_id === "pp_stripe_stripe") {
+    body.data = {
+      payment_method_types: STRIPE_PAYMENT_METHOD_TYPES,
+      automatic_payment_methods: { enabled: false },
+    }
+  }
   return sdk.store.payment
-    .initiatePaymentSession(cart, data, {}, await getAuthHeadersSafe())
+    .initiatePaymentSession(cart, body, {}, await getAuthHeadersSafe())
     .then((resp) => {
       revalidateTag("cart")
       return resp
