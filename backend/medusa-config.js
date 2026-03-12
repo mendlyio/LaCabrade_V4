@@ -1,5 +1,7 @@
-import { loadEnv, Modules, defineConfig } from '@medusajs/utils';
-import {
+import { loadEnv, Modules, defineConfig } from '@medusajs/utils'
+import * as constants from './src/lib/constants.js'
+
+const {
   ADMIN_CORS,
   AUTH_CORS,
   BACKEND_URL,
@@ -29,7 +31,7 @@ import {
   BPOST_PUBLIC_KEY,
   BPOST_PRIVATE_KEY,
   BPOST_WEBHOOK_SECRET
-} from './src/lib/constants.js';
+} = constants.default ?? constants
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
