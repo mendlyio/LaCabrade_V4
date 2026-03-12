@@ -12,7 +12,6 @@ import PaymentContainer from "@modules/checkout/components/payment-container"
 import {
   getPaymentInfo,
   getStripePaymentMethodType,
-  isManual,
   isStripe as isStripeFunc,
   paymentInfoMap,
   sortPaymentProviders,
@@ -49,9 +48,7 @@ const Payment = ({
   )
   const pendingProviderId = useRef<string | null>(null)
 
-  const visiblePaymentMethods = (availablePaymentMethods ?? []).filter(
-    (paymentMethod) => !isManual(paymentMethod.id)
-  )
+  const visiblePaymentMethods = availablePaymentMethods ?? []
 
   const selectedOrActiveProviderId =
     selectedPaymentMethod || activeSession?.provider_id || ""
@@ -284,21 +281,25 @@ const Payment = ({
                         radios: true,
                       },
                       wallets: { applePay: "auto", googlePay: "auto" },
-                      defaultValues: cart?.shipping_address
-                        ? {
+                      defaultValues: (() => {
+                        const addr = cart?.shipping_address
+                        const country =
+                          addr?.country_code?.toUpperCase() ||
+                          cart?.region?.countries?.[0]?.iso_2?.toUpperCase() ||
+                          "BE"
+                        return {
+                          billingDetails: {
                             address: {
-                              country:
-                                cart.shipping_address.country_code?.toUpperCase() ||
-                                "BE",
-                              line1: cart.shipping_address.address_1 || "",
-                              line2: cart.shipping_address.address_2 || undefined,
-                              city: cart.shipping_address.city || undefined,
-                              state: cart.shipping_address.province || undefined,
-                              postal_code:
-                                cart.shipping_address.postal_code || undefined,
+                              country,
+                              line1: addr?.address_1 || "",
+                              line2: addr?.address_2 || undefined,
+                              city: addr?.city || undefined,
+                              state: addr?.province || undefined,
+                              postal_code: addr?.postal_code || undefined,
                             },
-                          }
-                        : undefined,
+                          },
+                        }
+                      })(),
                     }}
                     onReady={() => setPaymentElementReady(true)}
                     onChange={(e) => setError(e.error?.message || null)}
