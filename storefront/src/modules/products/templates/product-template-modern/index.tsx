@@ -69,6 +69,25 @@ const ProductTemplateModern = async ({
 
   const categoryBreadcrumb = buildCategoryBreadcrumb()
 
+  // Outlet : vérifier si le produit est dans outlet ou une sous-catégorie (via ancêtres)
+  const allPaths = (product.categories || [])
+    .map((c) => {
+      const path: HttpTypes.StoreProductCategory[] = []
+      let current = categoryMap.get(c.id)
+      const visited = new Set<string>()
+      while (current && !visited.has(current.id)) {
+        path.unshift(current)
+        visited.add(current.id)
+        const parentId = current.parent_category_id || (current as any).parent_category?.id
+        current = parentId ? categoryMap.get(parentId) : undefined
+      }
+      return path
+    })
+    .filter((p) => p.length > 0)
+  const isOutlet = allPaths.some((path) =>
+    path.some((cat) => (cat.handle || "").toLowerCase().startsWith("outlet"))
+  )
+
   // Vérifier si le produit est en promotion
   const hasDiscount = product.variants?.some((v) => {
     const calculated = v.calculated_price?.calculated_amount
@@ -215,6 +234,7 @@ const ProductTemplateModern = async ({
                     product={product} 
                     region={region}
                     countryCode={countryCode}
+                    isOutlet={isOutlet}
                   />
                 </Suspense>
               </div>

@@ -5,11 +5,25 @@ import { ICartModuleService } from "@medusajs/framework/types"
 const OUTLET_DISCOUNT_PERCENT = 50
 const OUTLET_HANDLES = ["outlet", "outlet-727"]
 
+/** IDs des catégories outlet (racine + sous-catégories) */
+function getOutletCategoryIds(
+  categoryId: string,
+  byId: Map<string, { id: string; parent_category_id?: string | null }>
+): string[] {
+  const ids: string[] = [categoryId]
+  for (const [cid, cat] of byId) {
+    if (cat.parent_category_id === categoryId) {
+      ids.push(...getOutletCategoryIds(cid, byId))
+    }
+  }
+  return ids
+}
+
 /**
  * POST /store/custom/outlet-add-to-cart
  *
  * Ajoute un produit outlet au panier avec -50% appliqué directement sur le line item.
- * Vérifie côté serveur que le produit appartient bien à la catégorie outlet.
+ * Vérifie côté serveur que le produit appartient bien à la catégorie outlet (ou sous-catégorie).
  *
  * Body: { cart_id: string, variant_id: string, quantity?: number }
  */
@@ -52,10 +66,24 @@ export async function POST(
     const product = await productModuleService.retrieveProduct(variant.product_id, {
       relations: ["categories"],
     })
-    const categories = (product as any).categories || []
-    const isOutlet = categories.some((c: any) =>
-      OUTLET_HANDLES.includes((c.handle || "").toLowerCase())
+
+    // Récupérer outlet + toutes les sous-catégories (comme seed-outlet-promotion)
+    const allCategories = await productModuleService.listProductCategories(
+      {},
+      { select: ["id", "handle", "parent_category_id"], take: 500 }
     )
+    type Cat = { id: string; parent_category_id?: string | null }
+    const byId = new Map<string, Cat>(allCategories.map((c: any) => [c.id, c as Cat]))
+    const outletIds = new Set<string>()
+    for (const h of OUTLET_HANDLES) {
+      const cat = allCategories.find((c: any) => (c.handle || "").toLowerCase() === h)
+      if (cat) {
+        getOutletCategoryIds(cat.id, byId).forEach((id) => outletIds.add(id))
+      }
+    }
+
+    const categories = (product as any).categories || []
+    const isOutlet = categories.some((c: any) => outletIds.has(c.id))
 
     if (!isOutlet) {
       res.status(400).json({

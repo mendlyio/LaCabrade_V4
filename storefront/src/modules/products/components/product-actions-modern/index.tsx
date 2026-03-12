@@ -12,6 +12,7 @@ type ProductActionsModernProps = {
   product: HttpTypes.StoreProduct
   region: HttpTypes.StoreRegion
   countryCode: string
+  isOutlet?: boolean
 }
 
 const optionsAsKeymap = (variantOptions: any): Record<string, string | undefined> => {
@@ -46,6 +47,7 @@ const isVariantAvailable = (variant?: HttpTypes.StoreProductVariant) => {
 export default function ProductActionsModern({
   product,
   region,
+  isOutlet: isOutletProp,
 }: ProductActionsModernProps) {
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [quantity, setQuantity] = useState(1)
@@ -253,9 +255,9 @@ export default function ProductActionsModern({
 
   // ── Prix réactif ────────────────────────────────────────────────────────────
   const categories = (product as any).categories || []
-  const isOutlet = categories.some((cat: any) =>
-    (cat.handle || "").toLowerCase().startsWith("outlet")
-  )
+  const isOutlet =
+    isOutletProp ??
+    categories.some((cat: any) => (cat.handle || "").toLowerCase().startsWith("outlet"))
 
   const priceData = useMemo(() => {
     // Utiliser le variant sélectionné si disponible, sinon le variant le moins cher
