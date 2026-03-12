@@ -1,4 +1,5 @@
 import { HttpTypes } from "@medusajs/types"
+import { lineItemAmountToEuros } from "./cart-amounts"
 import { getPercentageDiff } from "./get-precentage-diff"
 import { convertToLocale } from "./money"
 
@@ -11,15 +12,15 @@ function isGiftCardVariant(variant: any): boolean {
 
 /**
  * Retourne le prix en euros pour affichage.
- * @param lineItemUnitPrice - Prix unitaire du line item (panier). Prioritaire, toujours en centimes.
+ * @param lineItemUnitPrice - Odoo = euros, bon cadeau = centimes
  */
 export const getPricesForVariant = (variant: any, lineItemUnitPrice?: number) => {
   const isGiftCard = isGiftCardVariant(variant)
   const cp = variant?.calculated_price
 
-  // Line item (panier) : unit_price est en centimes pour tous les produits
+  // Line item (panier) : Odoo en euros, bon cadeau en centimes
   if (lineItemUnitPrice != null && Number.isFinite(lineItemUnitPrice)) {
-    const amount = lineItemUnitPrice / 100
+    const amount = lineItemAmountToEuros(lineItemUnitPrice, isGiftCard)
     return {
       calculated_price_number: amount,
       calculated_price: convertToLocale({
@@ -39,23 +40,26 @@ export const getPricesForVariant = (variant: any, lineItemUnitPrice?: number) =>
 
   let rawAmount = cp?.calculated_amount ?? cp?.original_amount
   let currencyCode = cp?.currency_code ?? "eur"
+  let amount: number
+  let originalAmount: number
 
   if ((rawAmount == null || !Number.isFinite(rawAmount)) && variant?.prices?.length) {
     const firstPrice = variant.prices[0] as { amount?: number; currency_code?: string } | undefined
     const pAmount = firstPrice?.amount
     if (pAmount != null && Number.isFinite(pAmount) && pAmount > 0) {
-      rawAmount = pAmount / 100
+      amount = lineItemAmountToEuros(pAmount, isGiftCard)
+      originalAmount = amount
       currencyCode = (firstPrice?.currency_code || "eur").toLowerCase()
+    } else {
+      return null
     }
-  }
-
-  if (rawAmount == null || !Number.isFinite(rawAmount)) {
+  } else if (rawAmount != null && Number.isFinite(rawAmount)) {
+    const divisor = isGiftCard ? 100 : 1
+    amount = rawAmount / divisor
+    originalAmount = cp?.original_amount != null ? cp.original_amount / divisor : amount
+  } else {
     return null
   }
-
-  const divisor = isGiftCard ? 100 : 1
-  const amount = rawAmount / divisor
-  const originalAmount = cp?.original_amount != null ? cp.original_amount / divisor : amount
 
   return {
     calculated_price_number: amount,
@@ -84,14 +88,14 @@ export function getProductPrice({
       return null
     }
 
-    // Retourne le montant en euros pour le tri (calculated_price = euros, prices = centimes)
+    // Retourne le montant en euros pour le tri (Odoo = euros, bon cadeau = centimes)
     const getAmount = (v: any) => {
       const cp = v?.calculated_price?.calculated_amount ?? v?.calculated_price?.original_amount
       if (cp != null && Number.isFinite(cp)) return cp
-      // Fallback : variant.prices (montant en centimes dans Medusa)
       const p = v?.prices?.[0]?.amount
-      if (p != null && Number.isFinite(p) && p > 0) return p / 100
-
+      if (p != null && Number.isFinite(p) && p > 0) {
+        return lineItemAmountToEuros(p, isGiftCardVariant(v))
+      }
       return Infinity
     }
 

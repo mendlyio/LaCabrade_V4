@@ -1,7 +1,6 @@
 "use client"
 
 import {
-  centsToEuros,
   getDisplayTotalTvacEuros,
   getItemsDisplayTotalEuros,
   isIntraCommunityExempt,
@@ -62,18 +61,17 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
   }
 
   const exempt = isIntraCommunityExempt(cartInput)
-  const toEuros = centsToEuros
 
-  // Tous les montants API sont en centimes. Sous-total articles TVAC (ou HT si exempt).
+  // Sous-total articles TVAC (ou HT si exempt). Montants Odoo en euros.
   const displayedSubtotal = getItemsDisplayTotalEuros(cartInput)
 
-  // Livraison, réduction, carte cadeau : centimes → euros
-  const shippingEuros = toEuros(shipping_total)
-  const discountEuros = toEuros(discount_total)
-  const giftCardDeduction = toEuros(gift_card_total)
+  // Montants Odoo en euros. Carte cadeau en centimes.
+  const shippingEuros = shipping_total ?? 0
+  const discountEuros = discount_total ?? 0
+  const giftCardDeduction = (gift_card_total ?? 0) / 100
 
-  // TVA affichée : 0 si exempt, sinon tax_total
-  const displayedTaxTotal = exempt ? 0 : toEuros(tax_total ?? 0)
+  // TVA affichée : 0 si exempt, sinon tax_total (euros)
+  const displayedTaxTotal = exempt ? 0 : (tax_total ?? 0)
 
   // Total TVAC (ou HT si exempt)
   const displayedTotal = getDisplayTotalTvacEuros(cartInput)
@@ -126,7 +124,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
             {exempt ? (
               <span className="flex items-center gap-1.5">
                 <span className="line-through text-gray-400 text-xs">
-                  {formatAmount(toEuros(tax_total), currency_code)}
+                  {formatAmount(tax_total ?? 0, currency_code)}
                 </span>
                 <span>{formatAmount(0, currency_code)}</span>
               </span>

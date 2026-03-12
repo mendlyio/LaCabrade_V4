@@ -1,5 +1,6 @@
 "use client"
 
+import { lineItemAmountToEuros } from "@lib/util/cart-amounts"
 import { convertToLocale } from "@lib/util/money"
 import repeat from "@lib/util/repeat"
 import { HttpTypes } from "@medusajs/types"
@@ -36,17 +37,23 @@ const ItemsPreviewTemplate = ({ items }: ItemsTemplateProps) => {
       {sortedItems.map((item) => {
         const { handle } = item.variant?.product ?? {}
         const currency_code = (item as any).currency_code || "eur"
+        const isGiftCard =
+          !!(item.metadata as any)?.is_gift_card ||
+          String(item.product_title || "").toLowerCase().includes("bon cadeau") ||
+          (item.variant?.product as any)?.handle === "bon-cadeau"
 
-        // Tous les montants API (unit_price, subtotal) sont en centimes → /100 pour affichage TVAC.
-        const unitPrice = (item.unit_price ?? 0) / 100
-        const comparePrice = ((item as any).compare_at_unit_price ?? 0) / 100
+        // Odoo = euros, bon cadeau = centimes
+        const unitPrice = lineItemAmountToEuros(item.unit_price, isGiftCard)
+        const comparePrice = lineItemAmountToEuros((item as any).compare_at_unit_price, isGiftCard)
         const hasDiscount = comparePrice && comparePrice > unitPrice
         const lineTotal =
-          item.subtotal != null ? item.subtotal / 100 : unitPrice * item.quantity
+          item.subtotal != null
+            ? lineItemAmountToEuros(item.subtotal, isGiftCard)
+            : unitPrice * item.quantity
 
-        // Adjustments (promotions, etc.) — amount peut être en centimes
+        // Adjustments : même unité que le line item
         const adjustmentsSum = (item.adjustments || []).reduce(
-          (acc, adj) => acc + (adj.amount / 100),
+          (acc, adj) => acc + lineItemAmountToEuros(adj.amount, isGiftCard),
           0
         )
         const finalTotal = lineTotal - adjustmentsSum

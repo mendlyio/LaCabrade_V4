@@ -1,11 +1,34 @@
 /**
  * Utilitaire centralisé pour les montants du panier.
- * Tous les produits (y compris bons cadeaux) sont en TVAC (TTC).
- * L'API Medusa renvoie les montants en centimes (minor units).
+ * Tous les produits sont en TVAC (TTC).
+ *
+ * IMPORTANT: Les produits Odoo sont stockés en EUROS (sync-from-erp).
+ * Seul gift_card_total est en centimes. item_total, shipping_total, etc. = euros.
  */
+const AMOUNTS_IN_EUROS = true
 
 export function centsToEuros(cents: number | null | undefined): number {
   return (cents ?? 0) / 100
+}
+
+/** Convertit un montant API en euros pour affichage. */
+function toDisplayEuros(value: number | null | undefined, isGiftCard = false): number {
+  const v = value ?? 0
+  if (isGiftCard) return v / 100
+  return AMOUNTS_IN_EUROS ? v : v / 100
+}
+
+/** Pour les line items : unit_price en euros (Odoo) ou centimes (bon cadeau). */
+export function lineItemAmountToEuros(value: number | null | undefined, isGiftCard: boolean): number {
+  const v = value ?? 0
+  return isGiftCard ? v / 100 : (AMOUNTS_IN_EUROS ? v : v / 100)
+}
+
+/** Convertit un montant API en centimes pour Stripe. */
+function toPaymentCents(value: number | null | undefined, isGiftCard = false): number {
+  const v = value ?? 0
+  if (isGiftCard) return Math.round(v)
+  return AMOUNTS_IN_EUROS ? Math.round(v * 100) : Math.round(v)
 }
 
 export function isGiftCardItem(item: {
@@ -32,6 +55,7 @@ export type CartAmountsInput = {
   discount_total?: number | null
   gift_card_total?: number | null
   total?: number | null
+  items?: Array<unknown>
   metadata?: Record<string, unknown> | null
   shipping_address?: { country_code?: string | null } | null
 }
@@ -48,14 +72,13 @@ export function isIntraCommunityExempt(cart: CartAmountsInput | null | undefined
 
 /**
  * Calcule le sous-total TVAC des articles (en euros pour affichage).
- * Tous les montants API sont en centimes → /100.
  */
 export function getItemsTotalTvacEuros(
   itemTotal: number | null | undefined,
   subtotal: number | null | undefined,
   taxTotal: number | null | undefined
 ): number {
-  return centsToEuros(itemTotal ?? (subtotal ?? 0) + (taxTotal ?? 0))
+  return toDisplayEuros(itemTotal ?? (subtotal ?? 0) + (taxTotal ?? 0))
 }
 
 /**
@@ -65,10 +88,10 @@ export function getItemsTotalTvacEuros(
 export function getItemsDisplayTotalEuros(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
   const itemTotal = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0)
-  const itemEuros = centsToEuros(itemTotal)
+  const itemEuros = toDisplayEuros(itemTotal)
   if (isIntraCommunityExempt(cart)) {
     const itemTax = cart.item_tax_total ?? cart.tax_total ?? 0
-    return Math.max(0, itemEuros - centsToEuros(itemTax))
+    return Math.max(0, itemEuros - toDisplayEuros(itemTax))
   }
   return itemEuros
 }
@@ -79,41 +102,41 @@ export function getItemsDisplayTotalEuros(cart: CartAmountsInput | null | undefi
  */
 export function getDisplayTotalTvacEuros(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
-  const toEuros = centsToEuros
   const exempt = isIntraCommunityExempt(cart)
-  const giftCardDeduction = cart.gift_card_total != null ? toEuros(cart.gift_card_total) : 0
+  const giftCardDeduction = toDisplayEuros(cart.gift_card_total, true)
 
   const itemTotal = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0)
-  const itemTotalEuros = toEuros(itemTotal)
-  const shippingEuros = toEuros(cart.shipping_total)
-  const discountEuros = toEuros(cart.discount_total)
+  const itemTotalEuros = toDisplayEuros(itemTotal)
+  const shippingEuros = toDisplayEuros(cart.shipping_total)
+  const discountEuros = toDisplayEuros(cart.discount_total)
 
   const totalTvac = itemTotalEuros + shippingEuros - discountEuros - giftCardDeduction
 
   if (exempt && cart.tax_total != null) {
-    return Math.max(0, totalTvac - toEuros(cart.tax_total))
+    return Math.max(0, totalTvac - toDisplayEuros(cart.tax_total))
   }
   return Math.max(0, totalTvac)
 }
 
 /**
  * Calcule le montant à charger (Stripe) en centimes.
- * Stripe attend les minor units. Tous les champs API sont en centimes.
+ * Stripe attend les minor units.
  */
 export function getPaymentAmountCents(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
   const exempt = isIntraCommunityExempt(cart)
 
-  const itemTotalCents = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0)
-  const shippingCents = cart.shipping_total ?? 0
-  const discountCents = cart.discount_total ?? 0
-  const giftCardCents = cart.gift_card_total ?? 0
+  const itemTotal = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0)
+  const itemCents = toPaymentCents(itemTotal)
+  const shippingCents = toPaymentCents(cart.shipping_total)
+  const discountCents = toPaymentCents(cart.discount_total)
+  const giftCardCents = toPaymentCents(cart.gift_card_total, true)
 
-  let totalCents = itemTotalCents + shippingCents - discountCents - giftCardCents
+  let totalCents = itemCents + shippingCents - discountCents - giftCardCents
 
   if (exempt && cart.tax_total != null) {
-    totalCents = Math.max(0, totalCents - (cart.tax_total ?? 0))
+    totalCents = Math.max(0, totalCents - toPaymentCents(cart.tax_total))
   }
 
-  return Math.max(0, Math.round(totalCents))
+  return Math.max(0, totalCents)
 }
