@@ -40,7 +40,13 @@ const CartDropdown = ({
       (i?.variant?.product as any)?.handle === "bon-cadeau"
   )
   const subtotalRaw = cartState?.subtotal ?? 0
-  const subtotal = hasGiftCard ? subtotalRaw / 100 : subtotalRaw
+  const subtotalHT = hasGiftCard ? subtotalRaw / 100 : subtotalRaw
+  const taxTotal = cartState?.tax_total ?? 0
+  const taxFromApi = hasGiftCard ? taxTotal / 100 : taxTotal
+  const itemTotalRaw = cartState?.item_total ?? 0
+  const itemTotal = hasGiftCard ? itemTotalRaw / 100 : itemTotalRaw
+  const VAT_RATE = 0.21
+  const subtotal = itemTotal > 0 ? itemTotal : taxFromApi > 0 ? subtotalHT + taxFromApi : subtotalHT * (1 + VAT_RATE)
   const itemRef = useRef<number>(totalItems || 0)
 
   const timedOpen = () => {
@@ -193,7 +199,7 @@ const CartDropdown = ({
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">
                       Sous-total{" "}
-                      <span className="text-xs">(hors taxes)</span>
+                      <span className="text-xs">(TVA 21% incl.)</span>
                     </span>
                     <span
                       className="text-xl font-bold text-gray-900"
