@@ -389,52 +389,15 @@ export async function setPickupLocation({
     .catch(medusaError)
 }
 
-function buildStripePaymentData(cart: HttpTypes.StoreCart) {
-  const addr = cart?.shipping_address
-  const country =
-    addr?.country_code?.toUpperCase() ||
-    cart?.region?.countries?.[0]?.iso_2?.toUpperCase() ||
-    "BE"
-  return {
-    shipping: addr
-      ? {
-          name: [addr.first_name, addr.last_name].filter(Boolean).join(" ") || "Client",
-          address: {
-            line1: addr.address_1 || "",
-            line2: addr.address_2 || undefined,
-            city: addr.city || undefined,
-            state: addr.province || undefined,
-            postal_code: addr.postal_code || undefined,
-            country,
-          },
-        }
-      : {
-          name: "Client",
-          address: { country },
-        },
-  }
-}
-
 export async function initiatePaymentSession(
   cart: HttpTypes.StoreCart,
   data: {
     provider_id: string
     context?: Record<string, unknown>
-    data?: Record<string, unknown>
   }
 ) {
-  const isStripe = data.provider_id?.startsWith("pp_stripe")
-  const body: { provider_id: string; data?: Record<string, unknown> } = {
-    provider_id: data.provider_id,
-  }
-  if (isStripe) {
-    body.data = {
-      ...buildStripePaymentData(cart),
-      ...data.data,
-    }
-  }
   return sdk.store.payment
-    .initiatePaymentSession(cart, body, {}, await getAuthHeadersSafe())
+    .initiatePaymentSession(cart, data, {}, await getAuthHeadersSafe())
     .then((resp) => {
       revalidateTag("cart")
       return resp
