@@ -10,7 +10,7 @@ import { formatAmount, formatAmountFromCents } from "@lib/util/money"
 import React from "react"
 
 type CartTotalsProps = {
-  totals: {
+  totals?: {
     total?: number | null
     item_total?: number | null
     item_tax_total?: number | null
@@ -27,10 +27,12 @@ type CartTotalsProps = {
       subtotal?: number | null
       unit_price?: number | null
     }>
-  }
+  } | null
 }
 
 const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
+  if (!totals) return null
+
   const {
     currency_code,
     total,

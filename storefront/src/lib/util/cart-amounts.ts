@@ -39,7 +39,8 @@ export type CartAmountsInput = {
 /**
  * Vérifie si le client bénéficie de l'exonération TVA intracommunautaire.
  */
-export function isIntraCommunityExempt(cart: CartAmountsInput): boolean {
+export function isIntraCommunityExempt(cart: CartAmountsInput | null | undefined): boolean {
+  if (!cart) return false
   const vatNumber = (cart.metadata as any)?.vat_number || null
   const country = cart.shipping_address?.country_code?.toLowerCase()
   return !!(vatNumber && country && country !== "be")
@@ -61,7 +62,8 @@ export function getItemsTotalTvacEuros(
  * Sous-total articles pour affichage (dropdown, etc.).
  * TVAC normal, HT si exonération intracommunautaire.
  */
-export function getItemsDisplayTotalEuros(cart: CartAmountsInput): number {
+export function getItemsDisplayTotalEuros(cart: CartAmountsInput | null | undefined): number {
+  if (!cart) return 0
   const itemTotal = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0)
   const itemEuros = centsToEuros(itemTotal)
   if (isIntraCommunityExempt(cart)) {
@@ -75,7 +77,8 @@ export function getItemsDisplayTotalEuros(cart: CartAmountsInput): number {
  * Calcule le total TVAC à afficher (en euros).
  * Cas intracommunautaire : total HT (sans TVA belge).
  */
-export function getDisplayTotalTvacEuros(cart: CartAmountsInput): number {
+export function getDisplayTotalTvacEuros(cart: CartAmountsInput | null | undefined): number {
+  if (!cart) return 0
   const toEuros = centsToEuros
   const exempt = isIntraCommunityExempt(cart)
   const giftCardDeduction = cart.gift_card_total != null ? toEuros(cart.gift_card_total) : 0
@@ -97,7 +100,8 @@ export function getDisplayTotalTvacEuros(cart: CartAmountsInput): number {
  * Calcule le montant à charger (Stripe) en centimes.
  * Stripe attend les minor units. Tous les champs API sont en centimes.
  */
-export function getPaymentAmountCents(cart: CartAmountsInput): number {
+export function getPaymentAmountCents(cart: CartAmountsInput | null | undefined): number {
+  if (!cart) return 0
   const exempt = isIntraCommunityExempt(cart)
 
   const itemTotalCents = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0)
