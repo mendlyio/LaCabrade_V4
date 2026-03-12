@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useContext, useEffect, useState } from "react"
+import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { RadioGroup } from "@headlessui/react"
 import ErrorMessage from "@modules/checkout/components/error-message"
@@ -26,11 +26,13 @@ const Payment = ({
 
   const [isLoading, setIsLoading] = useState(false)
   const [isSwitching, setIsSwitching] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [paymentElementReady, setPaymentElementReady] = useState(false)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
     activeSession?.provider_id ?? ""
   )
+  const initAttempted = useRef(false)
 
   // Réinitialiser paymentElementReady quand la session change (nouveau Payment Element)
   useEffect(() => {
@@ -38,7 +40,6 @@ const Payment = ({
   }, [activeSession?.id])
 
   // Synchroniser la sélection quand la session du panier change (ex: retour arrière, refresh)
-  // Ne pas écraser pendant un changement en cours (isSwitching)
   useEffect(() => {
     if (!isSwitching && activeSession?.provider_id && activeSession.provider_id !== selectedPaymentMethod) {
       setSelectedPaymentMethod(activeSession.provider_id)
@@ -48,8 +49,28 @@ const Payment = ({
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
-
   const isOpen = searchParams.get("step") === "payment"
+
+  // Medusa v2 : auto-init session Stripe quand étape paiement ouverte, pas de session
+  // Affiche immédiatement le Payment Element (carte, Klarna, Bancontact, etc.)
+  useEffect(() => {
+    if (!activeSession && isOpen && availablePaymentMethods?.length) {
+      const stripeProvider = availablePaymentMethods.find((p) => isStripeFunc(p.id))
+      if (stripeProvider && !initAttempted.current) {
+        initAttempted.current = true
+        setIsInitializing(true)
+        initiatePaymentSession(cart, { provider_id: stripeProvider.id })
+          .then(() => router.refresh())
+          .catch((err) => {
+            setError(err?.message ?? "Impossible d'initialiser le paiement.")
+            initAttempted.current = false
+          })
+          .finally(() => setIsInitializing(false))
+      }
+    } else if (activeSession) {
+      initAttempted.current = false
+    }
+  }, [activeSession, isOpen, availablePaymentMethods, cart, router])
 
   const isStripe = isStripeFunc(activeSession?.provider_id)
   const stripeReady = useContext(StripeContext)
@@ -227,15 +248,15 @@ const Payment = ({
             data-testid="payment-method-error-message"
           />
 
-          {isSwitching && (
+          {(isSwitching || isInitializing) && (
             <p className="text-sm text-amber-600 mt-2">
-              Changement de moyen de paiement en cours...
+              {isInitializing ? "Préparation du paiement..." : "Changement de moyen de paiement en cours..."}
             </p>
           )}
           <Button
             size="large"
             className={`mt-6 w-full font-semibold py-3.5 px-6 rounded-lg transition-all duration-200 text-base ${
-              (isStripe && !paymentElementReady) || (!selectedPaymentMethod && !paidByGiftcard) || isSwitching
+              (isStripe && !paymentElementReady) || (!selectedPaymentMethod && !paidByGiftcard) || isSwitching || isInitializing
                 ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                 : "bg-amber-600 hover:bg-amber-700 text-white shadow-md hover:shadow-lg"
             }`}
@@ -244,7 +265,8 @@ const Payment = ({
             disabled={
               (isStripe && !paymentElementReady) ||
               (!selectedPaymentMethod && !paidByGiftcard) ||
-              isSwitching
+              isSwitching ||
+              isInitializing
             }
             data-testid="submit-payment-button"
           >
