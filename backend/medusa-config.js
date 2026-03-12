@@ -171,6 +171,7 @@ const medusaConfig = {
               apiKey: STRIPE_API_KEY,
               ...(STRIPE_WEBHOOK_SECRET ? { webhookSecret: STRIPE_WEBHOOK_SECRET } : {}),
               automaticPaymentMethods: true,
+              capture: true, // Bancontact/Klarna/Alma exigent capture automatique
             },
           },
         ],

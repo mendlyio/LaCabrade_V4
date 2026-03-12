@@ -412,6 +412,7 @@ export async function initiatePaymentSession(
     body.data = {
       payment_method_types: STRIPE_PAYMENT_METHOD_TYPES,
       automatic_payment_methods: { enabled: false },
+      capture_method: "automatic", // Bancontact/Klarna/Alma ne supportent pas manual
     }
   }
   return sdk.store.payment
