@@ -8,6 +8,7 @@ type StripeWrapperProps = {
   paymentSession: HttpTypes.StorePaymentSession
   stripeKey?: string
   stripePromise: Promise<Stripe | null> | null
+  cart?: HttpTypes.StoreCart | null
   children: React.ReactNode
 }
 
@@ -15,10 +16,18 @@ const StripeWrapper: React.FC<StripeWrapperProps> = ({
   paymentSession,
   stripeKey,
   stripePromise,
+  cart,
   children,
 }) => {
   const options: StripeElementsOptions = {
     clientSecret: paymentSession!.data?.client_secret as string | undefined,
+    locale: "fr",
+    appearance: {
+      theme: "stripe",
+      variables: {
+        borderRadius: "8px",
+      },
+    },
   }
 
   if (!stripeKey) {

@@ -278,8 +278,27 @@ const Payment = ({
                   <PaymentElement
                     key={selectedSession?.id}
                     options={{
-                      layout: "accordion",
+                      layout: {
+                        type: "accordion",
+                        defaultCollapsed: false,
+                        radios: true,
+                      },
                       wallets: { applePay: "auto", googlePay: "auto" },
+                      defaultValues: cart?.shipping_address
+                        ? {
+                            address: {
+                              country:
+                                cart.shipping_address.country_code?.toUpperCase() ||
+                                "BE",
+                              line1: cart.shipping_address.address_1 || "",
+                              line2: cart.shipping_address.address_2 || undefined,
+                              city: cart.shipping_address.city || undefined,
+                              state: cart.shipping_address.province || undefined,
+                              postal_code:
+                                cart.shipping_address.postal_code || undefined,
+                            },
+                          }
+                        : undefined,
                     }}
                     onReady={() => setPaymentElementReady(true)}
                     onChange={(e) => setError(e.error?.message || null)}
