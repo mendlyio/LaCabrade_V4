@@ -31,7 +31,7 @@ export default async function customOrderPlacedEmailHandler({
     const notificationModuleService: INotificationModuleService = container.resolve(Modules.NOTIFICATION)
     const orderData = {
       emailOptions: {
-        replyTo: 'info@sellerie-lacabrade.be',
+        replyTo: 'contact@sellerie-lacabrade.be',
         subject: `Confirmation de votre commande #${(order as any).display_id || order.id}`
       },
       order: {

@@ -272,7 +272,7 @@ Ouvert:
 ║     Client       │                │                              ║
 ║                  │                │                              ║
 ║  • Mon compte    │ • Qui sommes-  │  📞 01 23 45 67 89          ║
-║  • Commandes     │   nous         │  ✉️ contact@lacabrade.fr    ║
+║  • Commandes     │   nous         │  ✉️ contact@sellerie-lacabrade.be    ║
 ║  • Contact       │ • Nos magasins │                              ║
 ║  • FAQ           │ • Blog         │  Lun-Ven: 9h-19h            ║
 ║  • Livraison     │ • Recrutement  │  Sam: 9h-18h                ║

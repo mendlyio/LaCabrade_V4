@@ -110,7 +110,7 @@ export const StockAlertTemplate: React.FC<StockAlertTemplateProps> & {
         </Text>
 
         <Text style={{ fontSize: '14px', color: '#6B7280', textAlign: 'center', margin: '20px 0 0' }}>
-          Des questions ? Contactez-nous à <a href="mailto:info@sellerie-lacabrade.be" style={{ color: '#D97706' }}>info@sellerie-lacabrade.be</a>
+          Des questions ? Contactez-nous à <a href="mailto:contact@sellerie-lacabrade.be" style={{ color: '#D97706' }}>contact@sellerie-lacabrade.be</a>
         </Text>
 
         <Text style={{ fontSize: '14px', color: '#6B7280', textAlign: 'center', margin: '20px 0 0' }}>

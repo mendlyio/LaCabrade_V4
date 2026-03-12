@@ -42,7 +42,7 @@ export default async function orderShippedEmailHandler({
       template: EmailTemplates.ORDER_SHIPPED,
       data: {
         emailOptions: {
-          replyTo: 'info@sellerie-lacabrade.be',
+          replyTo: 'contact@sellerie-lacabrade.be',
           subject: `Votre commande #${(order as any).display_id} a été expédiée ! 🚀`
         },
         order: {

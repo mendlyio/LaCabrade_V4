@@ -5,13 +5,16 @@ nixPkgs = ["nodejs_22"]
 cmds = ["npm ci --prefer-offline --no-audit || npm install --no-audit"]
 
 [phases.build]
-cmds = ["npm run build"]
+# NODE_OPTIONS inline car parfois ignoré via variables sur Railway
+cmds = ["NODE_OPTIONS=--max-old-space-size=4096 npm run build"]
 
 [start]
 cmd = "node start-server.js"
 
 [variables]
 NPM_CONFIG_LOGLEVEL = "error"
+# Éviter OOM pendant le build Medusa (compilation admin + rollup)
+NODE_OPTIONS = "--max-old-space-size=4096"
 NPM_CONFIG_FETCH_RETRIES = "5"
 NPM_CONFIG_FETCH_RETRY_MINTIMEOUT = "20000"
 NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT = "120000"

@@ -69,7 +69,7 @@ export default async function stockAlertNotificationHandler({
           template: EmailTemplates.STOCK_ALERT,
           data: {
             emailOptions: {
-              replyTo: 'info@sellerie-lacabrade.be',
+              replyTo: 'contact@sellerie-lacabrade.be',
               subject: `🎉 ${product.title} est de retour en stock !`
             },
             productTitle: product.title,

@@ -31,7 +31,7 @@ export default async function orderFulfilledHandler({
       template: EmailTemplates.ORDER_SHIPPED,
       data: {
         emailOptions: {
-          replyTo: 'info@sellerie-lacabrade.be',
+          replyTo: 'contact@sellerie-lacabrade.be',
           subject: `📦 Votre commande #${order.display_id} est en route !`
         },
         order,

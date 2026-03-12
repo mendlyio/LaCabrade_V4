@@ -117,7 +117,7 @@ WORKER_MODE=shared
 
 # Emails - Utilise Resend en mode test
 RESEND_API_KEY=re_123456789 # Remplace par ta clé de test Resend
-RESEND_FROM_EMAIL=dev@lacabrade.com
+RESEND_FROM_EMAIL=contact@sellerie-lacabrade.be
 
 # Stripe - Mode Test
 STRIPE_API_KEY=sk_test_... # Remplace par ta clé de test Stripe
@@ -306,7 +306,7 @@ node create-admin.sh
 
 Ou directement :
 ```bash
-npx medusa user -e admin@sellerie-lacabrade.be -p motdepasse123
+npx medusa user -e contact@sellerie-lacabrade.be -p motdepasse123
 ```
 
 ---

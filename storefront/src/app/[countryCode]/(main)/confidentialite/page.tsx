@@ -26,7 +26,7 @@ export default function ConfidentialitePage() {
               <p>
                 <strong className="text-gray-900">Responsable du traitement :</strong> La Cabrade - LC•EQUESTRIAN<br />
                 <strong className="text-gray-900">Adresse :</strong> Rue de la Clef, 96 - B-4620 Fléron, Belgique<br />
-                <strong className="text-gray-900">Email :</strong> contact@lacabrade.com<br />
+                <strong className="text-gray-900">Email :</strong> contact@sellerie-lacabrade.be<br />
                 <strong className="text-gray-900">Téléphone :</strong> +32 (0)4/358.60.99
               </p>
             </section>
@@ -127,7 +127,7 @@ export default function ConfidentialitePage() {
                 <li><strong>Droit de retirer votre consentement :</strong> À tout moment pour les traitements basés sur votre consentement</li>
               </ul>
               <p>
-                Pour exercer vos droits, contactez-nous à <a href="mailto:contact@lacabrade.com" className="text-amber-600 hover:text-amber-700 underline">contact@lacabrade.com</a> ou par courrier à l'adresse indiquée ci-dessus.
+                Pour exercer vos droits, contactez-nous à <a href="mailto:contact@sellerie-lacabrade.be" className="text-amber-600 hover:text-amber-700 underline">contact@sellerie-lacabrade.be</a> ou par courrier à l'adresse indiquée ci-dessus.
               </p>
             </section>
 

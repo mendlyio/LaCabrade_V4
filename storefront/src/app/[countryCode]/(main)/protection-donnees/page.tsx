@@ -31,7 +31,7 @@ export default function ProtectionDonneesPage() {
                 B-4620 Fléron<br />
                 Belgique<br />
                 Téléphone : +32 (0)4/358.60.99<br />
-                Email : info@sellerie-lacabrade.be
+                Email : contact@sellerie-lacabrade.be
               </p>
             </section>
 
@@ -111,7 +111,7 @@ export default function ProtectionDonneesPage() {
                 <li>Droit d&apos;introduire une réclamation auprès de l&apos;autorité de contrôle</li>
               </ul>
               <p className="text-gray-600 mt-4">
-                Pour exercer vos droits, contactez-nous à l&apos;adresse : <a href="mailto:info@sellerie-lacabrade.be" className="text-amber-600 hover:text-amber-700 underline">info@sellerie-lacabrade.be</a>
+                Pour exercer vos droits, contactez-nous à l&apos;adresse : <a href="mailto:contact@sellerie-lacabrade.be" className="text-amber-600 hover:text-amber-700 underline">contact@sellerie-lacabrade.be</a>
               </p>
             </section>
 

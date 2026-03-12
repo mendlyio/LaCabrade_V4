@@ -134,10 +134,10 @@ export default function RecrutementPage() {
                 CV + Lettre de motivation par email
               </p>
               <a
-                href="mailto:recrutement@lacabrade.com?subject=Candidature spontanée"
+                href="mailto:contact@sellerie-lacabrade.be?subject=Candidature spontanée"
                 className="inline-block bg-white text-amber-600 hover:bg-gray-100 font-semibold py-3 px-8 rounded-lg transition-colors"
               >
-                📧 recrutement@lacabrade.com
+                📧 contact@sellerie-lacabrade.be
               </a>
             </div>
 

@@ -40,12 +40,12 @@ MINIO_BUCKET=medusa-media
 
 # Email - Resend (domaine vérifié: sellerie-lacabrade.be)
 RESEND_API_KEY=re_xxxxxxxxxxxx
-RESEND_FROM_EMAIL=noreply@sellerie-lacabrade.be
+RESEND_FROM_EMAIL=contact@sellerie-lacabrade.be
 CONTACT_EMAIL=contact@sellerie-lacabrade.be
 
 # Email - SendGrid (alternative à Resend)
 SENDGRID_API_KEY=SG.xxxxxxxxxxxx
-SENDGRID_FROM_EMAIL=noreply@votredomaine.com
+SENDGRID_FROM_EMAIL=contact@sellerie-lacabrade.be
 
 # Stripe Payment
 STRIPE_API_KEY=sk_live_xxxxxxxxxxxx

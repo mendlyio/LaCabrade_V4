@@ -99,10 +99,10 @@ export default function MagasinsPage() {
                       Téléphone : +32 (0)4/358.60.99
                     </a>
                     <a 
-                      href="mailto:contact@lacabrade.com"
+                      href="mailto:contact@sellerie-lacabrade.be"
                       className="flex items-center gap-2 text-amber-600 hover:text-amber-700 font-semibold"
                     >
-                      Email : contact@lacabrade.com
+                      Email : contact@sellerie-lacabrade.be
                     </a>
                   </div>
                 </div>

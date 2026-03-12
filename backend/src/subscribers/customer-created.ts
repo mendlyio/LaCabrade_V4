@@ -26,7 +26,7 @@ export default async function customerCreatedEmailHandler({
       template: EmailTemplates.WELCOME,
       data: {
         emailOptions: {
-          replyTo: 'info@sellerie-lacabrade.be',
+          replyTo: 'contact@sellerie-lacabrade.be',
           subject: '🐴 Bienvenue chez La Cabrade !'
         },
         firstName: customer.first_name || 'Cher(e) client(e)',

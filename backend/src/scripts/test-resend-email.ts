@@ -9,8 +9,8 @@
 import 'dotenv/config'
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY
-const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@sellerie-lacabrade.be'
-const TEST_TO = 'info@duplex38.com'
+const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'contact@sellerie-lacabrade.be'
+const TEST_TO = 'contact@sellerie-lacabrade.be'
 
 const html = `
 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">

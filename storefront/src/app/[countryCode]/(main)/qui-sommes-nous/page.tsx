@@ -158,13 +158,13 @@ export default function QuiSommesNousPage() {
                   +32 (0)4/358.60.99
                 </a>
                 <a 
-                  href="mailto:contact@lacabrade.com"
+                  href="mailto:contact@sellerie-lacabrade.be"
                   className="flex items-center gap-3 text-amber-600 hover:text-amber-700 font-semibold"
                 >
                   <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
                     ✉️
                   </div>
-                  contact@lacabrade.com
+                  contact@sellerie-lacabrade.be
                 </a>
               </div>
 

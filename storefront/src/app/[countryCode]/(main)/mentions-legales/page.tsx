@@ -21,7 +21,7 @@ export default function MentionsLegalesPage() {
               <p className="mb-2"><strong className="text-gray-900">Adresse :</strong> Rue de la Clef, 96 - B-4620 Fléron, Belgique</p>
               <p className="mb-2"><strong className="text-gray-900">Numéro TVA :</strong> [À compléter]</p>
               <p className="mb-2"><strong className="text-gray-900">Téléphone :</strong> +32 (0)4/358.60.99</p>
-              <p className="mb-2"><strong className="text-gray-900">Email :</strong> contact@lacabrade.com</p>
+              <p className="mb-2"><strong className="text-gray-900">Email :</strong> contact@sellerie-lacabrade.be</p>
             </section>
 
             {/* Directeur de publication */}

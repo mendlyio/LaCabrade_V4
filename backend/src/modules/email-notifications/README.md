@@ -33,7 +33,7 @@ await notificationModuleService.createNotifications({
   template: EmailTemplates.INVITE_USER, // Use the enum for the template key
   data: {
     emailOptions: {
-      replyTo: 'info@example.com',
+      replyTo: 'contact@sellerie-lacabrade.be',
       subject: "You've been invited!",
     },
     inviteLink: `${BACKEND_URL}/app/invite?token=${invite.token}`,

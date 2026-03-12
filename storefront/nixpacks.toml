@@ -5,7 +5,8 @@ nixPkgs = ["nodejs_20", "pnpm"]
 cmds = ["pnpm install --no-frozen-lockfile"]
 
 [phases.build]
-cmds = ["pnpm run build"]
+# Limite mémoire pour le build Next.js (éviter OOM sur Railway)
+cmds = ["NODE_OPTIONS=--max-old-space-size=2048 pnpm run build"]
 
 [start]
 cmd = "pnpm start"
