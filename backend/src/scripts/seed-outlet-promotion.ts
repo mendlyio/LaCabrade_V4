@@ -65,7 +65,8 @@ export default async function seedOutletPromotion({ container }: ExecArgs) {
     {},
     { select: ["id", "name", "handle", "parent_category_id"], take: 500 }
   )
-  const byId = new Map(allCategories.map((c: any) => [c.id, c]))
+  type Cat = { id: string; parent_category_id?: string | null }
+  const byId = new Map<string, Cat>(allCategories.map((c: any) => [c.id, c as Cat]))
   const outletIds: string[] = []
 
   for (const h of OUTLET_HANDLES) {
