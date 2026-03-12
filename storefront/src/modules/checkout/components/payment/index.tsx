@@ -272,19 +272,14 @@ const Payment = ({
                       {paymentInfo.title}
                     </p>
                     <p className="text-xs text-gray-600 mt-1">
-                      {stripeMethodType === "card"
-                        ? "Saisissez uniquement votre carte bancaire."
-                        : "Vous allez payer avec cette methode Stripe uniquement."}
+                      Carte bancaire, Apple Pay, Google Pay, Klarna, Alma, Bancontact et autres moyens activés sur Stripe.
                     </p>
                   </div>
                   <PaymentElement
                     key={selectedSession?.id}
                     options={{
                       layout: "accordion",
-                      paymentMethodOrder: stripeMethodType
-                        ? [stripeMethodType]
-                        : undefined,
-                      wallets: { applePay: "never", googlePay: "never" },
+                      wallets: { applePay: "auto", googlePay: "auto" },
                     }}
                     onReady={() => setPaymentElementReady(true)}
                     onChange={(e) => setError(e.error?.message || null)}

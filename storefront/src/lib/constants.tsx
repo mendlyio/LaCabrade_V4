@@ -11,7 +11,7 @@ export const paymentInfoMap: Record<
   { title: string; icon: React.JSX.Element }
 > = {
   pp_stripe_stripe: {
-    title: "Carte bancaire",
+    title: "Paiement en ligne (carte, Apple Pay, Klarna, Alma, etc.)",
     icon: <CreditCard />,
   },
   "pp_stripe-ideal_stripe": {
