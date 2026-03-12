@@ -18,6 +18,7 @@ import {
 } from "./cookies"
 import { getProductsById } from "./products"
 import { getRegion } from "./regions"
+import { getPaymentAmountFromCart } from "@lib/util/get-payment-amount"
 
 export async function retrieveCart() {
   const cartId = await getCartIdSafe()
@@ -405,18 +406,63 @@ export async function initiatePaymentSession(
     context?: Record<string, unknown>
   }
 ) {
-  const body: { provider_id: string; data?: Record<string, unknown> } = {
-    provider_id: data.provider_id,
+  const backendUrl =
+    process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
   }
-  if (data.provider_id === "pp_stripe_stripe") {
-    body.data = {
-      payment_method_types: STRIPE_PAYMENT_METHOD_TYPES,
-      automatic_payment_methods: { enabled: false },
-      capture_method: "automatic", // Bancontact/Klarna/Alma ne supportent pas manual
+  const authHeaders = await getAuthHeadersSafe()
+  if (authHeaders) Object.assign(headers, authHeaders)
+  const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+  if (publishableKey) headers["x-publishable-api-key"] = publishableKey
+
+  const stripeData =
+    data.provider_id === "pp_stripe_stripe"
+      ? {
+          payment_method_types: STRIPE_PAYMENT_METHOD_TYPES,
+          automatic_payment_methods: { enabled: false },
+          capture_method: "automatic",
+        }
+      : {}
+
+  const amount = getPaymentAmountFromCart(cart as any)
+  const paymentCollectionId = (cart as any).payment_collection?.id
+
+  if (paymentCollectionId && amount > 0) {
+    const res = await fetch(
+      `${backendUrl}/store/custom/initiate-payment-with-total`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          cart_id: cart.id,
+          payment_collection_id: paymentCollectionId,
+          provider_id: data.provider_id,
+          amount,
+          data: stripeData,
+          context: data.context,
+        }),
+      }
+    )
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err?.message || `Erreur paiement: ${res.status}`)
     }
+    const result = await res.json()
+    revalidateTag("cart")
+    return result
   }
+
   return sdk.store.payment
-    .initiatePaymentSession(cart, body, {}, await getAuthHeadersSafe())
+    .initiatePaymentSession(
+      cart,
+      {
+        provider_id: data.provider_id,
+        data: stripeData,
+      },
+      {},
+      authHeaders
+    )
     .then((resp) => {
       revalidateTag("cart")
       return resp
