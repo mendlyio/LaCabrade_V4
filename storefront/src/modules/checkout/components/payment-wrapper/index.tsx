@@ -7,6 +7,7 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js"
 import { createContext } from "react"
 import { HttpTypes } from "@medusajs/types"
 import { isPaypal, isStripe } from "@lib/constants"
+import { getActivePaymentSession } from "@lib/util/payment-session"
 
 type WrapperProps = {
   cart: HttpTypes.StoreCart
@@ -21,13 +22,14 @@ const stripePromise = stripeKey ? loadStripe(stripeKey) : null
 const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID
 
 const Wrapper: React.FC<WrapperProps> = ({ cart, children }) => {
-  const paymentSession = cart.payment_collection?.payment_sessions?.find(
-    (s) => s.status === "pending"
+  const paymentSession = getActivePaymentSession(
+    cart.payment_collection?.payment_sessions
   )
 
   if (
     isStripe(paymentSession?.provider_id) &&
     paymentSession &&
+    paymentSession?.data?.client_secret &&
     stripePromise
   ) {
     return (

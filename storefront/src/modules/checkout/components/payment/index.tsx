@@ -12,6 +12,7 @@ import PaymentContainer from "@modules/checkout/components/payment-container"
 import { isStripe as isStripeFunc, paymentInfoMap } from "@lib/constants"
 import { StripeContext } from "@modules/checkout/components/payment-wrapper"
 import { initiatePaymentSession } from "@lib/data/cart"
+import { getActivePaymentSession } from "@lib/util/payment-session"
 
 const Payment = ({
   cart,
@@ -20,8 +21,8 @@ const Payment = ({
   cart: any
   availablePaymentMethods: any[]
 }) => {
-  const activeSession = cart.payment_collection?.payment_sessions?.find(
-    (paymentSession: any) => paymentSession.status === "pending"
+  const activeSession = getActivePaymentSession(
+    cart.payment_collection?.payment_sessions
   )
 
   const [isLoading, setIsLoading] = useState(false)

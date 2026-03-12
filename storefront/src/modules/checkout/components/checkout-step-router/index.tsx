@@ -3,6 +3,7 @@
 import { HttpTypes } from "@medusajs/types"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useEffect } from "react"
+import { getActivePaymentSession } from "@lib/util/payment-session"
 
 /**
  * Détermine automatiquement l'étape du checkout à afficher
@@ -32,10 +33,8 @@ const CheckoutStepRouter = ({ cart }: { cart: HttpTypes.StoreCart }) => {
 
     const hasShipping = (cart.shipping_methods?.length ?? 0) > 0
 
-    const hasPayment = !!(
-      cart.payment_collection?.payment_sessions?.find(
-        (s: any) => s.status === "pending"
-      )
+    const hasPayment = !!getActivePaymentSession(
+      cart.payment_collection?.payment_sessions
     )
 
     if (!hasAddress) {

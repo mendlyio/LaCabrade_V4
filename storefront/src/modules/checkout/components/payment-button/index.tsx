@@ -10,6 +10,7 @@ import Spinner from "@modules/common/icons/spinner"
 import { placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { isManual, isPaypal, isStripe } from "@lib/constants"
+import { getActivePaymentSession } from "@lib/util/payment-session"
 
 type PaymentButtonProps = {
   cart: HttpTypes.StoreCart
@@ -35,8 +36,8 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
   //   return <GiftCardPaymentButton />
   // }
 
-  const paymentSession = cart.payment_collection?.payment_sessions?.find(
-    (s) => s.status === "pending"
+  const paymentSession = getActivePaymentSession(
+    cart.payment_collection?.payment_sessions
   )
 
   switch (true) {
@@ -110,8 +111,8 @@ const StripePaymentButton = ({
   const stripe = useStripe()
   const elements = useElements()
 
-  const session = cart.payment_collection?.payment_sessions?.find(
-    (s) => s.status === "pending"
+  const session = getActivePaymentSession(
+    cart.payment_collection?.payment_sessions
   )
 
   const disabled = !stripe || !elements
@@ -213,8 +214,8 @@ const PayPalPaymentButton = ({
       })
   }
 
-  const session = cart.payment_collection?.payment_sessions?.find(
-    (s) => s.status === "pending"
+  const session = getActivePaymentSession(
+    cart.payment_collection?.payment_sessions
   )
 
   const handlePayment = async (
