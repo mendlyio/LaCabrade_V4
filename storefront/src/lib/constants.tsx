@@ -11,7 +11,7 @@ export const paymentInfoMap: Record<
   { title: string; icon: React.JSX.Element }
 > = {
   pp_stripe_stripe: {
-    title: "Credit card",
+    title: "Carte bancaire",
     icon: <CreditCard />,
   },
   "pp_stripe-ideal_stripe": {
@@ -22,12 +22,20 @@ export const paymentInfoMap: Record<
     title: "Bancontact",
     icon: <Bancontact />,
   },
+  "pp_stripe-klarna_stripe-klarna-alma": {
+    title: "Klarna",
+    icon: <CreditCard />,
+  },
+  "pp_stripe-alma_stripe-klarna-alma": {
+    title: "Alma",
+    icon: <CreditCard />,
+  },
   pp_paypal_paypal: {
     title: "PayPal",
     icon: <PayPal />,
   },
   pp_system_default: {
-    title: "Manual Payment",
+    title: "Paiement manuel",
     icon: <CreditCard />,
   },
   // Add more payment providers here
@@ -42,6 +50,101 @@ export const isPaypal = (providerId?: string) => {
 }
 export const isManual = (providerId?: string) => {
   return providerId?.startsWith("pp_system_default")
+}
+
+export const getStripePaymentMethodType = (providerId?: string) => {
+  if (!providerId) {
+    return undefined
+  }
+
+  if (providerId.includes("bancontact")) {
+    return "bancontact"
+  }
+
+  if (providerId.includes("ideal")) {
+    return "ideal"
+  }
+
+  if (providerId.includes("klarna")) {
+    return "klarna"
+  }
+
+  if (providerId.includes("alma")) {
+    return "alma"
+  }
+
+  if (providerId === "pp_stripe_stripe") {
+    return "card"
+  }
+
+  return undefined
+}
+
+export const getPaymentInfo = (providerId?: string) => {
+  if (!providerId) {
+    return {
+      title: "Paiement",
+      icon: <CreditCard />,
+    }
+  }
+
+  const mapped = paymentInfoMap[providerId]
+
+  if (mapped) {
+    return mapped
+  }
+
+  if (providerId.includes("alma")) {
+    return { title: "Alma", icon: <CreditCard /> }
+  }
+
+  if (providerId.includes("klarna")) {
+    return { title: "Klarna", icon: <CreditCard /> }
+  }
+
+  if (providerId.includes("bancontact")) {
+    return { title: "Bancontact", icon: <Bancontact /> }
+  }
+
+  if (providerId.includes("ideal")) {
+    return { title: "iDeal", icon: <Ideal /> }
+  }
+
+  return {
+    title: providerId,
+    icon: <CreditCard />,
+  }
+}
+
+export const sortPaymentProviders = (providerIds: string[]) => {
+  const order = [
+    "pp_stripe_stripe",
+    "pp_stripe-bancontact_stripe",
+    "pp_stripe-klarna_stripe-klarna-alma",
+    "pp_stripe-alma_stripe-klarna-alma",
+    "pp_stripe-ideal_stripe",
+    "pp_paypal_paypal",
+    "pp_system_default",
+  ]
+
+  return [...providerIds].sort((a, b) => {
+    const aIndex = order.indexOf(a)
+    const bIndex = order.indexOf(b)
+
+    if (aIndex === -1 && bIndex === -1) {
+      return a.localeCompare(b)
+    }
+
+    if (aIndex === -1) {
+      return 1
+    }
+
+    if (bIndex === -1) {
+      return -1
+    }
+
+    return aIndex - bIndex
+  })
 }
 
 // Add currencies that don't need to be divided by 100

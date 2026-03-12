@@ -22,12 +22,28 @@ export const getActivePaymentSession = (
     return undefined
   }
 
-  const scoped = providerId
+  const scoped = (providerId
     ? sessions.filter((session) => session.provider_id === providerId)
     : sessions
+  ).sort((a, b) => {
+    const aTime = new Date(a.updated_at ?? a.created_at ?? 0).getTime()
+    const bTime = new Date(b.updated_at ?? b.created_at ?? 0).getTime()
+
+    return bTime - aTime
+  })
 
   if (!scoped.length) {
     return undefined
+  }
+
+  const selectedSession = scoped.find(
+    (session) =>
+      (session as Session & { is_selected?: boolean }).is_selected &&
+      session.status !== "canceled"
+  )
+
+  if (selectedSession) {
+    return selectedSession
   }
 
   for (const status of SESSION_PRIORITY) {

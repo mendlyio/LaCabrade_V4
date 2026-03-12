@@ -4,13 +4,14 @@ import { Button } from "@medusajs/ui"
 import { OnApproveActions, OnApproveData } from "@paypal/paypal-js"
 import { PayPalButtons, usePayPalScriptReducer } from "@paypal/react-paypal-js"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
-import React, { useState } from "react"
+import React, { useContext, useState } from "react"
 import ErrorMessage from "../error-message"
 import Spinner from "@modules/common/icons/spinner"
 import { placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { isManual, isPaypal, isStripe } from "@lib/constants"
 import { getActivePaymentSession } from "@lib/util/payment-session"
+import { PaymentSessionsContext } from "@modules/checkout/components/payment-wrapper"
 
 type PaymentButtonProps = {
   cart: HttpTypes.StoreCart
@@ -21,6 +22,11 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
   cart,
   "data-testid": dataTestId,
 }) => {
+  const paymentSessionsContext = useContext(PaymentSessionsContext)
+  const paymentSessions =
+    paymentSessionsContext?.paymentSessions ||
+    cart.payment_collection?.payment_sessions
+
   const notReady =
     !cart ||
     !cart.shipping_address ||
@@ -37,7 +43,7 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
   // }
 
   const paymentSession = getActivePaymentSession(
-    cart.payment_collection?.payment_sessions
+    paymentSessions
   )
 
   switch (true) {
@@ -95,6 +101,11 @@ const StripePaymentButton = ({
   notReady: boolean
   "data-testid"?: string
 }) => {
+  const paymentSessionsContext = useContext(PaymentSessionsContext)
+  const paymentSessions =
+    paymentSessionsContext?.paymentSessions ||
+    cart.payment_collection?.payment_sessions
+
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -112,7 +123,7 @@ const StripePaymentButton = ({
   const elements = useElements()
 
   const session = getActivePaymentSession(
-    cart.payment_collection?.payment_sessions
+    paymentSessions
   )
 
   const disabled = !stripe || !elements
@@ -201,6 +212,11 @@ const PayPalPaymentButton = ({
   notReady: boolean
   "data-testid"?: string
 }) => {
+  const paymentSessionsContext = useContext(PaymentSessionsContext)
+  const paymentSessions =
+    paymentSessionsContext?.paymentSessions ||
+    cart.payment_collection?.payment_sessions
+
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -215,7 +231,7 @@ const PayPalPaymentButton = ({
   }
 
   const session = getActivePaymentSession(
-    cart.payment_collection?.payment_sessions
+    paymentSessions
   )
 
   const handlePayment = async (

@@ -9,8 +9,18 @@ import { Button, Container, Heading, Text, clx } from "@medusajs/ui"
 import { PaymentElement } from "@stripe/react-stripe-js"
 
 import PaymentContainer from "@modules/checkout/components/payment-container"
-import { isStripe as isStripeFunc, paymentInfoMap } from "@lib/constants"
-import { StripeContext } from "@modules/checkout/components/payment-wrapper"
+import {
+  getPaymentInfo,
+  getStripePaymentMethodType,
+  isManual,
+  isStripe as isStripeFunc,
+  paymentInfoMap,
+  sortPaymentProviders,
+} from "@lib/constants"
+import {
+  PaymentSessionsContext,
+  StripeContext,
+} from "@modules/checkout/components/payment-wrapper"
 import { initiatePaymentSession } from "@lib/data/cart"
 import { getActivePaymentSession } from "@lib/util/payment-session"
 
@@ -21,60 +31,81 @@ const Payment = ({
   cart: any
   availablePaymentMethods: any[]
 }) => {
-  const activeSession = getActivePaymentSession(
+  const paymentSessionsContext = useContext(PaymentSessionsContext)
+  const paymentSessions =
+    paymentSessionsContext?.paymentSessions ||
     cart.payment_collection?.payment_sessions
+
+  const activeSession = getActivePaymentSession(
+    paymentSessions
   )
 
   const [isLoading, setIsLoading] = useState(false)
   const [isSwitching, setIsSwitching] = useState(false)
-  const [isInitializing, setIsInitializing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [paymentElementReady, setPaymentElementReady] = useState(false)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
     activeSession?.provider_id ?? ""
   )
-  const initAttempted = useRef(false)
+  const pendingProviderId = useRef<string | null>(null)
+
+  const visiblePaymentMethods = (availablePaymentMethods ?? []).filter(
+    (paymentMethod) => !isManual(paymentMethod.id)
+  )
+
+  const selectedOrActiveProviderId =
+    selectedPaymentMethod || activeSession?.provider_id || ""
+
+  const selectedSession = getActivePaymentSession(
+    paymentSessions,
+    selectedOrActiveProviderId || undefined
+  )
 
   // Réinitialiser paymentElementReady quand la session change (nouveau Payment Element)
   useEffect(() => {
     setPaymentElementReady(false)
-  }, [activeSession?.id])
+  }, [selectedSession?.id, selectedPaymentMethod])
 
-  // Synchroniser la sélection quand la session du panier change (ex: retour arrière, refresh)
+  // Quand le cart serveur a bien basculé sur le provider demandé, on lève l'état de switching
   useEffect(() => {
-    if (!isSwitching && activeSession?.provider_id && activeSession.provider_id !== selectedPaymentMethod) {
+    if (
+      pendingProviderId.current &&
+      activeSession?.provider_id === pendingProviderId.current
+    ) {
+      pendingProviderId.current = null
+      setIsSwitching(false)
+    }
+  }, [activeSession?.provider_id])
+
+  // Synchroniser la sélection quand la session du panier change hors changement manuel
+  useEffect(() => {
+    if (
+      !pendingProviderId.current &&
+      activeSession?.provider_id &&
+      activeSession.provider_id !== selectedPaymentMethod
+    ) {
       setSelectedPaymentMethod(activeSession.provider_id)
     }
-  }, [activeSession?.provider_id, isSwitching, selectedPaymentMethod])
+  }, [activeSession?.provider_id, selectedPaymentMethod])
 
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
   const isOpen = searchParams.get("step") === "payment"
 
-  // Medusa v2 : auto-init session Stripe quand étape paiement ouverte, pas de session
-  // Affiche immédiatement le Payment Element (carte, Klarna, Bancontact, etc.)
-  useEffect(() => {
-    if (!activeSession && isOpen && availablePaymentMethods?.length) {
-      const stripeProvider = availablePaymentMethods.find((p) => isStripeFunc(p.id))
-      if (stripeProvider && !initAttempted.current) {
-        initAttempted.current = true
-        setIsInitializing(true)
-        initiatePaymentSession(cart, { provider_id: stripeProvider.id })
-          .then(() => router.refresh())
-          .catch((err) => {
-            setError(err?.message ?? "Impossible d'initialiser le paiement.")
-            initAttempted.current = false
-          })
-          .finally(() => setIsInitializing(false))
-      }
-    } else if (activeSession) {
-      initAttempted.current = false
-    }
-  }, [activeSession, isOpen, availablePaymentMethods, cart, router])
-
-  const isStripe = isStripeFunc(activeSession?.provider_id)
+  const isStripe = isStripeFunc(selectedOrActiveProviderId)
   const stripeReady = useContext(StripeContext)
+  const stripeMethodType = getStripePaymentMethodType(selectedOrActiveProviderId)
+  const paymentInfo = getPaymentInfo(selectedOrActiveProviderId)
+  const isStripeSessionReady =
+    !!selectedSession &&
+    selectedSession.provider_id === selectedOrActiveProviderId &&
+    !!selectedSession.data?.client_secret
+  const shouldRenderStripeElement =
+    isStripe &&
+    stripeReady &&
+    isStripeSessionReady &&
+    !isSwitching
 
   const paidByGiftcard =
     cart?.gift_cards && cart?.gift_cards?.length > 0 && cart?.total === 0
@@ -106,31 +137,40 @@ const Payment = ({
       }
       setError(null)
       setIsSwitching(true)
-      const previousProviderId = activeSession?.provider_id ?? ""
       setSelectedPaymentMethod(newProviderId)
+      pendingProviderId.current = newProviderId
       try {
-        await initiatePaymentSession(cart, { provider_id: newProviderId })
-        await router.refresh()
+        const updatedPaymentCollection = await initiatePaymentSession(cart, {
+          provider_id: newProviderId,
+        })
+        paymentSessionsContext?.setPaymentSessions(
+          updatedPaymentCollection?.payment_collection?.payment_sessions || []
+        )
+        router.refresh()
       } catch (err: any) {
         setError(err?.message ?? "Impossible de changer de moyen de paiement. Réessayez.")
-        setSelectedPaymentMethod(previousProviderId)
-      } finally {
+        pendingProviderId.current = null
+        setSelectedPaymentMethod(activeSession?.provider_id ?? "")
         setIsSwitching(false)
       }
     },
-    [cart, activeSession?.provider_id, router]
+    [cart, activeSession?.provider_id, paymentSessionsContext, router]
   )
 
   const handleSubmit = async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const needNewSession = !activeSession || activeSession.provider_id !== selectedPaymentMethod
+      const needNewSession =
+        !selectedSession || selectedSession.provider_id !== selectedPaymentMethod
 
       if (needNewSession) {
-        await initiatePaymentSession(cart, {
+        const updatedPaymentCollection = await initiatePaymentSession(cart, {
           provider_id: selectedPaymentMethod,
         })
+        paymentSessionsContext?.setPaymentSessions(
+          updatedPaymentCollection?.payment_collection?.payment_sessions || []
+        )
         router.refresh()
       }
 
@@ -202,16 +242,21 @@ const Payment = ({
                 onChange={handlePaymentMethodChange}
               >
                 <div className="space-y-3">
-                  {availablePaymentMethods
-                    .sort((a, b) => {
-                      return (a.id ?? a.provider_id ?? "") > (b.id ?? b.provider_id ?? "") ? 1 : -1
-                    })
+                  {sortPaymentProviders(
+                    visiblePaymentMethods.map((paymentMethod) => paymentMethod.id)
+                  )
+                    .map((paymentProviderId) =>
+                      visiblePaymentMethods.find(
+                        (paymentMethod) => paymentMethod.id === paymentProviderId
+                      )
+                    )
+                    .filter(Boolean)
                     .map((paymentMethod) => {
                       return (
                         <PaymentContainer
                           paymentInfoMap={paymentInfoMap}
-                          paymentProviderId={paymentMethod.id}
-                          key={paymentMethod.id}
+                          paymentProviderId={paymentMethod!.id}
+                          key={paymentMethod!.id}
                           selectedPaymentOptionId={selectedPaymentMethod}
                           disabled={isSwitching}
                         />
@@ -220,17 +265,38 @@ const Payment = ({
                 </div>
               </RadioGroup>
 
-              {isStripe && stripeReady && (
+              {shouldRenderStripeElement && (
                 <div className="mt-5 transition-all duration-150 ease-in-out">
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 mb-4">
+                    <p className="text-sm font-medium text-gray-900">
+                      {paymentInfo.title}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {stripeMethodType === "card"
+                        ? "Saisissez uniquement votre carte bancaire."
+                        : "Vous allez payer avec cette methode Stripe uniquement."}
+                    </p>
+                  </div>
                   <PaymentElement
-                    key={activeSession?.id}
+                    key={selectedSession?.id}
                     options={{
-                      layout: "tabs",
-                      wallets: { applePay: "auto", googlePay: "auto" },
+                      layout: "accordion",
+                      paymentMethodOrder: stripeMethodType
+                        ? [stripeMethodType]
+                        : undefined,
+                      wallets: { applePay: "never", googlePay: "never" },
                     }}
                     onReady={() => setPaymentElementReady(true)}
                     onChange={(e) => setError(e.error?.message || null)}
                   />
+                </div>
+              )}
+
+              {isStripe && !shouldRenderStripeElement && selectedPaymentMethod && !isSwitching && (
+                <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-sm text-gray-700">
+                    Préparation du formulaire de paiement {paymentInfo.title.toLowerCase()}...
+                  </p>
                 </div>
               )}
             </>
@@ -249,15 +315,15 @@ const Payment = ({
             data-testid="payment-method-error-message"
           />
 
-          {(isSwitching || isInitializing) && (
+          {isSwitching && (
             <p className="text-sm text-amber-600 mt-2">
-              {isInitializing ? "Préparation du paiement..." : "Changement de moyen de paiement en cours..."}
+              Changement de moyen de paiement en cours...
             </p>
           )}
           <Button
             size="large"
             className={`mt-6 w-full font-semibold py-3.5 px-6 rounded-lg transition-all duration-200 text-base ${
-              (isStripe && !paymentElementReady) || (!selectedPaymentMethod && !paidByGiftcard) || isSwitching || isInitializing
+              (isStripe && !paymentElementReady) || (!selectedPaymentMethod && !paidByGiftcard) || isSwitching
                 ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                 : "bg-amber-600 hover:bg-amber-700 text-white shadow-md hover:shadow-lg"
             }`}
@@ -266,8 +332,7 @@ const Payment = ({
             disabled={
               (isStripe && !paymentElementReady) ||
               (!selectedPaymentMethod && !paidByGiftcard) ||
-              isSwitching ||
-              isInitializing
+              isSwitching
             }
             data-testid="submit-payment-button"
           >
@@ -309,13 +374,13 @@ const Payment = ({
                   data-testid="payment-details-summary"
                 >
                   <Container className="flex items-center h-7 w-fit p-2 bg-white border border-gray-200 rounded">
-                    {paymentInfoMap[selectedPaymentMethod]?.icon || (
+                    {paymentInfo.icon || (
                       <CreditCard />
                     )}
                   </Container>
                   <Text>
                     {isStripeFunc(selectedPaymentMethod)
-                      ? "Carte / Klarna / Alma"
+                      ? paymentInfo.title
                       : "Prêt pour le paiement"}
                   </Text>
                 </div>

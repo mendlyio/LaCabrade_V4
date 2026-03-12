@@ -170,7 +170,6 @@ const medusaConfig = {
             options: {
               apiKey: STRIPE_API_KEY,
               ...(STRIPE_WEBHOOK_SECRET ? { webhookSecret: STRIPE_WEBHOOK_SECRET } : {}),
-              automaticPaymentMethods: true,
             },
           },
         ],
