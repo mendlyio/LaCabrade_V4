@@ -22,13 +22,14 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const [isOpen, setIsOpen] = React.useState(false)
 
   const { promotions = [] } = cart
+  const validPromotions = (promotions ?? []).filter((p): p is NonNullable<typeof p> => p != null)
   const removePromotionCode = async (code: string) => {
-    const validPromotions = promotions.filter(
+    const toApply = validPromotions.filter(
       (promotion) => promotion.code !== code
     )
 
     await applyPromotions(
-      validPromotions.filter((p) => p.code === undefined).map((p) => p.code!)
+      toApply.filter((p) => p.code != null).map((p) => p.code!)
     )
   }
 
@@ -38,8 +39,8 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
       return
     }
     const input = document.getElementById("promotion-input") as HTMLInputElement
-    const codes = promotions
-      .filter((p) => p.code === undefined)
+    const codes = validPromotions
+      .filter((p) => p.code != null)
       .map((p) => p.code!)
     codes.push(code.toString())
 
@@ -96,9 +97,9 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
         )}
       </form>
 
-      {promotions.length > 0 && (
+      {validPromotions.length > 0 && (
         <div className="mt-3">
-          {promotions.map((promotion) => (
+          {validPromotions.map((promotion) => (
             <div
               key={promotion.id}
               className="flex items-center justify-between py-2"
@@ -109,7 +110,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                   color={promotion.is_automatic ? "green" : "grey"}
                   size="small"
                 >
-                  {promotion.code}
+                  {promotion.code ?? "Promo"}
                 </Badge>
                 {promotion.application_method?.value !== undefined &&
                   promotion.application_method.currency_code !== undefined && (
