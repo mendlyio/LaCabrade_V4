@@ -46,6 +46,21 @@ export function isGiftCardItem(item: {
   )
 }
 
+/** Panier contenant uniquement des bons cadeau (Bon Cadeau La Cabrade) */
+export function isGiftCardOnlyCart(cart: {
+  items?: Array<{
+    metadata?: Record<string, unknown> | null
+    product_title?: string | null
+    title?: string | null
+    variant_sku?: string | null
+    variant?: { product?: { handle?: string } }
+  }> | null
+}): boolean {
+  const items = cart?.items ?? []
+  if (items.length === 0) return false
+  return items.every(item => isGiftCardItem(item))
+}
+
 export type CartAmountsInput = {
   item_total?: number | null
   item_tax_total?: number | null
@@ -136,18 +151,12 @@ export function getItemsTotalTvacEuros(
 }
 
 /**
- * Sous-total articles pour affichage (dropdown, etc.).
- * TVAC normal, HT si exonération intracommunautaire.
+ * Sous-total articles pour affichage (toujours TVAC).
  * Utilise les line items quand disponibles (Odoo=euros, bon cadeau=centimes).
  */
 export function getItemsDisplayTotalEuros(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
-  let itemEuros = getItemsTotalEuros(cart)
-  if (isIntraCommunityExempt(cart)) {
-    const itemTax = cart.item_tax_total ?? cart.tax_total ?? 0
-    return Math.max(0, itemEuros - toDisplayEuros(itemTax))
-  }
-  return itemEuros
+  return getItemsTotalEuros(cart)
 }
 
 /** TVA belge standard 21 %. TVA = TTC × 0.21 / 1.21 */
@@ -155,15 +164,11 @@ const VAT_RATE = 0.21
 
 /**
  * Calcule la TVA à afficher (en euros).
- * Si tax_total fourni par l'API > 0 : on l'utilise.
- * Sinon : calcul à partir du total TTC (TVA = TTC × 21% / 1.21).
+ * Toujours calculée côté frontend pour éviter les bugs d'unité (API peut renvoyer centimes).
+ * Cas intracommunautaire : retourne la TVA en NÉGATIF (montant déduit).
  */
 export function getDisplayTaxEuros(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
-  if (isIntraCommunityExempt(cart)) return 0
-
-  const apiTax = cart.tax_total ?? cart.item_tax_total ?? 0
-  if (apiTax > 0) return toDisplayEuros(apiTax)
 
   const itemTotalEuros = getItemsTotalEuros(cart)
   const shippingEuros = toDisplayEuros(cart.shipping_total)
@@ -171,12 +176,17 @@ export function getDisplayTaxEuros(cart: CartAmountsInput | null | undefined): n
   const giftCardDeduction = toDisplayEuros(cart.gift_card_total, true)
   const totalTTC = itemTotalEuros + shippingEuros - discountEuros - giftCardDeduction
 
-  return Math.round(totalTTC * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
+  const vatAmount = Math.round(totalTTC * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
+
+  if (isIntraCommunityExempt(cart)) {
+    return -vatAmount
+  }
+  return vatAmount
 }
 
 /**
- * Calcule le total TVAC à afficher (en euros).
- * Cas intracommunautaire : total HT (sans TVA belge).
+ * Calcule le total à afficher (en euros).
+ * Cas intracommunautaire : total HT = TTC - TVA (TVA déduite).
  */
 export function getDisplayTotalTvacEuros(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
@@ -187,17 +197,19 @@ export function getDisplayTotalTvacEuros(cart: CartAmountsInput | null | undefin
   const shippingEuros = toDisplayEuros(cart.shipping_total)
   const discountEuros = toDisplayEuros(cart.discount_total)
 
-  const totalTvac = itemTotalEuros + shippingEuros - discountEuros - giftCardDeduction
+  const totalTTC = itemTotalEuros + shippingEuros - discountEuros - giftCardDeduction
 
-  if (exempt && cart.tax_total != null) {
-    return Math.max(0, totalTvac - toDisplayEuros(cart.tax_total))
+  if (exempt) {
+    const vatAmount = Math.round(totalTTC * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
+    return Math.round((totalTTC - vatAmount) * 100) / 100
   }
-  return Math.max(0, totalTvac)
+  return Math.max(0, totalTTC)
 }
 
 /**
  * Calcule le montant à charger (Stripe) en centimes.
  * Stripe attend les minor units.
+ * Cas intracommunautaire : déduit la TVA (total HT).
  */
 export function getPaymentAmountCents(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
@@ -210,8 +222,10 @@ export function getPaymentAmountCents(cart: CartAmountsInput | null | undefined)
 
   let totalCents = itemCents + shippingCents - discountCents - giftCardCents
 
-  if (exempt && cart.tax_total != null) {
-    totalCents = Math.max(0, totalCents - toPaymentCents(cart.tax_total))
+  if (exempt) {
+    const totalTTC = totalCents / 100
+    const vatAmount = totalTTC * (VAT_RATE / (1 + VAT_RATE))
+    totalCents = Math.round((totalTTC - vatAmount) * 100)
   }
 
   return Math.max(0, totalCents)

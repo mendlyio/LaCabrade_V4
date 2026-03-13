@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
     const products = await getProductsById({
       ids: productIds,
       regionId,
+      skipInventoryCheck: true,
     })
 
     return NextResponse.json({ products })

@@ -1,11 +1,15 @@
 /**
  * Met à jour la configuration des livraisons :
- * - Standard Bpost & Point relais Bpost : 6,90 € (au lieu de 5€)
+ * - Standard Bpost & Point relais Bpost : 6,90 €
  * - Crée une promotion automatique "Livraison gratuite dès 75€"
- *   (s'applique à toutes les options SAUF express)
+ *   pour : Bpost Livraison internationale (Europe), Point relais (Belgique), Livraison à domicile (Belgique)
+ *   (exclut express)
  *
  * Usage : npx medusa exec src/scripts/update-shipping-config.ts
  * En prod : DATABASE_URL=... REDIS_URL="" npx medusa exec src/scripts/update-shipping-config.ts
+ *
+ * Si la livraison gratuite ne s'applique pas : le subtotal Medusa peut être en euros.
+ * Modifier FREE_SHIPPING_THRESHOLD_CENTS en FREE_SHIPPING_THRESHOLD (75) dans les rules.
  */
 
 import { ExecArgs } from "@medusajs/framework/types"
@@ -21,6 +25,8 @@ import { ApplicationMethodTargetType, ApplicationMethodType } from "@medusajs/fr
 const STANDARD_PRICE = 6.9  // 6,90 €
 const EXPRESS_PRICE  = 12.9 // 12,90 €
 const FREE_SHIPPING_THRESHOLD = 75 // 75 € panier minimum
+// Medusa compare le subtotal en centimes : 75 € = 7500
+const FREE_SHIPPING_THRESHOLD_CENTS = FREE_SHIPPING_THRESHOLD * 100
 
 export default async function updateShippingConfig({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -131,7 +137,7 @@ export default async function updateShippingConfig({ container }: ExecArgs) {
     await promotionModule.deletePromotions(existing.map((p: any) => p.id))
   }
 
-  // IDs des options NON express (standard + relais + store_pickup + manual)
+  // IDs des options NON express : Bpost domicile BE, Point relais BE, International EU
   const nonExpressOptionIds = allOptions
     .filter((opt: any) => {
       const isExpress =
@@ -141,7 +147,11 @@ export default async function updateShippingConfig({ container }: ExecArgs) {
     })
     .map((opt: any) => opt.id)
 
-  logger.info(`   Options éligibles (non express) : ${nonExpressOptionIds.length}`)
+  logger.info(`   Options éligibles (livraison gratuite dès 75€) : ${nonExpressOptionIds.length}`)
+  nonExpressOptionIds.forEach((id: string) => {
+    const opt = allOptions.find((o: any) => o.id === id)
+    if (opt) logger.info(`      - ${opt.name}`)
+  })
 
   try {
     const promotionModule = container.resolve(Modules.PROMOTION)
@@ -150,6 +160,7 @@ export default async function updateShippingConfig({ container }: ExecArgs) {
       {
         code: "FREE_SHIPPING_75",
         type: PromotionType.STANDARD,
+        status: "active",
         is_automatic: true,
         application_method: {
           type: ApplicationMethodType.PERCENTAGE,
@@ -172,13 +183,14 @@ export default async function updateShippingConfig({ container }: ExecArgs) {
           {
             attribute: "subtotal",
             operator: PromotionRuleOperator.GTE,
-            values: [`${FREE_SHIPPING_THRESHOLD}`],
+            values: [`${FREE_SHIPPING_THRESHOLD_CENTS}`],
           },
         ],
       } as any,
     ])
     logger.info(`   ✅ Promotion créée : livraison GRATUITE si panier ≥ ${FREE_SHIPPING_THRESHOLD}€`)
     logger.info(`      Code interne : FREE_SHIPPING_75 (application automatique)`)
+    logger.info(`      Règle : subtotal >= ${FREE_SHIPPING_THRESHOLD_CENTS} (centimes)`)
   } catch (e: any) {
     logger.error(`   ❌ Erreur création promotion : ${e.message}`)
     logger.info("   → Vous pouvez créer la promotion manuellement dans le dashboard :")

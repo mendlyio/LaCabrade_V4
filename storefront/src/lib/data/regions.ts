@@ -30,8 +30,13 @@ const FALLBACK_REGION: HttpTypes.StoreRegion = {
   ] as any,
 } as HttpTypes.StoreRegion
 
+const INVALID_COUNTRY_CODES = ["api", "admin", "static", "favicon", "_next"]
+
 export const getRegion = cache(async function (countryCode: string) {
   try {
+    if (!countryCode || INVALID_COUNTRY_CODES.includes(countryCode.toLowerCase())) {
+      return null
+    }
     if (regionMap.has(countryCode)) {
       return regionMap.get(countryCode)
     }

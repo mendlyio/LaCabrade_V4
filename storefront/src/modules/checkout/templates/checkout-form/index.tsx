@@ -2,6 +2,7 @@ import { listCartShippingMethods } from "@lib/data/fulfillment"
 import { listCartPaymentMethods } from "@lib/data/payment"
 import { getProductByHandle, getProductsList } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
+import { isGiftCardOnlyCart } from "@lib/util/cart-amounts"
 import { HttpTypes } from "@medusajs/types"
 import Addresses from "@modules/checkout/components/addresses"
 import Payment from "@modules/checkout/components/payment"
@@ -41,7 +42,7 @@ async function fetchUpsellProducts(
 
     // "Complétez votre commande" = produits fixes LC Equestrian
     const upsellRaw = await Promise.all(
-      CHECKOUT_UPSELL_HANDLES.map((h) => getProductByHandle(h, region.id))
+      CHECKOUT_UPSELL_HANDLES.map((h) => getProductByHandle(h, region.id, { skipInventoryCheck: true }))
     )
     let upsell = upsellRaw
       .filter((p): p is HttpTypes.StoreProduct => p != null)
@@ -60,7 +61,7 @@ async function fetchUpsellProducts(
 
     // "Vérification et validation" (Last chance) = produits fixes
     const lastChanceRaw = await Promise.all(
-      LAST_CHANCE_HANDLES.map((h) => getProductByHandle(h, region.id))
+      LAST_CHANCE_HANDLES.map((h) => getProductByHandle(h, region.id, { skipInventoryCheck: true }))
     )
     let lastChance = lastChanceRaw
       .filter((p): p is HttpTypes.StoreProduct => p != null)
@@ -121,6 +122,15 @@ export default async function CheckoutForm({
     )
   }
 
+  // Livraison numérique : visible uniquement si panier = bon cadeau seul
+  // Sinon : masquer Livraison numérique
+  const giftCardOnly = isGiftCardOnlyCart(cart)
+  const filteredShippingMethods = (shippingMethods ?? []).filter((opt) => {
+    const isDigital = isDigitalShippingOption(opt)
+    if (giftCardOnly) return isDigital
+    return !isDigital
+  })
+
   if (!shippingMethods || !paymentMethods) {
     return (
       <div className="p-6 bg-amber-50 border border-amber-200 rounded-xl">
@@ -152,7 +162,7 @@ export default async function CheckoutForm({
 
       {/* Étape 2 : Livraison */}
       <div className="relative pb-8 mb-0">
-        <Shipping cart={cart} availableShippingMethods={shippingMethods} />
+        <Shipping cart={cart} availableShippingMethods={filteredShippingMethods} />
         <div className="mx-4 sm:mx-0 sm:ml-[40px] mt-6 border-b-2 border-dashed border-gray-200" />
       </div>
 

@@ -3,6 +3,7 @@ import { Container } from "@medusajs/ui"
 import Checkbox from "@modules/common/components/checkbox"
 import Input from "@modules/common/components/input"
 import { mapKeys } from "lodash"
+import { useRouter } from "next/navigation"
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import AddressSelect from "../address-select"
 import CountrySelect from "../country-select"
@@ -20,6 +21,7 @@ const ShippingAddress = ({
   onChange: () => void
 }) => {
   const t = useTranslate()
+  const router = useRouter()
   const [formData, setFormData] = useState<Record<string, any>>({})
   const [vatNumber, setVatNumber] = useState("")
   const [vatStatus, setVatStatus] = useState<"idle" | "validating" | "valid" | "invalid">("idle")
@@ -127,10 +129,11 @@ const ShippingAddress = ({
     try {
       const { updateCart } = await import("@lib/data/cart")
       await updateCart({ metadata: { vat_number: validatedVatNumber } } as any)
+      router.refresh()
     } catch (err) {
       console.warn("Impossible de sauvegarder le numéro de TVA dans le cart:", err)
     }
-  }, [])
+  }, [router])
 
   // Valider le numéro de TVA via VIES
   const validateVat = useCallback(async () => {
@@ -339,6 +342,7 @@ const ShippingAddress = ({
                   try {
                     const { updateCart } = await import("@lib/data/cart")
                     await updateCart({ metadata: { vat_number: null } } as any)
+                    router.refresh()
                   } catch {}
                 }}
                 className="text-gray-400 hover:text-gray-600 transition-colors"

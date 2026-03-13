@@ -83,7 +83,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
       <div className="flex flex-col gap-y-3 text-sm">
         <div className="flex items-center justify-between">
           <span className="text-gray-600">
-            Sous-total {exempt ? "(HT)" : "(TVAC)"}
+            Sous-total (TVAC)
           </span>
           <span className="font-medium text-gray-900" data-testid="cart-subtotal" data-value={displayedSubtotal || 0}>
             {formatAmount(displayedSubtotal, currency_code)}
@@ -123,16 +123,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
             )}
           </span>
           <span className={`font-medium ${exempt ? "text-emerald-600" : "text-gray-900"}`} data-testid="cart-taxes" data-value={displayedTaxTotal}>
-            {exempt ? (
-              <span className="flex items-center gap-1.5">
-                <span className="line-through text-gray-400 text-xs">
-                  {formatAmount(displayedTotal * 0.21, currency_code)}
-                </span>
-                <span>{formatAmount(0, currency_code)}</span>
-              </span>
-            ) : (
-              formatAmount(displayedTaxTotal, currency_code)
-            )}
+            {formatAmount(displayedTaxTotal, currency_code)}
           </span>
         </div>
 

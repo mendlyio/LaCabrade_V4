@@ -41,9 +41,8 @@ export default async function Home({
   params: { countryCode: string }
 }) {
   const region = await getRegion(countryCode)
-  
+
   if (!region) {
-    console.error("❌ Aucune région trouvée pour:", countryCode)
     return null
   }
 

@@ -11,16 +11,20 @@ export const GIFT_CARD_PRODUCT_HANDLE = "bon-cadeau"
 export const getProductsById = cache(async function ({
   ids,
   regionId,
+  skipInventoryCheck,
 }: {
   ids: string[]
   regionId: string
+  /** Si true, n'inclut pas inventory_quantity pour éviter l'erreur « Some variant does not have the required inventory » */
+  skipInventoryCheck?: boolean
 }) {
+  const inventoryField = skipInventoryCheck ? "" : "+variants.inventory_quantity,"
   return sdk.store.product
     .list(
       {
         id: ids,
         region_id: regionId,
-        fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images",
+        fields: `*variants.calculated_price,${inventoryField}+variants.prices,+images`,
       },
       { next: { tags: ["products"] } }
     )
@@ -29,14 +33,16 @@ export const getProductsById = cache(async function ({
 
 export const getProductByHandle = cache(async function (
   handle: string,
-  regionId: string
+  regionId: string,
+  options?: { skipInventoryCheck?: boolean }
 ) {
+  const inv = options?.skipInventoryCheck ? "" : "+variants.inventory_quantity,"
   return sdk.store.product
     .list(
       {
         handle,
         region_id: regionId,
-        fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,*categories,+categories.handle,+categories.name,+categories.id,+categories.parent_category_id",
+        fields: `*variants.calculated_price,${inv}+variants.prices,*categories,+categories.handle,+categories.name,+categories.id,+categories.parent_category_id`,
       },
       { next: { tags: ["products"] } }
     )

@@ -270,7 +270,7 @@ export async function enrichLineItems(
 
   let products: HttpTypes.StoreProduct[] = []
   try {
-    products = await getProductsById({ ids: productIds, regionId })
+    products = await getProductsById({ ids: productIds, regionId, skipInventoryCheck: true })
   } catch {
     return lineItems as HttpTypes.StoreCartLineItem[]
   }

@@ -205,14 +205,12 @@ const CartDropdown = ({
                       {formatAmount(itemsDisplayTotal, cartState.currency_code ?? "eur")}
                     </span>
                   </div>
-                  {!exempt && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">TVA</span>
-                      <span className="font-medium text-gray-900" data-testid="cart-taxes" data-value={taxDisplayTotal}>
-                        {formatAmount(taxDisplayTotal, cartState.currency_code ?? "eur")}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">TVA</span>
+                    <span className={`font-medium ${exempt ? "text-emerald-600" : "text-gray-900"}`} data-testid="cart-taxes" data-value={taxDisplayTotal}>
+                      {formatAmount(taxDisplayTotal, cartState.currency_code ?? "eur")}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 rounded-lg p-3">
                     <span>✓</span>
                     <span>Livraison gratuite dès 75€</span>
