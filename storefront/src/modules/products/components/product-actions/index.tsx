@@ -34,18 +34,9 @@ const optionsAsKeymap = (variantOptions: any): Record<string, string | undefined
 
 // Vérifie si une variante est en stock
 const isVariantInStock = (variant: HttpTypes.StoreProductVariant): boolean => {
-  // Si on ne gère pas l'inventaire, c'est toujours disponible
-  if (!variant.manage_inventory) {
-    return true
-  }
-  
-  // Si les backorders sont autorisés, c'est toujours disponible
-  if (variant.allow_backorder) {
-    return true
-  }
-  
-  // Sinon, vérifier la quantité en stock
-  return (variant.inventory_quantity || 0) > 0
+  if (!variant.manage_inventory || variant.allow_backorder) return true
+  if (variant.inventory_quantity === undefined || variant.inventory_quantity === null) return true
+  return (variant.inventory_quantity ?? 0) > 0
 }
 
 // Calcule les valeurs d'options indisponibles en fonction des sélections actuelles

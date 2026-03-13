@@ -11,6 +11,13 @@ import Shipping from "@modules/checkout/components/shipping"
 import CheckoutUpsell from "@modules/checkout/components/checkout-upsell"
 import CheckoutStepRouter from "@modules/checkout/components/checkout-step-router"
 
+/** Détecte si une option de livraison est "Livraison numérique" (bon cadeau uniquement) */
+function isDigitalShippingOption(opt: { name?: string | null; data?: Record<string, unknown> }): boolean {
+  const name = (opt.name ?? "").toLowerCase()
+  const mode = (opt.data as any)?.mode
+  return name.includes("numérique") || name.includes("digital") || mode === "digital"
+}
+
 /** Produits fixes pour "Complétez votre commande" (étape 3 checkout) */
 const CHECKOUT_UPSELL_HANDLES = [
   "73197-cure-pied-nala-lc-equestrian-odoo-23066",

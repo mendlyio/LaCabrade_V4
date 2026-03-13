@@ -3,6 +3,7 @@
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { getProductPrice } from "@lib/util/get-product-price"
+import { getProductStockInfo } from "@lib/util/product-stock"
 import WishlistToggleButton from "@modules/common/components/wishlist-toggle-button"
 import Image from "next/image"
 
@@ -31,16 +32,7 @@ export default function ProductCardWishlist({
     : 0
 
   const variants = product.variants || []
-  const hasUnlimitedStock = variants.some(
-    (v) => !v.manage_inventory || v.allow_backorder
-  )
-  const totalAvailable = variants.reduce((acc, v) => {
-    if (!v.manage_inventory || v.allow_backorder) return acc
-    return acc + (v.inventory_quantity || 0)
-  }, 0)
-  const isInStock = hasUnlimitedStock || totalAvailable > 0
-  const isLowStock =
-    !hasUnlimitedStock && totalAvailable > 0 && totalAvailable < 5
+  const { isInStock, isLowStock, totalAvailable } = getProductStockInfo(variants)
 
   const collection = product.collection?.title
   const images = product.images || []

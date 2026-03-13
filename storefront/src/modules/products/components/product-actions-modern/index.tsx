@@ -29,19 +29,10 @@ const optionsAsKeymap = (variantOptions: any): Record<string, string | undefined
 }
 
 const isVariantAvailable = (variant?: HttpTypes.StoreProductVariant) => {
-  if (!variant) {
-    return false
-  }
-
-  if (!variant.manage_inventory) {
-    return true
-  }
-
-  if (variant.allow_backorder) {
-    return true
-  }
-
-  return (variant.inventory_quantity || 0) > 0
+  if (!variant) return false
+  if (!variant.manage_inventory || variant.allow_backorder) return true
+  if (variant.inventory_quantity === undefined || variant.inventory_quantity === null) return true
+  return (variant.inventory_quantity ?? 0) > 0
 }
 
 export default function ProductActionsModern({

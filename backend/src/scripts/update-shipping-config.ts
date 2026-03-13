@@ -24,9 +24,7 @@ import { ApplicationMethodTargetType, ApplicationMethodType } from "@medusajs/fr
 
 const STANDARD_PRICE = 6.9  // 6,90 €
 const EXPRESS_PRICE  = 12.9 // 12,90 €
-const FREE_SHIPPING_THRESHOLD = 75 // 75 € panier minimum
-// Medusa compare le subtotal en centimes : 75 € = 7500
-const FREE_SHIPPING_THRESHOLD_CENTS = FREE_SHIPPING_THRESHOLD * 100
+const FREE_SHIPPING_THRESHOLD = 75 // 75 € panier minimum (subtotal en euros dans Medusa)
 
 export default async function updateShippingConfig({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
@@ -183,14 +181,14 @@ export default async function updateShippingConfig({ container }: ExecArgs) {
           {
             attribute: "subtotal",
             operator: PromotionRuleOperator.GTE,
-            values: [`${FREE_SHIPPING_THRESHOLD_CENTS}`],
+            values: [`${FREE_SHIPPING_THRESHOLD}`], // 75 (euros)
           },
         ],
       } as any,
     ])
     logger.info(`   ✅ Promotion créée : livraison GRATUITE si panier ≥ ${FREE_SHIPPING_THRESHOLD}€`)
     logger.info(`      Code interne : FREE_SHIPPING_75 (application automatique)`)
-    logger.info(`      Règle : subtotal >= ${FREE_SHIPPING_THRESHOLD_CENTS} (centimes)`)
+    logger.info(`      Règle : subtotal >= ${FREE_SHIPPING_THRESHOLD} €`)
   } catch (e: any) {
     logger.error(`   ❌ Erreur création promotion : ${e.message}`)
     logger.info("   → Vous pouvez créer la promotion manuellement dans le dashboard :")

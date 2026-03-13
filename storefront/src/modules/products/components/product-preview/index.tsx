@@ -1,4 +1,5 @@
 import { getProductPrice } from "@lib/util/get-product-price"
+import { getProductStockInfo } from "@lib/util/product-stock"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Thumbnail from "../thumbnail"
 import PreviewPrice from "./price"
@@ -29,8 +30,8 @@ export default async function ProductPreview({
     product: pricedProduct,
   })
 
-  // Vérifier si en stock
-  const isInStock = pricedProduct.variants?.some(v => (v.inventory_quantity || 0) > 0)
+  // Vérifier si en stock (fallback: inventory_quantity null/undefined → supposer en stock)
+  const { isInStock } = getProductStockInfo(pricedProduct.variants)
 
   // Vérifier les metadata pour les pastilles NEW et PROMO
   const isNew = product.metadata?.is_new === true || product.metadata?.is_new === "true"

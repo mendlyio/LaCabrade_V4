@@ -314,10 +314,14 @@ export default async function PaginatedProductsModern({
     })
   }
 
-  // Filtre en stock uniquement
+  // Filtre en stock uniquement (inventory_quantity null/undefined → supposer en stock)
   if (searchParams.in_stock === 'true') {
     filteredProducts = filteredProducts.filter(product => {
-      return product.variants?.some(v => (v.inventory_quantity || 0) > 0)
+      return product.variants?.some(v => {
+        if (!v.manage_inventory || v.allow_backorder) return true
+        if (v.inventory_quantity === undefined || v.inventory_quantity === null) return true
+        return (v.inventory_quantity ?? 0) > 0
+      })
     })
   }
 

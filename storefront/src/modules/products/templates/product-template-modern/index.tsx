@@ -10,6 +10,7 @@ import ViewItemTracker from "@modules/common/components/tracking/view-item-track
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { listCategories } from "@lib/data/categories"
 import { buildCategoryTree } from "@lib/util/category-tree"
+import { getProductStockInfo } from "@lib/util/product-stock"
 
 type ProductTemplateModernProps = {
   product: HttpTypes.StoreProduct
@@ -99,19 +100,9 @@ const ProductTemplateModern = async ({
     return typeof calculated === "number" && typeof original === "number" && calculated < original
   })
 
-  // Vérifier le stock
+  // Vérifier le stock (fallback: inventory_quantity null/undefined → supposer en stock)
   const variants = product.variants || []
-  const hasUnlimitedStock = variants.some(
-    (variant) => !variant.manage_inventory || variant.allow_backorder
-  )
-  const totalAvailable = variants.reduce((acc, variant) => {
-    if (!variant.manage_inventory || variant.allow_backorder) {
-      return acc
-    }
-    return acc + (variant.inventory_quantity || 0)
-  }, 0)
-  const isInStock = hasUnlimitedStock || totalAvailable > 0
-  const lowStock = !hasUnlimitedStock && totalAvailable > 0 && totalAvailable < 5
+  const { isInStock, isLowStock: lowStock, totalAvailable } = getProductStockInfo(variants)
 
   // Vérifier les metadata pour les pastilles NEW et PROMO
   const isNew = product.metadata?.is_new === true || product.metadata?.is_new === "true"

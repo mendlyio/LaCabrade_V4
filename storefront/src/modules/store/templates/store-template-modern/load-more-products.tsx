@@ -78,7 +78,8 @@ function ProductCardClient({
 
   const isInStock = product.variants?.some((v) => {
     if (!v.manage_inventory || v.allow_backorder) return true
-    return (v.inventory_quantity || 0) > 0
+    if (v.inventory_quantity === undefined || v.inventory_quantity === null) return true
+    return (v.inventory_quantity ?? 0) > 0
   })
 
   const collection = product.collection?.title

@@ -163,6 +163,23 @@ export function getItemsDisplayTotalEuros(cart: CartAmountsInput | null | undefi
 const VAT_RATE = 0.21
 
 /**
+ * Détecte si discount_total provient de la promo livraison gratuite (FREE_SHIPPING_75).
+ * Medusa renvoie shipping_total=0 ET discount_total=6,90, ce qui crée une double déduction.
+ * Dans ce cas, on ne doit PAS soustraire discount_total (déjà reflété dans shipping=0).
+ */
+export function isFreeShippingDiscount(
+  shippingTotal: number | null | undefined,
+  discountTotal: number | null | undefined
+): boolean {
+  const ship = shippingTotal ?? 0
+  const disc = discountTotal ?? 0
+  if (ship > 0 || disc <= 0) return false
+  const matchStandard = disc >= 6 && disc <= 7.5
+  const matchExpress = disc >= 12 && disc <= 13.5
+  return matchStandard || matchExpress
+}
+
+/**
  * Calcule la TVA à afficher (en euros).
  * Toujours calculée côté frontend pour éviter les bugs d'unité (API peut renvoyer centimes).
  * Cas intracommunautaire : retourne la TVA en NÉGATIF (montant déduit).
@@ -172,7 +189,9 @@ export function getDisplayTaxEuros(cart: CartAmountsInput | null | undefined): n
 
   const itemTotalEuros = getItemsTotalEuros(cart)
   const shippingEuros = toDisplayEuros(cart.shipping_total)
-  const discountEuros = toDisplayEuros(cart.discount_total)
+  const discountEuros = isFreeShippingDiscount(cart.shipping_total, cart.discount_total)
+    ? 0
+    : toDisplayEuros(cart.discount_total)
   const giftCardDeduction = toDisplayEuros(cart.gift_card_total, true)
   const totalTTC = itemTotalEuros + shippingEuros - discountEuros - giftCardDeduction
 
@@ -195,7 +214,9 @@ export function getDisplayTotalTvacEuros(cart: CartAmountsInput | null | undefin
 
   const itemTotalEuros = getItemsTotalEuros(cart)
   const shippingEuros = toDisplayEuros(cart.shipping_total)
-  const discountEuros = toDisplayEuros(cart.discount_total)
+  const discountEuros = isFreeShippingDiscount(cart.shipping_total, cart.discount_total)
+    ? 0
+    : toDisplayEuros(cart.discount_total)
 
   const totalTTC = itemTotalEuros + shippingEuros - discountEuros - giftCardDeduction
 
@@ -217,7 +238,9 @@ export function getPaymentAmountCents(cart: CartAmountsInput | null | undefined)
 
   const itemCents = getItemsTotalCents(cart)
   const shippingCents = toPaymentCents(cart.shipping_total)
-  const discountCents = toPaymentCents(cart.discount_total)
+  const discountCents = isFreeShippingDiscount(cart.shipping_total, cart.discount_total)
+    ? 0
+    : toPaymentCents(cart.discount_total)
   const giftCardCents = toPaymentCents(cart.gift_card_total, true)
 
   let totalCents = itemCents + shippingCents - discountCents - giftCardCents

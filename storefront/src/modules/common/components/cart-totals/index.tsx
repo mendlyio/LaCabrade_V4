@@ -4,6 +4,7 @@ import {
   getDisplayTaxEuros,
   getDisplayTotalTvacEuros,
   getItemsDisplayTotalEuros,
+  isFreeShippingDiscount,
   isIntraCommunityExempt,
 } from "@lib/util/cart-amounts"
 import { formatAmount, formatAmountFromCents } from "@lib/util/money"
@@ -92,7 +93,11 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
 
         {!!discount_total && (
           <div className="flex items-center justify-between">
-            <span className="text-gray-600">Réduction</span>
+            <span className="text-gray-600">
+              {isFreeShippingDiscount(shipping_total, discount_total)
+                ? "Livraison gratuite dès 75€"
+                : "Réduction"}
+            </span>
             <span
               className="font-medium text-green-600"
               data-testid="cart-discount"
