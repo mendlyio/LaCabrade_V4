@@ -26,6 +26,16 @@ const ContactForm = () => {
       id="contact-form"
       className="space-y-6"
     >
+      {/* Honeypot — invisible pour les humains, piège pour les bots */}
+      <input
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        style={{ position: "absolute", left: "-9999px", top: "-9999px", opacity: 0, height: 0, width: 0 }}
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Input
           label="Prénom"

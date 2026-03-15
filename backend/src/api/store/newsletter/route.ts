@@ -16,9 +16,17 @@ function generatePromoCode(prefix: string): string {
 }
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
-  const { email, birthday } = req.body as {
+  const { email, birthday, website } = req.body as {
     email?: string
     birthday?: string
+    website?: string
+  }
+
+  // Honeypot : succès silencieux si le champ caché est rempli (bot détecté)
+  if (website) {
+    return res.status(201).json({
+      message: "Inscription réussie ! Vérifiez votre boîte email pour votre code -10%.",
+    })
   }
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {

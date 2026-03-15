@@ -18,6 +18,7 @@ export default function NewsletterPopup() {
   const [visible, setVisible] = useState(false)
   const [email, setEmail] = useState("")
   const [birthday, setBirthday] = useState("")
+  const [honeypot, setHoneypot] = useState("")
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle")
@@ -39,6 +40,15 @@ export default function NewsletterPopup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Honeypot : succès silencieux si le champ caché est rempli (bot détecté)
+    if (honeypot) {
+      setStatus("success")
+      localStorage.setItem(STORAGE_KEY, "1")
+      setTimeout(() => setVisible(false), 6000)
+      return
+    }
+
     const errs: { email?: string; birthday?: string } = {}
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       errs.email = "Email invalide"
@@ -59,7 +69,7 @@ export default function NewsletterPopup() {
       const res = await fetch(`${BACKEND_URL}/store/newsletter`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ email, birthday }),
+        body: JSON.stringify({ email, birthday, website: honeypot }),
       })
       const data = await res.json()
       if (res.ok) {
@@ -161,6 +171,18 @@ export default function NewsletterPopup() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+              {/* Honeypot — piège pour les bots */}
+              <input
+                type="text"
+                name="website"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                style={{ position: "absolute", left: "-9999px", top: "-9999px", opacity: 0, height: 0, width: 0 }}
+              />
+
               <Field label="Adresse email" error={errors.email}>
                 <input
                   type="email"

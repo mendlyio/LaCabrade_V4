@@ -12,6 +12,10 @@ export async function sendContactEmail(
   const phone = formData.get("phone") as string
   const subject = formData.get("subject") as string
   const message = formData.get("message") as string
+  const website = formData.get("website") as string
+
+  // Honeypot : succès silencieux si le champ caché est rempli (bot détecté)
+  if (website) return null
 
   if (!firstName || !lastName || !email || !subject || !message) {
     return "Veuillez remplir tous les champs obligatoires."
@@ -37,6 +41,7 @@ export async function sendContactEmail(
         phone: phone || null,
         subject,
         message,
+        website: website || "",
       }),
     })
 

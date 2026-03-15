@@ -8,13 +8,20 @@ interface ContactRequestBody {
   phone?: string
   subject: string
   message: string
+  website?: string
 }
 
 export async function POST(
   req: MedusaRequest<ContactRequestBody>,
   res: MedusaResponse
 ): Promise<void> {
-  const { first_name, last_name, email, phone, subject, message } = req.body
+  const { first_name, last_name, email, phone, subject, message, website } = req.body
+
+  // Honeypot : succès silencieux si le champ caché est rempli (bot détecté)
+  if (website) {
+    res.status(200).json({ message: "Message envoyé avec succès" })
+    return
+  }
 
   // Validation
   if (!first_name || !last_name || !email || !subject || !message) {
