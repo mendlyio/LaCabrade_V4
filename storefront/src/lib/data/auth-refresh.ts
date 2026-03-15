@@ -10,7 +10,8 @@ import { revalidateTag } from "next/cache"
  * Permet de rester connecté sans se reconnecter.
  */
 export async function refreshAuthToken(): Promise<boolean> {
-  const token = cookies().get("_medusa_jwt")?.value
+  const cookieStore = await cookies()
+  const token = cookieStore.get("_medusa_jwt")?.value
   if (!token) return false
 
   const backendUrl =
@@ -36,7 +37,7 @@ export async function refreshAuthToken(): Promise<boolean> {
     const data = (await res.json()) as { token?: string }
     const newToken = data?.token
     if (newToken) {
-      setAuthToken(newToken)
+      await setAuthToken(newToken)
       revalidateTag("customer")
       revalidateTag("auth")
       return true

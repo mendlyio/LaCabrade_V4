@@ -91,20 +91,20 @@ async function getOrCreateCart(countryCode: string) {
   const region = await getRegion(countryCode)
   if (!region) throw new Error(`Région non trouvée pour: ${countryCode}`)
 
-  let cartId = getCartId()
+  let cartId = await getCartId()
   if (cartId) {
     try {
       const { cart } = await sdk.store.cart.retrieve(
         cartId,
         {},
-        { next: { tags: ["cart"] }, ...getAuthHeaders() }
+        { next: { tags: ["cart"] }, ...(await getAuthHeaders()) }
       )
       if (cart.region_id !== region.id) {
         await sdk.store.cart.update(
           cartId,
           { region_id: region.id },
           {},
-          getAuthHeaders()
+          await getAuthHeaders()
         )
       }
       return cart
@@ -116,9 +116,9 @@ async function getOrCreateCart(countryCode: string) {
   const { cart } = await sdk.store.cart.create(
     { region_id: region.id },
     {},
-    getAuthHeaders()
+    await getAuthHeaders()
   )
-  setCartId(cart.id)
+  await setCartId(cart.id)
   revalidateTag("cart")
   return cart
 }
@@ -155,7 +155,7 @@ export async function addGiftCardToCart(
           metadata,
         },
         {},
-        getAuthHeaders()
+        await getAuthHeaders()
       )
       revalidateTag("cart")
       return { success: true }
