@@ -1,7 +1,7 @@
 import { Modules } from "@medusajs/framework/utils"
 import { IOrderModuleService } from "@medusajs/framework/types"
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
-import { GIFT_CARD_TRACKING_MODULE } from "../modules/gift-card-tracking"
+import { GIFT_CARD_TRACKING_MODULE } from "../modules/gift-card-tracking/constants"
 
 /**
  * Detects when a gift card promotion (LC-XXXX-XXXX-XXXX) is used in an order

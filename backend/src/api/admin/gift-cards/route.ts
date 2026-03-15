@@ -1,5 +1,5 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { GIFT_CARD_TRACKING_MODULE } from "../../../modules/gift-card-tracking"
+import { GIFT_CARD_TRACKING_MODULE } from "../../../modules/gift-card-tracking/constants"
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   try {

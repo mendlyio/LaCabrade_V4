@@ -10,7 +10,7 @@ import { generateGiftCardPDF, generateGiftCardCode } from "../utils/generate-gif
 import { syncGiftCardToOdoo } from "../utils/sync-gift-card-odoo"
 import { ODOO_MODULE } from "../modules/odoo"
 import OdooModuleService from "../modules/odoo/service"
-import { GIFT_CARD_TRACKING_MODULE } from "../modules/gift-card-tracking"
+import { GIFT_CARD_TRACKING_MODULE } from "../modules/gift-card-tracking/constants"
 
 export default async function giftCardOrderedHandler({
   event: { data },
