@@ -32,21 +32,14 @@ export default function NewsletterPopup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
     const newErrors: { email?: string; birthday?: string } = {}
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       newErrors.email = "Email invalide"
-    }
-    if (!birthday) {
+    if (!birthday)
       newErrors.birthday = "Requis pour recevoir ton cadeau anniversaire"
-    }
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors)
-      return
-    }
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return }
     setErrors({})
     setStatus("loading")
-
     try {
       const res = await fetch(`${BACKEND_URL}/store/newsletter`, {
         method: "POST",
@@ -59,9 +52,7 @@ export default function NewsletterPopup() {
         setPromoCode(data.promo_code || null)
         localStorage.setItem(STORAGE_KEY, "1")
         setTimeout(() => setVisible(false), 6000)
-      } else {
-        throw new Error(data.message || "Erreur")
-      }
+      } else throw new Error(data.message || "Erreur")
     } catch {
       setStatus("error")
       setTimeout(() => setStatus("idle"), 4000)
@@ -76,44 +67,12 @@ export default function NewsletterPopup() {
       style={{ backgroundColor: "rgba(0,0,0,0.60)" }}
       onClick={(e) => { if (e.target === e.currentTarget) dismiss() }}
     >
+      {/* Carte popup — flex-col mobile, flex-row ≥sm */}
       <div
-        className="relative bg-white rounded-2xl shadow-2xl overflow-hidden animate-popup-in"
-        style={{ display: "flex", flexDirection: "row", width: "100%", maxWidth: "640px" }}
+        className="relative bg-white rounded-2xl shadow-2xl overflow-hidden animate-popup-in w-full max-w-[580px] flex flex-col sm:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Image carrée ── */}
-        <div
-          className="hidden sm:block flex-shrink-0"
-          style={{ width: "260px", height: "260px", position: "relative", alignSelf: "stretch" }}
-        >
-          <div style={{ position: "absolute", inset: 0 }}>
-            <Image
-              src="https://ik.imagekit.io/kodt9cn6f/popup.webp"
-              alt="La Cabrade"
-              fill
-              className="object-cover"
-              priority
-              sizes="260px"
-            />
-          </div>
-        </div>
-
-        {/* ── Mobile : image carrée en haut ── */}
-        <div
-          className="sm:hidden w-full"
-          style={{ aspectRatio: "1 / 1", position: "relative", flexShrink: 0 }}
-        >
-          <Image
-            src="https://ik.imagekit.io/kodt9cn6f/popup.webp"
-            alt="La Cabrade"
-            fill
-            className="object-cover"
-            priority
-            sizes="100vw"
-          />
-        </div>
-
-        {/* ── Fermer ── */}
+        {/* ── Bouton fermer ── */}
         <button
           onClick={dismiss}
           aria-label="Fermer"
@@ -124,8 +83,37 @@ export default function NewsletterPopup() {
           </svg>
         </button>
 
-        {/* ── Contenu ── */}
-        <div className="flex flex-col justify-center px-6 py-6 flex-1 min-w-0">
+        {/* ── Image carrée — visible uniquement ≥sm ── */}
+        <div
+          className="hidden sm:block relative flex-shrink-0"
+          style={{ width: "240px", height: "240px", alignSelf: "flex-start" }}
+        >
+          <Image
+            src="https://ik.imagekit.io/kodt9cn6f/popup.webp"
+            alt="La Cabrade"
+            fill
+            className="object-cover"
+            priority
+            sizes="240px"
+          />
+        </div>
+
+        {/* ── Image bannière mobile — hauteur fixe contrôlée ── */}
+        <div className="sm:hidden relative w-full h-36 flex-shrink-0">
+          <Image
+            src="https://ik.imagekit.io/kodt9cn6f/popup.webp"
+            alt="La Cabrade"
+            fill
+            className="object-cover object-center"
+            priority
+            sizes="100vw"
+          />
+          {/* dégradé bas pour transition douce vers le blanc */}
+          <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-transparent" />
+        </div>
+
+        {/* ── Contenu formulaire ── */}
+        <div className="flex flex-col justify-center px-6 py-5 flex-1 min-w-0">
           <p className="text-[10px] font-bold tracking-widest text-amber-600 uppercase mb-1">
             La Cabrade
           </p>
@@ -142,7 +130,7 @@ export default function NewsletterPopup() {
             <div className="text-center py-2">
               <div className="text-3xl mb-2">🎉</div>
               <p className="text-gray-800 font-semibold text-sm mb-3">
-                Ton code -10% t'a été envoyé !
+                Ton code -10% t&apos;a été envoyé !
               </p>
               {promoCode && (
                 <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-3">
@@ -174,20 +162,14 @@ export default function NewsletterPopup() {
                 )}
               </div>
 
-              {/* Anniversaire — encadré spécial */}
+              {/* Anniversaire — encadré */}
               <div className={`rounded-xl border p-3 transition-all ${
-                errors.birthday
-                  ? "border-red-300 bg-red-50"
-                  : "border-amber-200 bg-amber-50/60"
+                errors.birthday ? "border-red-300 bg-red-50" : "border-amber-200 bg-amber-50/60"
               }`}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-amber-800 flex items-center gap-1.5">
-                    🎂 Ton anniversaire
-                  </span>
+                  <span className="text-xs font-semibold text-amber-800">🎂 Ton anniversaire</span>
                   <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
-                    errors.birthday
-                      ? "bg-red-100 text-red-600"
-                      : "bg-amber-100 text-amber-700"
+                    errors.birthday ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-700"
                   }`}>
                     obligatoire
                   </span>
@@ -197,7 +179,7 @@ export default function NewsletterPopup() {
                   value={birthday}
                   onChange={(e) => { setBirthday(e.target.value); setErrors((p) => ({ ...p, birthday: undefined })) }}
                   disabled={status === "loading"}
-                  className={`w-full px-3 py-2 rounded-lg border text-sm text-gray-900 focus:outline-none focus:ring-2 transition-all disabled:opacity-50 bg-white ${
+                  className={`w-full px-3 py-2 rounded-lg border text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 transition-all disabled:opacity-50 ${
                     errors.birthday
                       ? "border-red-300 focus:ring-red-100"
                       : "border-amber-200 focus:border-amber-400 focus:ring-amber-100"
@@ -207,21 +189,19 @@ export default function NewsletterPopup() {
                   <p className="text-[11px] text-red-500 mt-1.5">{errors.birthday}</p>
                 ) : (
                   <p className="text-[10px] text-amber-700/70 mt-1.5">
-                    Tu recevras un code -10% chaque année pour ton anniversaire
+                    Un code -10% t&apos;attend chaque année pour ton anniversaire
                   </p>
                 )}
               </div>
 
-              {/* Erreur serveur */}
               {status === "error" && (
-                <p className="text-xs text-red-500 text-center">Une erreur s'est produite. Réessaie.</p>
+                <p className="text-xs text-red-500 text-center">Une erreur s&apos;est produite. Réessaie.</p>
               )}
 
-              {/* Bouton */}
               <button
                 type="submit"
                 disabled={status === "loading"}
-                className="w-full py-3 bg-[#9e354a] hover:bg-[#8a2d3f] text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed text-sm tracking-wide"
+                className="w-full py-3 bg-[#9e354a] hover:bg-[#8a2d3f] text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-60 text-sm tracking-wide"
               >
                 {status === "loading" ? (
                   <span className="flex items-center justify-center gap-2">
@@ -231,12 +211,10 @@ export default function NewsletterPopup() {
                     </svg>
                     Inscription…
                   </span>
-                ) : (
-                  "Je veux mon -10% →"
-                )}
+                ) : "Je veux mon -10% →"}
               </button>
 
-              <p className="text-center text-[10px] text-gray-400 leading-relaxed">
+              <p className="text-center text-[10px] text-gray-400">
                 Code à usage unique · Pas de spam · Désinscription en 1 clic
               </p>
             </form>
