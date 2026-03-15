@@ -133,12 +133,12 @@ export default async function CategoryTemplateModern({
                   <div key={child.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                     <LocalizedClientLink
                       href={`/categories/${encodeURIComponent(child.handle)}`}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 bg-gray-100 hover:bg-amber-600 border-2 border-gray-300 hover:border-amber-600 transition-colors group"
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 bg-amber-50 hover:bg-amber-600 border-2 border-amber-200 hover:border-amber-600 transition-colors group"
                     >
-                      <span className="flex-1 text-sm font-semibold text-gray-900 group-hover:text-white">
+                      <span className="flex-1 text-base font-bold text-gray-900 group-hover:text-white">
                         {child.name}
                       </span>
-                      <svg className="w-4 h-4 text-gray-600 group-hover:text-white transform group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-amber-600 group-hover:text-white transform group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </LocalizedClientLink>
@@ -149,18 +149,18 @@ export default async function CategoryTemplateModern({
                           <li key={grandChild.id} className="space-y-1">
                             <LocalizedClientLink
                               href={`/categories/${encodeURIComponent(grandChild.handle)}`}
-                              className="block rounded-md px-3 py-2 text-sm font-medium text-gray-800 hover:text-white hover:bg-amber-600 transition-colors"
+                              className="block rounded-md px-3 py-2 text-sm font-semibold text-gray-600 hover:text-white hover:bg-amber-600 transition-colors"
                             >
                               {grandChild.name}
                             </LocalizedClientLink>
                             {grandChild.category_children &&
                               grandChild.category_children.length > 0 && (
-                                <ul className="pl-3 border-l border-gray-300 space-y-1">
+                                <ul className="pl-3 border-l border-gray-200 space-y-1">
                                   {grandChild.category_children.map((greatGrandChild) => (
                                     <li key={greatGrandChild.id}>
                                       <LocalizedClientLink
                                         href={`/categories/${encodeURIComponent(greatGrandChild.handle)}`}
-                                        className="block rounded-md px-3 py-1 text-xs font-medium text-gray-700 hover:text-white hover:bg-amber-600 transition-colors"
+                                        className="block rounded-md px-3 py-1 text-xs font-normal text-gray-500 hover:text-white hover:bg-amber-500 transition-colors"
                                       >
                                         {greatGrandChild.name}
                                       </LocalizedClientLink>

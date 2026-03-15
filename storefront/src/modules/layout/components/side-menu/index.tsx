@@ -184,10 +184,10 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                                     <div className="flex items-center gap-2">
                                       <LocalizedClientLink
                                         href={`/categories/${encodeURIComponent(category.handle)}`}
-                                        className={`flex-1 px-4 py-2 text-sm rounded-lg transition-colors font-medium ${
+                                        className={`flex-1 px-4 py-2 text-sm rounded-lg transition-colors font-bold ${
                                           category.handle === "outlet"
-                                            ? "text-[#c4707f] hover:text-[#9e354a] hover:bg-[#c4707f]/10"
-                                            : "text-gray-700 hover:text-amber-600 hover:bg-amber-50"
+                                            ? "text-[#9e354a] hover:text-white hover:bg-[#c4707f]"
+                                            : "text-gray-900 hover:text-amber-700 hover:bg-amber-50"
                                         }`}
                                         onClick={close}
                                       >
@@ -215,7 +215,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                                           <li key={child.id} className="space-y-1">
                                             <LocalizedClientLink
                                               href={`/categories/${encodeURIComponent(child.handle)}`}
-                                              className="block px-2 py-1 text-sm font-medium text-gray-700 hover:text-amber-600 transition-colors"
+                                              className="block px-2 py-1 text-sm font-semibold text-gray-600 hover:text-amber-600 transition-colors"
                                               onClick={close}
                                             >
                                               {child.name}
@@ -226,7 +226,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                                                   <li key={grandChild.id}>
                                                     <LocalizedClientLink
                                                       href={`/categories/${encodeURIComponent(grandChild.handle)}`}
-                                                      className="block px-2 py-1 text-xs text-gray-600 hover:text-amber-600 transition-colors"
+                                                      className="block px-2 py-1 text-xs font-medium text-gray-500 hover:text-amber-600 transition-colors"
                                                       onClick={close}
                                                     >
                                                       {grandChild.name}
@@ -237,7 +237,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                                                           <li key={greatGrandChild.id}>
                                                             <LocalizedClientLink
                                                               href={`/categories/${encodeURIComponent(greatGrandChild.handle)}`}
-                                                              className="block px-2 py-1 text-xs text-gray-500 hover:text-amber-600 transition-colors"
+                                                              className="block px-2 py-1 text-xs font-normal text-gray-400 hover:text-amber-600 transition-colors"
                                                               onClick={close}
                                                             >
                                                               {greatGrandChild.name}

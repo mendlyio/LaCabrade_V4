@@ -152,9 +152,9 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                       <LocalizedClientLink
                         href={`/categories/${encodeURIComponent(child.handle)}`}
                         onClick={() => setOpen(false)}
-                        className="group flex items-center gap-2 mb-3 pb-2 border-b-2 border-gray-300 hover:border-amber-500 transition-colors rounded px-2 py-1 -mx-2 -mt-1 bg-gray-50 hover:bg-amber-50"
+                        className="group flex items-center gap-2 mb-3 pb-2 border-b-2 border-amber-300 hover:border-amber-500 transition-colors rounded px-2 py-1 -mx-2 -mt-1 bg-amber-50/80 hover:bg-amber-100"
                       >
-                        <span className="text-sm font-bold text-gray-900 group-hover:text-amber-700 transition-colors truncate">
+                        <span className="text-sm font-bold text-gray-900 group-hover:text-amber-800 transition-colors truncate">
                           {child.name}
                         </span>
                       </LocalizedClientLink>
@@ -167,7 +167,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                               <LocalizedClientLink
                                 href={`/categories/${encodeURIComponent(grandChild.handle)}`}
                                 onClick={() => setOpen(false)}
-                                className="group/item flex items-center py-1.5 px-2 rounded-md text-sm text-gray-700 hover:text-white hover:bg-amber-600 transition-all"
+                                className="group/item flex items-center py-1.5 px-2 rounded-md text-sm font-medium text-gray-600 hover:text-white hover:bg-amber-600 transition-all"
                               >
                                 <span className="truncate">{grandChild.name}</span>
                               </LocalizedClientLink>
@@ -180,7 +180,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                                       <LocalizedClientLink
                                         href={`/categories/${encodeURIComponent(greatGrandChild.handle)}`}
                                         onClick={() => setOpen(false)}
-                                        className="block py-1 px-2 rounded text-xs text-gray-500 hover:text-white hover:bg-amber-500 transition-all truncate"
+                                        className="block py-1 px-2 rounded text-xs font-normal text-gray-500 hover:text-white hover:bg-amber-500 transition-all truncate"
                                       >
                                         {greatGrandChild.name}
                                       </LocalizedClientLink>

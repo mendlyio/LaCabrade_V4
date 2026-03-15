@@ -218,19 +218,21 @@ export default async function Home({
               <div className="flex gap-6 pb-4">
                 {mainCategories.map((category) => {
                   const categoryImage = getCategoryImage(category)
+                  const handle = category?.handle
+                  if (!handle) return null
                   return (
                   <LocalizedClientLink
                     key={category.id}
-                    href={`/categories/${encodeURIComponent(category.handle)}`}
-                    className="flex-none w-[calc(100%-32px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] group/card relative block overflow-hidden rounded-2xl aspect-square bg-gray-200 shadow-sm ring-1 ring-black/5 transition-shadow duration-300 hover:shadow-xl"
+                    href={`/categories/${encodeURIComponent(handle)}`}
+                    className="flex-none w-[calc(100%-32px)] sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] lg:w-[calc(25%-18px)] group/card relative block overflow-hidden rounded-2xl aspect-square bg-gray-200 shadow-sm ring-1 ring-black/5 transition-shadow duration-300 hover:shadow-xl cursor-pointer"
                   >
                     <div
-                      className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover/card:scale-[1.03]"
+                      className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover/card:scale-[1.03] pointer-events-none"
                       style={{
                         backgroundImage: categoryImage ? `url(${categoryImage})` : undefined,
                       }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
                     <div className="absolute inset-x-0 bottom-0 p-5 text-left">
                       <h3 className="text-lg md:text-xl font-semibold text-white drop-shadow">
                         {category.name}
