@@ -13,7 +13,6 @@ const NewsletterBanner = () => {
   const [birthday, setBirthday] = useState("")
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
   const [message, setMessage] = useState("")
-  const [promoCode, setPromoCode] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,18 +45,16 @@ const NewsletterBanner = () => {
 
       if (res.ok || res.status === 200) {
         setStatus("success")
-        setPromoCode(data.promo_code || null)
         setMessage(
           data.already_subscribed
-            ? "Vous êtes déjà inscrit(e) 🎉"
-            : "Merci ! Ton code -10% t'a été envoyé 🎉"
+            ? "Tu es déjà inscrit(e) — vérifie tes emails 📬"
+            : "C'est parti ! Ton code -10% t'a été envoyé par email 📬"
         )
         setEmail("")
         setBirthday("")
         setTimeout(() => {
           setStatus("idle")
           setMessage("")
-          setPromoCode(null)
         }, 8000)
       } else {
         throw new Error(data.message || "Erreur")
@@ -134,14 +131,6 @@ const NewsletterBanner = () => {
           {message && (
             <div className={`mt-4 text-sm font-medium ${status === "success" ? "text-white" : "text-red-100"}`}>
               {message}
-              {promoCode && status === "success" && (
-                <div className="mt-2">
-                  <span className="text-white/80">Ton code : </span>
-                  <code className="bg-white/20 text-white font-mono font-bold text-base px-3 py-1 rounded ml-1 tracking-widest">
-                    {promoCode}
-                  </code>
-                </div>
-              )}
             </div>
           )}
 

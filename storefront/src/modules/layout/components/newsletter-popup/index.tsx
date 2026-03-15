@@ -25,7 +25,6 @@ export default function NewsletterPopup() {
     email?: string
     birthday?: string
   }>({})
-  const [promoCode, setPromoCode] = useState<string | null>(null)
 
   useEffect(() => {
     if (localStorage.getItem(STORAGE_KEY)) return
@@ -65,7 +64,6 @@ export default function NewsletterPopup() {
       const data = await res.json()
       if (res.ok) {
         setStatus("success")
-        setPromoCode(data.promo_code ?? null)
         localStorage.setItem(STORAGE_KEY, "1")
         setTimeout(() => setVisible(false), 6000)
       } else {
@@ -150,21 +148,16 @@ export default function NewsletterPopup() {
             <div className="text-center py-2">
               <p className="text-2xl mb-2">🎉</p>
               <p className="text-gray-800 font-semibold text-sm mb-3">
-                Ton code -10&nbsp;% t&apos;a été envoyé&nbsp;!
+                C&apos;est parti !
               </p>
-              {promoCode && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
-                    Ton code
-                  </p>
-                  <code className="text-lg font-bold tracking-widest text-amber-700">
-                    {promoCode}
-                  </code>
-                  <p className="text-[10px] text-gray-400 mt-1">
-                    Usage unique · Vérifie tes emails
-                  </p>
-                </div>
-              )}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <p className="text-sm text-gray-700">
+                  Ton code <strong>-10&nbsp;%</strong> vient d&apos;être envoyé à ton adresse email.
+                </p>
+                <p className="text-[11px] text-gray-400 mt-2">
+                  Vérifie aussi tes spams 📬
+                </p>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
