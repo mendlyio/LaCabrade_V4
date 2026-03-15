@@ -41,19 +41,20 @@ export default function AProposPage() {
       image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/clara.webp",
     },
     {
-      name: "AMÉLIE - La discrète 🤓",
+      name: "AMÉLIE L. - La discrète 🤓",
       role: "Secrétariat & visuels",
       description:
         "Amélie, notre secrétaire attitrée, veille au bon fonctionnement du bureau au quotidien. Elle met de temps en temps ses compétences créatives au service du magasin en réalisant certains de nos visuels.",
       accent: "from-slate-100 to-gray-100",
-      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/amelied.webp",
+      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/amelie.webp?updatedAt=1773212429228",
     },
     {
-      name: "AMÉLIE L. – La suppléante 🤭",
+      name: "AMÉLIE D. – La suppléante 🤭",
       role: "Conseil & vente",
       description:
-        "Professeure de mathématiques en secondaire et cavalière depuis plus de 30 ans, Amélie L. met sa rigueur et son enthousiasme quelques jours par mois au service du magasin. Elle apporte son sens du détail et sa bonne humeur pour que tout soit parfaitement carré, à l'écurie comme en boutique.",
+        "Professeure de mathématiques en secondaire et cavalière depuis plus de 30 ans, Amélie D. met sa rigueur et son enthousiasme quelques jours par mois au service du magasin. Elle apporte son sens du détail et sa bonne humeur pour que tout soit parfaitement carré, à l'écurie comme en boutique.",
       accent: "from-violet-100 to-purple-100",
+      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/amelied.webp",
     },
   ]
 
