@@ -3,6 +3,7 @@ import Summary from "./summary-modern"
 import EmptyCartMessage from "../../components/empty-cart-message"
 import SignInPrompt from "../../components/sign-in-prompt"
 import SuggestedProducts from "./suggested-products"
+import ViewCartTracker from "@modules/common/components/tracking/view-cart-tracker"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
@@ -56,6 +57,7 @@ const CartTemplateModern = ({
         </div>
       </div>
 
+      <ViewCartTracker cart={cart} />
       <div className="content-container py-8 sm:py-10" data-testid="cart-container">
         {cart?.items?.length ? (
           <>

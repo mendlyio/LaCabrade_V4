@@ -1,6 +1,7 @@
 "use client"
 
 import { deleteLineItem } from "@lib/data/cart"
+import { trackGA4RemoveFromCart, TrackingItem } from "@lib/tracking"
 import Spinner from "@medusajs/icons/dist/esm/spinner"
 import Trash from "@medusajs/icons/dist/esm/trash"
 import { clx } from "@medusajs/ui"
@@ -11,10 +12,12 @@ const DeleteButton = ({
   id,
   children,
   className,
+  trackingItem,
 }: {
   id: string
   children?: React.ReactNode
   className?: string
+  trackingItem?: TrackingItem
 }) => {
   const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
@@ -22,6 +25,9 @@ const DeleteButton = ({
   const handleDelete = async (lineId: string) => {
     setIsDeleting(true)
     try {
+      if (trackingItem) {
+        trackGA4RemoveFromCart(trackingItem)
+      }
       await deleteLineItem(lineId)
       router.refresh()
     } catch (err) {

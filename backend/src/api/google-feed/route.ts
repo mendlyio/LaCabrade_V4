@@ -74,7 +74,7 @@ function getGoogleCategory(collection: string, categories: string[]): string {
  * - Validation GTIN (8/12/13/14 chiffres), HTML strippé de la description
  *
  * À configurer dans Merchant Center → Sources de données → Récupération planifiée
- * URL : https://backend-production-7bbb.up.railway.app/store/google-feed
+ * URL : https://backend-production-7bbb.up.railway.app/google-feed
  */
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const productService = req.scope.resolve(Modules.PRODUCT)

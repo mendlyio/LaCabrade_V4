@@ -13,8 +13,9 @@ import LineItemUnitPrice from "@modules/common/components/line-item-unit-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Spinner from "@modules/common/icons/spinner"
 import Thumbnail from "@modules/products/components/thumbnail"
+import { lineItemToTrackingItem } from "@lib/tracking"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 type ItemProps = {
   item: HttpTypes.StoreCartLineItem
@@ -27,6 +28,16 @@ const Item = ({ item, type = "full" }: ItemProps) => {
   const router = useRouter()
 
   const { handle } = item.variant?.product ?? {}
+
+  const trackingItem = useMemo(
+    () =>
+      lineItemToTrackingItem(
+        item as any,
+        item.product_title ?? undefined,
+        (item as any).variant?.product?.categories?.[0]?.name
+      ),
+    [item]
+  )
 
   const changeQuantity = async (quantity: number) => {
     setError(null)
@@ -90,7 +101,7 @@ const Item = ({ item, type = "full" }: ItemProps) => {
                 )
               )}
             </CartItemSelect>
-            <DeleteButton id={item.id} data-testid="product-delete-button" />
+            <DeleteButton id={item.id} trackingItem={trackingItem} data-testid="product-delete-button" />
             {updating && <Spinner />}
           </div>
         )}
@@ -100,7 +111,7 @@ const Item = ({ item, type = "full" }: ItemProps) => {
       {type === "full" && (
         <Table.Cell className="hidden sm:table-cell p-2 sm:p-4">
           <div className="flex gap-2 items-center">
-            <DeleteButton id={item.id} data-testid="product-delete-button" />
+            <DeleteButton id={item.id} trackingItem={trackingItem} data-testid="product-delete-button" />
             <CartItemSelect
               value={item.quantity}
               onChange={(value) => changeQuantity(parseInt(value.target.value))}

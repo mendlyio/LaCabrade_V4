@@ -9,6 +9,7 @@ import { Button, Container, Heading, Text, clx } from "@medusajs/ui"
 import { PaymentElement } from "@stripe/react-stripe-js"
 
 import PaymentContainer from "@modules/checkout/components/payment-container"
+import { cartToTrackingCart, trackGA4AddPaymentInfo } from "@lib/tracking"
 import {
   getPaymentInfo,
   getStripePaymentMethodType,
@@ -172,6 +173,17 @@ const Payment = ({
           updatedPaymentCollection?.payment_collection?.payment_sessions || []
         )
         router.refresh()
+      }
+
+      if (cart?.items?.length) {
+        const trackingCart = cartToTrackingCart(
+          cart.items as any,
+          cart.currency_code ?? "EUR",
+          cart.subtotal ?? undefined
+        )
+        const paymentLabel =
+          paymentInfoMap[selectedPaymentMethod]?.title ?? selectedPaymentMethod
+        trackGA4AddPaymentInfo(trackingCart, paymentLabel)
       }
 
       return router.push(

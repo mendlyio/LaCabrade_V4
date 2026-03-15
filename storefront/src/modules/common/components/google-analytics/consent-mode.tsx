@@ -41,7 +41,9 @@ export const GoogleConsentMode = () => {
               'ad_personalization': 'denied',
               'functionality_storage': 'granted',
               'security_storage': 'granted',
-              'wait_for_update': 500
+              'wait_for_update': 500,
+              'url_passthrough': true,
+              'ads_data_redaction': true
             });
           }
         `}

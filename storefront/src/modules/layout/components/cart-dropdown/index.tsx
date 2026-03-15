@@ -12,6 +12,7 @@ import {
 } from "@lib/util/cart-amounts"
 import { formatAmount } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
+import { lineItemToTrackingItem } from "@lib/tracking"
 import DeleteButton from "@modules/common/components/delete-button"
 import LineItemOptions from "@modules/common/components/line-item-options"
 import LineItemPrice from "@modules/common/components/line-item-price"
@@ -180,6 +181,10 @@ const CartDropdown = ({
                           </div>
                           <DeleteButton
                             id={item.id}
+                            trackingItem={lineItemToTrackingItem(
+                              item as any,
+                              item.product_title ?? undefined
+                            )}
                             className="mt-2 text-xs text-red-600 hover:text-red-700 hover:underline"
                             data-testid="cart-item-remove-button"
                           >

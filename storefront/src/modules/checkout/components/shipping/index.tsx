@@ -10,6 +10,7 @@ import StorePickup from "@modules/checkout/components/store-pickup"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { setShippingMethod, clearShippingMetadata } from "@lib/data/cart"
+import { cartToTrackingCart, trackGA4AddShippingInfo } from "@lib/tracking"
 import { formatAmount } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 
@@ -79,6 +80,14 @@ const Shipping: React.FC<ShippingProps> = ({
   }
 
   const handleSubmit = () => {
+    if (cart?.items?.length && selectedShippingMethod) {
+      const trackingCart = cartToTrackingCart(
+        cart.items as any,
+        (cart as any).currency_code ?? "EUR",
+        cart.subtotal ?? undefined
+      )
+      trackGA4AddShippingInfo(trackingCart, selectedShippingMethod.name ?? "")
+    }
     router.push(pathname + "?step=payment", { scroll: false })
   }
 

@@ -162,6 +162,95 @@ export function trackGA4ViewItemList(
   })
 }
 
+export function trackGA4RemoveFromCart(item: TrackingItem, currency = "EUR") {
+  if (!GA_ID || !hasConsent()) return
+  const gtag = (window as any).gtag
+  if (!gtag) return
+
+  gtag("event", "remove_from_cart", {
+    currency,
+    value: item.price * item.quantity,
+    items: [
+      {
+        item_id: item.item_id,
+        item_name: item.item_name,
+        price: item.price,
+        quantity: item.quantity,
+        item_variant: item.item_variant,
+        item_category: item.item_category,
+      },
+    ],
+  })
+}
+
+export function trackGA4ViewCart(cart: TrackingCart) {
+  if (!GA_ID || !hasConsent()) return
+  const gtag = (window as any).gtag
+  if (!gtag) return
+
+  gtag("event", "view_cart", {
+    currency: cart.currency,
+    value: cart.value,
+    items: cart.items.map((i, idx) => ({
+      item_id: i.item_id,
+      item_name: i.item_name,
+      price: i.price,
+      quantity: i.quantity,
+      item_variant: i.item_variant,
+      item_category: i.item_category,
+      index: idx,
+    })),
+  })
+}
+
+export function trackGA4AddShippingInfo(
+  cart: TrackingCart,
+  shippingTier: string
+) {
+  if (!GA_ID || !hasConsent()) return
+  const gtag = (window as any).gtag
+  if (!gtag) return
+
+  gtag("event", "add_shipping_info", {
+    currency: cart.currency,
+    value: cart.value,
+    shipping_tier: shippingTier,
+    items: cart.items.map((i, idx) => ({
+      item_id: i.item_id,
+      item_name: i.item_name,
+      price: i.price,
+      quantity: i.quantity,
+      item_variant: i.item_variant,
+      item_category: i.item_category,
+      index: idx,
+    })),
+  })
+}
+
+export function trackGA4AddPaymentInfo(
+  cart: TrackingCart,
+  paymentType: string
+) {
+  if (!GA_ID || !hasConsent()) return
+  const gtag = (window as any).gtag
+  if (!gtag) return
+
+  gtag("event", "add_payment_info", {
+    currency: cart.currency,
+    value: cart.value,
+    payment_type: paymentType,
+    items: cart.items.map((i, idx) => ({
+      item_id: i.item_id,
+      item_name: i.item_name,
+      price: i.price,
+      quantity: i.quantity,
+      item_variant: i.item_variant,
+      item_category: i.item_category,
+      index: idx,
+    })),
+  })
+}
+
 // ── Meta Pixel ───────────────────────────────────────────────────────────────
 
 export function trackMetaAddToCart(item: TrackingItem, currency = "EUR") {
