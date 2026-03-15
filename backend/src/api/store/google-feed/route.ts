@@ -241,12 +241,12 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       <g:shipping>
         <g:country>BE</g:country>
         <g:service>Standard Bpost</g:service>
-        <g:price>5.95 EUR</g:price>
+        <g:price>${amount >= 75 ? '0.00' : '5.95'} EUR</g:price>
       </g:shipping>
       <g:shipping>
         <g:country>FR</g:country>
         <g:service>Standard</g:service>
-        <g:price>8.95 EUR</g:price>
+        <g:price>${amount >= 75 ? '0.00' : '8.95'} EUR</g:price>
       </g:shipping>
     </item>`
 
