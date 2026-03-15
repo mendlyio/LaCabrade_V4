@@ -33,7 +33,10 @@ const srcPath = path.join(process.cwd(), 'src');
 const destSrcPath = path.join(MEDUSA_SERVER_PATH, 'src');
 
 // Directories to exclude from copying (because they are already compiled to JS)
-const EXCLUDED_DIRS = ['subscribers', 'loaders', 'api', 'workflows', 'jobs', 'admin', 'types', 'utils'];
+// Ces dossiers sont déjà compilés par medusa build vers .medusa/server/src/
+// Les copier en TS par-dessus causerait un double chargement → erreur MikroORM
+// "Duplicate entity names are not allowed"
+const EXCLUDED_DIRS = ['subscribers', 'loaders', 'api', 'workflows', 'jobs', 'admin', 'types', 'utils', 'modules'];
 
 function copyDirRecursive(src, dest) {
   // Create destination directory if it doesn't exist
