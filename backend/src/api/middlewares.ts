@@ -1,4 +1,5 @@
-import type { MiddlewaresConfig, MedusaRequest, MedusaResponse, MedusaNextFunction } from "@medusajs/medusa"
+import type { MiddlewaresConfig } from "@medusajs/medusa"
+import type { MedusaRequest, MedusaResponse, MedusaNextFunction } from "@medusajs/framework/http"
 import rateLimit from "express-rate-limit"
 
 /**
