@@ -27,22 +27,25 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
     (order?.metadata as any)?.bpost_label_url || null
   )
 
+  const shippingMethods = Array.isArray(order?.shipping_methods) ? order.shipping_methods : []
+  const fulfillments = Array.isArray(order?.fulfillments) ? order.fulfillments : []
+
   // Commande avec livraison Bpost (méthode de livraison ou point relais)
   const hasBpostShipping =
-    (order?.shipping_methods || []).some(
+    shippingMethods.some(
       (m: any) =>
         (m?.shipping_option?.provider_id || m?.provider_id || "")
           .toString()
           .toLowerCase()
           .includes("bpost")
     ) ||
-    (order?.shipping_methods || []).some(
+    shippingMethods.some(
       (m: any) => (m?.name || "").toLowerCase().includes("bpost")
     ) ||
     !!(order?.metadata as any)?.bpost_pickup_point
 
   // Fulfillments Bpost (provider_id peut être "bpost" ou "bpost_xxx")
-  const bpostFulfillments = (order?.fulfillments || []).filter((f: any) =>
+  const bpostFulfillments = fulfillments.filter((f: any) =>
     (f.provider_id || "").toString().toLowerCase().includes("bpost")
   )
 
@@ -155,15 +158,16 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
           const trackingUrl = fulfillment.data?.public_tracking_url
           const trackingNumber =
             fulfillment.data?.trackingNumber || fulfillment.tracking_numbers?.[0]
+          const fulfillmentId = fulfillment.id ?? "unknown"
 
           return (
             <div
-              key={fulfillment.id}
+              key={fulfillmentId}
               className="flex items-center justify-between border border-gray-200 rounded-lg p-3 bg-gray-50"
             >
               <div className="flex flex-col">
                 <Text className="font-medium">
-                  Expédition #{fulfillment.id.slice(-4)}
+                  Expédition #{(fulfillmentId || "----").toString().slice(-4)}
                 </Text>
                 <Text className="text-ui-fg-subtle text-small-regular">
                   Suivi: {trackingNumber || "Non disponible"}

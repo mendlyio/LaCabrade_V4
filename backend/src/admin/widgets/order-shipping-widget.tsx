@@ -10,16 +10,17 @@ const TruckIcon = (props: React.SVGAttributes<SVGElement>) => (
 )
 
 const OrderShippingWidget = ({ data: order }: { data: any }) => {
-  const shippingMethods = order?.shipping_methods || []
-  const pickupLocation = order?.metadata?.pickup_location as { id?: string; name?: string; address?: string } | undefined
+  try {
+    const shippingMethods = Array.isArray(order?.shipping_methods) ? order.shipping_methods : []
+    const pickupLocation = order?.metadata?.pickup_location as { id?: string; name?: string; address?: string } | undefined
 
-  if (shippingMethods.length === 0 && !pickupLocation) {
-    return null
-  }
+    if (shippingMethods.length === 0 && !pickupLocation) {
+      return null
+    }
 
-  const method = shippingMethods[0]
+    const method = shippingMethods[0]
 
-  return (
+    return (
     <Container className="divide-y divide-gray-200 dark:divide-gray-700 p-0">
       <div className="flex items-center gap-x-2 px-6 py-4">
         <TruckIcon className="text-gray-500 w-5 h-5" />
@@ -46,7 +47,10 @@ const OrderShippingWidget = ({ data: order }: { data: any }) => {
         )}
       </div>
     </Container>
-  )
+    )
+  } catch {
+    return null
+  }
 }
 
 export const config = defineWidgetConfig({

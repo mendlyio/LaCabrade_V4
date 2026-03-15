@@ -47,7 +47,7 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
           Order Date: {new Date(order.created_at).toLocaleDateString()}
         </Text>
         <Text style={{ margin: '0 0 20px' }}>
-          Total: {String(order.summary?.raw_current_order_total?.value ?? order.total ?? 0)} {order.currency_code}
+          Total: {Number((order as any).display_total ?? order.total ?? 0).toFixed(2)} {order.currency_code}
         </Text>
 
         <Hr style={{ margin: '20px 0' }} />

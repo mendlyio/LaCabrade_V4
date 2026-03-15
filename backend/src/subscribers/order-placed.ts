@@ -4,6 +4,7 @@ import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa'
 import { EmailTemplates } from '../modules/email-notifications/templates'
 import { ODOO_MODULE } from '../modules/odoo'
 import OdooModuleService from '../modules/odoo/service'
+import { getOrderDisplayTotalEuros } from '../utils/order-display-total'
 
 export default async function customOrderPlacedEmailHandler({
   event: { data },
@@ -29,6 +30,8 @@ export default async function customOrderPlacedEmailHandler({
   // 1. Envoyer l'email de confirmation
   try {
     const notificationModuleService: INotificationModuleService = container.resolve(Modules.NOTIFICATION)
+    // Total affiché = montant réellement payé (identique au checkout : exonération TVA, promo livraison gratuite, etc.)
+    const displayTotal = getOrderDisplayTotalEuros(order as any)
     const orderData = {
       emailOptions: {
         replyTo: 'contact@sellerie-lacabrade.be',
@@ -36,7 +39,8 @@ export default async function customOrderPlacedEmailHandler({
       },
       order: {
         ...order,
-        display_id: (order as any).display_id || order.id
+        display_id: (order as any).display_id || order.id,
+        display_total: displayTotal
       },
       shippingAddress,
       preview: 'Merci pour votre commande !'
