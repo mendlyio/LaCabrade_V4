@@ -5,6 +5,9 @@ import { useState } from "react"
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "https://backend-production-7bbb.up.railway.app"
 
+const PUBLISHABLE_KEY =
+  process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
+
 const NewsletterForm = () => {
   const [email, setEmail] = useState("")
   const [birthday, setBirthday] = useState("")
@@ -28,9 +31,15 @@ const NewsletterForm = () => {
 
     setStatus("loading")
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      }
+      if (PUBLISHABLE_KEY) {
+        headers["x-publishable-api-key"] = PUBLISHABLE_KEY
+      }
       const res = await fetch(`${BACKEND_URL}/store/newsletter`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ email, birthday }),
       })
       const data = await res.json()

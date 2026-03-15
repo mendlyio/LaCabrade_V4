@@ -7,6 +7,9 @@ const BACKEND_URL =
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ||
   "https://backend-production-7bbb.up.railway.app"
 
+const PUBLISHABLE_KEY =
+  process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
+
 const IMG = "https://ik.imagekit.io/kodt9cn6f/popup.webp"
 const STORAGE_KEY = "lc_newsletter_popup_dismissed"
 const DELAY_MS = 3000
@@ -48,9 +51,15 @@ export default function NewsletterPopup() {
     setErrors({})
     setStatus("loading")
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      }
+      if (PUBLISHABLE_KEY) {
+        headers["x-publishable-api-key"] = PUBLISHABLE_KEY
+      }
       const res = await fetch(`${BACKEND_URL}/store/newsletter`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ email, birthday }),
       })
       const data = await res.json()
@@ -97,21 +106,21 @@ export default function NewsletterPopup() {
           </svg>
         </button>
 
-        {/* ── MOBILE : image carrée centrée, entière ── */}
-        <div className="sm:hidden flex justify-center flex-shrink-0 pt-6 pb-2">
-          <div className="relative w-[140px] h-[140px] rounded-2xl overflow-hidden shadow-lg">
+        {/* Mobile : image carrée entière, bien visible */}
+        <div className="sm:hidden flex justify-center flex-shrink-0 pt-5 pb-2">
+          <div className="relative w-[200px] h-[200px] rounded-2xl overflow-hidden shadow-lg">
             <Image
               src={IMG}
               alt="La Cabrade"
               fill
               className="object-contain"
-              sizes="140px"
+              sizes="200px"
               priority
             />
           </div>
         </div>
 
-        {/* ── DESKTOP : colonne gauche avec image carrée centrée ── */}
+        {/* Desktop : colonne gauche, image carrée */}
         <div className="hidden sm:flex flex-shrink-0 w-[220px] bg-[#faf6f2] items-center justify-center self-stretch">
           <Image
             src={IMG}
@@ -123,7 +132,7 @@ export default function NewsletterPopup() {
           />
         </div>
 
-        {/* ── FORMULAIRE ── */}
+        {/* Formulaire */}
         <div className="flex flex-col px-5 py-4 sm:px-6 sm:py-5 flex-1 min-w-0 overflow-y-auto">
           <p className="text-[10px] font-bold tracking-widest text-[#9e354a] uppercase mb-1 text-center sm:text-left">
             La Cabrade
