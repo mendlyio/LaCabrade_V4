@@ -13,6 +13,10 @@
     "medusa"
   ],
   "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:bpost": "jest --testPathPattern=__tests__/bpost",
     "postinstall": "npx patch-package",
     "build": "medusa build && node src/scripts/postBuild.js",
     "seed": "medusa exec ./src/scripts/seed.ts",
@@ -37,7 +41,9 @@
     "dev:local": "REDIS_URL= MINIO_ENDPOINT= MINIO_ACCESS_KEY= MINIO_SECRET_KEY= NODE_OPTIONS='--max-old-space-size=2048' medusa develop",
     "email:dev": "email dev --dir=./src/modules/email-notifications/templates --port=3002",
     "odoo:ping": "tsx src/scripts/odoo-ping.ts",
-    "email:test": "tsx src/scripts/test-resend-email.ts"
+    "email:test": "tsx src/scripts/test-resend-email.ts",
+    "email:check-amounts": "medusa exec src/scripts/test-email-amounts.ts",
+    "email:check-amounts:local": "REDIS_URL= medusa exec src/scripts/test-email-amounts.ts"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.10.3",

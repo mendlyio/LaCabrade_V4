@@ -7,6 +7,8 @@ import { WelcomeTemplate, WELCOME, isWelcomeTemplateData } from './welcome'
 import { StockAlertTemplate, STOCK_ALERT, isStockAlertTemplateData } from './stock-alert'
 import { GiftCardDeliveryTemplate, GIFT_CARD_DELIVERY, isGiftCardDeliveryData } from './gift-card-delivery'
 import { PasswordResetTemplate, PASSWORD_RESET, isPasswordResetTemplateData } from './password-reset'
+import { NewsletterWelcomeTemplate, NEWSLETTER_WELCOME, isNewsletterWelcomeData } from './newsletter-welcome'
+import { NewsletterBirthdayTemplate, NEWSLETTER_BIRTHDAY, isNewsletterBirthdayData } from './newsletter-birthday'
 
 export const EmailTemplates = {
   INVITE_USER,
@@ -16,6 +18,8 @@ export const EmailTemplates = {
   STOCK_ALERT,
   GIFT_CARD_DELIVERY,
   PASSWORD_RESET,
+  NEWSLETTER_WELCOME,
+  NEWSLETTER_BIRTHDAY,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -85,6 +89,24 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <PasswordResetTemplate {...data} />
 
+    case EmailTemplates.NEWSLETTER_WELCOME:
+      if (!isNewsletterWelcomeData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.NEWSLETTER_WELCOME}"`
+        )
+      }
+      return <NewsletterWelcomeTemplate {...data} />
+
+    case EmailTemplates.NEWSLETTER_BIRTHDAY:
+      if (!isNewsletterBirthdayData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.NEWSLETTER_BIRTHDAY}"`
+        )
+      }
+      return <NewsletterBirthdayTemplate {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -93,4 +115,4 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
   }
 }
 
-export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, WelcomeTemplate, StockAlertTemplate, GiftCardDeliveryTemplate, PasswordResetTemplate }
+export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, WelcomeTemplate, StockAlertTemplate, GiftCardDeliveryTemplate, PasswordResetTemplate, NewsletterWelcomeTemplate, NewsletterBirthdayTemplate }

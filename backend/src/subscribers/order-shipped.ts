@@ -1,7 +1,8 @@
 import { Modules } from '@medusajs/framework/utils'
-import { INotificationModuleService, IOrderModuleService, IFulfillmentModuleService } from '@medusajs/framework/types'
+import { INotificationModuleService, IOrderModuleService, IFulfillmentModuleService, IProductModuleService } from '@medusajs/framework/types'
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa'
 import { EmailTemplates } from '../modules/email-notifications/templates'
+import { STORE_URL } from '../lib/constants'
 
 export default async function orderShippedEmailHandler({
   event: { data },
@@ -35,7 +36,27 @@ export default async function orderShippedEmailHandler({
     const publicTrackingUrl = fulfillmentData.public_tracking_url
     const labelUrl = fulfillmentData.label_url
 
-    // Envoyer l'email
+    // Récupérer des produits suggérés
+    let suggestedProducts: Array<{ title: string; thumbnail: string; url: string }> = []
+    try {
+      const productModuleService: IProductModuleService = container.resolve(Modules.PRODUCT)
+      const products = await productModuleService.listProducts(
+        {},
+        { take: 30, select: ['id', 'title', 'handle', 'thumbnail'] }
+      )
+      suggestedProducts = products
+        .filter((p) => p.thumbnail)
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 2)
+        .map((p) => ({
+          title: p.title,
+          thumbnail: p.thumbnail!,
+          url: `${STORE_URL}/products/${p.handle}`,
+        }))
+    } catch (e: any) {
+      console.warn('⚠️ Could not fetch suggested products for shipped email:', e?.message)
+    }
+
     await notificationModuleService.createNotifications({
       to: order.email,
       channel: 'email',
@@ -43,7 +64,7 @@ export default async function orderShippedEmailHandler({
       data: {
         emailOptions: {
           replyTo: 'contact@sellerie-lacabrade.be',
-          subject: `Votre commande #${(order as any).display_id} a été expédiée ! 🚀`
+          subject: `Votre commande #${(order as any).display_id} a été expédiée !`
         },
         order: {
           ...order,
@@ -51,7 +72,6 @@ export default async function orderShippedEmailHandler({
         },
         fulfillment: {
             ...fulfillment,
-            // On injecte les données personnalisées ici pour le template
             data: {
                 ...fulfillmentData,
                 public_tracking_url: publicTrackingUrl,
@@ -59,6 +79,7 @@ export default async function orderShippedEmailHandler({
             }
         },
         shippingAddress,
+        suggestedProducts,
         preview: 'Votre commande a été expédiée !'
       }
     })

@@ -1,7 +1,8 @@
 import { Modules } from '@medusajs/framework/utils'
-import { INotificationModuleService, IOrderModuleService } from '@medusajs/framework/types'
+import { INotificationModuleService, IOrderModuleService, IProductModuleService } from '@medusajs/framework/types'
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa'
 import { EmailTemplates } from '../modules/email-notifications/templates'
+import { STORE_URL } from '../lib/constants'
 
 export default async function orderFulfilledHandler({
   event: { data },
@@ -24,7 +25,27 @@ export default async function orderFulfilledHandler({
       relations: ['tracking_links']
     })
 
-    // Envoyer l'email de commande expédiée
+    // Récupérer des produits suggérés
+    let suggestedProducts: Array<{ title: string; thumbnail: string; url: string }> = []
+    try {
+      const productModuleService: IProductModuleService = container.resolve(Modules.PRODUCT)
+      const products = await productModuleService.listProducts(
+        {},
+        { take: 30, select: ['id', 'title', 'handle', 'thumbnail'] }
+      )
+      suggestedProducts = products
+        .filter((p) => p.thumbnail)
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 2)
+        .map((p) => ({
+          title: p.title,
+          thumbnail: p.thumbnail!,
+          url: `${STORE_URL}/products/${p.handle}`,
+        }))
+    } catch (e: any) {
+      console.warn('⚠️ Could not fetch suggested products:', e?.message)
+    }
+
     await notificationModuleService.createNotifications({
       to: order.email,
       channel: 'email',
@@ -32,11 +53,12 @@ export default async function orderFulfilledHandler({
       data: {
         emailOptions: {
           replyTo: 'contact@sellerie-lacabrade.be',
-          subject: `📦 Votre commande #${order.display_id} est en route !`
+          subject: `Votre commande #${order.display_id} est en route !`
         },
         order,
         fulfillment,
         shippingAddress,
+        suggestedProducts,
         preview: 'Votre commande a été expédiée !'
       }
     })

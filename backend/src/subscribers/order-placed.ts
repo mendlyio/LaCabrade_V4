@@ -1,10 +1,11 @@
 import { Modules } from '@medusajs/framework/utils'
-import { INotificationModuleService, IOrderModuleService } from '@medusajs/framework/types'
+import { INotificationModuleService, IOrderModuleService, IProductModuleService } from '@medusajs/framework/types'
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa'
 import { EmailTemplates } from '../modules/email-notifications/templates'
 import { ODOO_MODULE } from '../modules/odoo'
 import OdooModuleService from '../modules/odoo/service'
 import { getOrderDisplayTotalEuros } from '../utils/order-display-total'
+import { STORE_URL } from '../lib/constants'
 
 export default async function customOrderPlacedEmailHandler({
   event: { data },
@@ -30,8 +31,47 @@ export default async function customOrderPlacedEmailHandler({
   // 1. Envoyer l'email de confirmation
   try {
     const notificationModuleService: INotificationModuleService = container.resolve(Modules.NOTIFICATION)
-    // Total affiché = montant réellement payé (identique au checkout : exonération TVA, promo livraison gratuite, etc.)
-    const displayTotal = getOrderDisplayTotalEuros(order as any)
+
+    // Medusa v2 order n'expose pas shipping_total directement — on le calcule depuis shipping_methods
+    const shippingTotal = (order.shipping_methods || []).reduce(
+      (acc: number, m: any) => acc + (Number(m.amount) || 0), 0
+    )
+    const orderForTotal = { ...order, shipping_total: shippingTotal }
+    const displayTotal = getOrderDisplayTotalEuros(orderForTotal as any)
+
+    // Validation croisée avec summary.original_order_total (inclut livraison)
+    const summaryTotal = (order as any).summary?.original_order_total
+    if (summaryTotal != null && Math.abs(Number(summaryTotal) - displayTotal) > 0.02) {
+      console.warn(
+        `⚠️ Écart entre display_total (${displayTotal}) et summary.original_order_total (${summaryTotal})` +
+        ` pour commande ${(order as any).display_id || order.id}. Vérifier si exonération TVA ou promotion.`
+      )
+    }
+
+    // Récupérer 2 produits suggérés (cross-sell)
+    let suggestedProducts: Array<{ title: string; thumbnail: string; url: string }> = []
+    try {
+      const productModuleService: IProductModuleService = container.resolve(Modules.PRODUCT)
+      const orderedProductIds = new Set(
+        order.items.map((i: any) => i.product_id).filter(Boolean)
+      )
+      const products = await productModuleService.listProducts(
+        {},
+        { take: 40, select: ['id', 'title', 'handle', 'thumbnail'] }
+      )
+      suggestedProducts = products
+        .filter((p) => !orderedProductIds.has(p.id) && p.thumbnail)
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 2)
+        .map((p) => ({
+          title: p.title,
+          thumbnail: p.thumbnail!,
+          url: `${STORE_URL}/products/${p.handle}`,
+        }))
+    } catch (e: any) {
+      console.warn('⚠️ Could not fetch suggested products for email:', e?.message)
+    }
+
     const orderData = {
       emailOptions: {
         replyTo: 'contact@sellerie-lacabrade.be',
@@ -43,10 +83,10 @@ export default async function customOrderPlacedEmailHandler({
         display_total: displayTotal
       },
       shippingAddress,
+      suggestedProducts,
       preview: 'Merci pour votre commande !'
     }
 
-    // Email au client
     await notificationModuleService.createNotifications({
       to: order.email,
       channel: 'email',
@@ -54,13 +94,13 @@ export default async function customOrderPlacedEmailHandler({
       data: orderData
     })
 
-    // Email à l'équipe gestion des commandes
     await notificationModuleService.createNotifications({
       to: 'contact@sellerie-lacabrade.be',
       channel: 'email',
       template: EmailTemplates.ORDER_PLACED,
       data: {
         ...orderData,
+        suggestedProducts: [],
         emailOptions: {
           ...orderData.emailOptions,
           subject: `[La Cabrade] Nouvelle commande #${(order as any).display_id || order.id}`

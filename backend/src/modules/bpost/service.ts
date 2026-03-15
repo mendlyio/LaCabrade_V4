@@ -362,12 +362,42 @@ export default class BpostModuleService {
     return { shipmentId, trackingNumber }
   }
 
-  async getLabel(shipmentId: string): Promise<{ labelUrl: string }> {
-    // Étape 1: demande de label
-    const { response } = await this.sendToApi<any>({ method: "POST", endpoint: "/labels", data: { ClientReferenceCodeList: [shipmentId], LabelStart: 1, LabelType: 0 } })
-    // Selon la plateforme, un callback/url de suivi peut être renvoyé
-    const labelUrl = response?.Url || response?.LabelUrl || ""
-    return { labelUrl }
+  async getLabel(shipmentId: string): Promise<{ labelUrl: string; labelData?: string }> {
+    const { response } = await this.sendToApi<any>({
+      method: "POST",
+      endpoint: "/labels",
+      data: { ClientReferenceCodeList: [shipmentId], LabelStart: 1, LabelType: 0 },
+    })
+
+    // Essayer toutes les structures de réponse connues de l'API Bpost SHM v3
+    const labelArray = Array.isArray(response?.Label) ? response.Label : []
+    const firstLabel = labelArray[0] || {}
+
+    // URL directe
+    const directUrl =
+      response?.Url ||
+      response?.LabelUrl ||
+      firstLabel?.Url ||
+      firstLabel?.url ||
+      response?.labels?.[0]?.url ||
+      ""
+
+    // Données base64 (PDF inline dans la réponse)
+    const labelData =
+      firstLabel?.LabelData ||
+      firstLabel?.labelData ||
+      response?.LabelData ||
+      response?.labels?.[0]?.data ||
+      ""
+
+    let labelUrl = directUrl
+    if (!labelUrl && labelData) {
+      // Construire une data URI PDF pour le stockage/prévisualisation
+      labelUrl = `data:application/pdf;base64,${labelData}`
+    }
+
+    console.log(`[Bpost] getLabel(${shipmentId}): url=${labelUrl ? "ok" : "vide"}, data=${labelData ? `${labelData.length} chars` : "absent"}`)
+    return { labelUrl, labelData: labelData || undefined }
   }
 
   validateWebhookSignature(rawBody: string, signature: string): boolean {

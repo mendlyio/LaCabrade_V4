@@ -203,6 +203,10 @@ const medusaConfig = {
       resolve: "./src/modules/gift-card-tracking",
     },
     {
+      key: "newsletter",
+      resolve: "./src/modules/newsletter",
+    },
+    {
       key: Modules.FULFILLMENT,
       resolve: '@medusajs/fulfillment',
       options: {

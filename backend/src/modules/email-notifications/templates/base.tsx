@@ -12,9 +12,19 @@ export const Base: React.FC<BaseProps> = ({ preview, children }) => {
       <Head />
       <Preview>{preview}</Preview>
       <Tailwind>
-        <Body className="bg-white my-auto mx-auto font-sans px-2">
-          <Container className="border border-solid border-[#eaeaea] rounded my-[40px] mx-auto p-[20px] max-w-[465px] w-full overflow-hidden">
-            <div className="max-w-full break-words">
+        <Body className="my-auto mx-auto font-sans px-2" style={{ backgroundColor: '#f4f4f5' }}>
+          <Container style={{
+            border: '1px solid #e5e7eb',
+            borderTop: '4px solid #92400E',
+            borderRadius: '8px',
+            margin: '40px auto',
+            padding: '32px 24px',
+            maxWidth: '560px',
+            width: '100%',
+            overflow: 'hidden',
+            backgroundColor: '#ffffff',
+          }}>
+            <div style={{ maxWidth: '100%', wordBreak: 'break-word' as const }}>
               {children}
             </div>
           </Container>
