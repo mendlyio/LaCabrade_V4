@@ -2,7 +2,7 @@
 
 import { Heading, Text, clx } from "@medusajs/ui"
 import { HttpTypes } from "@medusajs/types"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import PaymentButton from "../payment-button"
 import LastChanceUpsell from "../last-chance-upsell"
@@ -18,17 +18,30 @@ const Review = ({
 }) => {
   const searchParams = useSearchParams()
   const hasHandledReturn = useRef(false)
+  const [redirecting, setRedirecting] = useState(false)
+  const [redirectError, setRedirectError] = useState<string | null>(null)
 
   const isOpen = searchParams.get("step") === "review"
 
-  // Retour depuis Klarna/Alma : Stripe ajoute redirect_status=succeeded
   useEffect(() => {
     if (hasHandledReturn.current) return
     const redirectStatus = searchParams.get("redirect_status")
     const paymentIntent = searchParams.get("payment_intent")
+
+    if (redirectStatus === "failed") {
+      setRedirectError("Le paiement a échoué. Veuillez réessayer avec un autre moyen de paiement.")
+      return
+    }
+
     if ((redirectStatus === "succeeded" || redirectStatus === "processing") && paymentIntent) {
       hasHandledReturn.current = true
-      placeOrder().catch(() => { hasHandledReturn.current = false })
+      setRedirecting(true)
+      setRedirectError(null)
+      placeOrder().catch((err) => {
+        hasHandledReturn.current = false
+        setRedirecting(false)
+        setRedirectError(err?.message ?? "Erreur lors de la finalisation. Veuillez réessayer.")
+      })
     }
   }, [searchParams])
 
@@ -45,7 +58,6 @@ const Review = ({
 
   return (
     <div className="bg-white">
-      {/* Step header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
@@ -67,9 +79,23 @@ const Review = ({
         </div>
       </div>
 
-      {isOpen && previousStepsCompleted && (
+      {redirecting && (
+        <div className="flex items-center justify-center gap-3 py-8">
+          <div className="w-5 h-5 border-2 border-amber-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-amber-700 font-medium">
+            Paiement validé, finalisation de votre commande en cours...
+          </p>
+        </div>
+      )}
+
+      {redirectError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+          <p className="text-sm text-red-700 font-medium">{redirectError}</p>
+        </div>
+      )}
+
+      {isOpen && previousStepsCompleted && !redirecting && (
         <div className="space-y-5">
-          {/* Last chance — offre exclusive avant paiement */}
           {lastChanceProducts.length > 0 && (
             <LastChanceUpsell
               products={lastChanceProducts}
@@ -78,7 +104,6 @@ const Review = ({
             />
           )}
 
-          {/* Message CGV */}
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 sm:p-5">
             <div className="flex items-start gap-3">
               <div className="flex-shrink-0 w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center mt-0.5">
@@ -88,14 +113,24 @@ const Review = ({
               </div>
               <Text className="text-xs sm:text-sm text-gray-700 leading-relaxed">
                 En cliquant sur <strong>&quot;Valider la commande&quot;</strong>, vous confirmez avoir lu et accepté nos{" "}
-                <a href="#" className="text-amber-600 hover:text-amber-700 underline">CGV</a>,{" "}
-                notre <a href="#" className="text-amber-600 hover:text-amber-700 underline">Politique de Retour</a> et{" "}
-                notre <a href="#" className="text-amber-600 hover:text-amber-700 underline">Politique de Confidentialité</a>.
+                <a href="/conditions-generales-de-vente" target="_blank" className="text-amber-600 hover:text-amber-700 underline">Conditions Générales de Vente</a>,{" "}
+                notre <a href="/politique-de-retour" target="_blank" className="text-amber-600 hover:text-amber-700 underline">Politique de Retour</a> et{" "}
+                notre <a href="/politique-de-confidentialite" target="_blank" className="text-amber-600 hover:text-amber-700 underline">Politique de Confidentialité</a>.
               </Text>
             </div>
           </div>
 
-          {/* Bouton payer — toujours bien visible */}
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <p className="text-xs text-green-700">
+                <strong>Paiement 100% sécurisé</strong> — Vos données sont protégées par un chiffrement SSL de bout en bout.
+              </p>
+            </div>
+          </div>
+
           <PaymentButton cart={cart} data-testid="submit-order-button" />
         </div>
       )}

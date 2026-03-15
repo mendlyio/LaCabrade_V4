@@ -67,8 +67,8 @@ const PaymentMethods = () => (
     </h4>
     <div className="flex flex-wrap gap-1.5">
       {[
-        "Visa", "Mastercard", "CB", "Apple Pay", "PayPal",
-        "Klarna", "Alma", "Belfius", "CBC", "ING", "Revolut",
+        "Visa", "Mastercard", "CB", "Apple Pay", "Google Pay",
+        "Bancontact", "Klarna", "Alma", "PayPal",
       ].map((name) => (
         <div
           key={name}

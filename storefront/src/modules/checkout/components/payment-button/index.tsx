@@ -4,7 +4,7 @@ import { Button } from "@medusajs/ui"
 import { OnApproveActions, OnApproveData } from "@paypal/paypal-js"
 import { PayPalButtons, usePayPalScriptReducer } from "@paypal/react-paypal-js"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
-import React, { useContext, useState } from "react"
+import React, { useCallback, useContext, useRef, useState } from "react"
 import ErrorMessage from "../error-message"
 import Spinner from "@modules/common/icons/spinner"
 import { placeOrder } from "@lib/data/cart"
@@ -16,6 +16,23 @@ import { PaymentSessionsContext } from "@modules/checkout/components/payment-wra
 type PaymentButtonProps = {
   cart: HttpTypes.StoreCart
   "data-testid": string
+}
+
+const STRIPE_ERROR_MESSAGES: Record<string, string> = {
+  card_declined: "Votre carte a été refusée. Veuillez essayer une autre carte.",
+  expired_card: "Votre carte est expirée. Veuillez utiliser une autre carte.",
+  incorrect_cvc: "Le code CVC est incorrect. Vérifiez et réessayez.",
+  insufficient_funds: "Fonds insuffisants. Essayez une autre carte.",
+  processing_error: "Erreur de traitement. Veuillez réessayer dans quelques instants.",
+  incorrect_number: "Le numéro de carte est incorrect.",
+  authentication_required: "Authentification requise. Veuillez valider le paiement via votre banque.",
+}
+
+function translateStripeError(error: { decline_code?: string; message?: string }): string {
+  if (error.decline_code && STRIPE_ERROR_MESSAGES[error.decline_code]) {
+    return STRIPE_ERROR_MESSAGES[error.decline_code]
+  }
+  return error.message ?? "Une erreur est survenue lors du paiement. Veuillez réessayer."
 }
 
 const PaymentButton: React.FC<PaymentButtonProps> = ({
@@ -34,8 +51,11 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
     !cart.email ||
     (cart.shipping_methods?.length ?? 0) < 1
 
+  const hasGiftCardPromotion = (cart?.promotions || []).some(
+    (p: any) => p?.code && /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(p.code)
+  )
   const paidByGiftcard =
-    cart?.total !== undefined && cart?.total !== null && cart.total === 0
+    hasGiftCardPromotion && cart?.total !== undefined && cart?.total !== null && cart.total === 0
 
   if (paidByGiftcard) {
     return <GiftCardPaymentButton />
@@ -73,21 +93,36 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
 
 const GiftCardPaymentButton = () => {
   const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const submitGuard = useRef(false)
 
   const handleOrder = async () => {
+    if (submitGuard.current) return
+    submitGuard.current = true
     setSubmitting(true)
-    await placeOrder()
+    setErrorMessage(null)
+    try {
+      await placeOrder()
+    } catch (err: any) {
+      setErrorMessage(err?.message ?? "Erreur lors de la validation de la commande.")
+      submitGuard.current = false
+      setSubmitting(false)
+    }
   }
 
   return (
-    <Button
-      onClick={handleOrder}
-      isLoading={submitting}
-      data-testid="submit-order-button"
-      className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-4 px-8 rounded-lg transition-colors w-full text-lg"
-    >
-      🎉 Valider la commande
-    </Button>
+    <>
+      <Button
+        onClick={handleOrder}
+        isLoading={submitting}
+        disabled={submitting}
+        data-testid="submit-order-button"
+        className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-4 px-8 rounded-lg transition-colors w-full text-lg"
+      >
+        Valider la commande
+      </Button>
+      <ErrorMessage error={errorMessage} data-testid="gift-card-payment-error-message" />
+    </>
   )
 }
 
@@ -107,16 +142,18 @@ const StripePaymentButton = ({
 
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const submitGuard = useRef(false)
 
-  const onPaymentCompleted = async () => {
-    await placeOrder()
-      .catch((err) => {
-        setErrorMessage(err.message)
-      })
-      .finally(() => {
-        setSubmitting(false)
-      })
-  }
+  const onPaymentCompleted = useCallback(async () => {
+    try {
+      await placeOrder()
+    } catch (err: any) {
+      setErrorMessage(err?.message ?? "Erreur lors de la finalisation de la commande.")
+    } finally {
+      setSubmitting(false)
+      submitGuard.current = false
+    }
+  }, [])
 
   const stripe = useStripe()
   const elements = useElements()
@@ -128,10 +165,14 @@ const StripePaymentButton = ({
   const disabled = !stripe || !elements
 
   const handlePayment = async () => {
+    if (submitGuard.current) return
+    submitGuard.current = true
     setSubmitting(true)
+    setErrorMessage(null)
 
     if (!stripe || !elements || !session?.data?.client_secret || !cart) {
       setSubmitting(false)
+      submitGuard.current = false
       return
     }
 
@@ -139,7 +180,6 @@ const StripePaymentButton = ({
       ? `${window.location.origin}${window.location.pathname}?step=review`
       : ""
 
-    // Bancontact, iDEAL, Klarna, etc. exigent billing_details.name
     const billingName =
       [cart.billing_address?.first_name, cart.billing_address?.last_name]
         .filter(Boolean)
@@ -171,12 +211,14 @@ const StripePaymentButton = ({
         redirect: "if_required",
       })
       if (error) {
-        setErrorMessage(error.message ?? "Une erreur est survenue. Réessayez.")
+        setErrorMessage(translateStripeError(error as any))
+        submitGuard.current = false
       } else {
         await onPaymentCompleted()
       }
     } catch (err: any) {
-      setErrorMessage(err?.message ?? "Une erreur est survenue. Réessayez.")
+      setErrorMessage(err?.message ?? "Une erreur est survenue lors du paiement. Veuillez réessayer.")
+      submitGuard.current = false
     } finally {
       setSubmitting(false)
     }
@@ -185,15 +227,20 @@ const StripePaymentButton = ({
   return (
     <>
       <Button
-        disabled={disabled || notReady}
+        disabled={disabled || notReady || submitting}
         onClick={handlePayment}
         size="large"
         isLoading={submitting}
         data-testid={dataTestId}
         className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-4 px-8 rounded-lg transition-colors w-full text-lg"
       >
-        🎉 Valider la commande
+        Valider la commande
       </Button>
+      {submitting && (
+        <p className="text-xs text-amber-600 text-center mt-2 animate-pulse">
+          Traitement du paiement en cours, veuillez patienter...
+        </p>
+      )}
       <ErrorMessage
         error={errorMessage}
         data-testid="stripe-payment-error-message"
@@ -280,34 +327,33 @@ const PayPalPaymentButton = ({
 const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const submitGuard = useRef(false)
 
-  const onPaymentCompleted = async () => {
-    await placeOrder()
-      .catch((err) => {
-        setErrorMessage(err.message)
-      })
-      .finally(() => {
-        setSubmitting(false)
-      })
-  }
-
-  const handlePayment = () => {
+  const handlePayment = async () => {
+    if (submitGuard.current) return
+    submitGuard.current = true
     setSubmitting(true)
-
-    onPaymentCompleted()
+    setErrorMessage(null)
+    try {
+      await placeOrder()
+    } catch (err: any) {
+      setErrorMessage(err?.message ?? "Erreur lors de la validation.")
+      submitGuard.current = false
+      setSubmitting(false)
+    }
   }
 
   return (
     <>
       <Button
-        disabled={notReady}
+        disabled={notReady || submitting}
         isLoading={submitting}
         onClick={handlePayment}
         size="large"
         data-testid="submit-order-button"
         className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-4 px-8 rounded-lg transition-colors w-full text-lg"
       >
-        🎉 Valider la commande
+        Valider la commande
       </Button>
       <ErrorMessage
         error={errorMessage}

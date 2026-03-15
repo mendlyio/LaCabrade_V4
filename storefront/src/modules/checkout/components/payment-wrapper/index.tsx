@@ -43,19 +43,24 @@ const Wrapper: React.FC<WrapperProps> = ({ cart, children }) => {
     currentPaymentSessions
   )
 
-  if (
-    isStripe(paymentSession?.provider_id) &&
-    paymentSession &&
-    paymentSession?.data?.client_secret &&
-    stripePromise
-  ) {
+  const hasAnyStripeSession = currentPaymentSessions.some(
+    (s) => isStripe(s.provider_id) && s.data?.client_secret
+  )
+
+  const stripeSession = isStripe(paymentSession?.provider_id) && paymentSession?.data?.client_secret
+    ? paymentSession
+    : hasAnyStripeSession
+      ? currentPaymentSessions.find((s) => isStripe(s.provider_id) && s.data?.client_secret)
+      : null
+
+  if (stripeSession && stripePromise) {
     return (
       <PaymentSessionsContext.Provider
         value={{ paymentSessions: currentPaymentSessions, setPaymentSessions }}
       >
         <StripeContext.Provider value={true}>
           <StripeWrapper
-            paymentSession={paymentSession}
+            paymentSession={stripeSession}
             stripeKey={stripeKey}
             stripePromise={stripePromise}
             cart={cart}

@@ -272,8 +272,29 @@ const Payment = ({
                       {paymentInfo.title}
                     </p>
                     <p className="text-xs text-gray-600 mt-1">
-                      Carte bancaire, Apple Pay, Google Pay, Klarna, Alma, Bancontact et autres moyens activés sur Stripe.
+                      Carte bancaire, Apple Pay, Google Pay, Klarna, Alma, Bancontact et plus.
                     </p>
+                    <div className="flex items-center gap-2 mt-3 flex-wrap">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-white border border-gray-200 rounded-full px-2 py-1 text-gray-700">
+                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 0 0 .554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.852.816-5.09a.932.932 0 0 1 .923-.788h.58c3.76 0 6.705-1.528 7.565-5.946.36-1.847.174-3.388-.777-4.471z"/></svg>
+                        Visa/MC
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-white border border-gray-200 rounded-full px-2 py-1 text-gray-700">
+                        Apple Pay
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-white border border-gray-200 rounded-full px-2 py-1 text-gray-700">
+                        Google Pay
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-white border border-gray-200 rounded-full px-2 py-1 text-gray-700">
+                        Bancontact
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-white border border-gray-200 rounded-full px-2 py-1 text-gray-700">
+                        Klarna
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-white border border-gray-200 rounded-full px-2 py-1 text-gray-700">
+                        Alma
+                      </span>
+                    </div>
                   </div>
                   <PaymentElement
                     key={selectedSession?.id}
@@ -284,28 +305,40 @@ const Payment = ({
                         radios: true,
                       },
                       wallets: { applePay: "auto", googlePay: "auto" },
+                      fields: {
+                        billingDetails: "auto",
+                      },
                       defaultValues: (() => {
                         const addr = cart?.shipping_address
+                        const billing = cart?.billing_address
+                        const name = [
+                          billing?.first_name || addr?.first_name,
+                          billing?.last_name || addr?.last_name,
+                        ].filter(Boolean).join(" ") || ""
                         const country =
+                          billing?.country_code?.toUpperCase() ||
                           addr?.country_code?.toUpperCase() ||
                           cart?.region?.countries?.[0]?.iso_2?.toUpperCase() ||
                           "BE"
                         return {
                           billingDetails: {
+                            name,
+                            email: cart?.email || "",
+                            phone: billing?.phone || addr?.phone || "",
                             address: {
                               country,
-                              line1: addr?.address_1 || "",
-                              line2: addr?.address_2 || undefined,
-                              city: addr?.city || undefined,
-                              state: addr?.province || undefined,
-                              postal_code: addr?.postal_code || undefined,
+                              line1: billing?.address_1 || addr?.address_1 || "",
+                              line2: billing?.address_2 || addr?.address_2 || undefined,
+                              city: billing?.city || addr?.city || undefined,
+                              state: billing?.province || addr?.province || undefined,
+                              postal_code: billing?.postal_code || addr?.postal_code || undefined,
                             },
                           },
                         }
                       })(),
                     }}
                     onReady={() => setPaymentElementReady(true)}
-                    onChange={(e) => setError(e.error?.message || null)}
+                    onChange={(e) => setError((e as any).error?.message || null)}
                   />
                 </div>
               )}

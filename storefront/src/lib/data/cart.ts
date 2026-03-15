@@ -219,13 +219,13 @@ export async function updateLineItem({
     throw new Error("Missing lineItem ID when updating line item")
   }
 
-  const cartId = getCartId()
+  const cartId = await getCartIdSafe()
   if (!cartId) {
     throw new Error("Missing cart ID when updating line item")
   }
 
   await sdk.store.cart
-    .updateLineItem(cartId, lineId, { quantity }, {}, getAuthHeaders())
+    .updateLineItem(cartId, lineId, { quantity }, {}, await getAuthHeadersSafe())
     .then(() => {
       revalidateTag("cart")
     })
@@ -237,13 +237,13 @@ export async function deleteLineItem(lineId: string) {
     throw new Error("Missing lineItem ID when deleting line item")
   }
 
-  const cartId = getCartId()
+  const cartId = await getCartIdSafe()
   if (!cartId) {
     throw new Error("Missing cart ID when deleting line item")
   }
 
   await sdk.store.cart
-    .deleteLineItem(cartId, lineId, {}, getAuthHeaders())
+    .deleteLineItem(cartId, lineId, {}, await getAuthHeadersSafe())
     .then(() => {
       revalidateTag("cart")
     })
@@ -477,7 +477,7 @@ export async function initiatePaymentSession(
 }
 
 export async function applyPromotions(codes: string[]) {
-  const cartId = getCartId()
+  const cartId = await getCartIdSafe()
   if (!cartId) {
     throw new Error("No existing cart found")
   }
@@ -550,7 +550,7 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
     if (!formData) {
       throw new Error("No form data found when setting addresses")
     }
-    const cartId = getCartId()
+    const cartId = await getCartIdSafe()
     if (!cartId) {
       throw new Error("No existing cart found when setting addresses")
     }
