@@ -199,7 +199,7 @@ export default function NewsletterPopup() {
                     setErrors((p) => ({ ...p, birthday: undefined }))
                   }}
                   disabled={status === "loading"}
-                  className={inputClass(!!errors.birthday)}
+                  className={inputClass(!!errors.birthday).replace("w-full", "w-auto")}
                   style={{ colorScheme: "light" }}
                 />
               </Field>

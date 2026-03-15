@@ -108,9 +108,9 @@ const NewsletterBanner = () => {
                 onChange={(e) => setBirthday(e.target.value)}
                 required
                 disabled={disabled}
-                className={`w-full px-5 py-3 rounded-lg text-gray-900
+                className={`w-auto px-4 py-3 rounded-lg text-gray-900
                            focus:outline-none focus:ring-2 focus:ring-white
-                           disabled:opacity-50 text-sm box-border ${
+                           disabled:opacity-50 text-sm ${
                   status === "error" && !birthday
                     ? "ring-2 ring-red-300"
                     : ""
