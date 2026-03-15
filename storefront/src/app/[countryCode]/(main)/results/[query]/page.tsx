@@ -1,14 +1,7 @@
 import { Metadata } from "next"
-
 import SearchResultsTemplate from "@modules/search/templates/search-results-template"
-
-import { search } from "@modules/search/actions"
+import { searchProductIds } from "@modules/search/actions"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
-
-export const metadata: Metadata = {
-  title: "Search",
-  description: "Explore all of our products.",
-}
 
 type Params = {
   params: { query: string; countryCode: string }
@@ -18,17 +11,19 @@ type Params = {
   }
 }
 
+export async function generateMetadata({ params }: Params): Promise<Metadata> {
+  const q = decodeURIComponent(params.query)
+  return {
+    title: `Recherche : ${q}`,
+    description: `Résultats de recherche pour "${q}" sur La Cabrade.`,
+  }
+}
+
 export default async function SearchResults({ params, searchParams }: Params) {
-  const { query } = params
+  const { query, countryCode } = params
   const { sortBy, page } = searchParams
 
-  const hits = await search(query).then((data) => data)
-
-  const ids = hits
-    .map((h) => h.objectID || h.id)
-    .filter((id): id is string => {
-      return typeof id === "string"
-    })
+  const ids = await searchProductIds(decodeURIComponent(query), countryCode)
 
   return (
     <SearchResultsTemplate
@@ -36,7 +31,7 @@ export default async function SearchResults({ params, searchParams }: Params) {
       ids={ids}
       sortBy={sortBy}
       page={page}
-      countryCode={params.countryCode}
+      countryCode={countryCode}
     />
   )
 }

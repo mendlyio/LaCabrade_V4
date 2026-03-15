@@ -30,7 +30,7 @@ const {
   ODOO_API_KEY,
   BPOST_PUBLIC_KEY,
   BPOST_PRIVATE_KEY,
-  BPOST_WEBHOOK_SECRET
+  BPOST_WEBHOOK_SECRET,
 } = constants.default ?? constants
 
 loadEnv(process.env.NODE_ENV, process.cwd());

@@ -2,8 +2,9 @@
 
 import { SHOW_COOKIE_BANNER_EVENT } from "@modules/layout/components/cookie-banner"
 
-function clearConsentCookie() {
+function clearConsent() {
   document.cookie = "cookie_consent=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax"
+  try { localStorage.removeItem("cookie_consent") } catch (e) {}
 }
 
 export default function ManageCookiesLink({
@@ -15,7 +16,7 @@ export default function ManageCookiesLink({
 }) {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
-    clearConsentCookie()
+    clearConsent()
     window.dispatchEvent(new CustomEvent(SHOW_COOKIE_BANNER_EVENT))
   }
 

@@ -13,6 +13,7 @@ import {
   getCartIdSafe,
   removeCartId,
   removeCartIdSafe,
+  setCartCountSafe,
   setCartId,
   setCartIdSafe,
 } from "./cookies"
@@ -632,6 +633,7 @@ export async function placeOrder() {
       cartRes.order.billing_address?.country_code?.toLowerCase() ||
       "be"
     await removeCartIdSafe()
+    await setCartCountSafe(0)
     redirect(`/${countryCode}/order/confirmed/${cartRes.order.id}`)
   }
 

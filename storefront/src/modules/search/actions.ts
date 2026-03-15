@@ -1,33 +1,118 @@
 "use server"
 
-import { SEARCH_INDEX_NAME, searchClient } from "@lib/search-client"
+import { sdk } from "@lib/config"
+import { getRegion } from "@lib/data/regions"
 import { GIFT_CARD_PRODUCT_HANDLE } from "@lib/data/products"
 
-interface Hits {
-  readonly objectID?: string
-  id?: string
-  handle?: string
-  [x: string | number | symbol]: unknown
+export type SearchProductResult = {
+  id: string
+  title: string
+  handle: string
+  thumbnail: string | null
+  description: string | null
+  collection: string | null
+  collectionHandle: string | null
+  minPrice: number | null
+  currency: string
+  score?: number
 }
 
 /**
- * Uses MeiliSearch or Algolia to search for a query
- * @param {string} query - search query
+ * Recherche directe via Medusa SDK avec scoring côté serveur.
+ * Fonctionne sans MeiliSearch.
  */
-export async function search(query: string) {
-  // MeiliSearch
-  const queries = [{ params: { query }, indexName: SEARCH_INDEX_NAME }]
-  const { results } = (await searchClient.search(queries)) as Record<
-    string,
-    any
-  >
-  const { hits } = results[0] as { hits: Hits[] }
-  const filtered = hits.filter((h) => h.handle !== GIFT_CARD_PRODUCT_HANDLE)
+export async function searchProductsDirect(
+  query: string,
+  countryCode = "fr"
+): Promise<SearchProductResult[]> {
+  if (!query || query.trim().length < 2) return []
 
-  // In case you want to use Algolia instead of MeiliSearch, uncomment the following lines and delete the above lines.
+  try {
+    const region = await getRegion(countryCode)
+    const q = query.trim()
+    const qLower = q.toLowerCase()
+    const qTokens = qLower.split(/\s+/).filter(Boolean)
 
-  // const index = searchClient.initIndex(SEARCH_INDEX_NAME)
-  // const { hits } = (await index.search(query)) as { hits: Hits[] }
+    const { products } = await sdk.store.product.list(
+      {
+        q,
+        limit: 50,
+        is_giftcard: false,
+        region_id: region?.id,
+        fields:
+          "*variants.calculated_price,+variants.prices,+images,+collection.title,+collection.handle",
+      } as any,
+      { next: { tags: ["products"], revalidate: 60 } }
+    )
 
-  return filtered
+    const scored = products
+      .filter((p) => p.handle !== GIFT_CARD_PRODUCT_HANDLE)
+      .map((p) => {
+        const title = (p.title || "").toLowerCase()
+        const handle = (p.handle || "").toLowerCase()
+        const desc = (p.description || "").toLowerCase()
+        const collectionTitle = ((p as any).collection?.title || "").toLowerCase()
+        const variantTitles = (p.variants || [])
+          .map((v: any) => (v.title || "").toLowerCase())
+          .join(" ")
+
+        let score = 0
+        if (title.startsWith(qLower)) score += 100
+        else if (title.includes(qLower)) score += 60
+        if (handle.includes(qLower)) score += 30
+        if (collectionTitle.includes(qLower)) score += 20
+        if (variantTitles.includes(qLower)) score += 15
+        if (desc.includes(qLower)) score += 5
+
+        qTokens.forEach((token) => {
+          if (title.includes(token)) score += 10
+          if (handle.includes(token)) score += 5
+          if (variantTitles.includes(token)) score += 3
+        })
+
+        const prices = (p.variants || [])
+          .flatMap((v: any) =>
+            v.calculated_price?.calculated_amount != null
+              ? [v.calculated_price.calculated_amount]
+              : []
+          )
+          .filter((n: number) => n > 0)
+
+        const minPrice = prices.length > 0 ? Math.min(...prices) : null
+        const currency =
+          (p.variants?.[0] as any)?.calculated_price?.currency_code || "eur"
+
+        return {
+          id: p.id,
+          title: p.title || "",
+          handle: p.handle || "",
+          thumbnail: p.thumbnail || (p as any).images?.[0]?.url || null,
+          description: p.description || null,
+          collection: (p as any).collection?.title || null,
+          collectionHandle: (p as any).collection?.handle || null,
+          minPrice,
+          currency,
+          score,
+        }
+      })
+      .filter((p) => p.score > 0)
+      .sort((a, b) => b.score - a.score)
+
+    return scored
+  } catch (err) {
+    console.error("[searchProductsDirect] Erreur:", err)
+    return []
+  }
+}
+
+/**
+ * Retourne les IDs des produits correspondant à la requête.
+ * Utilisé par la page /results/[query] pour la compatibilité avec PaginatedProducts.
+ */
+export async function searchProductIds(
+  query: string,
+  countryCode = "fr"
+): Promise<string[]> {
+  const results = await searchProductsDirect(query, countryCode)
+  return results.map((r) => r.id)
 }

@@ -13,18 +13,37 @@ export const GoogleConsentMode = () => {
 
   return (
     <>
-      {/* 1. Consent default AVANT scripts - obligatoire RGPD / Consent v2 */}
+      {/* 1. Consent Mode v2 — défini AVANT le chargement de gtag.js (beforeInteractive)
+          Pour les visiteurs récurrents, on restaure immédiatement l'état depuis localStorage
+          afin d'éviter tout flashback "denied" entre le chargement de la page et l'hydratation React */}
       <Script id="consent-default" strategy="beforeInteractive">
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
-          gtag('consent', 'default', {
-            'ad_storage': 'denied',
-            'analytics_storage': 'denied',
-            'ad_user_data': 'denied',
-            'ad_personalization': 'denied',
-            'wait_for_update': 500
-          });
+
+          var _storedConsent = null;
+          try { _storedConsent = localStorage.getItem('cookie_consent'); } catch(e) {}
+
+          if (_storedConsent === 'true') {
+            gtag('consent', 'default', {
+              'ad_storage': 'granted',
+              'analytics_storage': 'granted',
+              'ad_user_data': 'granted',
+              'ad_personalization': 'granted',
+              'functionality_storage': 'granted',
+              'security_storage': 'granted'
+            });
+          } else {
+            gtag('consent', 'default', {
+              'ad_storage': 'denied',
+              'analytics_storage': 'denied',
+              'ad_user_data': 'denied',
+              'ad_personalization': 'denied',
+              'functionality_storage': 'granted',
+              'security_storage': 'granted',
+              'wait_for_update': 500
+            });
+          }
         `}
       </Script>
 

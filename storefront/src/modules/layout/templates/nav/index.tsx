@@ -3,6 +3,7 @@ import { listRegions, FALLBACK_REGIONS } from "@lib/data/regions"
 import { listCategories } from "@lib/data/categories"
 import { listBrands } from "@lib/data/brands"
 import { buildCategoryTree } from "@lib/util/category-tree"
+import { getCartCountSafe } from "@lib/data/cookies"
 import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
@@ -23,13 +24,22 @@ export default async function Nav() {
   let regions: StoreRegion[] = FALLBACK_REGIONS
   let categories: any[] = []
   let brands: any[] = []
+  let cachedCartCount = 0
 
   try {
-    regions = await listRegions().then((r: StoreRegion[]) => r)
-    categories = await listCategories()
-    brands = await listBrands()
+    ;[regions, categories, brands, cachedCartCount] = await Promise.all([
+      listRegions().then((r: StoreRegion[]) => r),
+      listCategories(),
+      listBrands(),
+      getCartCountSafe(),
+    ])
   } catch (error) {
     console.error("[Nav] Backend indisponible, utilisation des valeurs de repli:", error)
+    try {
+      cachedCartCount = await getCartCountSafe()
+    } catch {
+      // ignore
+    }
   }
 
   // Filtrer les catégories racines (Niveau 0) et actives
@@ -112,7 +122,7 @@ export default async function Nav() {
                     <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
                     <span className="hidden sm:inline">Panier</span>
                     <span className="bg-white text-amber-600 text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-bold">
-                      0
+                      {cachedCartCount}
                     </span>
                   </LocalizedClientLink>
                 }

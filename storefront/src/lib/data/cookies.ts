@@ -77,3 +77,20 @@ export const removeCartIdSafe = async () => {
   const cookieStore = await cookies()
   cookieStore.set("_medusa_cart_id", "", { maxAge: -1 })
 }
+
+export const getCartCountSafe = async (): Promise<number> => {
+  const cookieStore = await cookies()
+  const count = cookieStore.get("_cart_count")?.value
+  return count ? parseInt(count, 10) : 0
+}
+
+export const setCartCountSafe = async (count: number) => {
+  const cookieStore = await cookies()
+  cookieStore.set("_cart_count", String(Math.max(0, count)), {
+    maxAge: 60 * 60 * 24 * 7,
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  })
+}

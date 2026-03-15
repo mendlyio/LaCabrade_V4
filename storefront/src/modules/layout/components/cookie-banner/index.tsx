@@ -9,11 +9,11 @@ export default function CookieBanner() {
   const [showBanner, setShowBanner] = useState(false)
 
   useEffect(() => {
-    const consent = getCookie("cookie_consent")
+    const consent = getConsentValue()
     if (!consent) {
       setShowBanner(true)
     } else if (consent === "true") {
-      updateGoogleConsent(true)
+      updateConsent(true)
     }
   }, [])
 
@@ -26,34 +26,15 @@ export default function CookieBanner() {
   }, [])
 
   const acceptCookies = () => {
-    setCookie("cookie_consent", "true", 365)
-    updateGoogleConsent(true)
+    saveConsent("true")
+    updateConsent(true)
     setShowBanner(false)
   }
 
   const declineCookies = () => {
-    setCookie("cookie_consent", "false", 365)
-    updateGoogleConsent(false)
+    saveConsent("false")
+    updateConsent(false)
     setShowBanner(false)
-  }
-
-  // Fonction pour communiquer avec Google Consent Mode v2 et Meta Pixel
-  const updateGoogleConsent = (granted: boolean) => {
-    if (typeof window === "undefined") return
-    const status = granted ? "granted" : "denied"
-
-    if ((window as any).gtag) {
-      ;(window as any).gtag("consent", "update", {
-        ad_storage: status,
-        analytics_storage: status,
-        ad_user_data: status,
-        ad_personalization: status,
-      })
-    }
-
-    if ((window as any).fbq) {
-      ;(window as any).fbq("consent", granted ? "grant" : "revoke")
-    }
   }
 
   if (!showBanner) return null
@@ -95,25 +76,45 @@ export default function CookieBanner() {
   )
 }
 
-// Helper functions
-function setCookie(name: string, value: string, days: number) {
-  let expires = ""
-  if (days) {
-    const date = new Date()
-    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000))
-    expires = "; expires=" + date.toUTCString()
-  }
-  document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax"
+// Persistance : cookie (lisible côté serveur) + localStorage (restauration immédiate en beforeInteractive)
+function saveConsent(value: string) {
+  const date = new Date()
+  date.setTime(date.getTime() + 365 * 24 * 60 * 60 * 1000)
+  document.cookie = `cookie_consent=${value}; expires=${date.toUTCString()}; path=/; SameSite=Lax`
+  try { localStorage.setItem("cookie_consent", value) } catch (e) {}
 }
 
-function getCookie(name: string) {
-  const nameEQ = name + "="
-  const ca = document.cookie.split(';')
-  for (let i = 0; i < ca.length; i++) {
-    let c = ca[i]
-    while (c.charAt(0) === ' ') c = c.substring(1, c.length)
-    if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length)
+function getConsentValue(): string | null {
+  try {
+    const ls = localStorage.getItem("cookie_consent")
+    if (ls) return ls
+  } catch (e) {}
+  const nameEQ = "cookie_consent="
+  for (const part of document.cookie.split(";")) {
+    const c = part.trim()
+    if (c.startsWith(nameEQ)) return c.substring(nameEQ.length)
   }
   return null
+}
+
+// Mise à jour Google Consent Mode v2 (tous les signaux) + Meta Pixel
+function updateConsent(granted: boolean) {
+  if (typeof window === "undefined") return
+  const status = granted ? "granted" : "denied"
+
+  if ((window as any).gtag) {
+    ;(window as any).gtag("consent", "update", {
+      ad_storage: status,
+      analytics_storage: status,
+      ad_user_data: status,
+      ad_personalization: status,
+      functionality_storage: "granted",
+      security_storage: "granted",
+    })
+  }
+
+  if ((window as any).fbq) {
+    ;(window as any).fbq("consent", granted ? "grant" : "revoke")
+  }
 }
 
