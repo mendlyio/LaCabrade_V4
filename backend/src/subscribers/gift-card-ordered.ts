@@ -10,18 +10,8 @@ import { generateGiftCardPDF, generateGiftCardCode } from "../utils/generate-gif
 import { syncGiftCardToOdoo } from "../utils/sync-gift-card-odoo"
 import { ODOO_MODULE } from "../modules/odoo"
 import OdooModuleService from "../modules/odoo/service"
+import { GIFT_CARD_TRACKING_MODULE } from "../modules/gift-card-tracking"
 
-/**
- * Subscriber qui gère la livraison des bons cadeaux après une commande.
- *
- * Déclenché sur `order.placed`, il :
- * 1. Détecte les items "Gift Card" via la metadata `is_gift_card`
- * 2. Génère un code unique pour chaque bon cadeau
- * 3. Crée une promotion Medusa (utilisable comme code au checkout)
- * 4. Génère un PDF avec le design La Cabrade
- * 5. Envoie un email au destinataire avec le PDF en pièce jointe
- * 6. Synchronise le bon cadeau vers Odoo (si configuré)
- */
 export default async function giftCardOrderedHandler({
   event: { data },
   container,
@@ -31,25 +21,30 @@ export default async function giftCardOrderedHandler({
     Modules.NOTIFICATION
   )
 
+  let giftCardTrackingService: any = null
+  try {
+    giftCardTrackingService = container.resolve(GIFT_CARD_TRACKING_MODULE)
+  } catch (e) {
+    console.warn("[GiftCard] Module gift-card-tracking non disponible")
+  }
+
   try {
     const order = await orderModuleService.retrieveOrder(data.id, {
       relations: ["items", "shipping_address"],
     })
 
-    // Filtrer les items qui sont des bons cadeaux
     const giftCardItems = order.items.filter(
       (item: any) => item.metadata?.is_gift_card === true
     )
 
     if (giftCardItems.length === 0) {
-      return // Pas de bon cadeau dans cette commande
+      return
     }
 
     console.log(
-      `[GiftCard] 🎁 ${giftCardItems.length} bon(s) cadeau(x) détecté(s) dans la commande ${order.id}`
+      `[GiftCard] ${giftCardItems.length} bon(s) cadeau(x) détecté(s) dans la commande ${order.id}`
     )
 
-    // Récupérer le nom de l'expéditeur
     let senderName = "Un(e) ami(e)"
     try {
       if (order.shipping_address?.id) {
@@ -61,38 +56,35 @@ export default async function giftCardOrderedHandler({
         }
       }
     } catch (e) {
-      // Fallback: utiliser les infos de base
       if ((order.shipping_address as any)?.first_name) {
         senderName = `${(order.shipping_address as any).first_name} ${(order.shipping_address as any).last_name || ""}`.trim()
       }
     }
 
-    // Résoudre le service Odoo (optionnel)
     let odooService: OdooModuleService | null = null
     try {
       odooService = container.resolve(ODOO_MODULE)
     } catch (e) {
-      console.log("[GiftCard] ℹ️ Module Odoo non configuré, pas de sync.")
+      console.log("[GiftCard] Module Odoo non configuré, pas de sync.")
     }
 
-    // Traiter chaque bon cadeau
     for (const item of giftCardItems) {
       try {
         const metadata = item.metadata as Record<string, any>
         const recipientEmail = metadata.recipient_email
         const recipientName = metadata.recipient_name || "Cher(e) destinataire"
         const giftMessage = metadata.gift_message || ""
-        const amount = Number(item.unit_price) / 100 // Convertir de centimes en euros
+        const amount = Number(item.unit_price) / 100
 
-        // 1. Générer un code unique
         const code = generateGiftCardCode()
-        console.log(`[GiftCard] 🔑 Code généré: ${code} (${amount}€ pour ${recipientEmail})`)
+        console.log(`[GiftCard] Code généré: ${code} (${amount}€ pour ${recipientEmail})`)
 
-        // 2. Créer une promotion Medusa pour que le code soit utilisable au checkout
+        // Create the Medusa promotion for checkout redemption
         const amountInCents = Math.round(amount * 100)
+        let promotionId: string | null = null
         try {
           const createPromotions = createPromotionsWorkflow(container)
-          await createPromotions.run({
+          const result = await createPromotions.run({
             input: {
               promotionsData: [
                 {
@@ -120,16 +112,40 @@ export default async function giftCardOrderedHandler({
               ],
             },
           })
-          console.log(`[GiftCard] ✅ Promotion créée pour le code ${code} (${amount}€)`)
+          promotionId = result?.result?.[0]?.id ?? null
+          console.log(`[GiftCard] Promotion créée pour le code ${code} (${amount}€) - ID: ${promotionId}`)
         } catch (promoError: any) {
           console.error(
-            `[GiftCard] ❌ Erreur création promotion pour ${code}:`,
+            `[GiftCard] Erreur création promotion pour ${code}:`,
             promoError.message
           )
-          // On continue quand même : le code est dans order.metadata, le destinataire reçoit l'email
         }
 
-        // 3. Générer le PDF
+        // Save to the gift-card-tracking module
+        if (giftCardTrackingService) {
+          try {
+            await giftCardTrackingService.createGiftCards({
+              code,
+              original_amount: amount,
+              balance: amount,
+              recipient_email: recipientEmail,
+              recipient_name: recipientName,
+              sender_name: senderName,
+              message: giftMessage,
+              order_id: order.id,
+              promotion_id: promotionId,
+              status: "active",
+            })
+            console.log(`[GiftCard] Tracking record créé pour ${code}`)
+          } catch (trackingError: any) {
+            console.error(
+              `[GiftCard] Erreur création tracking pour ${code}:`,
+              trackingError.message
+            )
+          }
+        }
+
+        // Generate PDF
         const pdfBuffer = await generateGiftCardPDF({
           code,
           amount,
@@ -137,9 +153,9 @@ export default async function giftCardOrderedHandler({
           message: giftMessage,
           senderName,
         })
-        console.log(`[GiftCard] 📄 PDF généré (${pdfBuffer.length} bytes)`)
+        console.log(`[GiftCard] PDF généré (${pdfBuffer.length} bytes)`)
 
-        // 4. Envoyer l'email au destinataire avec le PDF en PJ
+        // Send email with PDF attachment
         try {
           await notificationModuleService.createNotifications({
             to: recipientEmail,
@@ -148,7 +164,7 @@ export default async function giftCardOrderedHandler({
             data: {
               emailOptions: {
                 replyTo: "contact@sellerie-lacabrade.be",
-                subject: `🎁 Vous avez reçu un Bon Cadeau La Cabrade de ${amount}€ !`,
+                subject: `Vous avez reçu un Bon Cadeau La Cabrade de ${amount}€ !`,
                 attachments: [
                   {
                     content: Buffer.from(pdfBuffer).toString("base64"),
@@ -168,16 +184,16 @@ export default async function giftCardOrderedHandler({
           } as any)
 
           console.log(
-            `[GiftCard] ✅ Email envoyé à ${recipientEmail} avec le bon cadeau ${code}`
+            `[GiftCard] Email envoyé à ${recipientEmail} avec le bon cadeau ${code}`
           )
         } catch (emailError: any) {
           console.error(
-            `[GiftCard] ❌ Erreur d'envoi email pour ${code}:`,
+            `[GiftCard] Erreur d'envoi email pour ${code}:`,
             emailError.message
           )
         }
 
-        // 5. Synchroniser vers Odoo (si configuré)
+        // Sync to Odoo if configured
         if (odooService) {
           await syncGiftCardToOdoo(odooService, {
             code,
@@ -186,7 +202,7 @@ export default async function giftCardOrderedHandler({
           })
         }
 
-        // 6. Sauvegarder le code dans les metadata de la commande pour référence
+        // Save code in order metadata for reference
         try {
           const existingGiftCards = ((order.metadata as any)?.gift_cards || []) as any[]
           await orderModuleService.updateOrders([
@@ -208,20 +224,19 @@ export default async function giftCardOrderedHandler({
             },
           ])
         } catch (updateError) {
-          console.warn("[GiftCard] ⚠️ Impossible de sauvegarder le code dans la commande:", updateError)
+          console.warn("[GiftCard] Impossible de sauvegarder le code dans la commande:", updateError)
         }
       } catch (itemError: any) {
         console.error(
-          `[GiftCard] ❌ Erreur traitement bon cadeau pour item ${item.id}:`,
+          `[GiftCard] Erreur traitement bon cadeau pour item ${item.id}:`,
           itemError.message
         )
-        // Continuer avec les autres items
       }
     }
 
-    console.log(`[GiftCard] ✅ Traitement terminé pour la commande ${order.id}`)
+    console.log(`[GiftCard] Traitement terminé pour la commande ${order.id}`)
   } catch (error: any) {
-    console.error("[GiftCard] ❌ Erreur générale:", error.message)
+    console.error("[GiftCard] Erreur générale:", error.message)
   }
 }
 

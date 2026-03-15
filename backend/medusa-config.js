@@ -199,6 +199,10 @@ const medusaConfig = {
       }
     }] : []),
     {
+      key: "gift_card_tracking",
+      resolve: "./src/modules/gift-card-tracking",
+    },
+    {
       key: Modules.FULFILLMENT,
       resolve: '@medusajs/fulfillment',
       options: {

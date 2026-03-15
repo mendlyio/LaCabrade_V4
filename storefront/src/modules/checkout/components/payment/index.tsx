@@ -104,8 +104,11 @@ const Payment = ({
     isStripeSessionReady &&
     !isSwitching
 
+  const hasGiftCardPromotion = (cart?.promotions || []).some(
+    (p: any) => p?.code && /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(p.code)
+  )
   const paidByGiftcard =
-    cart?.gift_cards && cart?.gift_cards?.length > 0 && cart?.total === 0
+    hasGiftCardPromotion && cart?.total !== undefined && cart?.total !== null && cart.total === 0
 
   const paymentReady =
     (activeSession && cart?.shipping_methods.length !== 0) || paidByGiftcard

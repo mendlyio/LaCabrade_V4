@@ -34,13 +34,12 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
     !cart.email ||
     (cart.shipping_methods?.length ?? 0) < 1
 
-  // TODO: Add this once gift cards are implemented
-  // const paidByGiftcard =
-  //   cart?.gift_cards && cart?.gift_cards?.length > 0 && cart?.total === 0
+  const paidByGiftcard =
+    cart?.total !== undefined && cart?.total !== null && cart.total === 0
 
-  // if (paidByGiftcard) {
-  //   return <GiftCardPaymentButton />
-  // }
+  if (paidByGiftcard) {
+    return <GiftCardPaymentButton />
+  }
 
   const paymentSession = getActivePaymentSession(
     paymentSessions

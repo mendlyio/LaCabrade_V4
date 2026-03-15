@@ -23,10 +23,12 @@ type CartTotalsProps = {
     currency_code: string
     metadata?: Record<string, any> | null
     shipping_address?: { country_code?: string | null } | null
+    promotions?: Array<{ code?: string | null }> | null
     items?: Array<{
       quantity?: number | null
       subtotal?: number | null
       unit_price?: number | null
+      adjustments?: Array<{ code?: string | null; amount?: number | null }> | null
     }>
   } | null
 }
@@ -47,6 +49,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
     items,
     metadata,
     shipping_address,
+    promotions,
   } = totals
 
   const cartInput = {
@@ -68,7 +71,29 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
   // Sous-total articles TVAC (ou HT si exempt). Montants Odoo en euros.
   const displayedSubtotal = getItemsDisplayTotalEuros(cartInput)
 
-  // Montants Odoo en euros. Carte cadeau en centimes.
+  const gcPattern = /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
+  const gcCodes = (promotions || [])
+    .filter((p) => p.code && gcPattern.test(p.code))
+    .map((p) => p.code!)
+
+  // Separate gift card adjustments from regular discounts
+  let gcDiscountEuros = 0
+  let regularDiscountEuros = 0
+  if (items && gcCodes.length > 0) {
+    for (const item of items) {
+      for (const adj of item.adjustments || []) {
+        const amount = Math.abs(Number(adj.amount || 0))
+        if (adj.code && gcCodes.includes(adj.code)) {
+          gcDiscountEuros += amount
+        } else {
+          regularDiscountEuros += amount
+        }
+      }
+    }
+  } else {
+    regularDiscountEuros = discount_total ?? 0
+  }
+
   const shippingEuros = shipping_total ?? 0
   const discountEuros = discount_total ?? 0
   const giftCardDeduction = (gift_card_total ?? 0) / 100
@@ -91,7 +116,42 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
           </span>
         </div>
 
-        {!!discount_total && (
+        {gcCodes.length > 0 && gcDiscountEuros > 0 && (
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 flex items-center gap-1">
+              <svg className="w-3.5 h-3.5 text-amber-600" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M9.375 3a1.875 1.875 0 000 3.75h1.875v4.5H3.375A1.875 1.875 0 011.5 9.375v-.75c0-1.036.84-1.875 1.875-1.875h3.193A3.375 3.375 0 019.375 3zM12.75 12h8.625c.621 0 1.125-.504 1.125-1.125v-.75a1.875 1.875 0 00-1.875-1.875h-3.193A3.375 3.375 0 0014.625 3a1.875 1.875 0 000 3.75h-1.875v4.5zm-1.5 0H1.5v6.75C1.5 19.993 2.507 21 3.75 21h6.75V12zm1.5 0V21h6.75c1.243 0 2.25-1.007 2.25-2.25V12h-9z" />
+              </svg>
+              Bon cadeau
+            </span>
+            <span
+              className="font-medium text-green-600"
+              data-testid="cart-gift-card-discount"
+              data-value={gcDiscountEuros}
+            >
+              - {formatAmount(gcDiscountEuros, currency_code)}
+            </span>
+          </div>
+        )}
+
+        {regularDiscountEuros > 0 && (
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600">
+              {isFreeShippingDiscount(shipping_total, regularDiscountEuros)
+                ? "Livraison gratuite dès 75€"
+                : "Réduction"}
+            </span>
+            <span
+              className="font-medium text-green-600"
+              data-testid="cart-discount"
+              data-value={regularDiscountEuros}
+            >
+              - {formatAmount(regularDiscountEuros, currency_code)}
+            </span>
+          </div>
+        )}
+
+        {!gcCodes.length && !!discount_total && (
           <div className="flex items-center justify-between">
             <span className="text-gray-600">
               {isFreeShippingDiscount(shipping_total, discount_total)
