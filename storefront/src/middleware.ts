@@ -6,6 +6,31 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
 const PUBLISHABLE_API_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
 const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "fr"
 
+/** Timeout plus long pour gérer les cold starts Railway (30s au lieu de 10s par défaut) */
+const FETCH_TIMEOUT_MS = 30000
+const FETCH_RETRIES = 2
+
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit & { timeout?: number } = {}
+): Promise<Response> {
+  const { timeout = FETCH_TIMEOUT_MS, ...fetchOptions } = options
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), timeout)
+
+  try {
+    const res = await fetch(url, {
+      ...fetchOptions,
+      signal: controller.signal,
+    })
+    clearTimeout(id)
+    return res
+  } catch (e) {
+    clearTimeout(id)
+    throw e
+  }
+}
+
 const regionMapCache = {
   regionMap: new Map<string, HttpTypes.StoreRegion>(),
   regionMapUpdated: Date.now(),
@@ -34,18 +59,33 @@ async function getRegionMap() {
       }
 
       // Fetch regions from Medusa. We can't use the JS client here because middleware is running on Edge and the client needs a Node environment.
-      const response = await fetch(`${BACKEND_URL}/store/regions`, {
-        headers: {
-          "x-publishable-api-key": PUBLISHABLE_API_KEY,
-        },
-        next: {
-          revalidate: 3600,
-          tags: ["regions"],
-        },
-      })
+      // Timeout 30s + retries pour gérer les cold starts Railway
+      let response: Response | null = null
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch regions: ${response.status}`)
+      for (let attempt = 0; attempt <= FETCH_RETRIES; attempt++) {
+        try {
+          response = await fetchWithTimeout(`${BACKEND_URL}/store/regions`, {
+            headers: {
+              "x-publishable-api-key": PUBLISHABLE_API_KEY,
+            },
+            next: {
+              revalidate: 3600,
+              tags: ["regions"],
+            },
+          })
+          break
+        } catch (e) {
+          lastError = e
+          if (attempt < FETCH_RETRIES) {
+            await new Promise((r) => setTimeout(r, 2000))
+          } else {
+            throw e
+          }
+        }
+      }
+
+      if (!response || !response.ok) {
+        throw new Error(`Failed to fetch regions: ${response?.status ?? "no response"}`)
       }
 
       const { regions } = await response.json()
