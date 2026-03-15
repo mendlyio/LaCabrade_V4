@@ -15,24 +15,24 @@ const NewsletterForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!email || !email.includes("@")) {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setStatus("error")
       setMessage("Veuillez entrer une adresse email valide")
       return
     }
+    if (!birthday) {
+      setStatus("error")
+      setMessage("Votre date d'anniversaire est requise pour valider l'inscription 🎂")
+      return
+    }
 
     setStatus("loading")
-
     try {
       const res = await fetch(`${BACKEND_URL}/store/newsletter`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          ...(birthday ? { birthday } : {}),
-        }),
+        body: JSON.stringify({ email, birthday }),
       })
-
       const data = await res.json()
 
       if (res.ok || res.status === 200) {
@@ -53,19 +53,17 @@ const NewsletterForm = () => {
       } else {
         throw new Error(data.message || "Erreur inconnue")
       }
-    } catch (error: any) {
+    } catch {
       setStatus("error")
       setMessage("Une erreur s'est produite. Veuillez réessayer.")
-      setTimeout(() => {
-        setStatus("idle")
-        setMessage("")
-      }, 5000)
+      setTimeout(() => { setStatus("idle"); setMessage("") }, 5000)
     }
   }
 
   return (
     <div className="max-w-2xl mx-auto">
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        {/* Email + bouton */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <input
@@ -79,7 +77,7 @@ const NewsletterForm = () => {
             />
             {status === "loading" && (
               <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               </div>
             )}
           </div>
@@ -92,17 +90,23 @@ const NewsletterForm = () => {
           </button>
         </div>
 
-        {/* Champ anniversaire optionnel */}
+        {/* Anniversaire — toujours visible, obligatoire */}
         <div className="flex flex-col gap-1">
-          <label className="text-white/70 text-xs font-medium ml-1">
-            🎂 Date d'anniversaire <span className="opacity-60">(optionnel — pour recevoir un cadeau le jour J)</span>
+          <label className="text-white/80 text-xs font-medium ml-1 flex items-center gap-1">
+            🎂 Date d'anniversaire
+            <span className="text-white/50 font-normal">(obligatoire — pour recevoir un cadeau le jour J)</span>
           </label>
           <input
             type="date"
             value={birthday}
             onChange={(e) => setBirthday(e.target.value)}
+            required
             disabled={status === "loading" || status === "success"}
-            className="w-full sm:w-56 px-4 py-3 rounded-lg border-2 border-white/20 bg-white/10 backdrop-blur-sm text-white focus:outline-none focus:border-white focus:bg-white/20 transition-all disabled:opacity-60 text-sm"
+            className={`w-full sm:w-64 px-4 py-3 rounded-lg border-2 bg-white/10 backdrop-blur-sm text-white focus:outline-none focus:bg-white/20 transition-all disabled:opacity-60 text-sm ${
+              status === "error" && !birthday
+                ? "border-red-300"
+                : "border-white/20 focus:border-white"
+            }`}
             style={{ colorScheme: "dark" }}
           />
         </div>

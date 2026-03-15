@@ -8,25 +8,31 @@ const BACKEND_URL =
 const NewsletterBanner = () => {
   const [email, setEmail] = useState("")
   const [birthday, setBirthday] = useState("")
-  const [showBirthday, setShowBirthday] = useState(false)
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
   const [message, setMessage] = useState("")
   const [promoCode, setPromoCode] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setStatus("loading")
 
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setStatus("error")
+      setMessage("Adresse email invalide")
+      return
+    }
+    if (!birthday) {
+      setStatus("error")
+      setMessage("Ta date d'anniversaire est requise 🎂")
+      return
+    }
+
+    setStatus("loading")
     try {
       const res = await fetch(`${BACKEND_URL}/store/newsletter`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          ...(birthday ? { birthday } : {}),
-        }),
+        body: JSON.stringify({ email, birthday }),
       })
-
       const data = await res.json()
 
       if (res.ok || res.status === 200) {
@@ -35,7 +41,7 @@ const NewsletterBanner = () => {
         setMessage(
           data.already_subscribed
             ? "Vous êtes déjà inscrit(e) 🎉"
-            : "Merci ! Votre code -10% vous a été envoyé 🎉"
+            : "Merci ! Ton code -10% t'a été envoyé 🎉"
         )
         setEmail("")
         setBirthday("")
@@ -47,13 +53,10 @@ const NewsletterBanner = () => {
       } else {
         throw new Error(data.message || "Erreur")
       }
-    } catch (error) {
+    } catch {
       setStatus("error")
       setMessage("Une erreur s'est produite. Réessayez.")
-      setTimeout(() => {
-        setStatus("idle")
-        setMessage("")
-      }, 4000)
+      setTimeout(() => { setStatus("idle"); setMessage("") }, 4000)
     }
   }
 
@@ -61,7 +64,7 @@ const NewsletterBanner = () => {
     <div className="bg-[#9e354a] py-12">
       <div className="content-container">
         <div className="max-w-3xl mx-auto text-center">
-          <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">
+          <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">
             Un petit bonus pour toi !
           </h3>
           <p className="text-white/90 text-lg mb-6">
@@ -69,7 +72,7 @@ const NewsletterBanner = () => {
           </p>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-3 max-w-xl mx-auto">
-            {/* Email + bouton */}
+            {/* Ligne email + bouton */}
             <div className="flex flex-col sm:flex-row gap-3">
               <input
                 type="email"
@@ -78,7 +81,7 @@ const NewsletterBanner = () => {
                 placeholder="Ton adresse email"
                 required
                 disabled={status === "loading" || status === "success"}
-                className="flex-1 px-6 py-4 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-5 py-4 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button
                 type="submit"
@@ -89,38 +92,34 @@ const NewsletterBanner = () => {
               </button>
             </div>
 
-            {/* Toggle anniversaire */}
-            {!showBirthday && status === "idle" && (
-              <button
-                type="button"
-                onClick={() => setShowBirthday(true)}
-                className="text-white/70 text-xs underline underline-offset-2 hover:text-white transition-colors text-left"
-              >
-                🎂 Ajouter ma date d'anniversaire pour un cadeau chaque année
-              </button>
-            )}
-
-            {/* Champ anniversaire */}
-            {showBirthday && (
-              <div className="flex items-center gap-3">
-                <label className="text-white/80 text-sm whitespace-nowrap">🎂 Mon anniversaire :</label>
-                <input
-                  type="date"
-                  value={birthday}
-                  onChange={(e) => setBirthday(e.target.value)}
-                  disabled={status === "loading" || status === "success"}
-                  className="px-4 py-2 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50 text-sm"
-                />
-              </div>
-            )}
+            {/* Anniversaire — toujours visible, obligatoire */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+              <label className="text-white/90 text-sm whitespace-nowrap font-medium flex items-center gap-1.5">
+                🎂 Date d'anniversaire
+                <span className="text-white/60 font-normal text-xs">(obligatoire)</span>
+              </label>
+              <input
+                type="date"
+                value={birthday}
+                onChange={(e) => setBirthday(e.target.value)}
+                required
+                disabled={status === "loading" || status === "success"}
+                className={`flex-1 px-4 py-2.5 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50 text-sm transition-all ${
+                  status === "error" && !birthday
+                    ? "ring-2 ring-red-300 border-red-300"
+                    : ""
+                }`}
+              />
+            </div>
           </form>
 
+          {/* Messages */}
           {message && (
             <div className={`mt-4 text-sm font-medium ${status === "success" ? "text-white" : "text-red-100"}`}>
               {message}
               {promoCode && status === "success" && (
                 <div className="mt-2">
-                  <span className="text-white/80">Code : </span>
+                  <span className="text-white/80">Ton code : </span>
                   <code className="bg-white/20 text-white font-mono font-bold text-base px-3 py-1 rounded ml-1 tracking-widest">
                     {promoCode}
                   </code>
@@ -129,8 +128,8 @@ const NewsletterBanner = () => {
             </div>
           )}
 
-          <p className="text-white/70 text-xs mt-4">
-            En t'inscrivant, tu acceptes de recevoir nos offres exclusives. Code à usage unique.
+          <p className="text-white/60 text-xs mt-4">
+            En t'inscrivant tu acceptes nos offres exclusives · Code à usage unique · Désinscription en 1 clic
           </p>
         </div>
       </div>

@@ -4,6 +4,7 @@ import "styles/globals.css"
 import { Providers } from "@lib/context/providers"
 import CookieBanner from "@modules/layout/components/cookie-banner"
 import { GoogleConsentMode } from "@modules/common/components/google-analytics/consent-mode"
+import NewsletterPopup from "@modules/layout/components/newsletter-popup"
 
 export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
@@ -20,6 +21,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
           <GoogleConsentMode />
           <main className="relative">{props.children}</main>
           <CookieBanner />
+          <NewsletterPopup />
         </Providers>
       </body>
     </html>
