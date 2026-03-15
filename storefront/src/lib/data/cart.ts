@@ -433,9 +433,31 @@ export async function initiatePaymentSession(
           capture_method: "automatic",
         }
       : {}
-  const paymentCollectionId = (cart as any).payment_collection?.id
+  let paymentCollectionId = (cart as any).payment_collection?.id
 
-  if (paymentCollectionId && amount > 0) {
+  // Si pas encore de payment collection, en créer une via le SDK
+  if (!paymentCollectionId && amount > 0) {
+    try {
+      const resp = await sdk.store.payment
+        .initiatePaymentSession(
+          cart,
+          {
+            provider_id: data.provider_id,
+            data: stripeData,
+          },
+          {},
+          authHeaders
+        )
+      paymentCollectionId = (resp as any)?.payment_collection?.id
+      if (paymentCollectionId) {
+        revalidateTag("cart")
+      }
+    } catch {
+      // SDK échoue : tenter malgré tout l'endpoint custom sans payment_collection_id
+    }
+  }
+
+  if (amount > 0) {
     const res = await fetch(
       `${backendUrl}/store/custom/initiate-payment-with-total`,
       {
@@ -443,7 +465,7 @@ export async function initiatePaymentSession(
         headers,
         body: JSON.stringify({
           cart_id: cart.id,
-          payment_collection_id: paymentCollectionId,
+          ...(paymentCollectionId ? { payment_collection_id: paymentCollectionId } : {}),
           provider_id: data.provider_id,
           amount,
           data: stripeData,
@@ -460,21 +482,9 @@ export async function initiatePaymentSession(
     return result
   }
 
-  return sdk.store.payment
-    .initiatePaymentSession(
-      cart,
-      {
-        provider_id: data.provider_id,
-        data: stripeData,
-      },
-      {},
-      authHeaders
-    )
-    .then((resp) => {
-      revalidateTag("cart")
-      return resp
-    })
-    .catch(medusaError)
+  // Montant = 0 (couvert par bon cadeau) : pas de session de paiement nécessaire
+  revalidateTag("cart")
+  return { payment_collection: cart.payment_collection }
 }
 
 export async function applyPromotions(codes: string[]) {

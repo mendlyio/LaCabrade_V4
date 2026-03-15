@@ -36,7 +36,7 @@ function formatPrice(amount: number, currency: string) {
     currency: currency.toUpperCase(),
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(amount / 100)
+  }).format(amount)
 }
 
 function highlightMatch(text: string, query: string) {

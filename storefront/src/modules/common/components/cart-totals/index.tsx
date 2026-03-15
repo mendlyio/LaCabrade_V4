@@ -95,7 +95,6 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
   }
 
   const shippingEuros = shipping_total ?? 0
-  const discountEuros = discount_total ?? 0
   const giftCardDeduction = (gift_card_total ?? 0) / 100
 
   // TVA affichée : 0 si exempt, sinon tax_total (euros)
@@ -147,23 +146,6 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
               data-value={regularDiscountEuros}
             >
               - {formatAmount(regularDiscountEuros, currency_code)}
-            </span>
-          </div>
-        )}
-
-        {!gcCodes.length && !!discount_total && (
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">
-              {isFreeShippingDiscount(shipping_total, discount_total)
-                ? "Livraison gratuite dès 75€"
-                : "Réduction"}
-            </span>
-            <span
-              className="font-medium text-green-600"
-              data-testid="cart-discount"
-              data-value={discountEuros}
-            >
-              - {formatAmount(discountEuros, currency_code)}
             </span>
           </div>
         )}
