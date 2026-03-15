@@ -22,6 +22,7 @@ export default function AProposPage() {
       description:
         "Floriane vous accueille avec soin et vous conseille avec justesse en magasin. Elle organise et prend part à nos shootings, tout en jouant un rôle clé dans la sélection de nos nouvelles collections.",
       accent: "from-blue-100 to-indigo-100",
+      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/floriane.webp",
     },
     {
       name: "ELENA - La douce 😍",
@@ -37,6 +38,7 @@ export default function AProposPage() {
       description:
         "Dernière arrivée, attentive et pleine d’énergie, Clara prend en main notre service de selle-sur-mesure Equipe. Elle vous aidera également à dénicher l’équipement de vos rêves en magasin.",
       accent: "from-amber-100 to-orange-100",
+      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/clara.webp",
     },
     {
       name: "AMÉLIE - La discrète 🤓",
@@ -44,7 +46,7 @@ export default function AProposPage() {
       description:
         "Amélie, notre secrétaire attitrée, veille au bon fonctionnement du bureau au quotidien. Elle met de temps en temps ses compétences créatives au service du magasin en réalisant certains de nos visuels.",
       accent: "from-slate-100 to-gray-100",
-      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/amelie.webp",
+      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/amelied.webp",
     },
     {
       name: "AMÉLIE L. – La suppléante 🤭",
@@ -97,7 +99,7 @@ export default function AProposPage() {
               </div>
               <div className="relative h-96 bg-gray-200 rounded-lg overflow-hidden shadow-lg">
                 <Image
-                  src="https://ik.imagekit.io/kodt9cn6f/Cabrade/apropos.webp"
+                  src="https://ik.imagekit.io/kodt9cn6f/Cabrade/team.webp"
                   alt="La Cabrade - magasin"
                   fill
                   className="object-cover"

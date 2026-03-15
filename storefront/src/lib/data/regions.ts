@@ -30,6 +30,9 @@ const FALLBACK_REGION: HttpTypes.StoreRegion = {
   ] as any,
 } as HttpTypes.StoreRegion
 
+/** Liste de régions de repli pour la Nav quand le backend est indisponible */
+export const FALLBACK_REGIONS: HttpTypes.StoreRegion[] = [FALLBACK_REGION]
+
 const INVALID_COUNTRY_CODES = ["api", "admin", "static", "favicon", "_next"]
 
 export const getRegion = cache(async function (countryCode: string) {

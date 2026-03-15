@@ -1,5 +1,5 @@
 import { Suspense } from "react"
-import { listRegions } from "@lib/data/regions"
+import { listRegions, FALLBACK_REGIONS } from "@lib/data/regions"
 import { listCategories } from "@lib/data/categories"
 import { listBrands } from "@lib/data/brands"
 import { buildCategoryTree } from "@lib/util/category-tree"
@@ -20,9 +20,17 @@ import {
 } from "@medusajs/icons"
 
 export default async function Nav() {
-  const regions = await listRegions().then((regions: StoreRegion[]) => regions)
-  const categories = await listCategories()
-  const brands = await listBrands()
+  let regions: StoreRegion[] = FALLBACK_REGIONS
+  let categories: any[] = []
+  let brands: any[] = []
+
+  try {
+    regions = await listRegions().then((r: StoreRegion[]) => r)
+    categories = await listCategories()
+    brands = await listBrands()
+  } catch (error) {
+    console.error("[Nav] Backend indisponible, utilisation des valeurs de repli:", error)
+  }
 
   // Filtrer les catégories racines (Niveau 0) et actives
   const { roots } = buildCategoryTree(categories)
