@@ -69,10 +69,12 @@ const NewsletterBanner = () => {
     }
   }
 
+  const disabled = status === "loading" || status === "success"
+
   return (
     <div className="bg-[#9e354a] py-12">
       <div className="content-container">
-        <div className="max-w-3xl mx-auto text-center">
+        <div className="max-w-xl mx-auto text-center">
           <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">
             Un petit bonus pour toi !
           </h3>
@@ -80,49 +82,55 @@ const NewsletterBanner = () => {
             Rejoins-nous et économise <strong className="text-white">10%</strong> dès ton inscription
           </p>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3 max-w-xl mx-auto">
-            {/* Ligne email + bouton */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Ton adresse email"
-                required
-                disabled={status === "loading" || status === "success"}
-                className="flex-1 px-5 py-4 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-              <button
-                type="submit"
-                disabled={status === "loading" || status === "success"}
-                className="px-8 py-4 bg-white text-amber-600 font-semibold rounded-lg hover:bg-amber-50 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                {status === "loading" ? "Inscription..." : status === "success" ? "✓ Inscrit(e)" : "S'inscrire"}
-              </button>
-            </div>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            {/* 1. Email */}
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Ton adresse email"
+              required
+              disabled={disabled}
+              className="w-full px-5 py-4 rounded-lg text-gray-900 placeholder-gray-500
+                         focus:outline-none focus:ring-2 focus:ring-white
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+            />
 
-            {/* Anniversaire — toujours visible, obligatoire */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-              <label className="text-white/90 text-sm whitespace-nowrap font-medium flex items-center gap-1.5">
-                🎂 Date d'anniversaire
-                <span className="text-white/60 font-normal text-xs">(obligatoire)</span>
+            {/* 2. Anniversaire */}
+            <div className="flex flex-col gap-1">
+              <label className="text-white/80 text-xs font-medium text-left ml-1 flex items-center gap-1">
+                🎂 Date d&apos;anniversaire
+                <span className="text-white/50 font-normal">(obligatoire)</span>
               </label>
               <input
                 type="date"
                 value={birthday}
                 onChange={(e) => setBirthday(e.target.value)}
                 required
-                disabled={status === "loading" || status === "success"}
-                className={`flex-1 px-4 py-2.5 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-white disabled:opacity-50 text-sm transition-all ${
+                disabled={disabled}
+                className={`w-full px-5 py-3 rounded-lg text-gray-900
+                           focus:outline-none focus:ring-2 focus:ring-white
+                           disabled:opacity-50 text-sm box-border ${
                   status === "error" && !birthday
-                    ? "ring-2 ring-red-300 border-red-300"
+                    ? "ring-2 ring-red-300"
                     : ""
                 }`}
+                style={{ colorScheme: "light" }}
               />
             </div>
+
+            {/* 3. Bouton */}
+            <button
+              type="submit"
+              disabled={disabled}
+              className="w-full px-8 py-4 bg-white text-amber-600 font-semibold rounded-lg
+                         hover:bg-amber-50 transition-all duration-300 shadow-lg hover:shadow-xl
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {status === "loading" ? "Inscription..." : status === "success" ? "✓ Inscrit(e)" : "S'inscrire"}
+            </button>
           </form>
 
-          {/* Messages */}
           {message && (
             <div className={`mt-4 text-sm font-medium ${status === "success" ? "text-white" : "text-red-100"}`}>
               {message}
@@ -138,7 +146,7 @@ const NewsletterBanner = () => {
           )}
 
           <p className="text-white/60 text-xs mt-4">
-            En t'inscrivant tu acceptes nos offres exclusives · Code à usage unique · Désinscription en 1 clic
+            En t&apos;inscrivant tu acceptes nos offres exclusives · Code à usage unique · Désinscription en 1 clic
           </p>
         </div>
       </div>
