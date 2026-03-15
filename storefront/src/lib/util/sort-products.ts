@@ -84,15 +84,11 @@ export function sortProducts(
       })
   }
 
-  // Page recherche : LC-Equestrian toujours en premier
+  // LC-Equestrian toujours en premier (stable sort: conserve l'ordre interne)
   if (prioritizeLcEquestrian) {
-    sortedProducts.sort((a, b) => {
-      const aIsLC = isLcEquestrian(a)
-      const bIsLC = isLcEquestrian(b)
-      if (aIsLC && !bIsLC) return -1
-      if (!aIsLC && bIsLC) return 1
-      return 0
-    })
+    const lcProducts = sortedProducts.filter((p) => isLcEquestrian(p))
+    const otherProducts = sortedProducts.filter((p) => !isLcEquestrian(p))
+    sortedProducts = [...lcProducts, ...otherProducts] as MinPricedProduct[]
   }
 
   return sortedProducts

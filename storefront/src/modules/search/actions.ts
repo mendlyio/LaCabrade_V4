@@ -40,7 +40,7 @@ export async function searchProductsDirect(
         is_giftcard: false,
         region_id: region?.id,
         fields:
-          "*variants.calculated_price,+variants.prices,+images,+collection.title,+collection.handle",
+          "*variants.calculated_price,+variants.prices,+images,+collection.title,+collection.handle,+categories.handle",
       } as any,
       { next: { tags: ["products"], revalidate: 60 } }
     )
@@ -56,7 +56,14 @@ export async function searchProductsDirect(
           .map((v: any) => (v.title || "").toLowerCase())
           .join(" ")
 
+        const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
+        const categories = ((p as any).categories || []) as { handle?: string }[]
+        const isLcEquestrian = categories.some((cat) =>
+          LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase() || "")
+        )
+
         let score = 0
+        if (isLcEquestrian) score += 200
         if (title.startsWith(qLower)) score += 100
         else if (title.includes(qLower)) score += 60
         if (handle.includes(qLower)) score += 30

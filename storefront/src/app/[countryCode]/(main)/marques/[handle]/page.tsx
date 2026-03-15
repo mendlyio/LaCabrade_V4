@@ -103,15 +103,12 @@ export default async function BrandPage({ params, searchParams }: Props) {
 
       <div className="content-container pb-16">
         <div className="flex flex-col lg:flex-row gap-8">
-          <aside className="hidden lg:block w-80 flex-shrink-0">
+          {/* Sidebar Filters (desktop: aside fixe / mobile: bouton + overlay) */}
+          <aside className="lg:w-80 lg:flex-shrink-0">
             <FiltersModern categories={allCategories || []} brands={brands || []} />
           </aside>
 
-          <div className="lg:hidden">
-            <FiltersModern categories={allCategories || []} brands={brands || []} />
-          </div>
-
-          <main className="flex-1">
+          <main className="flex-1 min-w-0">
             <Suspense fallback={<SkeletonProductGrid />}>
               <PaginatedProductsModern
                 searchParams={searchParamsWithBrand}

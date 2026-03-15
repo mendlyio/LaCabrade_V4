@@ -237,7 +237,7 @@ export default async function PaginatedProductsModern({
         finalProducts = sortProducts(
           finalProducts,
           sortBy as "price_asc" | "price_desc" | "title_asc" | "title_desc" | "created_at",
-          hasCategoryFilter
+          true
         )
       }
 
@@ -334,30 +334,20 @@ export default async function PaginatedProductsModern({
     })
   }
 
-  // ─── Trier les produits LC-Equestrian en premier (catégories + boutique sans filtre) ───
-  // Sur une page catégorie (ex: Cavalier), LC-Equestrian en priorité par défaut.
-  // Dès qu'un filtre utilisateur est actif (tri, prix, stock, promo, marque, recherche), on respecte le choix.
-  // Note: hasCategoryFilter n'est PAS un "filtre actif" — c'est la navigation normale vers une catégorie.
-  const userHasActiveFilter =
-    needsClientSideSort ||
-    hasClientSideFilters ||
-    hasBrandFilter ||
-    !!searchParams.q
+  // ─── Trier les produits LC-Equestrian en premier (toujours, catégories + boutique + recherche) ───
   const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
   const isLcEquestrian = (p: any) =>
     p.categories?.some((cat: any) =>
       LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase())
     ) ?? false
 
-  if (!userHasActiveFilter) {
-    filteredProducts = [...filteredProducts].sort((a, b) => {
-      const aIsLC = isLcEquestrian(a)
-      const bIsLC = isLcEquestrian(b)
-      if (aIsLC && !bIsLC) return -1
-      if (!aIsLC && bIsLC) return 1
-      return 0
-    })
-  }
+  filteredProducts = [...filteredProducts].sort((a, b) => {
+    const aIsLC = isLcEquestrian(a)
+    const bIsLC = isLcEquestrian(b)
+    if (aIsLC && !bIsLC) return -1
+    if (!aIsLC && bIsLC) return 1
+    return 0
+  })
 
   // Mettre à jour le count total après filtrage
   const totalFilteredCount = filteredProducts.length

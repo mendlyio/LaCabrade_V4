@@ -74,18 +74,13 @@ export default async function NouveautesPage({ params, searchParams }: Props) {
       {/* Main Content */}
       <div className="content-container pb-16">
         <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar Filtres — Desktop */}
-          <aside className="hidden lg:block w-80 flex-shrink-0">
+          {/* Sidebar Filters (desktop: aside fixe / mobile: bouton + overlay) */}
+          <aside className="lg:w-80 lg:flex-shrink-0">
             <FiltersModern categories={categories} brands={brands} />
           </aside>
 
-          {/* Filtres — Mobile */}
-          <div className="lg:hidden">
-            <FiltersModern categories={categories} brands={brands} />
-          </div>
-
           {/* Grille produits */}
-          <main className="flex-1">
+          <main className="flex-1 min-w-0">
             <Suspense fallback={<SkeletonProductGrid />}>
               <PaginatedProductsModern
                 searchParams={searchParamsWithOrder}
