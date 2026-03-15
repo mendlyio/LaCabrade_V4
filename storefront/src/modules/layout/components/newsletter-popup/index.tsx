@@ -15,7 +15,7 @@ export default function NewsletterPopup() {
   const [email, setEmail] = useState("")
   const [birthday, setBirthday] = useState("")
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
-  const [message, setMessage] = useState("")
+  const [errors, setErrors] = useState<{ email?: string; birthday?: string }>({})
   const [promoCode, setPromoCode] = useState<string | null>(null)
 
   useEffect(() => {
@@ -33,18 +33,20 @@ export default function NewsletterPopup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    const newErrors: { email?: string; birthday?: string } = {}
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setStatus("error")
-      setMessage("Adresse email invalide")
-      return
+      newErrors.email = "Email invalide"
     }
     if (!birthday) {
-      setStatus("error")
-      setMessage("Ta date d'anniversaire est requise pour valider l'inscription 🎂")
+      newErrors.birthday = "Requis pour recevoir ton cadeau anniversaire"
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
       return
     }
-
+    setErrors({})
     setStatus("loading")
+
     try {
       const res = await fetch(`${BACKEND_URL}/store/newsletter`, {
         method: "POST",
@@ -55,20 +57,14 @@ export default function NewsletterPopup() {
       if (res.ok || res.status === 200) {
         setStatus("success")
         setPromoCode(data.promo_code || null)
-        setMessage(
-          data.already_subscribed
-            ? "Vous êtes déjà inscrit(e) 🎉"
-            : "Votre code -10% vous a été envoyé ! 🎉"
-        )
         localStorage.setItem(STORAGE_KEY, "1")
-        setTimeout(() => setVisible(false), 5500)
+        setTimeout(() => setVisible(false), 6000)
       } else {
         throw new Error(data.message || "Erreur")
       }
     } catch {
       setStatus("error")
-      setMessage("Une erreur s'est produite. Réessayez.")
-      setTimeout(() => { setStatus("idle"); setMessage("") }, 4000)
+      setTimeout(() => setStatus("idle"), 4000)
     }
   }
 
@@ -77,116 +73,155 @@ export default function NewsletterPopup() {
   return (
     <div
       className="fixed inset-0 z-[9998] flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.65)" }}
+      style={{ backgroundColor: "rgba(0,0,0,0.60)" }}
       onClick={(e) => { if (e.target === e.currentTarget) dismiss() }}
     >
       <div
-        className="relative bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row w-full max-w-3xl max-h-[90vh] md:max-h-[620px] animate-popup-in"
+        className="relative bg-white rounded-2xl shadow-2xl overflow-hidden animate-popup-in"
+        style={{ display: "flex", flexDirection: "row", width: "100%", maxWidth: "640px" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Bouton fermer */}
+        {/* ── Image carrée ── */}
+        <div
+          className="hidden sm:block flex-shrink-0"
+          style={{ width: "260px", height: "260px", position: "relative", alignSelf: "stretch" }}
+        >
+          <div style={{ position: "absolute", inset: 0 }}>
+            <Image
+              src="https://ik.imagekit.io/kodt9cn6f/popup.webp"
+              alt="La Cabrade"
+              fill
+              className="object-cover"
+              priority
+              sizes="260px"
+            />
+          </div>
+        </div>
+
+        {/* ── Mobile : image carrée en haut ── */}
+        <div
+          className="sm:hidden w-full"
+          style={{ aspectRatio: "1 / 1", position: "relative", flexShrink: 0 }}
+        >
+          <Image
+            src="https://ik.imagekit.io/kodt9cn6f/popup.webp"
+            alt="La Cabrade"
+            fill
+            className="object-cover"
+            priority
+            sizes="100vw"
+          />
+        </div>
+
+        {/* ── Fermer ── */}
         <button
           onClick={dismiss}
           aria-label="Fermer"
-          className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white/90 hover:bg-gray-100 text-gray-500 hover:text-gray-800 shadow transition-all"
+          className="absolute top-2.5 right-2.5 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-white/95 hover:bg-gray-100 text-gray-400 hover:text-gray-700 shadow transition-all"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
             <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
           </svg>
         </button>
 
-        {/* Image gauche */}
-        <div className="relative w-full md:w-[45%] h-52 md:h-auto flex-shrink-0">
-          <Image
-            src="https://ik.imagekit.io/kodt9cn6f/popup.webp"
-            alt="La Cabrade — Sellerie équestre"
-            fill
-            className="object-cover"
-            priority
-            sizes="(max-width: 768px) 100vw, 45vw"
-          />
-          <div className="absolute bottom-0 left-0 right-0 h-16 md:hidden bg-gradient-to-t from-white to-transparent" />
-        </div>
-
-        {/* Contenu droite */}
-        <div className="flex flex-col justify-center px-7 py-8 flex-1 overflow-y-auto">
-          <p className="text-xs font-semibold tracking-widest text-amber-600 uppercase mb-2">
-            La Cabrade — Sellerie équestre
+        {/* ── Contenu ── */}
+        <div className="flex flex-col justify-center px-6 py-6 flex-1 min-w-0">
+          <p className="text-[10px] font-bold tracking-widest text-amber-600 uppercase mb-1">
+            La Cabrade
           </p>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight mb-2">
-            Un petit bonus<br className="hidden md:block" /> pour toi !
+          <h2 className="text-xl font-bold text-gray-900 leading-snug mb-1">
+            Un petit bonus pour toi !
           </h2>
-          <p className="text-gray-500 text-sm mb-5 leading-relaxed">
-            Rejoins-nous et économise{" "}
-            <span className="text-amber-600 font-bold text-base">10%</span>{" "}
-            sur ta prochaine commande. Et reçois un cadeau chaque année le jour de ton anniversaire 🎂
+          <p className="text-gray-500 text-xs mb-4 leading-relaxed">
+            Inscris-toi et profite de{" "}
+            <span className="text-[#9e354a] font-bold">-10%</span>{" "}
+            sur ta prochaine commande.
           </p>
 
           {status === "success" ? (
-            <div className="text-center py-4">
-              <div className="text-4xl mb-3">🎉</div>
-              <p className="text-gray-800 font-semibold text-sm mb-2">{message}</p>
+            <div className="text-center py-2">
+              <div className="text-3xl mb-2">🎉</div>
+              <p className="text-gray-800 font-semibold text-sm mb-3">
+                Ton code -10% t'a été envoyé !
+              </p>
               {promoCode && (
-                <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                  <p className="text-xs text-gray-500 mb-1">Ton code -10% :</p>
-                  <code className="text-xl font-bold tracking-widest text-amber-700">{promoCode}</code>
-                  <p className="text-xs text-gray-400 mt-1">Valable une seule fois · Vérifie tes emails</p>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-3">
+                  <p className="text-[10px] text-gray-400 mb-1 uppercase tracking-wider">Ton code</p>
+                  <code className="text-lg font-bold tracking-widest text-amber-700">{promoCode}</code>
+                  <p className="text-[10px] text-gray-400 mt-1">Valable une seule fois · Vérifie tes emails</p>
                 </div>
               )}
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
+
               {/* Email */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600">
-                  Adresse email <span className="text-red-400">*</span>
-                </label>
+              <div>
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: undefined })) }}
                   placeholder="ton@email.com"
-                  required
                   disabled={status === "loading"}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all text-sm disabled:opacity-50"
+                  className={`w-full px-3.5 py-2.5 rounded-lg border text-sm bg-gray-50 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all disabled:opacity-50 ${
+                    errors.email
+                      ? "border-red-300 focus:ring-red-100"
+                      : "border-gray-200 focus:border-amber-400 focus:ring-amber-100"
+                  }`}
                 />
+                {errors.email && (
+                  <p className="text-[11px] text-red-500 mt-1 ml-0.5">{errors.email}</p>
+                )}
               </div>
 
-              {/* Anniversaire — obligatoire */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
-                  🎂 Date d'anniversaire <span className="text-red-400">*</span>
-                  <span className="text-gray-400 font-normal">(pour recevoir un cadeau chaque année)</span>
-                </label>
+              {/* Anniversaire — encadré spécial */}
+              <div className={`rounded-xl border p-3 transition-all ${
+                errors.birthday
+                  ? "border-red-300 bg-red-50"
+                  : "border-amber-200 bg-amber-50/60"
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-amber-800 flex items-center gap-1.5">
+                    🎂 Ton anniversaire
+                  </span>
+                  <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                    errors.birthday
+                      ? "bg-red-100 text-red-600"
+                      : "bg-amber-100 text-amber-700"
+                  }`}>
+                    obligatoire
+                  </span>
+                </div>
                 <input
                   type="date"
                   value={birthday}
-                  onChange={(e) => setBirthday(e.target.value)}
-                  required
+                  onChange={(e) => { setBirthday(e.target.value); setErrors((p) => ({ ...p, birthday: undefined })) }}
                   disabled={status === "loading"}
-                  className={`w-full px-4 py-3 rounded-xl border bg-gray-50 text-gray-900 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all text-sm disabled:opacity-50 ${
-                    status === "error" && !birthday
-                      ? "border-red-300 ring-2 ring-red-100"
-                      : "border-gray-200"
+                  className={`w-full px-3 py-2 rounded-lg border text-sm text-gray-900 focus:outline-none focus:ring-2 transition-all disabled:opacity-50 bg-white ${
+                    errors.birthday
+                      ? "border-red-300 focus:ring-red-100"
+                      : "border-amber-200 focus:border-amber-400 focus:ring-amber-100"
                   }`}
                 />
+                {errors.birthday ? (
+                  <p className="text-[11px] text-red-500 mt-1.5">{errors.birthday}</p>
+                ) : (
+                  <p className="text-[10px] text-amber-700/70 mt-1.5">
+                    Tu recevras un code -10% chaque année pour ton anniversaire
+                  </p>
+                )}
               </div>
 
-              {/* Message erreur */}
-              {status === "error" && message && (
-                <p className="text-xs text-red-500 font-medium flex items-center gap-1">
-                  <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                  </svg>
-                  {message}
-                </p>
+              {/* Erreur serveur */}
+              {status === "error" && (
+                <p className="text-xs text-red-500 text-center">Une erreur s'est produite. Réessaie.</p>
               )}
 
               {/* Bouton */}
               <button
                 type="submit"
                 disabled={status === "loading"}
-                className="w-full py-3.5 bg-[#9e354a] hover:bg-[#8a2d3f] text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed text-sm tracking-wide mt-1"
+                className="w-full py-3 bg-[#9e354a] hover:bg-[#8a2d3f] text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed text-sm tracking-wide"
               >
                 {status === "loading" ? (
                   <span className="flex items-center justify-center gap-2">
@@ -194,14 +229,14 @@ export default function NewsletterPopup() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
-                    Inscription en cours...
+                    Inscription…
                   </span>
                 ) : (
                   "Je veux mon -10% →"
                 )}
               </button>
 
-              <p className="text-center text-xs text-gray-400">
+              <p className="text-center text-[10px] text-gray-400 leading-relaxed">
                 Code à usage unique · Pas de spam · Désinscription en 1 clic
               </p>
             </form>
