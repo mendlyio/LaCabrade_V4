@@ -87,6 +87,9 @@ export default async function sendBirthdayPromosJob(container: MedusaContainer) 
             email: subscriber.email,
             promoCode,
             preview: `Joyeux anniversaire ! 🎂 Votre cadeau -10% vous attend`,
+            emailOptions: {
+              subject: "🎂 Joyeux anniversaire ! Votre cadeau La Cabrade",
+            },
           },
         } as any)
 

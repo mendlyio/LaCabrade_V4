@@ -103,6 +103,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           email,
           promoCode,
           preview: `Votre code -10% est arrivé ! 🎁`,
+          emailOptions: {
+            subject: "🎁 Votre code -10% La Cabrade vous attend",
+          },
         },
       } as any)
       console.log(`[Newsletter] Email de bienvenue envoyé à ${email}`)

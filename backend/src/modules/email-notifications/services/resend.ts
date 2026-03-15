@@ -67,14 +67,14 @@ export class ResendNotificationService extends AbstractNotificationProviderServi
       )
     }
 
-    const emailOptions = notification.data.emailOptions as NotificationEmailOptions
+    const emailOptions = (notification.data?.emailOptions ?? {}) as NotificationEmailOptions
 
     // Compose the message body to send via API to Resend
     const message: CreateEmailOptions = {
       to: notification.to,
       from: notification.from?.trim() ?? this.config_.from,
       react: emailContent,
-      subject: emailOptions.subject ?? 'You have a new notification',
+      subject: emailOptions.subject ?? 'La Cabrade',
       headers: emailOptions.headers,
       replyTo: emailOptions.replyTo,
       cc: emailOptions.cc,
