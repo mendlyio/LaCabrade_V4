@@ -77,11 +77,14 @@ export default function NewsletterPopup() {
         localStorage.setItem(STORAGE_KEY, "1")
         setTimeout(() => setVisible(false), 6000)
       } else {
-        throw new Error()
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.message || "Erreur")
       }
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : ""
       setStatus("error")
-      setTimeout(() => setStatus("idle"), 4000)
+      setErrors(msg ? { email: msg } : { email: "Une erreur s'est produite. Réessaie." })
+      setTimeout(() => { setStatus("idle"); setErrors({}) }, 6000)
     }
   }
 

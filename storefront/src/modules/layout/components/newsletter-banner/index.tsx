@@ -67,10 +67,11 @@ const NewsletterBanner = () => {
       } else {
         throw new Error(data.message || "Erreur")
       }
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : ""
       setStatus("error")
-      setMessage("Une erreur s'est produite. Réessayez.")
-      setTimeout(() => { setStatus("idle"); setMessage("") }, 4000)
+      setMessage(msg || "Une erreur s'est produite. Réessayez.")
+      setTimeout(() => { setStatus("idle"); setMessage("") }, 6000)
     }
   }
 

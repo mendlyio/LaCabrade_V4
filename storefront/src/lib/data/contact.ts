@@ -48,6 +48,9 @@ export async function sendContactEmail(
     if (!response.ok) {
       const error = await response.json()
       console.error("Erreur lors de l'envoi du message:", error)
+      if (response.status === 429) {
+        return error.message || "Trop de messages envoyés. Veuillez réessayer dans 1 heure."
+      }
       return "Une erreur est survenue lors de l'envoi du message. Veuillez réessayer."
     }
 
