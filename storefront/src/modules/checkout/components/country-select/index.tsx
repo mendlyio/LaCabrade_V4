@@ -23,10 +23,19 @@ const CountrySelect = forwardRef<
       return []
     }
 
-    return region.countries?.map((country) => ({
-      value: country.iso_2,
-      label: country.display_name,
-    }))
+    const PRIORITY: Record<string, number> = { be: 0, fr: 1 }
+
+    return region.countries
+      ?.map((country) => ({
+        value: country.iso_2,
+        label: country.display_name,
+      }))
+      .sort((a, b) => {
+        const pa = PRIORITY[a.value?.toLowerCase()] ?? 99
+        const pb = PRIORITY[b.value?.toLowerCase()] ?? 99
+        if (pa !== pb) return pa - pb
+        return (a.label ?? "").localeCompare(b.label ?? "")
+      })
   }, [region])
 
   return (
