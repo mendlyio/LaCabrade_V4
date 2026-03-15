@@ -73,6 +73,7 @@ const Item = ({ item, type = "full" }: ItemProps) => {
             thumbnail={item.variant?.product?.thumbnail}
             images={item.variant?.product?.images}
             size="square"
+            alt={item.product_title ?? "Produit"}
           />
         </LocalizedClientLink>
       </Table.Cell>

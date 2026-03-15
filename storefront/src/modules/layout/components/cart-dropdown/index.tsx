@@ -145,6 +145,7 @@ const CartDropdown = ({
                             thumbnail={item.variant?.product?.thumbnail}
                             images={item.variant?.product?.images}
                             size="square"
+                            alt={item.product_title ?? "Produit"}
                           />
                           <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-5 transition-opacity rounded-lg"></div>
                         </LocalizedClientLink>

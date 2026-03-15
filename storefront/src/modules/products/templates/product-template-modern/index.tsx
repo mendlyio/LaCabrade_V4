@@ -7,6 +7,7 @@ import ProductActionsModern from "@modules/products/components/product-actions-m
 import RelatedProductsModern from "@modules/products/components/related-products-modern"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
 import ViewItemTracker from "@modules/common/components/tracking/view-item-tracker"
+import ProductJsonLd from "@modules/common/components/json-ld/product-jsonld"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { listCategories } from "@lib/data/categories"
 import { buildCategoryTree } from "@lib/util/category-tree"
@@ -124,6 +125,14 @@ const ProductTemplateModern = async ({
 
   return (
     <div className="bg-white min-h-screen">
+      <ProductJsonLd
+        product={product}
+        countryCode={countryCode}
+        breadcrumb={categoryBreadcrumb.map((c) => ({
+          name: c.name,
+          handle: c.handle,
+        }))}
+      />
       <ViewItemTracker product={product} listName={categoryBreadcrumb[0]?.name} />
       {/* Breadcrumbs */}
       <div className="bg-gray-50 border-b border-gray-100">
@@ -181,7 +190,7 @@ const ProductTemplateModern = async ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
           {/* LEFT: Image Gallery */}
           <div className="lg:col-span-7 relative">
-            <ImageGalleryModern images={product?.images || []} />
+            <ImageGalleryModern images={product?.images || []} productTitle={product.title} />
             
             {/* Badges sur l'image */}
             <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">

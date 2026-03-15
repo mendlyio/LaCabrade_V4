@@ -58,7 +58,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
-    const { category } = await params
+    const { category, countryCode } = await params
     const { product_categories } = await getCategoryByHandle(category)
 
     if (!product_categories || product_categories.length === 0) {
@@ -70,13 +70,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       .join(" | ")
 
     const lastCategory = product_categories[product_categories.length - 1]
-    const description = lastCategory?.description || `${title} — La Cabrade`
+    const description = lastCategory?.description || `Découvrez notre sélection ${title} sur La Cabrade, sellerie équestre de qualité.`
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
 
     return {
       title: `${title} | La Cabrade`,
       description,
+      openGraph: {
+        title: `${title} | La Cabrade`,
+        description,
+      },
       alternates: {
-        canonical: `${category.join("/")}`,
+        canonical: `${baseUrl}/${countryCode}/categories/${category.join("/")}`,
       },
     }
   } catch {

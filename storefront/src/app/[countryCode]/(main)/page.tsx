@@ -139,6 +139,7 @@ export default async function Home({
 
   return (
     <div className="w-full">
+      <h1 className="sr-only">La Cabrade - Sellerie Équestre &amp; LC Equestrian</h1>
       {/* Hero Carrousel */}
       <HeroCarousel />
 

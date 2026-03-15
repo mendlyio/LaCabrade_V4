@@ -81,6 +81,7 @@ const ItemsPreviewTemplate = ({ items }: ItemsTemplateProps) => {
                 thumbnail={item.variant?.product?.thumbnail || item.thumbnail}
                 images={item.variant?.product?.images}
                 size="square"
+                alt={item.product_title ?? "Produit"}
               />
               {/* Badge quantité */}
               {item.quantity > 1 && (

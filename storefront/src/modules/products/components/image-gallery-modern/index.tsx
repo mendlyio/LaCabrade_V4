@@ -6,9 +6,10 @@ import Image from "next/image"
 
 type ImageGalleryModernProps = {
   images: HttpTypes.StoreProductImage[]
+  productTitle?: string
 }
 
-export default function ImageGalleryModern({ images }: ImageGalleryModernProps) {
+export default function ImageGalleryModern({ images, productTitle }: ImageGalleryModernProps) {
   const [selectedImage, setSelectedImage] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
 
@@ -65,7 +66,7 @@ export default function ImageGalleryModern({ images }: ImageGalleryModernProps) 
           >
             <Image
               src={images[selectedImage].url}
-              alt={`Image ${selectedImage + 1}`}
+              alt={productTitle ? `${productTitle} - photo ${selectedImage + 1}` : `Photo produit ${selectedImage + 1}`}
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -131,7 +132,7 @@ export default function ImageGalleryModern({ images }: ImageGalleryModernProps) 
               >
                 <Image
                   src={image.url}
-                  alt={`Miniature ${index + 1}`}
+                  alt={productTitle ? `${productTitle} - miniature ${index + 1}` : `Miniature ${index + 1}`}
                   width={80}
                   height={80}
                   className="w-full h-full object-cover"
@@ -167,7 +168,7 @@ export default function ImageGalleryModern({ images }: ImageGalleryModernProps) 
           <div className="relative w-full h-full max-w-5xl max-h-[85vh] mx-4 flex items-center justify-center">
             <Image
               src={images[selectedImage].url}
-              alt={`Image ${selectedImage + 1}`}
+              alt={productTitle ? `${productTitle} - photo ${selectedImage + 1}` : `Photo produit ${selectedImage + 1}`}
               fill
               className="object-contain"
               sizes="100vw"
@@ -214,7 +215,7 @@ export default function ImageGalleryModern({ images }: ImageGalleryModernProps) 
                 >
                   <Image
                     src={image.url}
-                    alt={`Miniature ${index + 1}`}
+                    alt={productTitle ? `${productTitle} - miniature ${index + 1}` : `Miniature ${index + 1}`}
                     width={48}
                     height={48}
                     className="w-full h-full object-cover"
