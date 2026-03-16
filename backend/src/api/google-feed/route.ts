@@ -146,6 +146,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     )
 
     const priceByVariantId = new Map<string, number>()
+    const availableByVariantId = new Map<string, number>()
     if (variantIds.length > 0) {
       await dbClient.connect()
       dbConnected = true
@@ -173,6 +174,26 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
           priceByVariantId.set(row.variant_id, Number(row.amount))
         }
       }
+
+      // Stock disponible réel = stocked_quantity - reserved_quantity
+      const stockRows = await dbClient.query(
+        `
+          SELECT
+            pvi.variant_id AS variant_id,
+            COALESCE(SUM(COALESCE(il.stocked_quantity, 0) - COALESCE(il.reserved_quantity, 0)), 0) AS available
+          FROM product_variant_inventory_item pvi
+          LEFT JOIN inventory_level il
+            ON il.inventory_item_id = pvi.inventory_item_id
+            AND il.deleted_at IS NULL
+          WHERE pvi.variant_id = ANY($1)
+          GROUP BY pvi.variant_id
+        `,
+        [variantIds]
+      )
+
+      for (const row of stockRows.rows) {
+        availableByVariantId.set(row.variant_id, Number(row.available))
+      }
     }
 
     // ── Génération des <item> ──────────────────────────────────────────────
@@ -193,7 +214,8 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         if (amount <= 0) continue
 
         // ── Disponibilité ──────────────────────────────────────────────────
-        const qty: number = variant.inventory_quantity ?? 0
+        const qty: number =
+          Number(availableByVariantId.get(variant.id) ?? variant.inventory_quantity ?? 0)
         const availability = qty > 0 ? 'in stock' : 'out of stock'
 
         // ── Image ──────────────────────────────────────────────────────────
