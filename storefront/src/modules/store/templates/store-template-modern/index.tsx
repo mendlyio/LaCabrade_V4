@@ -31,20 +31,13 @@ export default async function StoreTemplateModern({
   let collections: any[] = []
   let brands: any[] = []
   try {
-    categories = await listCategories()
+    ;[categories, collections, brands] = await Promise.all([
+      listCategories(),
+      getCollectionsList(0, 100).then((r) => r.collections || []),
+      listBrands(),
+    ])
   } catch (error) {
-    console.error("Erreur lors du chargement des catégories:", error)
-  }
-  try {
-    const collectionsResult = await getCollectionsList(0, 100)
-    collections = collectionsResult.collections || []
-  } catch (error) {
-    console.error("Erreur lors du chargement des collections:", error)
-  }
-  try {
-    brands = await listBrands()
-  } catch (error) {
-    console.error("Erreur lors du chargement des marques:", error)
+    console.error("Erreur lors du chargement des données filtres:", error)
   }
 
   // Compter le nombre de filtres actifs

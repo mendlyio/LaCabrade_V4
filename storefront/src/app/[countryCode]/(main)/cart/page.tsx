@@ -35,8 +35,10 @@ type Props = {
 }
 
 export default async function Cart({ params }: Props) {
-  const cart = await fetchCart()
-  const customer = await getCustomer().catch(() => null)
+  const [cart, customer] = await Promise.all([
+    fetchCart(),
+    getCustomer().catch(() => null),
+  ])
   const { countryCode } = params
 
   return <CartTemplateModern cart={cart} customer={customer} countryCode={countryCode} />

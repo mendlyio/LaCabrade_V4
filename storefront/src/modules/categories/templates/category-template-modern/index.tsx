@@ -37,14 +37,12 @@ export default async function CategoryTemplateModern({
   let allCategories: HttpTypes.StoreProductCategory[] = []
   let brands: any[] = []
   try {
-    allCategories = await listCategories()
+    ;[allCategories, brands] = await Promise.all([
+      listCategories(),
+      listBrands(),
+    ])
   } catch (error) {
-    console.error("Erreur lors du chargement des catégories:", error)
-  }
-  try {
-    brands = await listBrands()
-  } catch (error) {
-    console.error("Erreur lors du chargement des marques:", error)
+    console.error("Erreur lors du chargement des données filtres:", error)
   }
   const { map: categoryMap } = buildCategoryTree(allCategories || [])
   const categoryNode = categoryMap.get(category.id) || category

@@ -34,17 +34,19 @@ export default async function LcEquestrianPage({
 }: {
   params: { countryCode: string }
 }) {
-  const region = await getRegion(countryCode)
+  const [region, allCategories] = await Promise.all([
+    getRegion(countryCode),
+    listCategories().catch(() => [] as any[]),
+  ])
 
   if (!region) {
     return null
   }
 
-  // Uniquement la catégorie LC Equestrian (pas "la-cabrade" qui inclut d'autres produits)
   let lcCategory: { id: string } | null = null
   let allowedIds = new Set<string>()
   try {
-    const categories = await listCategories() || []
+    const categories = allCategories || []
     const { map: categoryMap } = buildCategoryTree(categories)
     // Seulement lc-equestrian ou lc_equestrian — jamais la-cabrade
     lcCategory =

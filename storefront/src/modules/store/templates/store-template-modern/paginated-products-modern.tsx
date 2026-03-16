@@ -77,15 +77,12 @@ export default async function PaginatedProductsModern({
   let categories: any[] = []
   let collections: any[] = []
   try {
-    categories = await listCategories()
+    ;[categories, collections] = await Promise.all([
+      listCategories(),
+      getCollectionsList(0, 100).then((r) => r.collections || []),
+    ])
   } catch (error) {
-    console.error("Erreur lors du chargement des catégories:", error)
-  }
-  try {
-    const collectionsResult = await getCollectionsList(0, 100)
-    collections = collectionsResult.collections || []
-  } catch (error) {
-    console.error("Erreur lors du chargement des collections:", error)
+    console.error("Erreur lors du chargement des données filtres:", error)
   }
   const { map: categoryMap } = buildCategoryTree(categories || [])
 
