@@ -13,6 +13,7 @@ import { cartToTrackingCart, trackGA4AddPaymentInfo } from "@lib/tracking"
 import {
   getPaymentInfo,
   getStripePaymentMethodType,
+  isManual,
   isStripe as isStripeFunc,
   paymentInfoMap,
   sortPaymentProviders,
@@ -49,7 +50,9 @@ const Payment = ({
   )
   const pendingProviderId = useRef<string | null>(null)
 
-  const visiblePaymentMethods = availablePaymentMethods ?? []
+  const visiblePaymentMethods = (availablePaymentMethods ?? []).filter(
+    (method) => !isManual(method.id)
+  )
 
   const selectedOrActiveProviderId =
     selectedPaymentMethod || activeSession?.provider_id || ""
