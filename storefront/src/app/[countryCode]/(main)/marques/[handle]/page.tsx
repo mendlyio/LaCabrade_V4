@@ -49,23 +49,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export const dynamic = "force-dynamic"
 
 export default async function BrandPage({ params, searchParams }: Props) {
-  const brand = await getBrandBySlug(params.handle)
+  const [brand, allCategories, brands] = await Promise.all([
+    getBrandBySlug(params.handle),
+    listCategories().catch((error) => {
+      console.error("Erreur lors du chargement des catégories:", error)
+      return [] as any[]
+    }),
+    listBrands().catch((error) => {
+      console.error("Erreur lors du chargement des marques:", error)
+      return [] as any[]
+    }),
+  ])
 
   if (!brand) {
     notFound()
-  }
-
-  let allCategories: any[] = []
-  let brands: any[] = []
-  try {
-    allCategories = await listCategories()
-  } catch (error) {
-    console.error("Erreur lors du chargement des catégories:", error)
-  }
-  try {
-    brands = await listBrands()
-  } catch (error) {
-    console.error("Erreur lors du chargement des marques:", error)
   }
 
   const searchParamsWithBrand = {
