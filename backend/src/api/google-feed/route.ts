@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from '@medusajs/framework/http'
-import { ContainerRegistrationKeys, remoteQueryObjectFromString } from '@medusajs/framework/utils'
+import { Modules } from '@medusajs/framework/utils'
+import { Client } from 'pg'
 
 const STORE_URL = process.env.STORE_URL || 'https://www.sellerie-lacabrade.be'
 const STORE_NAME = 'La Cabrade'
@@ -61,42 +62,77 @@ function getGoogleCategory(collection: string, categories: string[]): string {
  * URL Merchant Center : https://backend-production-7bbb.up.railway.app/google-feed
  */
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
-  const remoteQuery = req.scope.resolve(ContainerRegistrationKeys.REMOTE_QUERY)
+  const productService = req.scope.resolve(Modules.PRODUCT)
+  const dbClient = new Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL?.includes('railway')
+      ? { rejectUnauthorized: false }
+      : false,
+  })
+  let dbConnected = false
 
   try {
-    // ── Récupération via remoteQuery (cross-module : Product + Pricing) ────
+    // ── Récupération produits publiés (sans pricing) ───────────────────────
     const allProducts: any[] = []
     let offset = 0
     const take = 100
 
     while (true) {
-      const products: any[] = await remoteQuery(
-        remoteQueryObjectFromString({
-          entryPoint: 'product',
-          fields: [
-            'id', 'title', 'handle', 'description', 'thumbnail', 'status', 'metadata',
-            'images.url',
-            'collection.title',
-            'categories.name',
-            'variants.id', 'variants.title', 'variants.sku', 'variants.barcode',
-            'variants.inventory_quantity', 'variants.metadata',
-            'variants.prices.amount',
-            'variants.prices.currency_code',
-            'variants.options.value',
-            'variants.options.option.title',
+      const products = await productService.listProducts(
+        { status: 'published' },
+        {
+          relations: [
+            'variants',
+            'variants.options',
+            'variants.options.option',
+            'images',
+            'collection',
+            'categories',
           ],
-          variables: {
-            filters: { status: 'published' },
-            skip: offset,
-            take,
-          },
-        })
+          take,
+          skip: offset,
+        }
       )
 
       if (!products?.length) break
       allProducts.push(...products)
       if (products.length < take) break
       offset += take
+    }
+
+    // ── Récupération prix EUR via SQL (source de vérité pricing) ───────────
+    const variantIds = allProducts.flatMap((p: any) =>
+      (p.variants ?? []).map((v: any) => v.id)
+    )
+
+    const priceByVariantId = new Map<string, number>()
+    if (variantIds.length > 0) {
+      await dbClient.connect()
+      dbConnected = true
+      const { rows } = await dbClient.query(
+        `
+          SELECT
+            pv.id AS variant_id,
+            pp.amount AS amount
+          FROM product_variant pv
+          LEFT JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
+          LEFT JOIN price_set ps ON ps.id = pvps.price_set_id
+          LEFT JOIN price pp ON pp.price_set_id = ps.id
+          WHERE pv.id = ANY($1)
+            AND pp.currency_code = 'eur'
+            AND pp.amount IS NOT NULL
+            AND pp.deleted_at IS NULL
+          ORDER BY pv.id, pp.created_at DESC
+        `,
+        [variantIds]
+      )
+
+      // Garder le premier prix trouvé par variante (plus récent via ORDER BY)
+      for (const row of rows) {
+        if (!priceByVariantId.has(row.variant_id)) {
+          priceByVariantId.set(row.variant_id, Number(row.amount))
+        }
+      }
     }
 
     // ── Génération des <item> ──────────────────────────────────────────────
@@ -113,17 +149,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
 
       for (const variant of variants) {
         // ── Prix EUR ───────────────────────────────────────────────────────
-        const prices: any[] = variant.prices ?? []
-        const eurPrice = prices.find(
-          (p: any) => p.currency_code?.toLowerCase() === 'eur'
-        )
-        if (!eurPrice) continue
-
-        const rawAmount =
-          typeof eurPrice.amount === 'number'
-            ? eurPrice.amount
-            : parseFloat(String(eurPrice.amount))
-        const amount = rawAmount / 100
+        const amount = Number(priceByVariantId.get(variant.id) ?? 0)
         if (amount <= 0) continue
 
         // ── Disponibilité ──────────────────────────────────────────────────
@@ -234,5 +260,9 @@ ${items.join('\n')}
   } catch (error: any) {
     console.error('❌ [GoogleFeed] Erreur:', error.message)
     return res.status(500).json({ success: false, message: error.message })
+  } finally {
+    if (dbConnected) {
+      await dbClient.end().catch(() => undefined)
+    }
   }
 }
