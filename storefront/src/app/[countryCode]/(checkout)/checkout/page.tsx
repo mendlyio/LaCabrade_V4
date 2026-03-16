@@ -1,11 +1,11 @@
 import { Metadata } from "next"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 
 import Wrapper from "@modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
 import CheckoutTracker from "@modules/common/components/tracking/checkout-tracker"
-import { enrichLineItems, retrieveCart } from "@lib/data/cart"
+import { enrichLineItems, placeOrder, retrieveCart } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { getCustomer } from "@lib/data/customer"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -15,9 +15,28 @@ export const metadata: Metadata = {
   description: "Finalisez votre commande en toute sécurité",
 }
 
-const fetchCart = async () => {
+const fetchCart = async (
+  searchParams?: Record<string, string | string[] | undefined>,
+  countryCode?: string
+) => {
   const cart = await retrieveCart()
+
   if (!cart) {
+    const redirectStatus = searchParams?.redirect_status
+    if (redirectStatus === "succeeded" || redirectStatus === "processing") {
+      try {
+        // Cart gone after Stripe redirect → try to complete the order.
+        // placeOrder() calls redirect() on success (throws NEXT_REDIRECT, must propagate).
+        await placeOrder()
+      } catch (err: any) {
+        if (err?.digest?.includes?.("NEXT_REDIRECT")) {
+          throw err
+        }
+        // Cart cookie gone = order was already completed earlier.
+        // Redirect to homepage since we can't recover the order ID.
+        redirect(`/${countryCode || "fr"}`)
+      }
+    }
     return notFound()
   }
 
@@ -83,11 +102,16 @@ const PaymentMethods = () => (
 
 export default async function Checkout({
   params,
+  searchParams: searchParamsPromise,
 }: {
   params: Promise<{ countryCode: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  const { countryCode: paramCountry } = await params
-  const cart = await fetchCart()
+  const [{ countryCode: paramCountry }, searchParams] = await Promise.all([
+    params,
+    searchParamsPromise,
+  ])
+  const cart = await fetchCart(searchParams, paramCountry)
   const customer = await getCustomer()
   const countryCode = paramCountry || "be"
 

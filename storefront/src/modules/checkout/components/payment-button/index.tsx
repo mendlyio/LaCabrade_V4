@@ -148,6 +148,9 @@ const StripePaymentButton = ({
     try {
       await placeOrder()
     } catch (err: any) {
+      if (err?.digest?.includes?.("NEXT_REDIRECT")) {
+        return
+      }
       setErrorMessage(err?.message ?? "Erreur lors de la finalisation de la commande.")
     } finally {
       setSubmitting(false)

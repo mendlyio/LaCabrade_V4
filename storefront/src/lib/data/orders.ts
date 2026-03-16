@@ -5,15 +5,30 @@ import medusaError from "@lib/util/medusa-error"
 import { cache } from "react"
 import { getAuthHeaders } from "./cookies"
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
 export const retrieveOrder = cache(async function (id: string) {
-  return sdk.store.order
-    .retrieve(
-      id,
-      { fields: "*payment_collections.payments" },
-      { next: { tags: ["order"] }, ...(await getAuthHeaders()) }
-    )
-    .then(({ order }) => order)
-    .catch((err) => medusaError(err))
+  const headers = { next: { tags: ["order"] }, ...(await getAuthHeaders()) }
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const { order } = await sdk.store.order.retrieve(
+        id,
+        attempt === 0
+          ? { fields: "*payment_collections.payments" }
+          : {},
+        headers
+      )
+      if (order) return order
+    } catch {
+      if (attempt < 2) {
+        await sleep(1000 * (attempt + 1))
+        continue
+      }
+    }
+  }
+
+  return null
 })
 
 export const listOrders = cache(async function (

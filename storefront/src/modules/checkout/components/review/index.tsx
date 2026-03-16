@@ -9,6 +9,9 @@ import LastChanceUpsell from "../last-chance-upsell"
 import { useSearchParams } from "next/navigation"
 import { placeOrder } from "@lib/data/cart"
 
+const MAX_RETRIES = 3
+const RETRY_DELAY_MS = 2000
+
 const Review = ({
   cart,
   lastChanceProducts = [],
@@ -18,6 +21,7 @@ const Review = ({
 }) => {
   const searchParams = useSearchParams()
   const hasHandledReturn = useRef(false)
+  const retryCount = useRef(0)
   const [redirecting, setRedirecting] = useState(false)
   const [redirectError, setRedirectError] = useState<string | null>(null)
 
@@ -37,11 +41,32 @@ const Review = ({
       hasHandledReturn.current = true
       setRedirecting(true)
       setRedirectError(null)
-      placeOrder().catch((err) => {
-        hasHandledReturn.current = false
-        setRedirecting(false)
-        setRedirectError(err?.message ?? "Erreur lors de la finalisation. Veuillez réessayer.")
-      })
+
+      const attemptPlaceOrder = () => {
+        placeOrder()
+          .then(() => {
+            // redirect() inside placeOrder will navigate away
+          })
+          .catch((err) => {
+            if (err?.digest?.includes?.("NEXT_REDIRECT")) {
+              return
+            }
+
+            if (retryCount.current < MAX_RETRIES) {
+              retryCount.current++
+              setTimeout(attemptPlaceOrder, RETRY_DELAY_MS)
+              return
+            }
+
+            hasHandledReturn.current = false
+            setRedirecting(false)
+            setRedirectError(
+              err?.message ?? "Erreur lors de la finalisation. Veuillez réessayer."
+            )
+          })
+      }
+
+      attemptPlaceOrder()
     }
   }, [searchParams])
 

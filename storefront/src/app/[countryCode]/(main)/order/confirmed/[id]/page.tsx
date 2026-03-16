@@ -15,10 +15,15 @@ async function getOrder(id: string) {
     const order = await retrieveOrder(id)
     if (!order) return null
 
-    const enrichedItems = await enrichLineItems(
-      order.items ?? [],
-      order.region_id ?? ""
-    )
+    let enrichedItems = order.items ?? []
+    try {
+      enrichedItems = await enrichLineItems(
+        order.items ?? [],
+        order.region_id ?? ""
+      )
+    } catch {
+      // Use raw items if enrichment fails
+    }
 
     return {
       ...order,
