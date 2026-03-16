@@ -34,14 +34,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       }
     }
 
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+    const description = `Découvrez les ${brand.count} produits de la marque ${brand.name} sur La Cabrade, sellerie équestre de qualité.`
+
     return {
-      title: `${brand.name} | Marques`,
-      description: `Découvrez les produits de la marque ${brand.name}`,
+      title: `${brand.name} | Marques | La Cabrade`,
+      description,
+      openGraph: {
+        type: "website",
+        title: `${brand.name} | La Cabrade`,
+        description,
+        url: `${baseUrl}/${params.countryCode}/marques/${params.handle}`,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: `${brand.name} | La Cabrade`,
+        description,
+      },
+      alternates: {
+        canonical: `${baseUrl}/${params.countryCode}/marques/${params.handle}`,
+      },
     }
   } catch {
     return {
-      title: "Marque",
-      description: "Découvrez nos marques",
+      title: "Marque | La Cabrade",
+      description: "Découvrez nos marques équestres sur La Cabrade.",
     }
   }
 }

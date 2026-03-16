@@ -2,6 +2,7 @@ import { MetadataRoute } from "next"
 import { getProductsList } from "@lib/data/products"
 import { listCategories } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
+import { listBrands } from "@lib/data/brands"
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
 const DEFAULT_COUNTRY = "be"
@@ -95,6 +96,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   } catch (e) {
     console.error("[sitemap] Failed to fetch collections:", e)
+  }
+
+  try {
+    const brands = await listBrands()
+    for (const brand of brands) {
+      if (!brand.slug) continue
+      entries.push({
+        url: `${prefix}/marques/${brand.slug}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly",
+        priority: 0.6,
+      })
+    }
+  } catch (e) {
+    console.error("[sitemap] Failed to fetch brands:", e)
   }
 
   return entries

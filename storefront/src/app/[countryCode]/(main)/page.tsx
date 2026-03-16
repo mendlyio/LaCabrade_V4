@@ -7,14 +7,18 @@ import { slugify } from "@lib/util/slugify"
 import HomeContent from "@modules/home/components/home-content"
 import ProductCardModern from "@modules/products/components/product-card-modern"
 
+const HOME_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+
 export const metadata: Metadata = {
   title: "La Cabrade - Sellerie Équestre | LC•EQUESTRIAN",
   description:
     "Vivez l'équitation comme vous l'aimez, sans compromis. Des prix justes, du matériel fiable, et toute l'émotion d'une sellerie pensée pour les passionnés.",
   alternates: {
+    canonical: `${HOME_BASE_URL}/be`,
     languages: {
-      "fr-BE": "/be",
-      "nl-BE": "/be",
+      "fr-BE": `${HOME_BASE_URL}/be`,
+      "nl-BE": `${HOME_BASE_URL}/be`,
+      "x-default": `${HOME_BASE_URL}/be`,
     },
   },
 }

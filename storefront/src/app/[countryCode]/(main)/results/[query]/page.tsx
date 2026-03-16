@@ -16,6 +16,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   return {
     title: `Recherche : ${q}`,
     description: `Résultats de recherche pour "${q}" sur La Cabrade.`,
+    robots: { index: false, follow: true },
   }
 }
 

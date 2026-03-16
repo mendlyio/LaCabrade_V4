@@ -72,12 +72,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     notFound()
   }
 
-  const metadata = {
-    title: `${collection.title} | La Cabrade`,
-    description: `${collection.title} collection`,
-  } as Metadata
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+  const description = `Découvrez la collection ${collection.title} sur La Cabrade, sellerie équestre de qualité.`
 
-  return metadata
+  return {
+    title: `${collection.title} | La Cabrade`,
+    description,
+    openGraph: {
+      type: "website",
+      title: `${collection.title} | La Cabrade`,
+      description,
+      url: `${baseUrl}/${params.countryCode}/collections/${params.handle}`,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${collection.title} | La Cabrade`,
+      description,
+    },
+    alternates: {
+      canonical: `${baseUrl}/${params.countryCode}/collections/${params.handle}`,
+    },
+  }
 }
 
 export default async function CollectionPage({ params, searchParams }: Props) {

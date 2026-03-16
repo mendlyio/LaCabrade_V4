@@ -70,13 +70,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     notFound()
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
   return {
     title: `${product.title} | La Cabrade`,
     description: product.description || `Découvrez ${product.title} sur La Cabrade - Sellerie équestre de qualité`,
     openGraph: {
+      type: "website",
       title: `${product.title} | La Cabrade`,
       description: product.description || `Découvrez ${product.title} sur La Cabrade`,
-      images: product.thumbnail ? [product.thumbnail] : [],
+      images: product.thumbnail ? [{ url: product.thumbnail }] : [],
+      url: `${baseUrl}/${countryCode}/products/${handle}`,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${product.title} | La Cabrade`,
+      description: product.description || `Découvrez ${product.title} sur La Cabrade`,
+    },
+    alternates: {
+      canonical: `${baseUrl}/${countryCode}/products/${handle}`,
     },
   }
 }
