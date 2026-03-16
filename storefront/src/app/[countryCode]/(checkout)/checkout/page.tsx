@@ -65,6 +65,9 @@ const fetchCart = async (
     } catch (err: any) {
       if (err?.digest?.includes?.("NEXT_REDIRECT")) throw err
       await tryRecoverOrder(cartIdFromReturn, countryCode || "fr")
+      if (cartIdFromReturn) {
+        redirect(`/${countryCode || "fr"}/order/processing?cart_id=${cartIdFromReturn}`)
+      }
       redirect(`/${countryCode || "fr"}`)
     }
   }
@@ -160,6 +163,9 @@ export default async function Checkout({
       ? searchParams?.cart_id[0]
       : searchParams?.cart_id
     await tryRecoverOrder(cartId, paramCountry || "fr")
+    if (cartId) {
+      redirect(`/${paramCountry || "fr"}/order/processing?cart_id=${cartId}`)
+    }
     redirect(`/${paramCountry || "fr"}`)
   }
 
