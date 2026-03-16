@@ -131,12 +131,12 @@ export default async function CategoryTemplateModern({
                   <div key={child.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                     <LocalizedClientLink
                       href={`/categories/${encodeURIComponent(child.handle)}`}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 bg-amber-50 hover:bg-amber-600 border-2 border-amber-200 hover:border-amber-600 transition-colors group"
+                      className="flex items-center gap-2 pb-2 border-b border-gray-200 group transition-colors"
                     >
-                      <span className="flex-1 text-base font-bold text-gray-900 group-hover:text-white">
+                      <span className="flex-1 text-sm font-semibold text-gray-800 group-hover:text-amber-600 transition-colors">
                         {child.name}
                       </span>
-                      <svg className="w-4 h-4 text-amber-600 group-hover:text-white transform group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-gray-400 group-hover:text-amber-600 transform group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </LocalizedClientLink>
