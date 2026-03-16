@@ -31,10 +31,10 @@ export default async function NouveautesPage({ params, searchParams }: Props) {
   let categories: any[] = []
   let brands: any[] = []
   try {
-    categories = await listCategories()
-  } catch {}
-  try {
-    brands = await listBrands()
+    ;[categories, brands] = await Promise.all([
+      listCategories(),
+      listBrands(),
+    ])
   } catch {}
 
   const activeFiltersCount = Object.keys(searchParams).filter(
