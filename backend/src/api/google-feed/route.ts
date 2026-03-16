@@ -1,5 +1,5 @@
 import { MedusaRequest, MedusaResponse } from '@medusajs/framework/http'
-import { Modules } from '@medusajs/framework/utils'
+import { ContainerRegistrationKeys, remoteQueryObjectFromString } from '@medusajs/framework/utils'
 
 const STORE_URL = process.env.STORE_URL || 'https://www.sellerie-lacabrade.be'
 const STORE_NAME = 'La Cabrade'
@@ -16,7 +16,6 @@ function escapeXml(str: string): string {
     .replace(/'/g, '&apos;')
 }
 
-/** Supprime les balises HTML (description peut venir d'un éditeur riche) */
 function stripHtml(str: string): string {
   if (!str) return ''
   return str
@@ -30,78 +29,70 @@ function stripHtml(str: string): string {
     .trim()
 }
 
-/**
- * Valide qu'un barcode est un GTIN conforme Google (8, 12, 13 ou 14 chiffres).
- * Un barcode non valide déclenche des erreurs de données dans Merchant Center.
- */
 function isValidGtin(barcode: string): boolean {
   if (!barcode) return false
   const digits = barcode.replace(/\D/g, '')
   return [8, 12, 13, 14].includes(digits.length)
 }
 
-/**
- * Mappe les noms de collections/catégories vers les IDs de taxonomie Google.
- * Référence : https://www.google.com/basepages/producttype/taxonomy-with-ids.fr-BE.txt
- */
 function getGoogleCategory(collection: string, categories: string[]): string {
   const all = [collection, ...categories].join(' ').toLowerCase()
-
-  if (/sell[ei]|selle\b|saddle/.test(all))             return '6935' // Équitation > Selles
-  if (/bride|filet|licol|bridle|headstall/.test(all))  return '7291' // Équitation > Brides
-  if (/bombe|casque|helmet/.test(all))                 return '499713' // Équitation > Casques
-  if (/botte|boot|chap/.test(all))                     return '1604'  // Vêtements > Chaussures
-  if (/vêt|habits?|vest|gilet|jacket|blouson/.test(all)) return '1604' // Vêtements
-  if (/gant|glove/.test(all))                          return '6439'  // Gants d'équitation
-  if (/tapis|pad|couvert|blanket/.test(all))           return '7293'  // Équitation > Tapis
-  if (/étrier|stirrup/.test(all))                      return '7290'  // Équitation > Étriers
-  if (/soin|entret|care|nettoy/.test(all))             return '6937'  // Équitation > Soins
-  if (/équit|horse|cheval|equestri/.test(all))         return '6935'  // Équitation (fallback)
-
-  return '' // Laisser Google classifier automatiquement
+  if (/sell[ei]|selle\b|saddle/.test(all))              return '6935'
+  if (/bride|filet|licol|bridle|headstall/.test(all))   return '7291'
+  if (/bombe|casque|helmet/.test(all))                  return '499713'
+  if (/botte|boot|chap/.test(all))                      return '1604'
+  if (/vêt|habits?|vest|gilet|jacket|blouson/.test(all)) return '1604'
+  if (/gant|glove/.test(all))                           return '6439'
+  if (/tapis|pad|couvert|blanket/.test(all))            return '7293'
+  if (/étrier|stirrup/.test(all))                       return '7290'
+  if (/soin|entret|care|nettoy/.test(all))              return '6937'
+  if (/équit|horse|cheval|equestri/.test(all))          return '6935'
+  return ''
 }
 
 // ── Route principale ─────────────────────────────────────────────────────────
 
 /**
- * GET /store/google-feed
+ * GET /google-feed
  *
- * Flux RSS/XML au format Google Shopping 100% conforme :
- * - Champs obligatoires : id, title, description, link, image_link,
- *   price (TVA incluse), availability, condition, brand, gtin/mpn
- * - Champs recommandés : shipping BE, google_product_category, item_group_id,
- *   color, size, additional_image_link, product_type
- * - Validation GTIN (8/12/13/14 chiffres), HTML strippé de la description
+ * Flux RSS/XML Google Shopping — accessible publiquement (pas de publishable key).
+ * Utilise remoteQuery pour joindre les prix (Pricing module) aux variantes (Product module).
  *
- * À configurer dans Merchant Center → Sources de données → Récupération planifiée
- * URL : https://backend-production-7bbb.up.railway.app/google-feed
+ * URL Merchant Center : https://backend-production-7bbb.up.railway.app/google-feed
  */
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
-  const productService = req.scope.resolve(Modules.PRODUCT)
+  const remoteQuery = req.scope.resolve(ContainerRegistrationKeys.REMOTE_QUERY)
 
   try {
-    // ── Récupération de tous les produits publiés ──────────────────────────
+    // ── Récupération via remoteQuery (cross-module : Product + Pricing) ────
     const allProducts: any[] = []
     let offset = 0
     const take = 100
 
     while (true) {
-      const products = await productService.listProducts(
-        { status: 'published' },
-        {
-          relations: [
-            'variants',
-            'variants.prices',
-            'variants.options',
-            'variants.options.option',
-            'images',
-            'collection',
-            'categories',
+      const products: any[] = await remoteQuery(
+        remoteQueryObjectFromString({
+          entryPoint: 'product',
+          fields: [
+            'id', 'title', 'handle', 'description', 'thumbnail', 'status', 'metadata',
+            'images.url',
+            'collection.title',
+            'categories.name',
+            'variants.id', 'variants.title', 'variants.sku', 'variants.barcode',
+            'variants.inventory_quantity', 'variants.metadata',
+            'variants.prices.amount',
+            'variants.prices.currency_code',
+            'variants.options.value',
+            'variants.options.option.title',
           ],
-          take,
-          skip: offset,
-        }
+          variables: {
+            filters: { status: 'published' },
+            skip: offset,
+            take,
+          },
+        })
       )
+
       if (!products?.length) break
       allProducts.push(...products)
       if (products.length < take) break
@@ -112,22 +103,18 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     const items: string[] = []
 
     for (const product of allProducts) {
-      const variants: any[] = (product as any).variants ?? []
+      const variants: any[] = product.variants ?? []
       const hasMultipleVariants = variants.length > 1
 
-      // Catégorie Google calculée une fois par produit
       const collectionTitle: string = product.collection?.title ?? ''
       const categoryNames: string[] = (product.categories ?? []).map((c: any) => c.name)
       const googleCategory = getGoogleCategory(collectionTitle, categoryNames)
-
-      // product_type : collection > catégorie (pour les filtres Google)
-      const productType =
-        collectionTitle ||
-        (categoryNames.length > 0 ? categoryNames.join(' > ') : '')
+      const productType = collectionTitle || (categoryNames.length > 0 ? categoryNames.join(' > ') : '')
 
       for (const variant of variants) {
-        // ── Prix EUR (TVA incluse, obligatoire en Belgique) ────────────────
-        const eurPrice = (variant.prices ?? []).find(
+        // ── Prix EUR ───────────────────────────────────────────────────────
+        const prices: any[] = variant.prices ?? []
+        const eurPrice = prices.find(
           (p: any) => p.currency_code?.toLowerCase() === 'eur'
         )
         if (!eurPrice) continue
@@ -143,20 +130,15 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         const qty: number = variant.inventory_quantity ?? 0
         const availability = qty > 0 ? 'in stock' : 'out of stock'
 
-        // ── Image principale ───────────────────────────────────────────────
-        // thumbnail d'abord, puis première image du tableau
+        // ── Image ──────────────────────────────────────────────────────────
         const rawImage =
           product.thumbnail ||
           product.images?.[0]?.url ||
           (typeof product.images?.[0] === 'string' ? product.images[0] : '')
-        if (!rawImage) continue // Google refuse les produits sans image
+        if (!rawImage) continue
 
-        // S'assurer que l'URL est absolue
-        const imageLink = rawImage.startsWith('http')
-          ? rawImage
-          : `https://${rawImage}`
+        const imageLink = rawImage.startsWith('http') ? rawImage : `https://${rawImage}`
 
-        // ── Images supplémentaires (max 10) ────────────────────────────────
         const additionalImages: string[] = []
         if (Array.isArray(product.images)) {
           for (const img of product.images) {
@@ -167,37 +149,21 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
           }
         }
 
-        // ── Titre (max 150 chars) ──────────────────────────────────────────
+        // ── Titre / Description ────────────────────────────────────────────
         const isDefault =
-          !variant.title ||
-          ['Default Title', 'Default', 'default'].includes(variant.title)
-        const rawTitle = isDefault
-          ? (product.title ?? '')
-          : `${product.title} - ${variant.title}`
+          !variant.title || ['Default Title', 'Default', 'default'].includes(variant.title)
+        const rawTitle = isDefault ? (product.title ?? '') : `${product.title} - ${variant.title}`
         const title = rawTitle.substring(0, 150)
+        const description = (stripHtml(product.description || product.title || '')).substring(0, 5000) || title
 
-        // ── Description : HTML strippé, min 1 char ─────────────────────────
-        // Google refuse le HTML dans la description
-        const rawDesc = stripHtml(product.description || product.title || '')
-        const description = rawDesc.substring(0, 5000) || title
-
-        // ── Marque ─────────────────────────────────────────────────────────
-        const brand: string =
-          product.metadata?.brand ||
-          product.metadata?.vendor ||
-          product.metadata?.marque ||
-          'La Cabrade'
-
-        // ── ID produit : SKU si dispo (plus lisible), sinon variant.id ─────
-        // Google recommande un ID stable et court (max 50 chars)
-        const offerId: string = (variant.sku || variant.id).substring(0, 50)
-
-        // ── URL avec ancre variante pour atterrir sur la bonne variante ────
+        // ── Marque / ID / URL ──────────────────────────────────────────────
+        const brand = product.metadata?.brand || product.metadata?.vendor || product.metadata?.marque || 'La Cabrade'
+        const offerId = (variant.sku || variant.id).substring(0, 50)
         const productUrl = hasMultipleVariants
           ? `${STORE_URL}/products/${product.handle}?variant=${variant.id}`
           : `${STORE_URL}/products/${product.handle}`
 
-        // ── Options : couleur / taille ─────────────────────────────────────
+        // ── Options couleur / taille ───────────────────────────────────────
         let color = ''
         let size = ''
         if (Array.isArray(variant.options)) {
@@ -209,12 +175,9 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         }
 
         // ── GTIN / MPN ─────────────────────────────────────────────────────
-        // GTIN = barcode EAN-13 valide uniquement (8/12/13/14 chiffres)
-        // Si invalide → on passe en MPN pour éviter les erreurs Merchant Center
         const hasValidGtin = isValidGtin(variant.barcode)
-        const mpn: string = (variant.sku || variant.id).substring(0, 70)
+        const mpn = (variant.sku || variant.id).substring(0, 70)
 
-        // ── Construction du <item> ─────────────────────────────────────────
         const itemXml = `    <item>
       <g:id>${escapeXml(offerId)}</g:id>
       <title>${escapeXml(title)}</title>
@@ -254,7 +217,6 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       }
     }
 
-    // ── Enveloppe RSS ──────────────────────────────────────────────────────
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
   <channel>
@@ -270,7 +232,7 @@ ${items.join('\n')}
     return res.status(200).send(xml)
 
   } catch (error: any) {
-    console.error('❌ [GoogleFeed] Erreur génération XML:', error.message)
+    console.error('❌ [GoogleFeed] Erreur:', error.message)
     return res.status(500).json({ success: false, message: error.message })
   }
 }
