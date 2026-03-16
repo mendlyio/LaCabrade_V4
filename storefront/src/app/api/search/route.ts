@@ -65,30 +65,38 @@ export async function GET(request: NextRequest) {
     const prodData = await prodRes.json()
     const allProducts: any[] = prodData.products || []
 
+    // Normalise accents + casse : "équitation" == "equitation", "Éperons" == "eperons"
+    function norm(str: string): string {
+      return str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+    }
+
     // 3. Filtrage et scoring côté serveur
-    const qLower = q.toLowerCase()
-    const qTokens = qLower.split(/\s+/).filter(Boolean)
+    const qNorm = norm(q)
+    const qTokens = qNorm.split(/\s+/).filter(Boolean)
 
     const scored = allProducts
       .filter((p) => p.handle !== GIFT_CARD_HANDLE)
       .map((p) => {
-        const title = (p.title || "").toLowerCase()
-        const handle = (p.handle || "").toLowerCase()
-        const desc = (p.description || "").toLowerCase()
-        const collectionTitle = (p.collection?.title || "").toLowerCase()
+        const title = norm(p.title || "")
+        const handle = norm(p.handle || "")
+        const desc = norm(p.description || "")
+        const collectionTitle = norm(p.collection?.title || "")
         const variantTitles = (p.variants || [])
-          .map((v: any) => (v.title || "").toLowerCase())
+          .map((v: any) => norm(v.title || ""))
           .join(" ")
 
         let score = 0
 
         // Correspondance exacte du début = score maximal
-        if (title.startsWith(qLower)) score += 100
-        else if (title.includes(qLower)) score += 60
-        if (handle.includes(qLower)) score += 30
-        if (collectionTitle.includes(qLower)) score += 20
-        if (variantTitles.includes(qLower)) score += 15
-        if (desc.includes(qLower)) score += 5
+        if (title.startsWith(qNorm)) score += 100
+        else if (title.includes(qNorm)) score += 60
+        if (handle.includes(qNorm)) score += 30
+        if (collectionTitle.includes(qNorm)) score += 20
+        if (variantTitles.includes(qNorm)) score += 15
+        if (desc.includes(qNorm)) score += 5
 
         // Tokens individuels
         qTokens.forEach((token) => {

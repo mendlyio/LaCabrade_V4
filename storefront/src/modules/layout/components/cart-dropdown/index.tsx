@@ -18,12 +18,14 @@ import LineItemOptions from "@modules/common/components/line-item-options"
 import LineItemPrice from "@modules/common/components/line-item-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Thumbnail from "@modules/products/components/thumbnail"
+import { useTranslate } from "@lib/context/language-context"
 
 const CartDropdown = ({
   cart: cartState,
 }: {
   cart?: HttpTypes.StoreCart | null
 }) => {
+  const t = useTranslate()
   const [activeTimer, setActiveTimer] = useState<NodeJS.Timer | undefined>(
     undefined
   )
@@ -95,7 +97,7 @@ const CartDropdown = ({
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
-            <span className="hidden sm:inline">Panier</span>
+            <span className="hidden sm:inline">{t("cart.panier_btn" as any)}</span>
             <span className="bg-white text-amber-600 text-xs px-2 py-0.5 rounded-full font-bold min-w-[1.5rem] text-center">
               {totalItems}
             </span>
@@ -118,8 +120,10 @@ const CartDropdown = ({
           >
             <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100">
               <div>
-                <h3 className="text-sm font-semibold text-gray-900">Mon Panier</h3>
-                <p className="text-xs text-gray-500">{totalItems} article{totalItems > 1 ? "s" : ""}</p>
+                <h3 className="text-sm font-semibold text-gray-900">{t("cart.my_cart" as any)}</h3>
+                <p className="text-xs text-gray-500">
+                  {totalItems} {totalItems > 1 ? t("cart.articles" as any) : t("cart.article" as any)}
+                </p>
               </div>
             </div>
             {cartState && cartState.items?.length ? (
@@ -145,7 +149,7 @@ const CartDropdown = ({
                             thumbnail={item.variant?.product?.thumbnail}
                             images={item.variant?.product?.images}
                             size="square"
-                            alt={item.product_title ?? "Produit"}
+                            alt={item.product_title ?? t("cart.product_alt" as any)}
                           />
                           <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-5 transition-opacity rounded-lg"></div>
                         </LocalizedClientLink>
@@ -172,7 +176,7 @@ const CartDropdown = ({
                                   data-testid="cart-item-quantity"
                                   data-value={item.quantity}
                                 >
-                                  Qté: {item.quantity}
+                                  {t("cart.qty" as any)} {item.quantity}
                                 </span>
                               </div>
                               <div className="flex flex-col items-end gap-2 flex-shrink-0">
@@ -189,7 +193,7 @@ const CartDropdown = ({
                             className="mt-2 text-xs text-red-600 hover:text-red-700 hover:underline"
                             data-testid="cart-item-remove-button"
                           >
-                            Retirer
+                            {t("cart.remove" as any)}
                           </DeleteButton>
                         </div>
                       </div>
@@ -198,9 +202,9 @@ const CartDropdown = ({
                 <div className="p-6 flex flex-col gap-y-4 border-t border-gray-200 bg-gray-50">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">
-                      Sous-total{" "}
+                      {t("cart.subtotal_label" as any)}{" "}
                       <span className="text-xs">
-                        {exempt ? "HT (exonéré)" : "TVAC"}
+                        {exempt ? t("cart.excl_vat" as any) : t("cart.incl_vat" as any)}
                       </span>
                     </span>
                     <span
@@ -212,14 +216,14 @@ const CartDropdown = ({
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">TVA</span>
+                    <span className="text-gray-600">{t("cart.vat" as any)}</span>
                     <span className={`font-medium ${exempt ? "text-emerald-600" : "text-gray-900"}`} data-testid="cart-taxes" data-value={taxDisplayTotal}>
                       {formatAmount(taxDisplayTotal, cartState.currency_code ?? "eur")}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 rounded-lg p-3">
                     <span>✓</span>
-                    <span>Livraison gratuite dès 75€</span>
+                    <span>{t("cart.free_shipping_threshold" as any)}</span>
                   </div>
                   <LocalizedClientLink href="/cart" passHref>
                     <Button
@@ -227,7 +231,7 @@ const CartDropdown = ({
                       size="large"
                       data-testid="go-to-cart-button"
                     >
-                      Voir mon panier →
+                      {t("cart.view_cart" as any)}
                     </Button>
                   </LocalizedClientLink>
                 </div>
@@ -239,18 +243,18 @@ const CartDropdown = ({
                     🛒
                   </div>
                   <div className="text-center">
-                    <h4 className="font-semibold text-gray-900 mb-1">Votre panier est vide</h4>
-                    <p className="text-sm text-gray-500">Découvrez nos produits équestres</p>
+                    <h4 className="font-semibold text-gray-900 mb-1">{t("cart.empty_title" as any)}</h4>
+                    <p className="text-sm text-gray-500">{t("cart.empty_desc" as any)}</p>
                   </div>
                   <div className="w-full">
                     <LocalizedClientLink href="/store">
                       <>
-                        <span className="sr-only">Aller à la boutique</span>
-                        <Button 
+                        <span className="sr-only">{t("cart.go_to_store" as any)}</span>
+                        <Button
                           onClick={close}
                           className="w-full bg-amber-600 hover:bg-amber-700 text-white font-medium"
                         >
-                          Explorer nos produits →
+                          {t("cart.explore" as any)}
                         </Button>
                       </>
                     </LocalizedClientLink>

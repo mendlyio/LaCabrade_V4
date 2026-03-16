@@ -93,13 +93,13 @@ const ShippingAddress = ({
 
       if (savedVat) {
         setVatStatus("valid")
-        setVatMessage("Numéro validé")
+        setVatMessage(t("checkout.vat_validated" as any))
       } else if (customerVat) {
         setVatStatus("valid")
-        setVatMessage("Numéro depuis votre compte")
+        setVatMessage(t("checkout.vat_from_account" as any))
       } else {
         setVatStatus("valid")
-        setVatMessage("Numéro restauré — re-vérifiez si nécessaire")
+        setVatMessage(t("checkout.vat_restored" as any))
       }
 
       // Synchroniser localStorage
@@ -139,7 +139,7 @@ const ShippingAddress = ({
   const validateVat = useCallback(async () => {
     if (!vatNumber || vatNumber.length < 4) {
       setVatStatus("invalid")
-      setVatMessage("Numéro de TVA trop court")
+      setVatMessage(t("checkout.vat_too_short" as any))
       return
     }
 
@@ -162,16 +162,15 @@ const ShippingAddress = ({
 
       if (res.ok && result.valid) {
         setVatStatus("valid")
-        setVatMessage(result.company_name ? `✓ ${result.company_name}` : "Numéro valide")
-        // Sauvegarder immédiatement le numéro validé
+        setVatMessage(result.company_name ? `✓ ${result.company_name}` : t("checkout.vat_validated" as any))
         await saveVatToCart(vatNumber)
       } else {
         setVatStatus("invalid")
-        setVatMessage(result.message || "Numéro de TVA invalide")
+        setVatMessage(result.message || t("checkout.vat_validation_error" as any))
       }
     } catch {
       setVatStatus("invalid")
-      setVatMessage("Erreur de validation. Réessayez.")
+      setVatMessage(t("checkout.vat_validation_error" as any))
     }
   }, [vatNumber, saveVatToCart])
 
@@ -191,7 +190,7 @@ const ShippingAddress = ({
       {customer && (addressesInRegion?.length || 0) > 0 && (
         <Container className="mb-6 flex flex-col gap-y-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <p className="text-sm text-gray-700">
-            Bonjour <span className="font-semibold">{customer.first_name}</span>, souhaitez-vous utiliser une de vos adresses enregistrées ?
+            Bonjour <span className="font-semibold">{customer.first_name}</span>, {t("checkout.greeting" as any)}
           </p>
           <AddressSelect
             addresses={customer.addresses}
@@ -319,7 +318,7 @@ const ShippingAddress = ({
             <svg className="w-4 h-4 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Ajouter un numéro de TVA (professionnel)
+            {t("checkout.add_vat" as any)}
           </button>
         ) : (
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
@@ -328,7 +327,7 @@ const ShippingAddress = ({
                 <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
-                <span className="text-sm font-semibold text-gray-700">Numéro de TVA intracommunautaire</span>
+                <span className="text-sm font-semibold text-gray-700">{t("checkout.vat_number_label" as any)}</span>
               </div>
               <button
                 type="button"
@@ -402,10 +401,10 @@ const ShippingAddress = ({
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    Vérification...
+                    {t("checkout.verifying" as any)}
                   </>
                 ) : (
-                  "Vérifier"
+                  t("checkout.verify" as any)
                 )}
               </button>
             </div>
@@ -423,12 +422,12 @@ const ShippingAddress = ({
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>La TVA sera déduite pour les achats intracommunautaires hors Belgique.</span>
+                <span>{t("checkout.vat_deducted" as any)}</span>
               </div>
             )}
 
             <p className="text-xs text-gray-400">
-              Format : code pays + numéro (ex: BE0123456789, FR12345678901, DE123456789)
+              {t("checkout.vat_format" as any)}
             </p>
 
             {/* Champ caché pour transmettre le numéro validé au formulaire */}

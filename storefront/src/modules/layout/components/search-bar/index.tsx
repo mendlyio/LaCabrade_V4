@@ -4,21 +4,36 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import { MagnifyingGlass, XMark } from "@medusajs/icons"
 import { useParams, useRouter } from "next/navigation"
 import Image from "next/image"
+import { useTranslate } from "@lib/context/language-context"
+import { useLanguage } from "@lib/context/language-context"
 
 const RECENT_SEARCHES_KEY = "lc_recent_searches"
 const MAX_RECENT = 5
 
-const POPULAR_SEARCHES = [
-  "Gants",
-  "Selles de dressage",
-  "Bottes d'équitation",
-  "Tapis de selle",
-  "Mors",
-  "Licols",
-  "Protections cheval",
-  "Bombes équitation",
-  "Éperons",
-]
+const POPULAR_SEARCHES: Record<string, string[]> = {
+  fr: [
+    "Gants",
+    "Selles de dressage",
+    "Bottes d'équitation",
+    "Tapis de selle",
+    "Mors",
+    "Licols",
+    "Protections cheval",
+    "Bombes équitation",
+    "Éperons",
+  ],
+  nl: [
+    "Handschoenen",
+    "Dressagezadels",
+    "Rijlaarzen",
+    "Zadeldekjes",
+    "Bits",
+    "Halsters",
+    "Paardenbeschermers",
+    "Rijcaps",
+    "Sporen",
+  ],
+}
 
 type ProductSuggestion = {
   id: string
@@ -39,26 +54,47 @@ function formatPrice(amount: number, currency: string) {
   }).format(amount)
 }
 
+function normalizeAccents(str: string): string {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+}
+
 function highlightMatch(text: string, query: string) {
   if (!query.trim()) return <span>{text}</span>
-  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi")
-  const parts = text.split(regex)
-  return (
-    <>
-      {parts.map((part, i) =>
-        part.toLowerCase() === query.toLowerCase() ? (
-          <mark key={i} className="bg-amber-100 text-amber-900 font-semibold rounded-sm px-0.5">
-            {part}
-          </mark>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
-    </>
-  )
+
+  const normQuery = normalizeAccents(query)
+  const normText = normalizeAccents(text)
+
+  const parts: React.ReactNode[] = []
+  let lastIndex = 0
+  let searchFrom = 0
+
+  while (searchFrom < normText.length) {
+    const idx = normText.indexOf(normQuery, searchFrom)
+    if (idx === -1) break
+    if (idx > lastIndex) {
+      parts.push(<span key={lastIndex}>{text.slice(lastIndex, idx)}</span>)
+    }
+    parts.push(
+      <mark key={idx} className="bg-amber-100 text-amber-900 font-semibold rounded-sm px-0.5">
+        {text.slice(idx, idx + normQuery.length)}
+      </mark>
+    )
+    lastIndex = idx + normQuery.length
+    searchFrom = lastIndex
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(<span key={lastIndex}>{text.slice(lastIndex)}</span>)
+  }
+
+  return <>{parts}</>
 }
 
 const SearchBar = () => {
+  const t = useTranslate()
+  const { language } = useLanguage()
+  const popularSearches = POPULAR_SEARCHES[language] || POPULAR_SEARCHES.fr
+
   const [query, setQuery] = useState("")
   const [isOpen, setIsOpen] = useState(false)
   const [products, setProducts] = useState<ProductSuggestion[]>([])
@@ -154,7 +190,7 @@ const SearchBar = () => {
   const allItems = query.trim().length >= 2
     ? products.map((p) => p.title)
     : query.trim() === ""
-    ? recentSearches.length > 0 ? recentSearches : POPULAR_SEARCHES
+    ? recentSearches.length > 0 ? recentSearches : popularSearches
     : []
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -232,7 +268,7 @@ const SearchBar = () => {
           onChange={(e) => { setQuery(e.target.value); setSelectedIndex(-1) }}
           onFocus={() => setIsOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder="Rechercher un produit..."
+          placeholder={t("search.placeholder" as any)}
           className="w-full pl-12 pr-12 py-3 bg-transparent text-base font-medium text-gray-900 placeholder-gray-400 focus:outline-none"
           autoComplete="off"
           autoCorrect="off"
@@ -242,7 +278,7 @@ const SearchBar = () => {
           <button
             onClick={() => { setQuery(""); setProducts([]); inputRef.current?.focus() }}
             className="absolute right-3 p-1 hover:bg-gray-100 rounded-full transition-colors"
-            aria-label="Effacer"
+            aria-label={t("search.clear" as any)}
           >
             <XMark className="w-3.5 h-3.5 text-gray-400" />
           </button>
@@ -257,7 +293,7 @@ const SearchBar = () => {
           {showProducts && (
             <div className="p-3">
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest px-2 mb-2">
-                Produits
+                {t("search.products_section" as any)}
               </p>
               <ul className="space-y-0.5">
                 {products.map((product, i) => (
@@ -317,7 +353,7 @@ const SearchBar = () => {
                 onClick={() => handleSearch(query)}
                 className="w-full mt-2 px-3 py-2.5 flex items-center justify-between rounded-xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium transition-colors group"
               >
-                <span>Voir tous les résultats pour &ldquo;{query}&rdquo;</span>
+                <span>{t("search.all_results" as any)} &ldquo;{query}&rdquo;</span>
                 <svg className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
@@ -332,14 +368,14 @@ const SearchBar = () => {
                 <MagnifyingGlass className="w-6 h-6 text-gray-300" />
               </div>
               <p className="text-sm font-medium text-gray-700 mb-1">
-                Aucun résultat pour &ldquo;{query}&rdquo;
+                {t("search.no_result" as any)} &ldquo;{query}&rdquo;
               </p>
-              <p className="text-xs text-gray-400 mb-4">Essayez avec d&rsquo;autres mots-clés</p>
+              <p className="text-xs text-gray-400 mb-4">{t("search.try_keywords" as any)}</p>
               <button
                 onClick={() => handleSearch(query)}
                 className="px-5 py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-sm font-medium transition-colors"
               >
-                Rechercher quand même
+                {t("search.search_anyway" as any)}
               </button>
             </div>
           )}
@@ -349,7 +385,7 @@ const SearchBar = () => {
             <div className="p-3">
               <div className="flex items-center justify-between px-2 mb-2">
                 <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest">
-                  Récents
+                  {t("search.recent" as any)}
                 </p>
                 <button
                   onClick={() => {
@@ -358,7 +394,7 @@ const SearchBar = () => {
                   }}
                   className="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  Tout effacer
+                  {t("search.clear_all" as any)}
                 </button>
               </div>
               <ul className="space-y-0.5">
@@ -381,7 +417,7 @@ const SearchBar = () => {
                       <button
                         onClick={(e) => removeRecentSearch(term, e)}
                         className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-gray-200 transition-all"
-                        aria-label="Supprimer"
+                        aria-label={t("search.remove" as any)}
                       >
                         <XMark className="w-3 h-3 text-gray-400" />
                       </button>
@@ -396,10 +432,10 @@ const SearchBar = () => {
           {showPopular && (
             <div className="p-3">
               <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest px-2 mb-2">
-                Populaires
+                {t("search.popular" as any)}
               </p>
               <div className="flex flex-wrap gap-2 px-2">
-                {POPULAR_SEARCHES.map((term) => (
+                {popularSearches.map((term) => (
                   <button
                     key={term}
                     onClick={() => handleSearch(term)}
@@ -418,15 +454,15 @@ const SearchBar = () => {
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1.5">
                   <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px] font-mono shadow-sm">↑↓</kbd>
-                  Navigation
+                  {t("search.nav_hint" as any)}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px] font-mono shadow-sm">↵</kbd>
-                  Valider
+                  {t("search.confirm_hint" as any)}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-[10px] font-mono shadow-sm">ESC</kbd>
-                  Fermer
+                  {t("search.close_hint" as any)}
                 </span>
               </div>
             </div>

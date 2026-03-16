@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslate } from "@lib/context/language-context"
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "https://backend-production-7bbb.up.railway.app"
@@ -9,6 +10,7 @@ const PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
 
 const NewsletterForm = () => {
+  const t = useTranslate()
   const [email, setEmail] = useState("")
   const [birthday, setBirthday] = useState("")
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
@@ -20,23 +22,19 @@ const NewsletterForm = () => {
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setStatus("error")
-      setMessage("Veuillez entrer une adresse email valide")
+      setMessage(t("form.invalid_email" as any))
       return
     }
     if (!birthday) {
       setStatus("error")
-      setMessage("Votre date d'anniversaire est requise pour valider l'inscription 🎂")
+      setMessage(t("form.birthday_required" as any))
       return
     }
 
     setStatus("loading")
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      }
-      if (PUBLISHABLE_KEY) {
-        headers["x-publishable-api-key"] = PUBLISHABLE_KEY
-      }
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (PUBLISHABLE_KEY) headers["x-publishable-api-key"] = PUBLISHABLE_KEY
       const res = await fetch(`${BACKEND_URL}/store/newsletter`, {
         method: "POST",
         headers,
@@ -49,22 +47,18 @@ const NewsletterForm = () => {
         setPromoCode(data.promo_code || null)
         setMessage(
           data.already_subscribed
-            ? "Vous êtes déjà inscrit(e) 🎉 Vérifiez vos emails pour votre code."
-            : "Merci ! Votre code -10% vous a été envoyé par email 🎉"
+            ? t("form.already_subscribed" as any)
+            : t("form.success" as any)
         )
         setEmail("")
         setBirthday("")
-        setTimeout(() => {
-          setStatus("idle")
-          setMessage("")
-          setPromoCode(null)
-        }, 8000)
+        setTimeout(() => { setStatus("idle"); setMessage(""); setPromoCode(null) }, 8000)
       } else {
-        throw new Error(data.message || "Erreur inconnue")
+        throw new Error(data.message || t("form.error" as any))
       }
     } catch {
       setStatus("error")
-      setMessage("Une erreur s'est produite. Veuillez réessayer.")
+      setMessage(t("form.error" as any))
       setTimeout(() => { setStatus("idle"); setMessage("") }, 5000)
     }
   }
@@ -74,13 +68,13 @@ const NewsletterForm = () => {
   return (
     <div className="max-w-xl mx-auto">
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        {/* 1. Email */}
+        {/* Email */}
         <div className="relative">
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="votre@email.com"
+            placeholder={t("form.email_placeholder" as any)}
             required
             disabled={disabled}
             className="w-full px-6 py-4 rounded-lg border-2 border-white/20 bg-white/10
@@ -95,11 +89,11 @@ const NewsletterForm = () => {
           )}
         </div>
 
-        {/* 2. Anniversaire */}
+        {/* Anniversaire */}
         <div className="flex flex-col gap-1">
           <label className="text-white/80 text-xs font-medium ml-1 flex items-center gap-1">
-            🎂 Date d&apos;anniversaire
-            <span className="text-white/50 font-normal">(obligatoire — cadeau le jour J)</span>
+            🎂 {t("form.birthday_label" as any)}
+            <span className="text-white/50 font-normal">{t("form.birthday_hint" as any)}</span>
           </label>
           <input
             type="date"
@@ -118,7 +112,7 @@ const NewsletterForm = () => {
           />
         </div>
 
-        {/* 3. Bouton */}
+        {/* Bouton */}
         <button
           type="submit"
           disabled={disabled}
@@ -127,7 +121,11 @@ const NewsletterForm = () => {
                      disabled:cursor-not-allowed hover:scale-[1.02] transform
                      shadow-lg hover:shadow-xl"
         >
-          {status === "loading" ? "Inscription..." : status === "success" ? "✓ Inscrit !" : "S'inscrire"}
+          {status === "loading"
+            ? t("form.subscribing" as any)
+            : status === "success"
+            ? t("form.subscribed" as any)
+            : t("form.subscribe" as any)}
         </button>
       </form>
 
@@ -142,7 +140,7 @@ const NewsletterForm = () => {
           {message}
           {promoCode && status === "success" && (
             <div className="mt-2">
-              <span className="text-white/80 text-xs">Votre code : </span>
+              <span className="text-white/80 text-xs">{t("form.promo_code_label" as any)}</span>
               <code className="bg-white/20 text-white font-mono font-bold text-base px-3 py-1 rounded ml-1 tracking-widest">
                 {promoCode}
               </code>

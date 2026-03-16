@@ -4,12 +4,14 @@ import { Fragment, useState, useRef, useEffect } from "react"
 import { ChevronDown } from "@medusajs/icons"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HttpTypes } from "@medusajs/types"
+import { useTranslate } from "@lib/context/language-context"
 
 type MegaMenuProps = {
   category: HttpTypes.StoreProductCategory
 }
 
 const MegaMenu = ({ category }: MegaMenuProps) => {
+  const t = useTranslate()
   const hasChildren = category.category_children && category.category_children.length > 0
   const [open, setOpen] = useState(false)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -133,7 +135,7 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
                   onClick={() => setOpen(false)}
                   className="inline-flex items-center gap-2 rounded-full bg-amber-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition-colors"
                 >
-                  Tout voir
+                  {t("menu.view_all" as any)}
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>

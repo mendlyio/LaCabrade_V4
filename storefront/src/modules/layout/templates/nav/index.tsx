@@ -14,11 +14,9 @@ import TopBar from "@modules/layout/components/top-bar"
 import BrandsMenu from "@modules/layout/components/brands-menu"
 import MegaMenu from "@modules/layout/components/mega-menu"
 import NavLinks from "@modules/layout/components/nav-links"
-import {
-  MagnifyingGlass,
-  User,
-  ShoppingBag,
-} from "@medusajs/icons"
+import NavAccountLink from "@modules/layout/components/nav-account-link"
+import NavCartFallback from "@modules/layout/components/nav-cart-fallback"
+import NavSearchLink from "@modules/layout/components/nav-search-link"
 
 export default async function Nav() {
   let regions: StoreRegion[] = FALLBACK_REGIONS
@@ -87,46 +85,17 @@ export default async function Nav() {
 
               {/* Icône recherche mobile */}
               {process.env.NEXT_PUBLIC_FEATURE_SEARCH_ENABLED && (
-                <LocalizedClientLink
-                  className="xl:hidden p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                  href="/search"
-                  scroll={false}
-                  data-testid="nav-search-link"
-                  aria-label="Recherche"
-                >
-                  <MagnifyingGlass className="w-5 h-5 text-gray-600" />
-                </LocalizedClientLink>
+                <NavSearchLink />
               )}
 
               {/* Compte */}
-              <LocalizedClientLink
-                href="/account"
-                className="flex p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors group"
-                data-testid="nav-account-link"
-                aria-label="Mon compte"
-              >
-                <User className="w-5 h-5 text-gray-600 group-hover:text-amber-600 transition-colors" />
-              </LocalizedClientLink>
+              <NavAccountLink />
 
               {/* Wishlist */}
               <WishlistButton />
 
               {/* Panier */}
-              <Suspense
-                fallback={
-                  <LocalizedClientLink
-                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors font-medium text-sm"
-                    href="/cart"
-                    data-testid="nav-cart-link"
-                  >
-                    <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="hidden sm:inline">Panier</span>
-                    <span className="bg-white text-amber-600 text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-bold">
-                      {cachedCartCount}
-                    </span>
-                  </LocalizedClientLink>
-                }
-              >
+              <Suspense fallback={<NavCartFallback cachedCartCount={cachedCartCount} />}>
                 <CartButton />
               </Suspense>
             </div>

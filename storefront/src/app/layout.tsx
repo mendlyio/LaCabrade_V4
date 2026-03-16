@@ -6,6 +6,7 @@ import CookieBanner from "@modules/layout/components/cookie-banner"
 import { GoogleConsentMode } from "@modules/common/components/google-analytics/consent-mode"
 import NewsletterPopup from "@modules/layout/components/newsletter-popup"
 import OrganizationJsonLd from "@modules/common/components/json-ld/organization-jsonld"
+import HtmlLangUpdater from "@modules/common/components/html-lang-updater"
 
 const BASE_URL = getBaseURL()
 
@@ -37,15 +38,32 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: BASE_URL,
+    languages: {
+      "fr-BE": `${BASE_URL}/be`,
+      "nl-BE": `${BASE_URL}/be`,
+      "x-default": `${BASE_URL}/be`,
+    },
   },
+  keywords: [
+    "sellerie équestre",
+    "zadelmakerij",
+    "équipement cavalier",
+    "paardrijuitrusting",
+    "La Cabrade",
+    "LC Equestrian",
+    "Fléron",
+    "Belgique",
+    "België",
+  ],
 }
 
 export default function RootLayout(props: { children: React.ReactNode }) {
   return (
-    <html lang="fr" data-mode="light">
+    <html lang="fr-BE" data-mode="light">
       <body>
         <OrganizationJsonLd />
         <Providers>
+          <HtmlLangUpdater />
           <GoogleConsentMode />
           <main className="relative">{props.children}</main>
           <CookieBanner />

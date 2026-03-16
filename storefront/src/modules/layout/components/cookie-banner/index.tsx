@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { useTranslate } from "@lib/context/language-context"
 
 export const SHOW_COOKIE_BANNER_EVENT = "show-cookie-banner"
 
 export default function CookieBanner() {
+  const t = useTranslate()
   const [showBanner, setShowBanner] = useState(false)
 
   useEffect(() => {
@@ -44,15 +46,13 @@ export default function CookieBanner() {
       <div className="content-container mx-auto flex flex-col md:flex-row items-center justify-between gap-6 max-w-7xl">
         <div className="flex-1 text-center md:text-left">
           <h3 className="text-lg font-bold mb-2 text-white">
-            🍪 Nous respectons votre vie privée
+            {t("cookie.title" as any)}
           </h3>
           <p className="text-sm text-gray-300 leading-relaxed">
-            Nous utilisons des cookies pour améliorer votre expérience, analyser le trafic et personnaliser le contenu. 
-            En cliquant sur "Tout accepter", vous consentez à notre utilisation des cookies. 
-            Vous pouvez refuser ou gérer vos préférences à tout moment.
+            {t("cookie.description" as any)}
             <br className="hidden md:block" />
             <LocalizedClientLink href="/protection-donnees" className="text-amber-500 hover:text-amber-400 underline mt-1 inline-block">
-              Lire notre politique de confidentialité
+              {t("cookie.privacy_link" as any)}
             </LocalizedClientLink>
           </p>
         </div>
@@ -62,13 +62,13 @@ export default function CookieBanner() {
             onClick={declineCookies}
             className="px-6 py-3 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white transition-all text-sm font-medium w-full sm:w-auto"
           >
-            Continuer sans accepter
+            {t("cookie.decline" as any)}
           </button>
           <button
             onClick={acceptCookies}
             className="px-6 py-3 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-lg transform hover:scale-105 transition-all text-sm w-full sm:w-auto"
           >
-            Tout accepter
+            {t("cookie.accept" as any)}
           </button>
         </div>
       </div>

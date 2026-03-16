@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslate } from "@lib/context/language-context"
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "https://backend-production-7bbb.up.railway.app"
@@ -9,6 +10,7 @@ const PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
 
 const NewsletterBanner = () => {
+  const t = useTranslate()
   const [email, setEmail] = useState("")
   const [birthday, setBirthday] = useState("")
   const [honeypot, setHoneypot] = useState("")
@@ -18,21 +20,20 @@ const NewsletterBanner = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Honeypot : succès silencieux si le champ caché est rempli (bot détecté)
     if (honeypot) {
       setStatus("success")
-      setMessage("C'est parti ! Ton code -10% t'a été envoyé par email 📬")
+      setMessage(t("newsletter.success" as any))
       return
     }
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setStatus("error")
-      setMessage("Adresse email invalide")
+      setMessage(t("newsletter.invalid_email" as any))
       return
     }
     if (!birthday) {
       setStatus("error")
-      setMessage("Ta date d'anniversaire est requise 🎂")
+      setMessage(t("newsletter.birthday_required_msg" as any))
       return
     }
 
@@ -55,8 +56,8 @@ const NewsletterBanner = () => {
         setStatus("success")
         setMessage(
           data.already_subscribed
-            ? "Tu es déjà inscrit(e) — vérifie tes emails 📬"
-            : "C'est parti ! Ton code -10% t'a été envoyé par email 📬"
+            ? t("newsletter.already_subscribed" as any)
+            : t("newsletter.success" as any)
         )
         setEmail("")
         setBirthday("")
@@ -65,12 +66,12 @@ const NewsletterBanner = () => {
           setMessage("")
         }, 8000)
       } else {
-        throw new Error(data.message || "Erreur")
+        throw new Error(data.message || t("newsletter.error" as any))
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : ""
       setStatus("error")
-      setMessage(msg || "Une erreur s'est produite. Réessayez.")
+      setMessage(msg || t("newsletter.error" as any))
       setTimeout(() => { setStatus("idle"); setMessage("") }, 6000)
     }
   }
@@ -82,14 +83,16 @@ const NewsletterBanner = () => {
       <div className="content-container">
         <div className="max-w-xl mx-auto text-center">
           <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">
-            Un petit bonus pour toi !
+            {t("newsletter.title" as any)}
           </h3>
           <p className="text-white/90 text-lg mb-6">
-            Rejoins-nous et économise <strong className="text-white">10%</strong> dès ton inscription
+            {t("newsletter.subtitle" as any).split("10%")[0]}
+            <strong className="text-white">10%</strong>
+            {t("newsletter.subtitle" as any).split("10%")[1]}
           </p>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            {/* Honeypot — piège pour les bots */}
+            {/* Honeypot */}
             <input
               type="text"
               name="website"
@@ -101,12 +104,12 @@ const NewsletterBanner = () => {
               style={{ position: "absolute", left: "-9999px", top: "-9999px", opacity: 0, height: 0, width: 0 }}
             />
 
-            {/* 1. Email */}
+            {/* Email */}
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Ton adresse email"
+              placeholder={t("newsletter.email_placeholder" as any)}
               required
               disabled={disabled}
               className="w-full px-5 py-4 rounded-lg text-gray-900 placeholder-gray-500
@@ -114,11 +117,11 @@ const NewsletterBanner = () => {
                          disabled:opacity-50 disabled:cursor-not-allowed"
             />
 
-            {/* 2. Anniversaire */}
+            {/* Anniversaire */}
             <div className="flex flex-col gap-1">
               <label className="text-white/80 text-xs font-medium text-left ml-1 flex items-center gap-1">
-                🎂 Date d&apos;anniversaire
-                <span className="text-white/50 font-normal">(obligatoire)</span>
+                🎂 {t("newsletter.birthday_label" as any)}
+                <span className="text-white/50 font-normal">({t("newsletter.birthday_required" as any)})</span>
               </label>
               <input
                 type="date"
@@ -137,7 +140,7 @@ const NewsletterBanner = () => {
               />
             </div>
 
-            {/* 3. Bouton */}
+            {/* Bouton */}
             <button
               type="submit"
               disabled={disabled}
@@ -145,7 +148,11 @@ const NewsletterBanner = () => {
                          hover:bg-amber-50 transition-all duration-300 shadow-lg hover:shadow-xl
                          disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {status === "loading" ? "Inscription..." : status === "success" ? "✓ Inscrit(e)" : "S'inscrire"}
+              {status === "loading"
+                ? t("newsletter.subscribing" as any)
+                : status === "success"
+                ? t("newsletter.subscribed" as any)
+                : t("newsletter.subscribe_btn" as any)}
             </button>
           </form>
 
@@ -156,7 +163,7 @@ const NewsletterBanner = () => {
           )}
 
           <p className="text-white/60 text-xs mt-4">
-            En t&apos;inscrivant tu acceptes nos offres exclusives · Code à usage unique · Désinscription en 1 clic
+            {t("newsletter.footer_text" as any)}
           </p>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
+import { useTranslate } from "@lib/context/language-context"
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ||
@@ -15,22 +16,18 @@ const STORAGE_KEY = "lc_newsletter_popup_dismissed"
 const DELAY_MS = 3000
 
 export default function NewsletterPopup() {
+  const t = useTranslate()
   const [visible, setVisible] = useState(false)
   const [email, setEmail] = useState("")
   const [birthday, setBirthday] = useState("")
   const [honeypot, setHoneypot] = useState("")
-  const [status, setStatus] = useState<
-    "idle" | "loading" | "success" | "error"
-  >("idle")
-  const [errors, setErrors] = useState<{
-    email?: string
-    birthday?: string
-  }>({})
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
+  const [errors, setErrors] = useState<{ email?: string; birthday?: string }>({})
 
   useEffect(() => {
     if (localStorage.getItem(STORAGE_KEY)) return
-    const t = setTimeout(() => setVisible(true), DELAY_MS)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setVisible(true), DELAY_MS)
+    return () => clearTimeout(timer)
   }, [])
 
   const dismiss = useCallback(() => {
@@ -41,7 +38,6 @@ export default function NewsletterPopup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Honeypot : succès silencieux si le champ caché est rempli (bot détecté)
     if (honeypot) {
       setStatus("success")
       localStorage.setItem(STORAGE_KEY, "1")
@@ -51,8 +47,8 @@ export default function NewsletterPopup() {
 
     const errs: { email?: string; birthday?: string } = {}
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      errs.email = "Email invalide"
-    if (!birthday) errs.birthday = "Date d'anniversaire requise"
+      errs.email = t("popup.invalid_email" as any)
+    if (!birthday) errs.birthday = t("popup.birthday_required" as any)
     if (Object.keys(errs).length) {
       setErrors(errs)
       return
@@ -60,30 +56,25 @@ export default function NewsletterPopup() {
     setErrors({})
     setStatus("loading")
     try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      }
-      if (PUBLISHABLE_KEY) {
-        headers["x-publishable-api-key"] = PUBLISHABLE_KEY
-      }
+      const headers: Record<string, string> = { "Content-Type": "application/json" }
+      if (PUBLISHABLE_KEY) headers["x-publishable-api-key"] = PUBLISHABLE_KEY
       const res = await fetch(`${BACKEND_URL}/store/newsletter`, {
         method: "POST",
         headers,
         body: JSON.stringify({ email, birthday, website: honeypot }),
       })
-      const data = await res.json()
+      await res.json()
       if (res.ok) {
         setStatus("success")
         localStorage.setItem(STORAGE_KEY, "1")
         setTimeout(() => setVisible(false), 6000)
       } else {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.message || "Erreur")
+        throw new Error(t("popup.error_generic" as any))
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : ""
       setStatus("error")
-      setErrors(msg ? { email: msg } : { email: "Une erreur s'est produite. Réessaie." })
+      setErrors({ email: msg || t("popup.error_generic" as any) })
       setTimeout(() => { setStatus("idle"); setErrors({}) }, 6000)
     }
   }
@@ -94,9 +85,7 @@ export default function NewsletterPopup() {
     <div
       className="fixed inset-0 z-[9998] flex items-center justify-center p-4"
       style={{ backgroundColor: "rgba(0,0,0,0.55)" }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) dismiss()
-      }}
+      onClick={(e) => { if (e.target === e.currentTarget) dismiss() }}
     >
       <div
         className="relative w-full max-w-[420px] sm:max-w-[560px] bg-white rounded-2xl
@@ -107,7 +96,7 @@ export default function NewsletterPopup() {
         {/* Close */}
         <button
           onClick={dismiss}
-          aria-label="Fermer"
+          aria-label={t("popup.close" as any)}
           className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center
                      rounded-full bg-white/80 backdrop-blur hover:bg-white text-gray-400
                      hover:text-gray-700 shadow-sm transition-all"
@@ -117,30 +106,16 @@ export default function NewsletterPopup() {
           </svg>
         </button>
 
-        {/* Mobile : image carrée entière, bien visible */}
+        {/* Mobile image */}
         <div className="sm:hidden flex justify-center flex-shrink-0 pt-5 pb-2">
           <div className="relative w-[200px] h-[200px] rounded-2xl overflow-hidden shadow-lg">
-            <Image
-              src={IMG}
-              alt="La Cabrade"
-              fill
-              className="object-contain"
-              sizes="200px"
-              priority
-            />
+            <Image src={IMG} alt="La Cabrade" fill className="object-contain" sizes="200px" priority />
           </div>
         </div>
 
-        {/* Desktop : colonne gauche, image carrée */}
+        {/* Desktop image */}
         <div className="hidden sm:flex flex-shrink-0 w-[220px] bg-[#faf6f2] items-center justify-center self-stretch">
-          <Image
-            src={IMG}
-            alt="La Cabrade"
-            width={220}
-            height={220}
-            className="object-contain"
-            priority
-          />
+          <Image src={IMG} alt="La Cabrade" width={220} height={220} className="object-contain" priority />
         </div>
 
         {/* Formulaire */}
@@ -149,32 +124,38 @@ export default function NewsletterPopup() {
             La Cabrade
           </p>
           <h2 className="text-lg font-bold text-gray-900 leading-tight mb-1 text-center sm:text-left">
-            Un petit bonus pour toi&nbsp;!
+            {t("popup.title" as any)}
           </h2>
           <p className="text-gray-500 text-xs mb-4 leading-relaxed text-center sm:text-left">
-            Rejoins-nous et économise{" "}
-            <span className="text-[#9e354a] font-bold">10&nbsp;%</span> sur ta
-            prochaine commande.
+            {t("popup.subtitle" as any).replace("10%", "")}
+            <span className="text-[#9e354a] font-bold">10&nbsp;%</span>
+            {t("popup.subtitle" as any).includes("10%")
+              ? t("popup.subtitle" as any).split("10%")[1]
+              : ""}
           </p>
 
           {status === "success" ? (
             <div className="text-center py-2">
               <p className="text-2xl mb-2">🎉</p>
               <p className="text-gray-800 font-semibold text-sm mb-3">
-                C&apos;est parti !
+                {t("popup.success_title" as any)}
               </p>
               <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                 <p className="text-sm text-gray-700">
-                  Ton code <strong>-10&nbsp;%</strong> vient d&apos;être envoyé à ton adresse email.
+                  {t("popup.success_code" as any).replace("-10%", "")}
+                  <strong>-10&nbsp;%</strong>
+                  {t("popup.success_code" as any).includes("-10%")
+                    ? t("popup.success_code" as any).split("-10%")[1]
+                    : ""}
                 </p>
                 <p className="text-[11px] text-gray-400 mt-2">
-                  Vérifie aussi tes spams 📬
+                  {t("popup.success_spam" as any)}
                 </p>
               </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-              {/* Honeypot — piège pour les bots */}
+              {/* Honeypot */}
               <input
                 type="text"
                 name="website"
@@ -186,36 +167,26 @@ export default function NewsletterPopup() {
                 style={{ position: "absolute", left: "-9999px", top: "-9999px", opacity: 0, height: 0, width: 0 }}
               />
 
-              <Field label="Adresse email" error={errors.email}>
+              <Field label={t("popup.email_label" as any)} error={errors.email}>
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value)
-                    setErrors((p) => ({ ...p, email: undefined }))
-                  }}
-                  placeholder="ton@email.com"
+                  onChange={(e) => { setEmail(e.target.value); setErrors((p) => ({ ...p, email: undefined })) }}
+                  placeholder={t("popup.email_placeholder" as any)}
                   disabled={status === "loading"}
                   className={inputClass(!!errors.email)}
                 />
               </Field>
 
               <Field
-                label="Date d'anniversaire"
+                label={t("popup.birthday_label" as any)}
                 error={errors.birthday}
-                hint={
-                  !errors.birthday
-                    ? "🎂 -10 % offert chaque année pour ton anniversaire"
-                    : undefined
-                }
+                hint={!errors.birthday ? t("popup.birthday_hint" as any) : undefined}
               >
                 <input
                   type="date"
                   value={birthday}
-                  onChange={(e) => {
-                    setBirthday(e.target.value)
-                    setErrors((p) => ({ ...p, birthday: undefined }))
-                  }}
+                  onChange={(e) => { setBirthday(e.target.value); setErrors((p) => ({ ...p, birthday: undefined })) }}
                   disabled={status === "loading"}
                   className={inputClass(!!errors.birthday).replace("w-full", "w-auto")}
                   style={{ colorScheme: "light" }}
@@ -224,7 +195,7 @@ export default function NewsletterPopup() {
 
               {status === "error" && (
                 <p className="text-xs text-red-500 text-center">
-                  Une erreur s&apos;est produite. Réessaie.
+                  {t("popup.error_generic" as any)}
                 </p>
               )}
 
@@ -237,34 +208,19 @@ export default function NewsletterPopup() {
               >
                 {status === "loading" ? (
                   <span className="flex items-center justify-center gap-2">
-                    <svg
-                      className="w-4 h-4 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v8H4z"
-                      />
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
-                    Inscription…
+                    {t("popup.subscribing" as any)}
                   </span>
                 ) : (
-                  "Je veux mon -10 % →"
+                  t("popup.cta" as any)
                 )}
               </button>
 
               <p className="text-center text-[10px] text-gray-400">
-                Code à usage unique · Pas de spam · Désinscription en 1 clic
+                {t("popup.footer" as any)}
               </p>
             </form>
           )}

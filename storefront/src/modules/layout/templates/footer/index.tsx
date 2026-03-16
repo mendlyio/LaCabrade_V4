@@ -1,30 +1,35 @@
+"use client"
+
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import NewsletterBanner from "@modules/layout/components/newsletter-banner"
 import ManageCookiesLink from "@modules/layout/components/manage-cookies-link"
+import { useTranslate } from "@lib/context/language-context"
 
-export default async function Footer() {
+export default function Footer() {
+  const t = useTranslate()
+
   return (
     <footer className="bg-black border-t border-gray-800">
       {/* Bandeau Newsletter */}
       <NewsletterBanner />
-      
-      {/* Main Footer Content - Version Dark */}
+
+      {/* Main Footer Content */}
       <div className="content-container py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-          
+
           {/* COLONNE 1 : LOGO + RÉSEAUX SOCIAUX */}
           <div className="space-y-4">
             <div>
-              <img 
-                src="https://ik.imagekit.io/kodt9cn6f/Logo-cabrade-white.webp" 
-                alt="La Cabrade" 
+              <img
+                src="https://ik.imagekit.io/kodt9cn6f/Logo-cabrade-white.webp"
+                alt="La Cabrade"
                 className="h-14 w-auto object-contain"
               />
             </div>
             <p className="text-sm text-gray-300 leading-relaxed">
-              Sellerie - Magasin d&apos;équitation à Fléron, près de Liège
+              {t("footer.store_description")}
             </p>
-            
+
             {/* Réseaux sociaux */}
             <div className="flex gap-2 pt-2">
               <a
@@ -66,7 +71,7 @@ export default async function Footer() {
           {/* COLONNE 2 : INFOS LÉGALES */}
           <div>
             <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-4">
-              Informations
+              {t("footer.info_title")}
             </h3>
             <ul className="space-y-2">
               <li>
@@ -74,7 +79,7 @@ export default async function Footer() {
                   href="/mentions-legales"
                   className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
-                  Mentions légales
+                  {t("footer.legal_mentions")}
                 </LocalizedClientLink>
               </li>
               <li>
@@ -82,7 +87,7 @@ export default async function Footer() {
                   href="/cgv"
                   className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
-                  Conditions générales (CGV)
+                  {t("footer.cgv_full")}
                 </LocalizedClientLink>
               </li>
               <li>
@@ -90,7 +95,7 @@ export default async function Footer() {
                   href="/protection-donnees"
                   className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
-                  Protection des données
+                  {t("footer.data_protection")}
                 </LocalizedClientLink>
               </li>
               <li>
@@ -98,7 +103,7 @@ export default async function Footer() {
                   href="/conditions-paiement"
                   className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
-                  Conditions de paiement
+                  {t("footer.payment_conditions")}
                 </LocalizedClientLink>
               </li>
               <li>
@@ -106,7 +111,7 @@ export default async function Footer() {
                   href="/conditions-livraison"
                   className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
-                  Conditions de livraison
+                  {t("footer.delivery_conditions")}
                 </LocalizedClientLink>
               </li>
               <li>
@@ -114,7 +119,7 @@ export default async function Footer() {
                   href="/faq"
                   className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
-                  FAQ
+                  {t("footer.faq")}
                 </LocalizedClientLink>
               </li>
             </ul>
@@ -123,7 +128,7 @@ export default async function Footer() {
           {/* COLONNE 3 : CONTACT */}
           <div>
             <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-4">
-              Contact
+              {t("footer.contact_title")}
             </h3>
             <ul className="space-y-2">
               <li>
@@ -168,24 +173,24 @@ export default async function Footer() {
           {/* COLONNE 4 : HEURES D'OUVERTURE */}
           <div>
             <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-4">
-              Heures d&apos;ouverture
+              {t("footer.hours_title")}
             </h3>
             <ul className="space-y-1.5 text-sm text-gray-300">
               <li className="flex justify-between">
-                <span>Lundi :</span>
-                <span className="font-medium text-gray-100">fermé</span>
+                <span>{t("footer.monday")} :</span>
+                <span className="font-medium text-gray-100">{t("footer.closed")}</span>
               </li>
               <li className="flex justify-between">
-                <span>Mardi - Vendredi :</span>
+                <span>{t("footer.tue_fri")} :</span>
                 <span className="font-medium text-gray-100">10h - 18h</span>
               </li>
               <li className="flex justify-between">
-                <span>Samedi :</span>
+                <span>{t("footer.saturday")} :</span>
                 <span className="font-medium text-gray-100">10h - 17h</span>
               </li>
               <li className="flex justify-between">
-                <span>Dimanche :</span>
-                <span className="font-medium text-gray-100">fermé</span>
+                <span>{t("footer.sunday")} :</span>
+                <span className="font-medium text-gray-100">{t("footer.closed")}</span>
               </li>
             </ul>
           </div>
@@ -193,7 +198,7 @@ export default async function Footer() {
           {/* COLONNE 5 : LIENS UTILES */}
           <div>
             <h3 className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-4">
-              Navigation
+              {t("footer.navigation_title")}
             </h3>
             <ul className="space-y-2">
               <li>
@@ -201,7 +206,7 @@ export default async function Footer() {
                   href="/a-propos"
                   className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
-                  À propos
+                  {t("footer.about_link")}
                 </LocalizedClientLink>
               </li>
               <li>
@@ -209,7 +214,7 @@ export default async function Footer() {
                   href="/store"
                   className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
-                  Boutique
+                  {t("footer.store_link")}
                 </LocalizedClientLink>
               </li>
               <li>
@@ -217,7 +222,7 @@ export default async function Footer() {
                   href="/contact"
                   className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
-                  Nous contacter
+                  {t("footer.contact_us")}
                 </LocalizedClientLink>
               </li>
               <li>
@@ -225,43 +230,43 @@ export default async function Footer() {
                   href="/account"
                   className="text-sm text-gray-300 hover:text-amber-400 transition-colors"
                 >
-                  Mon compte
+                  {t("footer.my_account")}
                 </LocalizedClientLink>
               </li>
             </ul>
           </div>
         </div>
 
-        {/* Séparateur minimaliste */}
+        {/* Séparateur */}
         <div className="border-t border-gray-700 my-8"></div>
 
         {/* Copyright et liens légaux */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-400">
-          <p>© {new Date().getFullYear()} La Cabrade. Tous droits réservés.</p>
+          <p>© {new Date().getFullYear()} La Cabrade. {t("footer.copyright")}</p>
           <div className="flex items-center gap-4">
             <LocalizedClientLink
               href="/mentions-legales"
               className="hover:text-amber-400 transition-colors"
             >
-              Mentions légales
+              {t("footer.legal_mentions")}
             </LocalizedClientLink>
             <span className="text-gray-600">|</span>
             <LocalizedClientLink
               href="/cgv"
               className="hover:text-amber-400 transition-colors"
             >
-              CGV
+              {t("footer.cgv")}
             </LocalizedClientLink>
             <span className="text-gray-600">|</span>
             <LocalizedClientLink
               href="/protection-donnees"
               className="hover:text-amber-400 transition-colors"
             >
-              Données personnelles
+              {t("footer.personal_data")}
             </LocalizedClientLink>
             <span className="text-gray-600">|</span>
             <ManageCookiesLink className="hover:text-amber-400 transition-colors">
-              Gérer mes cookies
+              {t("footer.manage_cookies")}
             </ManageCookiesLink>
           </div>
         </div>

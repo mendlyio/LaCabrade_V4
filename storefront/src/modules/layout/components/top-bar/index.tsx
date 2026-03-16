@@ -3,31 +3,27 @@
 import { useState, useEffect, useCallback } from "react"
 import LanguageSelector from "@modules/layout/components/language-selector"
 import { HttpTypes } from "@medusajs/types"
+import { useTranslate } from "@lib/context/language-context"
 
-const promoBanners = [
-  {
-    text: "Livraison gratuite à partir de 75€",
-  },
-  {
-    text: "Inscris-toi à notre newsletter et bénéficie de 10% sur ta prochaine commande",
-  },
-  {
-    text: "Offre de lancement : 50 premières commandes reçoivent un cadeau",
-  },
-]
+const PROMO_KEYS = [
+  "topbar.free_shipping",
+  "topbar.newsletter_promo",
+  "topbar.launch_offer",
+] as const
 
 type TopBarProps = {
   regions: HttpTypes.StoreRegion[]
 }
 
 const TopBar = ({ regions }: TopBarProps) => {
+  const t = useTranslate()
   const [currentBanner, setCurrentBanner] = useState(0)
   const [isSliding, setIsSliding] = useState(false)
 
   const goToNext = useCallback(() => {
     setIsSliding(true)
     setTimeout(() => {
-      setCurrentBanner((prev) => (prev + 1) % promoBanners.length)
+      setCurrentBanner((prev) => (prev + 1) % PROMO_KEYS.length)
       setIsSliding(false)
     }, 400)
   }, [])
@@ -50,7 +46,7 @@ const TopBar = ({ regions }: TopBarProps) => {
                   : "opacity-100 translate-x-0"
               }`}
             >
-              {promoBanners[currentBanner].text}
+              {t(PROMO_KEYS[currentBanner] as any)}
             </p>
           </div>
 

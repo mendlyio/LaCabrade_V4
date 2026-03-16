@@ -111,7 +111,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                           onClick={close}
                           data-testid="close-menu-button"
                           className="p-2 hover:bg-white rounded-full transition-colors"
-                          aria-label="Fermer le menu"
+                          aria-label={t("nav.close_menu" as any)}
                         >
                           <XMark className="w-6 h-6" />
                         </button>
@@ -127,7 +127,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
-                          Mon compte
+                          {t("nav.my_account" as any)}
                         </LocalizedClientLink>
                         <LocalizedClientLink
                           href="/wishlist"
@@ -137,7 +137,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                           </svg>
-                          Favoris
+                          {t("nav.favorites" as any)}
                         </LocalizedClientLink>
                       </div>
 
@@ -198,7 +198,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                                         <button
                                           onClick={() => toggleCategory(category.id)}
                                           className="mr-2 p-2 rounded-lg hover:bg-amber-50 transition-colors"
-                                          aria-label={isExpanded ? "Masquer les sous-catégories" : "Afficher les sous-catégories"}
+                                          aria-label={isExpanded ? t("nav.hide_subcategories" as any) : t("nav.show_subcategories" as any)}
                                         >
                                           <ChevronDown
                                             className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${
@@ -307,7 +307,7 @@ const SideMenu = ({ regions, categories = [], brands = [] }: SideMenuProps) => {
                         {/* Contact */}
                         <div className="mt-8 pt-6 border-t border-gray-200">
                           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4 px-4">
-                            Contact
+                            {t("nav.contact" as any)}
                           </h3>
                           <ul className="space-y-2">
                             <li>
