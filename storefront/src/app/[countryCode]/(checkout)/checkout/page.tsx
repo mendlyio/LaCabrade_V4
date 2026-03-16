@@ -16,61 +16,70 @@ export const metadata: Metadata = {
   description: "Finalisez votre commande en toute sécurité",
 }
 
+const tryRecoverOrder = async (
+  cartId: string | undefined,
+  fallbackCountryCode: string
+) => {
+  if (!cartId) return false
+
+  try {
+    const recoveredOrder = await retrieveOrderByCartId(cartId)
+    if (!recoveredOrder?.id) return false
+
+    const cc =
+      recoveredOrder.shipping_address?.country_code?.toLowerCase() ||
+      recoveredOrder.billing_address?.country_code?.toLowerCase() ||
+      fallbackCountryCode ||
+      "fr"
+
+    redirect(`/${cc}/order/confirmed/${recoveredOrder.id}`)
+  } catch (err: any) {
+    if (err?.digest?.includes?.("NEXT_REDIRECT")) throw err
+    return false
+  }
+}
+
 const fetchCart = async (
   searchParams?: Record<string, string | string[] | undefined>,
   countryCode?: string
 ) => {
-  const cart = await retrieveCart()
   const redirectStatus = searchParams?.redirect_status
   const cartIdFromReturn = Array.isArray(searchParams?.cart_id)
     ? searchParams?.cart_id[0]
     : searchParams?.cart_id
+  const isStripeReturn =
+    redirectStatus === "succeeded" || redirectStatus === "processing"
 
-  const redirectToRecoveredOrder = async () => {
-    if (!cartIdFromReturn) {
-      return false
+  let cart: Awaited<ReturnType<typeof retrieveCart>> = null
+  try {
+    cart = await retrieveCart()
+  } catch {
+    cart = null
+  }
+
+  if (!cart && isStripeReturn) {
+    await tryRecoverOrder(cartIdFromReturn, countryCode || "fr")
+
+    try {
+      await placeOrder()
+    } catch (err: any) {
+      if (err?.digest?.includes?.("NEXT_REDIRECT")) throw err
+      await tryRecoverOrder(cartIdFromReturn, countryCode || "fr")
+      redirect(`/${countryCode || "fr"}`)
     }
-
-    const recoveredOrder = await retrieveOrderByCartId(cartIdFromReturn)
-    if (!recoveredOrder?.id) {
-      return false
-    }
-
-    const recoveredCountryCode =
-      recoveredOrder.shipping_address?.country_code?.toLowerCase() ||
-      recoveredOrder.billing_address?.country_code?.toLowerCase() ||
-      countryCode ||
-      "fr"
-
-    redirect(`/${recoveredCountryCode}/order/confirmed/${recoveredOrder.id}`)
   }
 
   if (!cart) {
-    if (redirectStatus === "succeeded" || redirectStatus === "processing") {
-      await redirectToRecoveredOrder()
-
-      try {
-        // Cart gone after Stripe redirect → try to complete the order.
-        // placeOrder() calls redirect() on success (throws NEXT_REDIRECT, must propagate).
-        await placeOrder()
-      } catch (err: any) {
-        if (err?.digest?.includes?.("NEXT_REDIRECT")) {
-          throw err
-        }
-
-        await redirectToRecoveredOrder()
-
-        // Cart cookie gone = order was already completed earlier.
-        // Redirect to homepage since we can't recover the order ID.
-        redirect(`/${countryCode || "fr"}`)
-      }
-    }
     return notFound()
   }
 
   if (cart?.items?.length) {
-    const enrichedItems = await enrichLineItems(cart?.items, cart?.region_id!)
-    cart.items = enrichedItems as HttpTypes.StoreCartLineItem[]
+    try {
+      const enrichedItems = await enrichLineItems(cart.items, cart.region_id!)
+      cart.items = enrichedItems as HttpTypes.StoreCartLineItem[]
+    } catch {
+      // keep raw items
+    }
   }
 
   return cart
@@ -139,11 +148,31 @@ export default async function Checkout({
     params,
     searchParamsPromise,
   ])
-  const cart = await fetchCart(searchParams, paramCountry)
-  const customer = await getCustomer()
+
+  let cart: any
+  try {
+    cart = await fetchCart(searchParams, paramCountry)
+  } catch (err: any) {
+    if (err?.digest?.includes?.("NEXT_REDIRECT")) throw err
+    if (err?.digest === "NEXT_NOT_FOUND") throw err
+
+    const cartId = Array.isArray(searchParams?.cart_id)
+      ? searchParams?.cart_id[0]
+      : searchParams?.cart_id
+    await tryRecoverOrder(cartId, paramCountry || "fr")
+    redirect(`/${paramCountry || "fr"}`)
+  }
+
+  let customer: any = null
+  try {
+    customer = await getCustomer()
+  } catch {
+    customer = null
+  }
+
   const countryCode = paramCountry || "be"
 
-  const itemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0
+  const itemCount = cart?.items?.reduce((acc: number, item: any) => acc + item.quantity, 0) || 0
 
   return (
     <div className="min-h-screen bg-gray-50">
