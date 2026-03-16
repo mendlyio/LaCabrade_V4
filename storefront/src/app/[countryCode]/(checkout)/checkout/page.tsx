@@ -57,7 +57,10 @@ const fetchCart = async (
     cart = null
   }
 
-  if (!cart && isStripeReturn) {
+  // Pour TOUS les retours Stripe (Bancontact, Klarna, iDeal, carte 3DS…)
+  // le panier peut encore exister en cookie mais le paiement est déjà validé côté Stripe.
+  // On tente toujours de récupérer/valider la commande dans ce cas.
+  if (isStripeReturn) {
     await tryRecoverOrder(cartIdFromReturn, countryCode || "fr")
 
     try {
