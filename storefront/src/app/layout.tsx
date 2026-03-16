@@ -55,6 +55,9 @@ export const metadata: Metadata = {
     "Belgique",
     "België",
   ],
+  verification: {
+    google: "sTxBoYrcrYjBNX7cj-E5NCsVgUcFb8lHT9-nPItx7HM",
+  },
 }
 
 export default function RootLayout(props: { children: React.ReactNode }) {
