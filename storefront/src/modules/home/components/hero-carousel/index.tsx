@@ -59,6 +59,8 @@ const HeroCarousel = () => {
             <div 
               className="absolute inset-0 bg-cover bg-center"
               style={{ backgroundImage: `url(${slide.image})` }}
+              role="img"
+              aria-label={slide.alt}
             />
             {/* Overlay sombre */}
             <div className="absolute inset-0 bg-black/40" />

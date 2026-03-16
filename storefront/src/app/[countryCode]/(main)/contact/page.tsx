@@ -1,9 +1,14 @@
 import { Metadata } from "next"
 import ContactForm from "@modules/contact/components/contact-form"
 
+const CONTACT_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+
 export const metadata: Metadata = {
   title: "Nous contacter - La Cabrade",
   description: "Besoin d'aide ? Contactez-nous par téléphone ou via notre formulaire de contact. Notre équipe est à votre disposition.",
+  alternates: {
+    canonical: `${CONTACT_BASE_URL}/be/contact`,
+  },
 }
 
 export default function ContactPage() {

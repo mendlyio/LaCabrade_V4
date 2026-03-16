@@ -43,6 +43,48 @@ const websiteSchema = {
   },
 }
 
+const localBusinessSchema = {
+  "@context": "https://schema.org",
+  "@type": "Store",
+  name: "La Cabrade - Sellerie Équestre",
+  image: "https://ik.imagekit.io/kodt9cn6f/Logo-cabrade.webp",
+  url: BASE_URL,
+  telephone: "+3243586099",
+  priceRange: "€€",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "Rue de la Clef, 96",
+    addressLocality: "Fléron",
+    postalCode: "4620",
+    addressRegion: "Liège",
+    addressCountry: "BE",
+  },
+  geo: {
+    "@type": "GeoCoordinates",
+    latitude: 50.6167,
+    longitude: 5.6833,
+  },
+  openingHoursSpecification: [
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: ["Tuesday", "Wednesday", "Thursday", "Friday"],
+      opens: "10:00",
+      closes: "18:00",
+    },
+    {
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek: "Saturday",
+      opens: "10:00",
+      closes: "17:00",
+    },
+  ],
+  sameAs: [
+    "https://www.facebook.com/SellerieLaCabrade/?locale=fr_FR",
+    "https://www.instagram.com/lacabrade/?hl=fr",
+    "https://www.tiktok.com/@selleriela.cabrade",
+  ],
+}
+
 export default function OrganizationJsonLd() {
   return (
     <>
@@ -53,6 +95,10 @@ export default function OrganizationJsonLd() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
       />
     </>
   )

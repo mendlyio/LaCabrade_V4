@@ -23,10 +23,15 @@ function getCategoryAndDescendantIds(categoryId: string, categoryMap: Map<string
   return ids
 }
 
+const LC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+
 export const metadata: Metadata = {
   title: "LC Equestrian - Équipements équestres de qualité | La Cabrade",
   description:
     "LC Equestrian lance son premier drop en proposant des équipements qui allient qualité, confort et prix juste. Découvrez notre propre collection.",
+  alternates: {
+    canonical: `${LC_BASE_URL}/be/lc-equestrian`,
+  },
 }
 
 export default async function LcEquestrianPage({

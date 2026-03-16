@@ -5,6 +5,7 @@ import InteractiveLink from "@modules/common/components/interactive-link"
 export const metadata: Metadata = {
   title: "Page introuvable",
   description: "La page demandée n'existe pas.",
+  robots: { index: false, follow: true },
 }
 
 export default function NotFound() {
