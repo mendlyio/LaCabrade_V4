@@ -2,16 +2,18 @@
 
 import ScrollCarousel from "@modules/common/components/scroll-carousel"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
-import ProductCardModern from "@modules/products/components/product-card-modern"
 import HeroCarousel from "@modules/home/components/hero-carousel"
 import { useTranslate } from "@lib/context/language-context"
 import { HttpTypes } from "@medusajs/types"
+import { ReactNode } from "react"
 
 type HomeContentProps = {
   region: HttpTypes.StoreRegion
   lcEquestrianProducts: any[]
   newProducts: any[]
   mainCategories: any[]
+  lcProductCards?: ReactNode
+  newProductCards?: ReactNode
 }
 
 export default function HomeContent({
@@ -19,6 +21,8 @@ export default function HomeContent({
   lcEquestrianProducts,
   newProducts,
   mainCategories,
+  lcProductCards,
+  newProductCards,
 }: HomeContentProps) {
   const t = useTranslate()
 
@@ -44,14 +48,7 @@ export default function HomeContent({
             <>
               <ScrollCarousel className="-mx-4 px-4">
                 <div className="flex gap-3 sm:gap-4 pb-4">
-                  {lcEquestrianProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex-none w-[calc(50%-6px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(25%-12px)] xl:w-[calc(20%-13px)]"
-                    >
-                      <ProductCardModern region={region} product={product} />
-                    </div>
-                  ))}
+                  {lcProductCards}
                 </div>
               </ScrollCarousel>
               <div className="text-center mt-8">
@@ -231,14 +228,7 @@ export default function HomeContent({
             <>
               <ScrollCarousel className="-mx-4 px-4">
                 <div className="flex gap-3 sm:gap-4 pb-4">
-                  {newProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex-none w-[calc(50%-6px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(25%-12px)] xl:w-[calc(20%-13px)]"
-                    >
-                      <ProductCardModern region={region} product={product} />
-                    </div>
-                  ))}
+                  {newProductCards}
                 </div>
               </ScrollCarousel>
               <div className="text-center mt-8">

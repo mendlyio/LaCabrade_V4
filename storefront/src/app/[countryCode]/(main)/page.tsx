@@ -5,6 +5,7 @@ import { listCategories } from "@lib/data/categories"
 import { buildCategoryTree } from "@lib/util/category-tree"
 import { slugify } from "@lib/util/slugify"
 import HomeContent from "@modules/home/components/home-content"
+import ProductCardModern from "@modules/products/components/product-card-modern"
 
 export const metadata: Metadata = {
   title: "La Cabrade - Sellerie Équestre | LC•EQUESTRIAN",
@@ -138,12 +139,32 @@ export default async function Home({
     _image: getCategoryImage(c),
   }))
 
+  const lcProductCards = lcEquestrianProducts.map((product) => (
+    <div
+      key={product.id}
+      className="flex-none w-[calc(50%-6px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(25%-12px)] xl:w-[calc(20%-13px)]"
+    >
+      <ProductCardModern region={region} product={product} />
+    </div>
+  ))
+
+  const newProductCards = newProducts.map((product) => (
+    <div
+      key={product.id}
+      className="flex-none w-[calc(50%-6px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(25%-12px)] xl:w-[calc(20%-13px)]"
+    >
+      <ProductCardModern region={region} product={product} />
+    </div>
+  ))
+
   return (
     <HomeContent
       region={region}
       lcEquestrianProducts={lcEquestrianProducts}
       newProducts={newProducts}
       mainCategories={mainCategories}
+      lcProductCards={lcProductCards}
+      newProductCards={newProductCards}
     />
   )
 }
