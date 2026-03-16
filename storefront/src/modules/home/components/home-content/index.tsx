@@ -12,7 +12,6 @@ type HomeContentProps = {
   lcEquestrianProducts: any[]
   newProducts: any[]
   mainCategories: any[]
-  getCategoryImage: (category: any) => string
 }
 
 export default function HomeContent({
@@ -20,7 +19,6 @@ export default function HomeContent({
   lcEquestrianProducts,
   newProducts,
   mainCategories,
-  getCategoryImage,
 }: HomeContentProps) {
   const t = useTranslate()
 
@@ -98,7 +96,7 @@ export default function HomeContent({
             <ScrollCarousel className="-mx-4 px-4">
               <div className="flex gap-6 pb-4">
                 {mainCategories.map((category) => {
-                  const categoryImage = getCategoryImage(category)
+                  const categoryImage = category._image || ""
                   const handle = category?.handle
                   if (!handle) return null
                   return (

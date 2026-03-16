@@ -128,7 +128,10 @@ export default async function Home({
     if (!aIsOutlet && bIsOutlet) return -1
     return 0
   })
-  const mainCategories = sorted.slice(0, 8)
+  const mainCategories = sorted.slice(0, 8).map((c: any) => ({
+    ...c,
+    _image: getCategoryImage(c),
+  }))
 
   return (
     <HomeContent
@@ -136,7 +139,6 @@ export default async function Home({
       lcEquestrianProducts={lcEquestrianProducts}
       newProducts={newProducts}
       mainCategories={mainCategories}
-      getCategoryImage={getCategoryImage}
     />
   )
 }
