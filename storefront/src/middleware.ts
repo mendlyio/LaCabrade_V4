@@ -231,5 +231,5 @@ export async function middleware(request: NextRequest) {
 export const config = {
   // Exclure toutes les routes internes Next.js (/ _next /...), et l'API
   // Sinon /_next/image est redirigé vers /{country}/_next/image et renvoie 404.
-  matcher: ["/((?!api|_next|favicon.ico).*)"],
+  matcher: ["/((?!api|_next|favicon.ico|sitemap.xml|robots.txt).*)"],
 }
