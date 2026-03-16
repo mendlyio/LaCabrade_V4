@@ -23,7 +23,7 @@ export default function HomeContent({
   const t = useTranslate()
 
   return (
-    <div className="w-full">
+    <div className="relative z-0 w-full">
       <h1 className="sr-only">La Cabrade - Sellerie Équestre &amp; LC Equestrian</h1>
 
       {/* Hero Carrousel */}
