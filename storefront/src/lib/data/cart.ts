@@ -629,13 +629,7 @@ export async function placeOrder() {
     throw new Error("No existing cart found when placing an order")
   }
 
-  const cartRes = await sdk.store.cart
-    .complete(cartId, {}, await getAuthHeadersSafe())
-    .then((cartRes) => {
-      revalidateTag("cart")
-      return cartRes
-    })
-    .catch(medusaError)
+  const cartRes = await completeCartById(cartId)
 
   if (cartRes?.type === "order" && cartRes?.order?.id) {
     const countryCode =
@@ -656,6 +650,20 @@ export async function placeOrder() {
   }
 
   return cartRes?.cart ?? null
+}
+
+export async function completeCartById(cartId: string) {
+  if (!cartId) {
+    throw new Error("No existing cart found when placing an order")
+  }
+
+  return sdk.store.cart
+    .complete(cartId, {}, await getAuthHeadersSafe())
+    .then((cartRes) => {
+      revalidateTag("cart")
+      return cartRes
+    })
+    .catch(medusaError)
 }
 
 /**

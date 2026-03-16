@@ -30,7 +30,9 @@ export default function OrderProcessingPage() {
       if (!polling.current) return
 
       try {
-        const res = await fetch(`/api/order-by-cart/${cartId}`)
+        const res = await fetch(`/api/order-by-cart/${cartId}`, {
+          method: "POST",
+        })
         const data = await res.json()
 
         if (data?.order?.id) {
