@@ -6,24 +6,24 @@ const LanguageSelector = () => {
   const { language, setLanguage } = useLanguage()
 
   return (
-    <div className="relative flex items-center gap-2 text-xs font-medium">
+    <div className="relative flex items-center gap-1 text-xs font-medium">
       <button
         onClick={() => setLanguage("fr")}
         className={`px-2 py-1 rounded transition-colors ${
           language === "fr"
-            ? "bg-amber-600 text-white"
-            : "text-gray-600 hover:text-amber-600 hover:bg-amber-50"
+            ? "bg-white text-amber-700 font-bold"
+            : "text-white/70 hover:text-white hover:bg-white/10"
         }`}
       >
         FR
       </button>
-      <span className="text-gray-300">|</span>
+      <span className="text-white/40">|</span>
       <button
         onClick={() => setLanguage("nl")}
         className={`px-2 py-1 rounded transition-colors ${
           language === "nl"
-            ? "bg-amber-600 text-white"
-            : "text-gray-600 hover:text-amber-600 hover:bg-amber-50"
+            ? "bg-white text-amber-700 font-bold"
+            : "text-white/70 hover:text-white hover:bg-white/10"
         }`}
       >
         NL
