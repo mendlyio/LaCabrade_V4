@@ -6,6 +6,7 @@ import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
 import CheckoutTracker from "@modules/common/components/tracking/checkout-tracker"
 import { enrichLineItems, placeOrder, retrieveCart } from "@lib/data/cart"
+import { retrieveOrderByCartId } from "@lib/data/orders"
 import { HttpTypes } from "@medusajs/types"
 import { getCustomer } from "@lib/data/customer"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -20,10 +21,34 @@ const fetchCart = async (
   countryCode?: string
 ) => {
   const cart = await retrieveCart()
+  const redirectStatus = searchParams?.redirect_status
+  const cartIdFromReturn = Array.isArray(searchParams?.cart_id)
+    ? searchParams?.cart_id[0]
+    : searchParams?.cart_id
+
+  const redirectToRecoveredOrder = async () => {
+    if (!cartIdFromReturn) {
+      return false
+    }
+
+    const recoveredOrder = await retrieveOrderByCartId(cartIdFromReturn)
+    if (!recoveredOrder?.id) {
+      return false
+    }
+
+    const recoveredCountryCode =
+      recoveredOrder.shipping_address?.country_code?.toLowerCase() ||
+      recoveredOrder.billing_address?.country_code?.toLowerCase() ||
+      countryCode ||
+      "fr"
+
+    redirect(`/${recoveredCountryCode}/order/confirmed/${recoveredOrder.id}`)
+  }
 
   if (!cart) {
-    const redirectStatus = searchParams?.redirect_status
     if (redirectStatus === "succeeded" || redirectStatus === "processing") {
+      await redirectToRecoveredOrder()
+
       try {
         // Cart gone after Stripe redirect → try to complete the order.
         // placeOrder() calls redirect() on success (throws NEXT_REDIRECT, must propagate).
@@ -32,6 +57,9 @@ const fetchCart = async (
         if (err?.digest?.includes?.("NEXT_REDIRECT")) {
           throw err
         }
+
+        await redirectToRecoveredOrder()
+
         // Cart cookie gone = order was already completed earlier.
         // Redirect to homepage since we can't recover the order ID.
         redirect(`/${countryCode || "fr"}`)

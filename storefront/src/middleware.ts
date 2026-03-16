@@ -184,12 +184,14 @@ export async function middleware(request: NextRequest) {
     countryCode && request.nextUrl.pathname.split("/")[1].includes(countryCode)
 
   // check if one of the country codes is in the url
-  if (
-    urlHasCountryCode &&
-    (!isOnboarding || onboardingCookie) &&
-    (!cartId || cartIdCookie)
-  ) {
-    return NextResponse.next()
+  if (urlHasCountryCode && (!isOnboarding || onboardingCookie)) {
+    if (!cartId || cartIdCookie) {
+      return NextResponse.next()
+    }
+
+    const response = NextResponse.next()
+    response.cookies.set("_medusa_cart_id", cartId, { maxAge: 60 * 60 * 24 })
+    return response
   }
 
   const redirectPath =
@@ -207,10 +209,14 @@ export async function middleware(request: NextRequest) {
     response = NextResponse.redirect(`${redirectUrl}`, 307)
   }
 
-  // If a cart_id is in the params, we set it as a cookie and redirect to the address step.
-  if (cartId && !checkoutStep) {
-    redirectUrl = `${redirectUrl}&step=address`
-    response = NextResponse.redirect(`${redirectUrl}`, 307)
+  // If a cart_id is in the params, always restore the cart cookie.
+  // This is critical after external payment redirects (Stripe/3DS),
+  // where we can return directly to a checkout step without the cookie.
+  if (cartId && !cartIdCookie) {
+    if (!checkoutStep) {
+      redirectUrl = `${redirectUrl}&step=address`
+      response = NextResponse.redirect(`${redirectUrl}`, 307)
+    }
     response.cookies.set("_medusa_cart_id", cartId, { maxAge: 60 * 60 * 24 })
   }
 

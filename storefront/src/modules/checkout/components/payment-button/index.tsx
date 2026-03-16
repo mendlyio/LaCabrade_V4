@@ -180,7 +180,12 @@ const StripePaymentButton = ({
     }
 
     const returnUrl = typeof window !== "undefined"
-      ? `${window.location.origin}${window.location.pathname}?step=review`
+      ? (() => {
+          const url = new URL(window.location.href)
+          url.searchParams.set("step", "review")
+          url.searchParams.set("cart_id", cart.id)
+          return url.toString()
+        })()
       : ""
 
     const billingName =
