@@ -1,7 +1,7 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect } from "react"
-import { Language } from "@lib/translations"
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react"
+import { getTranslation, type Language } from "@lib/translations"
 
 type LanguageContextType = {
   language: Language
@@ -13,7 +13,6 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>("fr")
 
-  // Charger la langue depuis localStorage au montage
   useEffect(() => {
     const savedLang = localStorage.getItem("language") as Language
     if (savedLang && (savedLang === "fr" || savedLang === "nl")) {
@@ -21,13 +20,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const setLanguage = (lang: Language) => {
+  const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang)
     localStorage.setItem("language", lang)
-  }
+  }, [])
+
+  const value = useMemo(() => ({ language, setLanguage }), [language, setLanguage])
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   )
@@ -43,8 +44,6 @@ export function useLanguage() {
 
 export function useTranslate() {
   const { language } = useLanguage()
-  const { getTranslation } = require("@lib/translations")
-  
-  return (key: string) => getTranslation(language, key)
+  return useCallback((key: string) => getTranslation(language, key), [language])
 }
 
