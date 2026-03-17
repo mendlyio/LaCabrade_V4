@@ -574,7 +574,11 @@ export async function submitPromotionForm(
   }
 
   try {
-    await applyPromotions([code])
+    const cart = await retrieveCart()
+    const existingCodes = (cart?.promotions ?? [])
+      .filter((p: any) => p.code != null && !p.is_automatic)
+      .map((p: any) => p.code as string)
+    await applyPromotions([...existingCodes, code])
   } catch (e: any) {
     return e.message
   }

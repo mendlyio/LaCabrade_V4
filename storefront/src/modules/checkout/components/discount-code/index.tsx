@@ -2,9 +2,8 @@
 
 import { Badge, Input, Text } from "@medusajs/ui"
 import React, { useEffect, useState } from "react"
-import { useFormState } from "react-dom"
 
-import { applyPromotions, submitPromotionForm } from "@lib/data/cart"
+import { applyPromotions } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import Trash from "@modules/common/icons/trash"
@@ -53,6 +52,7 @@ async function fetchGiftCardBalance(
 
 const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   const [isOpen, setIsOpen] = React.useState(false)
+  const [promoError, setPromoError] = useState<string | null>(null)
   const [gcBalances, setGcBalances] = useState<Record<string, GiftCardBalance>>(
     {}
   )
@@ -97,20 +97,24 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
   }
 
   const addPromotionCode = async (formData: FormData) => {
-    const code = formData.get("code")
-    if (!code) return
+    const rawCode = formData.get("code")
+    if (!rawCode) return
+    const code = rawCode.toString().toUpperCase().trim()
     const input = document.getElementById(
       "promotion-input"
     ) as HTMLInputElement
     const codes = validPromotions
       .filter((p) => p.code != null)
       .map((p) => p.code!)
-    codes.push(code.toString())
-    await applyPromotions(codes)
-    if (input) input.value = ""
+    codes.push(code)
+    try {
+      await applyPromotions(codes)
+      setPromoError(null)
+      if (input) input.value = ""
+    } catch (e: any) {
+      setPromoError(e.message)
+    }
   }
-
-  const [message, formAction] = useFormState(submitPromotionForm, null)
 
   return (
     <div className="w-full flex flex-col">
@@ -160,7 +164,7 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
 
         {isOpen && (
           <ErrorMessage
-            error={message}
+            error={promoError}
             data-testid="discount-error-message"
           />
         )}
