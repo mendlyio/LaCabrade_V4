@@ -27,8 +27,10 @@ export default async function CollectionTemplateModern({
   countryCode: string
 }) {
   // Récupérer toutes les catégories et marques pour les filtres
-  const allCategories = await listCategories()
-  const brands = await listBrands()
+  const [allCategories, brands] = await Promise.all([
+    listCategories(),
+    listBrands(),
+  ])
 
   // Compter le nombre de filtres actifs
   const activeFilters = Object.keys(searchParams).filter(

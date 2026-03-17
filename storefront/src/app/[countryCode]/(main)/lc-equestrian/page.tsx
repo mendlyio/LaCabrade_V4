@@ -23,10 +23,15 @@ function getCategoryAndDescendantIds(categoryId: string, categoryMap: Map<string
   return ids
 }
 
+const LC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+
 export const metadata: Metadata = {
   title: "LC Equestrian - Équipements équestres de qualité | La Cabrade",
   description:
     "LC Equestrian lance son premier drop en proposant des équipements qui allient qualité, confort et prix juste. Découvrez notre propre collection.",
+  alternates: {
+    canonical: `${LC_BASE_URL}/be/lc-equestrian`,
+  },
 }
 
 export default async function LcEquestrianPage({
@@ -34,17 +39,19 @@ export default async function LcEquestrianPage({
 }: {
   params: { countryCode: string }
 }) {
-  const region = await getRegion(countryCode)
+  const [region, allCategories] = await Promise.all([
+    getRegion(countryCode),
+    listCategories().catch(() => [] as any[]),
+  ])
 
   if (!region) {
     return null
   }
 
-  // Uniquement la catégorie LC Equestrian (pas "la-cabrade" qui inclut d'autres produits)
   let lcCategory: { id: string } | null = null
   let allowedIds = new Set<string>()
   try {
-    const categories = await listCategories() || []
+    const categories = allCategories || []
     const { map: categoryMap } = buildCategoryTree(categories)
     // Seulement lc-equestrian ou lc_equestrian — jamais la-cabrade
     lcCategory =

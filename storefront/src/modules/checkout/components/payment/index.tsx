@@ -25,6 +25,24 @@ import {
 import { initiatePaymentSession } from "@lib/data/cart"
 import { getActivePaymentSession } from "@lib/util/payment-session"
 
+const extractPaymentSessionsFromResponse = (
+  payload: any
+): any[] | null => {
+  const candidates = [
+    payload?.payment_collection?.payment_sessions,
+    payload?.payment_sessions,
+    payload?.cart?.payment_collection?.payment_sessions,
+  ]
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate) && candidate.length > 0) {
+      return candidate
+    }
+  }
+
+  return null
+}
+
 const Payment = ({
   cart,
   availablePaymentMethods,
@@ -33,9 +51,11 @@ const Payment = ({
   availablePaymentMethods: any[]
 }) => {
   const paymentSessionsContext = useContext(PaymentSessionsContext)
+  const contextPaymentSessions = paymentSessionsContext?.paymentSessions
   const paymentSessions =
-    paymentSessionsContext?.paymentSessions ||
-    cart.payment_collection?.payment_sessions
+    contextPaymentSessions && contextPaymentSessions.length > 0
+      ? contextPaymentSessions
+      : cart.payment_collection?.payment_sessions || []
 
   const activeSession = getActivePaymentSession(
     paymentSessions
@@ -147,15 +167,27 @@ const Payment = ({
         const updatedPaymentCollection = await initiatePaymentSession(cart, {
           provider_id: newProviderId,
         })
-        paymentSessionsContext?.setPaymentSessions(
-          updatedPaymentCollection?.payment_collection?.payment_sessions || []
+        const nextPaymentSessions = extractPaymentSessionsFromResponse(
+          updatedPaymentCollection
         )
+
+        if (nextPaymentSessions?.length) {
+          paymentSessionsContext?.setPaymentSessions(nextPaymentSessions as any)
+        }
+
         router.refresh()
       } catch (err: any) {
         setError(err?.message ?? "Impossible de changer de moyen de paiement. Réessayez.")
         pendingProviderId.current = null
         setSelectedPaymentMethod(activeSession?.provider_id ?? "")
         setIsSwitching(false)
+      } finally {
+        // Évite de rester bloqué en "switching" si la réponse API ne contient pas
+        // immédiatement la session attendue.
+        if (pendingProviderId.current === newProviderId) {
+          pendingProviderId.current = null
+          setIsSwitching(false)
+        }
       }
     },
     [cart, activeSession?.provider_id, paymentSessionsContext, router]
@@ -172,9 +204,12 @@ const Payment = ({
         const updatedPaymentCollection = await initiatePaymentSession(cart, {
           provider_id: selectedPaymentMethod,
         })
-        paymentSessionsContext?.setPaymentSessions(
-          updatedPaymentCollection?.payment_collection?.payment_sessions || []
+        const nextPaymentSessions = extractPaymentSessionsFromResponse(
+          updatedPaymentCollection
         )
+        if (nextPaymentSessions?.length) {
+          paymentSessionsContext?.setPaymentSessions(nextPaymentSessions as any)
+        }
         router.refresh()
       }
 

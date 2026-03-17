@@ -1,14 +1,15 @@
 import { HttpTypes } from "@medusajs/types"
-import { notFound } from "next/navigation"
 import { NextRequest, NextResponse } from "next/server"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
 const PUBLISHABLE_API_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
 const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "fr"
 
-/** Timeout plus long pour gérer les cold starts Railway (30s au lieu de 10s par défaut) */
-const FETCH_TIMEOUT_MS = 30000
-const FETCH_RETRIES = 2
+/**
+ * Le middleware s'exécute sur toutes les navigations.
+ * Il doit rester "fail-fast" pour ne pas dégrader le TTFB global.
+ */
+const FETCH_TIMEOUT_MS = 4000
 
 async function fetchWithTimeout(
   url: string,
@@ -59,32 +60,18 @@ async function getRegionMap() {
       }
 
       // Fetch regions from Medusa. We can't use the JS client here because middleware is running on Edge and the client needs a Node environment.
-      // Timeout 30s + retries pour gérer les cold starts Railway
-      let response: Response | null = null
+      const response = await fetchWithTimeout(`${BACKEND_URL}/store/regions`, {
+        headers: {
+          "x-publishable-api-key": PUBLISHABLE_API_KEY,
+        },
+        next: {
+          revalidate: 3600,
+          tags: ["regions"],
+        },
+      })
 
-      for (let attempt = 0; attempt <= FETCH_RETRIES; attempt++) {
-        try {
-          response = await fetchWithTimeout(`${BACKEND_URL}/store/regions`, {
-            headers: {
-              "x-publishable-api-key": PUBLISHABLE_API_KEY,
-            },
-            next: {
-              revalidate: 3600,
-              tags: ["regions"],
-            },
-          })
-          break
-        } catch (e) {
-          if (attempt < FETCH_RETRIES) {
-            await new Promise((r) => setTimeout(r, 2000))
-          } else {
-            throw e
-          }
-        }
-      }
-
-      if (!response || !response.ok) {
-        throw new Error(`Failed to fetch regions: ${response?.status ?? "no response"}`)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch regions: ${response.status}`)
       }
 
       const { regions } = await response.json()
@@ -197,12 +184,14 @@ export async function middleware(request: NextRequest) {
     countryCode && request.nextUrl.pathname.split("/")[1].includes(countryCode)
 
   // check if one of the country codes is in the url
-  if (
-    urlHasCountryCode &&
-    (!isOnboarding || onboardingCookie) &&
-    (!cartId || cartIdCookie)
-  ) {
-    return NextResponse.next()
+  if (urlHasCountryCode && (!isOnboarding || onboardingCookie)) {
+    if (!cartId || cartIdCookie) {
+      return NextResponse.next()
+    }
+
+    const response = NextResponse.next()
+    response.cookies.set("_medusa_cart_id", cartId, { maxAge: 60 * 60 * 24 })
+    return response
   }
 
   const redirectPath =
@@ -220,10 +209,14 @@ export async function middleware(request: NextRequest) {
     response = NextResponse.redirect(`${redirectUrl}`, 307)
   }
 
-  // If a cart_id is in the params, we set it as a cookie and redirect to the address step.
-  if (cartId && !checkoutStep) {
-    redirectUrl = `${redirectUrl}&step=address`
-    response = NextResponse.redirect(`${redirectUrl}`, 307)
+  // If a cart_id is in the params, always restore the cart cookie.
+  // This is critical after external payment redirects (Stripe/3DS),
+  // where we can return directly to a checkout step without the cookie.
+  if (cartId && !cartIdCookie) {
+    if (!checkoutStep) {
+      redirectUrl = `${redirectUrl}&step=address`
+      response = NextResponse.redirect(`${redirectUrl}`, 307)
+    }
     response.cookies.set("_medusa_cart_id", cartId, { maxAge: 60 * 60 * 24 })
   }
 
@@ -238,5 +231,5 @@ export async function middleware(request: NextRequest) {
 export const config = {
   // Exclure toutes les routes internes Next.js (/ _next /...), et l'API
   // Sinon /_next/image est redirigé vers /{country}/_next/image et renvoie 404.
-  matcher: ["/((?!api|_next|favicon.ico).*)"],
+  matcher: ["/((?!api|_next|favicon.ico|sitemap.xml|robots.txt).*)"],
 }

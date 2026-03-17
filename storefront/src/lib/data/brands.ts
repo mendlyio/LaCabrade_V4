@@ -17,33 +17,15 @@ const normalizeBrand = (brand?: string | null) => {
 }
 
 export const listBrands = cache(async function (): Promise<Brand[]> {
-  const limit = 100
-  let offset = 0
-  let total = 0
-
   const brandCounts = new Map<string, { name: string; count: number }>()
 
-  try {
-    do {
-      const { products, count } = await sdk.store.product.list(
-        {
-          limit,
-          offset,
-          fields: "id,metadata,+collection.title,+collection.handle",
-        },
-        { next: { tags: ["brands", "products"] } }
-      )
-
-      total = count || 0
-
-      products.forEach((product) => {
+  const processBatch = (products: any[]) => {
+    products.forEach((product: any) => {
       const metadataBrand = normalizeBrand(product.metadata?.brand as string | undefined)
       const collectionBrand = normalizeBrand(product.collection?.title)
       const brandName = metadataBrand || collectionBrand
 
-        if (!brandName) {
-          return
-        }
+      if (!brandName) return
 
       const key = brandName.toLowerCase()
       const existing = brandCounts.get(key)
@@ -51,10 +33,39 @@ export const listBrands = cache(async function (): Promise<Brand[]> {
         name: existing?.name || brandName,
         count: (existing?.count || 0) + 1,
       })
-      })
+    })
+  }
 
-      offset += limit
-    } while (offset < total)
+  try {
+    const first = await sdk.store.product.list(
+      {
+        limit: 500,
+        offset: 0,
+        fields: "id,metadata,+collection.title,+collection.handle",
+      },
+      { next: { tags: ["brands", "products"] } }
+    )
+
+    processBatch(first.products)
+    const total = first.count || 0
+
+    if (total > 500) {
+      const remaining: Promise<any>[] = []
+      for (let offset = 500; offset < total; offset += 500) {
+        remaining.push(
+          sdk.store.product.list(
+            {
+              limit: 500,
+              offset,
+              fields: "id,metadata,+collection.title,+collection.handle",
+            },
+            { next: { tags: ["brands", "products"] } }
+          )
+        )
+      }
+      const batches = await Promise.all(remaining)
+      batches.forEach((batch) => processBatch(batch.products))
+    }
   } catch (error) {
     console.error("Erreur lors de la récupération des marques:", error)
     return []

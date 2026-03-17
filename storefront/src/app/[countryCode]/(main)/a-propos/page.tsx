@@ -1,9 +1,14 @@
 import { Metadata } from "next"
 import Image from "next/image"
 
+const APROPOS_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+
 export const metadata: Metadata = {
   title: "À propos de nous | La Cabrade - Sellerie équestre à Fléron",
   description: "Depuis près de 50 ans, La Cabrade accompagne les cavaliers et leurs chevaux avec passion et expertise. Découvrez notre histoire, notre équipe et nos valeurs.",
+  alternates: {
+    canonical: `${APROPOS_BASE_URL}/be/a-propos`,
+  },
 }
 
 export default function AProposPage() {

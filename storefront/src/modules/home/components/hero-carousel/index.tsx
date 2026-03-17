@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 const HeroCarousel = () => {
@@ -10,7 +11,7 @@ const HeroCarousel = () => {
     {
       id: 1,
       image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/header-3.webp",
-      alt: "Tous les articles",
+      alt: "Sellerie La Cabrade - Tous les articles équestres",
       buttonText: "Voir tous les articles",
       buttonHref: "/store",
       buttonStyle: "bg-amber-600 text-white hover:bg-amber-700",
@@ -18,7 +19,7 @@ const HeroCarousel = () => {
     {
       id: 2,
       image: "https://ik.imagekit.io/kodt9cn6f/Slide-LC-Equestrian.webp",
-      alt: "LC Equestrian",
+      alt: "LC Equestrian - Collection exclusive d'équipements équestres",
       buttonText: "LC Equestrian",
       buttonHref: "/lc-equestrian",
       buttonStyle: "bg-white text-amber-700 hover:bg-amber-50 border-2 border-white",
@@ -26,14 +27,13 @@ const HeroCarousel = () => {
     {
       id: 3,
       image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/header-1.webp",
-      alt: "Outlet",
+      alt: "Outlet La Cabrade - Promotions sur l'équipement équestre",
       buttonText: "Voir les promotions",
       buttonHref: "/categories/outlet",
       buttonStyle: "bg-[#c4707f] text-white hover:bg-[#b5616f]",
     },
   ]
 
-  // Auto-défilement toutes les 5 secondes
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length)
@@ -46,8 +46,7 @@ const HeroCarousel = () => {
   }
 
   return (
-    <section className="relative w-full h-[60vh] md:h-[70vh] lg:h-[80vh] overflow-hidden bg-gray-900">
-      {/* Images du carrousel */}
+    <section className="relative z-0 w-full h-[60vh] md:h-[70vh] lg:h-[80vh] overflow-hidden bg-gray-900">
       <div className="relative h-full">
         {slides.map((slide, index) => (
           <div
@@ -56,17 +55,21 @@ const HeroCarousel = () => {
               index === currentSlide ? 'opacity-100 z-10' : 'opacity-0 z-0'
             }`}
           >
-            <div 
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${slide.image})` }}
+            <Image
+              src={slide.image}
+              alt={slide.alt}
+              fill
+              sizes="100vw"
+              className="object-cover object-center"
+              priority={index === 0}
+              fetchPriority={index === 0 ? "high" : "low"}
+              loading={index === 0 ? "eager" : "lazy"}
             />
-            {/* Overlay sombre */}
             <div className="absolute inset-0 bg-black/40" />
           </div>
         ))}
       </div>
 
-      {/* Bouton CTA — un seul rendu pour la slide courante (évite les clics sur le mauvais lien) */}
       <div className="absolute bottom-20 sm:bottom-24 left-0 right-0 z-20 flex justify-center px-4">
         <LocalizedClientLink
           href={slides[currentSlide].buttonHref}
@@ -76,7 +79,6 @@ const HeroCarousel = () => {
         </LocalizedClientLink>
       </div>
 
-      {/* Indicateurs de slides */}
       <div className="absolute bottom-8 left-0 right-0 z-30 flex justify-center gap-2">
         {slides.map((_, index) => (
           <button
@@ -92,7 +94,6 @@ const HeroCarousel = () => {
         ))}
       </div>
 
-      {/* Flèches de navigation */}
       <button
         onClick={() => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)}
         className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full transition-all duration-300 group"
@@ -117,4 +118,3 @@ const HeroCarousel = () => {
 }
 
 export default HeroCarousel
-

@@ -6,9 +6,14 @@ import FiltersModern from "@modules/store/components/filters-modern"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import PaginatedProductsModern from "@modules/store/templates/store-template-modern/paginated-products-modern"
 
+const NOUVEAUTES_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+
 export const metadata: Metadata = {
   title: "Nouveautés | La Cabrade",
-  description: "Découvrez nos derniers produits équestres - Nouveautés et dernières arrivées",
+  description: "Découvrez nos derniers produits équestres - Nouveautés et dernières arrivées sur La Cabrade, sellerie équestre à Fléron.",
+  alternates: {
+    canonical: `${NOUVEAUTES_BASE_URL}/be/nouveautes`,
+  },
 }
 
 type Props = {
@@ -31,10 +36,10 @@ export default async function NouveautesPage({ params, searchParams }: Props) {
   let categories: any[] = []
   let brands: any[] = []
   try {
-    categories = await listCategories()
-  } catch {}
-  try {
-    brands = await listBrands()
+    ;[categories, brands] = await Promise.all([
+      listCategories(),
+      listBrands(),
+    ])
   } catch {}
 
   const activeFiltersCount = Object.keys(searchParams).filter(

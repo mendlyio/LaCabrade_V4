@@ -1,9 +1,19 @@
 import { Metadata } from "next"
 import StoreTemplateModern from "@modules/store/templates/store-template-modern"
 
+const STORE_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+
 export const metadata: Metadata = {
   title: "Boutique - La Cabrade",
-  description: "Découvrez notre gamme complète de produits équestres de qualité.",
+  description: "Découvrez notre gamme complète de produits équestres de qualité. Selles, briderie, équipement cavalier et cheval. Livraison rapide en Belgique.",
+  openGraph: {
+    type: "website",
+    title: "Boutique - La Cabrade",
+    description: "Découvrez notre gamme complète de produits équestres de qualité.",
+  },
+  alternates: {
+    canonical: `${STORE_BASE_URL}/be/store`,
+  },
 }
 
 type Params = {

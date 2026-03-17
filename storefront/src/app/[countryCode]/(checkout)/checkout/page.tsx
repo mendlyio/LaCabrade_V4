@@ -6,6 +6,7 @@ import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
 import CheckoutTracker from "@modules/common/components/tracking/checkout-tracker"
 import { enrichLineItems, placeOrder, retrieveCart } from "@lib/data/cart"
+import { retrieveOrderByCartId } from "@lib/data/orders"
 import { HttpTypes } from "@medusajs/types"
 import { getCustomer } from "@lib/data/customer"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -15,34 +16,76 @@ export const metadata: Metadata = {
   description: "Finalisez votre commande en toute sécurité",
 }
 
+const tryRecoverOrder = async (
+  cartId: string | undefined,
+  fallbackCountryCode: string
+) => {
+  if (!cartId) return false
+
+  try {
+    const recoveredOrder = await retrieveOrderByCartId(cartId)
+    if (!recoveredOrder?.id) return false
+
+    const cc =
+      recoveredOrder.shipping_address?.country_code?.toLowerCase() ||
+      recoveredOrder.billing_address?.country_code?.toLowerCase() ||
+      fallbackCountryCode ||
+      "fr"
+
+    redirect(`/${cc}/order/confirmed/${recoveredOrder.id}`)
+  } catch (err: any) {
+    if (err?.digest?.includes?.("NEXT_REDIRECT")) throw err
+    return false
+  }
+}
+
 const fetchCart = async (
   searchParams?: Record<string, string | string[] | undefined>,
   countryCode?: string
 ) => {
-  const cart = await retrieveCart()
+  const redirectStatus = searchParams?.redirect_status
+  const cartIdFromReturn = Array.isArray(searchParams?.cart_id)
+    ? searchParams?.cart_id[0]
+    : searchParams?.cart_id
+  const isStripeReturn =
+    redirectStatus === "succeeded" || redirectStatus === "processing"
+
+  let cart: Awaited<ReturnType<typeof retrieveCart>> = null
+  try {
+    cart = await retrieveCart()
+  } catch {
+    cart = null
+  }
+
+  // Pour TOUS les retours Stripe (Bancontact, Klarna, iDeal, carte 3DS…)
+  // le panier peut encore exister en cookie mais le paiement est déjà validé côté Stripe.
+  // On tente toujours de récupérer/valider la commande dans ce cas.
+  if (isStripeReturn) {
+    await tryRecoverOrder(cartIdFromReturn, countryCode || "fr")
+
+    try {
+      await placeOrder()
+    } catch (err: any) {
+      if (err?.digest?.includes?.("NEXT_REDIRECT")) throw err
+      await tryRecoverOrder(cartIdFromReturn, countryCode || "fr")
+      if (cartIdFromReturn) {
+        redirect(`/${countryCode || "fr"}/order/processing?cart_id=${cartIdFromReturn}`)
+      }
+      redirect(`/${countryCode || "fr"}`)
+    }
+  }
 
   if (!cart) {
-    const redirectStatus = searchParams?.redirect_status
-    if (redirectStatus === "succeeded" || redirectStatus === "processing") {
-      try {
-        // Cart gone after Stripe redirect → try to complete the order.
-        // placeOrder() calls redirect() on success (throws NEXT_REDIRECT, must propagate).
-        await placeOrder()
-      } catch (err: any) {
-        if (err?.digest?.includes?.("NEXT_REDIRECT")) {
-          throw err
-        }
-        // Cart cookie gone = order was already completed earlier.
-        // Redirect to homepage since we can't recover the order ID.
-        redirect(`/${countryCode || "fr"}`)
-      }
-    }
     return notFound()
   }
 
   if (cart?.items?.length) {
-    const enrichedItems = await enrichLineItems(cart?.items, cart?.region_id!)
-    cart.items = enrichedItems as HttpTypes.StoreCartLineItem[]
+    try {
+      const enrichedItems = await enrichLineItems(cart.items, cart.region_id!)
+      cart.items = enrichedItems as HttpTypes.StoreCartLineItem[]
+    } catch {
+      // keep raw items
+    }
   }
 
   return cart
@@ -111,11 +154,34 @@ export default async function Checkout({
     params,
     searchParamsPromise,
   ])
-  const cart = await fetchCart(searchParams, paramCountry)
-  const customer = await getCustomer()
+
+  let cart: any
+  try {
+    cart = await fetchCart(searchParams, paramCountry)
+  } catch (err: any) {
+    if (err?.digest?.includes?.("NEXT_REDIRECT")) throw err
+    if (err?.digest === "NEXT_NOT_FOUND") throw err
+
+    const cartId = Array.isArray(searchParams?.cart_id)
+      ? searchParams?.cart_id[0]
+      : searchParams?.cart_id
+    await tryRecoverOrder(cartId, paramCountry || "fr")
+    if (cartId) {
+      redirect(`/${paramCountry || "fr"}/order/processing?cart_id=${cartId}`)
+    }
+    redirect(`/${paramCountry || "fr"}`)
+  }
+
+  let customer: any = null
+  try {
+    customer = await getCustomer()
+  } catch {
+    customer = null
+  }
+
   const countryCode = paramCountry || "be"
 
-  const itemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0
+  const itemCount = cart?.items?.reduce((acc: number, item: any) => acc + item.quantity, 0) || 0
 
   return (
     <div className="min-h-screen bg-gray-50">

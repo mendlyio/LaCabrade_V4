@@ -100,6 +100,7 @@ export default function ProductJsonLd({
           "@type": "ListItem",
           position: breadcrumb.length + 2,
           name: product.title,
+          item: `${BASE_URL}/${countryCode}/products/${product.handle}`,
         },
       ],
     })

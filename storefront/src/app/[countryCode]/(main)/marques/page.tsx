@@ -2,9 +2,19 @@ import { Metadata } from "next"
 import { listBrands } from "@lib/data/brands"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
+const MARQUES_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+
 export const metadata: Metadata = {
-  title: "Nos Marques",
-  description: "Découvrez toutes les marques disponibles dans notre sellerie",
+  title: "Nos Marques | La Cabrade",
+  description: "Découvrez toutes les marques équestres disponibles dans notre sellerie La Cabrade à Fléron. Grandes marques et LC Equestrian.",
+  openGraph: {
+    type: "website",
+    title: "Nos Marques | La Cabrade",
+    description: "Découvrez toutes les marques équestres disponibles dans notre sellerie.",
+  },
+  alternates: {
+    canonical: `${MARQUES_BASE_URL}/be/marques`,
+  },
 }
 
 export const dynamic = "force-dynamic"

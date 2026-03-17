@@ -543,13 +543,42 @@ export async function removeGiftCard(
   //   }
 }
 
+const ONE_TIME_PROMO_CODES = ["SORRY15"]
+
 export async function submitPromotionForm(
   currentState: unknown,
   formData: FormData
 ) {
-  const code = formData.get("code") as string
+  const code = (formData.get("code") as string).toUpperCase().trim()
+
+  if (ONE_TIME_PROMO_CODES.includes(code)) {
+    try {
+      const { getCustomer } = await import("./customer")
+      const { listOrders } = await import("./orders")
+      const customer = await getCustomer()
+
+      if (customer) {
+        const orders = await listOrders(100, 0)
+        const alreadyUsed = (orders ?? []).some((order: any) =>
+          (order.promotions ?? []).some(
+            (p: any) => p.code?.toUpperCase() === code
+          )
+        )
+        if (alreadyUsed) {
+          return "Ce code promo a déjà été utilisé sur votre compte."
+        }
+      }
+    } catch {
+      // En cas d'erreur de vérification, on laisse Medusa trancher
+    }
+  }
+
   try {
-    await applyPromotions([code])
+    const cart = await retrieveCart()
+    const existingCodes = (cart?.promotions ?? [])
+      .filter((p: any) => p.code != null && !p.is_automatic)
+      .map((p: any) => p.code as string)
+    await applyPromotions([...existingCodes, code])
   } catch (e: any) {
     return e.message
   }
@@ -629,13 +658,7 @@ export async function placeOrder() {
     throw new Error("No existing cart found when placing an order")
   }
 
-  const cartRes = await sdk.store.cart
-    .complete(cartId, {}, await getAuthHeadersSafe())
-    .then((cartRes) => {
-      revalidateTag("cart")
-      return cartRes
-    })
-    .catch(medusaError)
+  const cartRes = await completeCartById(cartId)
 
   if (cartRes?.type === "order" && cartRes?.order?.id) {
     const countryCode =
@@ -656,6 +679,20 @@ export async function placeOrder() {
   }
 
   return cartRes?.cart ?? null
+}
+
+export async function completeCartById(cartId: string) {
+  if (!cartId) {
+    throw new Error("No existing cart found when placing an order")
+  }
+
+  return sdk.store.cart
+    .complete(cartId, {}, await getAuthHeadersSafe())
+    .then((cartRes) => {
+      revalidateTag("cart")
+      return cartRes
+    })
+    .catch(medusaError)
 }
 
 /**

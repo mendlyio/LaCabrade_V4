@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from '@medusajs/framework/http'
-import { ContainerRegistrationKeys, remoteQueryObjectFromString } from '@medusajs/framework/utils'
+import { Modules } from '@medusajs/framework/utils'
+import { Client } from 'pg'
 
 const STORE_URL = process.env.STORE_URL || 'https://www.sellerie-lacabrade.be'
 const STORE_NAME = 'La Cabrade'
@@ -29,6 +30,22 @@ function stripHtml(str: string): string {
     .trim()
 }
 
+function resolvePublicUrl(raw: string): string {
+  if (!raw) return ''
+  const value = raw.trim()
+  if (!value) return ''
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return encodeURI(value)
+  }
+  if (value.startsWith('//')) {
+    return encodeURI(`https:${value}`)
+  }
+  if (value.startsWith('/')) {
+    return encodeURI(`${STORE_URL}${value}`)
+  }
+  return encodeURI(`https://${value}`)
+}
+
 function isValidGtin(barcode: string): boolean {
   if (!barcode) return false
   const digits = barcode.replace(/\D/g, '')
@@ -50,6 +67,30 @@ function getGoogleCategory(collection: string, categories: string[]): string {
   return ''
 }
 
+function isApparelProduct(text: string): boolean {
+  return /(shirt|t-?shirt|polo|pull|sweat|veste|jacket|pantalon|legging|gants?|gloves?|botte|boots?|chaussures?|socks?|casque|helmet|bonnet|hoodie)/i.test(
+    text
+  )
+}
+
+function inferGender(text: string): 'male' | 'female' | 'unisex' {
+  const t = text.toLowerCase()
+  if (/(femme|women|woman|lady|ladies|girl|filles?)/.test(t)) return 'female'
+  if (/(homme|men|man|boy|gar[cç]ons?)/.test(t)) return 'male'
+  return 'unisex'
+}
+
+function inferSizeFromTitle(title: string): string {
+  if (!title) return ''
+  const t = title.toUpperCase()
+  const match = t.match(/\b(XXS|XS|S|M|L|XL|XXL|XXXL)\b/)
+  if (match) return match[1]
+  const num = t.match(/\b(\d{2,3})\b/)
+  if (num) return num[1]
+  if (/ONE\s*SIZE|TAILLE\s*UNIQUE|UNIQUE/.test(t)) return 'one size'
+  return ''
+}
+
 // ── Route principale ─────────────────────────────────────────────────────────
 
 /**
@@ -61,42 +102,98 @@ function getGoogleCategory(collection: string, categories: string[]): string {
  * URL Merchant Center : https://backend-production-7bbb.up.railway.app/google-feed
  */
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
-  const remoteQuery = req.scope.resolve(ContainerRegistrationKeys.REMOTE_QUERY)
+  const productService = req.scope.resolve(Modules.PRODUCT)
+  const dbClient = new Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL?.includes('railway')
+      ? { rejectUnauthorized: false }
+      : false,
+  })
+  let dbConnected = false
 
   try {
-    // ── Récupération via remoteQuery (cross-module : Product + Pricing) ────
+    // ── Récupération produits publiés (sans pricing) ───────────────────────
     const allProducts: any[] = []
     let offset = 0
     const take = 100
 
     while (true) {
-      const products: any[] = await remoteQuery(
-        remoteQueryObjectFromString({
-          entryPoint: 'product',
-          fields: [
-            'id', 'title', 'handle', 'description', 'thumbnail', 'status', 'metadata',
-            'images.url',
-            'collection.title',
-            'categories.name',
-            'variants.id', 'variants.title', 'variants.sku', 'variants.barcode',
-            'variants.inventory_quantity', 'variants.metadata',
-            'variants.prices.amount',
-            'variants.prices.currency_code',
-            'variants.options.value',
-            'variants.options.option.title',
+      const products = await productService.listProducts(
+        { status: 'published' },
+        {
+          relations: [
+            'variants',
+            'variants.options',
+            'variants.options.option',
+            'images',
+            'collection',
+            'categories',
           ],
-          variables: {
-            filters: { status: 'published' },
-            skip: offset,
-            take,
-          },
-        })
+          take,
+          skip: offset,
+        }
       )
 
       if (!products?.length) break
       allProducts.push(...products)
       if (products.length < take) break
       offset += take
+    }
+
+    // ── Récupération prix EUR via SQL (source de vérité pricing) ───────────
+    const variantIds = allProducts.flatMap((p: any) =>
+      (p.variants ?? []).map((v: any) => v.id)
+    )
+
+    const priceByVariantId = new Map<string, number>()
+    const availableByVariantId = new Map<string, number>()
+    if (variantIds.length > 0) {
+      await dbClient.connect()
+      dbConnected = true
+      const { rows } = await dbClient.query(
+        `
+          SELECT
+            pv.id AS variant_id,
+            pp.amount AS amount
+          FROM product_variant pv
+          LEFT JOIN product_variant_price_set pvps ON pvps.variant_id = pv.id
+          LEFT JOIN price_set ps ON ps.id = pvps.price_set_id
+          LEFT JOIN price pp ON pp.price_set_id = ps.id
+          WHERE pv.id = ANY($1)
+            AND pp.currency_code = 'eur'
+            AND pp.amount IS NOT NULL
+            AND pp.deleted_at IS NULL
+          ORDER BY pv.id, pp.created_at DESC
+        `,
+        [variantIds]
+      )
+
+      // Garder le premier prix trouvé par variante (plus récent via ORDER BY)
+      for (const row of rows) {
+        if (!priceByVariantId.has(row.variant_id)) {
+          priceByVariantId.set(row.variant_id, Number(row.amount))
+        }
+      }
+
+      // Stock disponible réel = stocked_quantity - reserved_quantity
+      const stockRows = await dbClient.query(
+        `
+          SELECT
+            pvi.variant_id AS variant_id,
+            COALESCE(SUM(COALESCE(il.stocked_quantity, 0) - COALESCE(il.reserved_quantity, 0)), 0) AS available
+          FROM product_variant_inventory_item pvi
+          LEFT JOIN inventory_level il
+            ON il.inventory_item_id = pvi.inventory_item_id
+            AND il.deleted_at IS NULL
+          WHERE pvi.variant_id = ANY($1)
+          GROUP BY pvi.variant_id
+        `,
+        [variantIds]
+      )
+
+      for (const row of stockRows.rows) {
+        availableByVariantId.set(row.variant_id, Number(row.available))
+      }
     }
 
     // ── Génération des <item> ──────────────────────────────────────────────
@@ -113,21 +210,12 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
 
       for (const variant of variants) {
         // ── Prix EUR ───────────────────────────────────────────────────────
-        const prices: any[] = variant.prices ?? []
-        const eurPrice = prices.find(
-          (p: any) => p.currency_code?.toLowerCase() === 'eur'
-        )
-        if (!eurPrice) continue
-
-        const rawAmount =
-          typeof eurPrice.amount === 'number'
-            ? eurPrice.amount
-            : parseFloat(String(eurPrice.amount))
-        const amount = rawAmount / 100
+        const amount = Number(priceByVariantId.get(variant.id) ?? 0)
         if (amount <= 0) continue
 
         // ── Disponibilité ──────────────────────────────────────────────────
-        const qty: number = variant.inventory_quantity ?? 0
+        const qty: number =
+          Number(availableByVariantId.get(variant.id) ?? variant.inventory_quantity ?? 0)
         const availability = qty > 0 ? 'in stock' : 'out of stock'
 
         // ── Image ──────────────────────────────────────────────────────────
@@ -137,14 +225,16 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
           (typeof product.images?.[0] === 'string' ? product.images[0] : '')
         if (!rawImage) continue
 
-        const imageLink = rawImage.startsWith('http') ? rawImage : `https://${rawImage}`
+        const imageLink = resolvePublicUrl(rawImage)
+        if (!imageLink) continue
 
         const additionalImages: string[] = []
         if (Array.isArray(product.images)) {
           for (const img of product.images) {
             const url: string = typeof img === 'string' ? img : img?.url ?? ''
             if (!url || url === rawImage) continue
-            const absUrl = url.startsWith('http') ? url : `https://${url}`
+            const absUrl = resolvePublicUrl(url)
+            if (!absUrl) continue
             if (additionalImages.length < 10) additionalImages.push(absUrl)
           }
         }
@@ -168,11 +258,20 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         let size = ''
         if (Array.isArray(variant.options)) {
           for (const opt of variant.options) {
-            const label = (opt.option?.title || '').toLowerCase()
-            if (['couleur', 'color', 'colour'].includes(label)) color = opt.value || ''
-            else if (['taille', 'size', 'pointure', 'tour de tête'].includes(label)) size = opt.value || ''
+            const label = (opt.option?.title || '').toLowerCase().trim()
+            if (/(couleur|color|colour)/.test(label)) color = opt.value || ''
+            else if (/(taille|size|pointure|tour de tête|tour)/.test(label)) size = opt.value || ''
           }
         }
+        if (!size) {
+          size = inferSizeFromTitle(`${variant.title || ''} ${product.title || ''}`)
+        }
+
+        const apparelContext = `${title} ${productType} ${collectionTitle} ${categoryNames.join(' ')}`
+        const isApparel = isApparelProduct(apparelContext)
+        const gender = inferGender(apparelContext)
+        const ageGroup = 'adult'
+        const safeSize = size || (isApparel ? 'one size' : '')
 
         // ── GTIN / MPN ─────────────────────────────────────────────────────
         const hasValidGtin = isValidGtin(variant.barcode)
@@ -195,9 +294,12 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       <g:gtin>${escapeXml(variant.barcode.replace(/\D/g, ''))}</g:gtin>
       <g:mpn>${escapeXml(mpn)}</g:mpn>` : `
       <g:mpn>${escapeXml(mpn)}</g:mpn>
-      <g:identifier_exists>no</g:identifier_exists>`}${hasMultipleVariants ? `
+      <g:identifier_exists>no</g:identifier_exists>`}${isApparel ? `
+      <g:gender>${gender}</g:gender>
+      <g:age_group>${ageGroup}</g:age_group>${safeSize ? `
+      <g:size>${escapeXml(safeSize)}</g:size>` : ''}` : ''}${hasMultipleVariants ? `
       <g:item_group_id>${escapeXml(product.id)}</g:item_group_id>` : ''}${color ? `
-      <g:color>${escapeXml(color)}</g:color>` : ''}${size ? `
+      <g:color>${escapeXml(color)}</g:color>` : ''}${!isApparel && size ? `
       <g:size>${escapeXml(size)}</g:size>` : ''}${productType ? `
       <g:product_type>${escapeXml(productType)}</g:product_type>` : ''}${googleCategory ? `
       <g:google_product_category>${googleCategory}</g:google_product_category>` : ''}
@@ -234,5 +336,9 @@ ${items.join('\n')}
   } catch (error: any) {
     console.error('❌ [GoogleFeed] Erreur:', error.message)
     return res.status(500).json({ success: false, message: error.message })
+  } finally {
+    if (dbConnected) {
+      await dbClient.end().catch(() => undefined)
+    }
   }
 }

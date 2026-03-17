@@ -2,29 +2,37 @@ import { sdk } from "@lib/config"
 import { cache } from "react"
 
 export const listCategories = cache(async function () {
-  const limit = 100
-  let offset = 0
-  let total = 0
   const allCategories: any[] = []
 
-  do {
-    const { product_categories, count } = await sdk.store.category.list(
-      {
-        limit,
-        offset,
-      },
-      { next: { tags: ["categories"] } }
-    )
+  const first = await sdk.store.category.list(
+    { limit: 500, offset: 0 },
+    { next: { tags: ["categories"] } }
+  )
 
-    if (Array.isArray(product_categories)) {
-      allCategories.push(...product_categories)
+  if (Array.isArray(first.product_categories)) {
+    allCategories.push(...first.product_categories)
+  }
+
+  const total = typeof first.count === "number" ? first.count : allCategories.length
+
+  if (total > 500) {
+    const remaining: Promise<any>[] = []
+    for (let offset = 500; offset < total; offset += 500) {
+      remaining.push(
+        sdk.store.category.list(
+          { limit: 500, offset },
+          { next: { tags: ["categories"] } }
+        )
+      )
     }
+    const batches = await Promise.all(remaining)
+    batches.forEach((batch) => {
+      if (Array.isArray(batch.product_categories)) {
+        allCategories.push(...batch.product_categories)
+      }
+    })
+  }
 
-    total = typeof count === "number" ? count : allCategories.length
-    offset += limit
-  } while (offset < total)
-
-  // Dédupliquer par id pour éviter les doublons éventuels
   const deduped = new Map<string, any>()
   allCategories.forEach((category) => {
     if (category?.id) {

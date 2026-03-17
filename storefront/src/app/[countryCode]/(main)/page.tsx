@@ -5,15 +5,20 @@ import { listCategories } from "@lib/data/categories"
 import { buildCategoryTree } from "@lib/util/category-tree"
 import { slugify } from "@lib/util/slugify"
 import HomeContent from "@modules/home/components/home-content"
+import ProductCardModern from "@modules/products/components/product-card-modern"
+
+const HOME_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
 
 export const metadata: Metadata = {
   title: "La Cabrade - Sellerie Équestre | LC•EQUESTRIAN",
   description:
     "Vivez l'équitation comme vous l'aimez, sans compromis. Des prix justes, du matériel fiable, et toute l'émotion d'une sellerie pensée pour les passionnés.",
   alternates: {
+    canonical: `${HOME_BASE_URL}/be`,
     languages: {
-      "fr-BE": "/be",
-      "nl-BE": "/be",
+      "fr-BE": `${HOME_BASE_URL}/be`,
+      "nl-BE": `${HOME_BASE_URL}/be`,
+      "x-default": `${HOME_BASE_URL}/be`,
     },
   },
 }
@@ -60,17 +65,16 @@ export default async function Home({
 }: {
   params: { countryCode: string }
 }) {
-  const region = await getRegion(countryCode)
+  const [region, allCategories] = await Promise.all([
+    getRegion(countryCode),
+    listCategories().catch((error) => {
+      console.error("Erreur lors de la récupération des catégories:", error)
+      return [] as any[]
+    }),
+  ])
 
   if (!region) {
     return null
-  }
-
-  let allCategories: any[] = []
-  try {
-    allCategories = (await listCategories()) || []
-  } catch (error) {
-    console.error("Erreur lors de la récupération des catégories:", error)
   }
 
   const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
@@ -80,11 +84,8 @@ export default async function Home({
 
   const { map: categoryMap } = buildCategoryTree(allCategories)
 
-  let lcEquestrianProducts: any[] = []
-  if (lcCategory) {
-    try {
-      const allowedIds = getCategoryAndDescendantIds(lcCategory.id, categoryMap)
-      const result = await getProductsList({
+  const lcProductsPromise = lcCategory
+    ? getProductsList({
         queryParams: {
           limit: 48,
           region_id: region.id,
@@ -92,31 +93,40 @@ export default async function Home({
           fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images,+categories.handle,+categories.id",
         } as any,
         countryCode,
+      }).catch((error) => {
+        console.error("Erreur lors de la récupération des produits LC Equestrian:", error)
+        return { response: { products: [] as any[], count: 0 } }
       })
-      const raw = result.response.products || []
-      const isInLcCategory = (p: any) =>
-        (p.categories || []).some((cat: any) => cat?.id && allowedIds.has(cat.id))
-      lcEquestrianProducts = raw.filter(isInLcCategory).slice(0, 8)
-    } catch (error) {
-      console.error("Erreur lors de la récupération des produits LC Equestrian:", error)
-    }
+    : Promise.resolve({ response: { products: [] as any[], count: 0 } })
+
+  const newProductsPromise = getProductsList({
+    queryParams: {
+      limit: 8,
+      region_id: region.id,
+      order: "-created_at",
+      fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images,+categories.handle,+categories.id",
+    } as any,
+    countryCode,
+  }).catch((error) => {
+    console.error("Erreur lors de la récupération des nouveautés:", error)
+    return { response: { products: [] as any[], count: 0 } }
+  })
+
+  const [lcResult, newResult] = await Promise.all([
+    lcProductsPromise,
+    newProductsPromise,
+  ])
+
+  let lcEquestrianProducts: any[] = []
+  if (lcCategory) {
+    const allowedIds = getCategoryAndDescendantIds(lcCategory.id, categoryMap)
+    const raw = lcResult.response.products || []
+    const isInLcCategory = (p: any) =>
+      (p.categories || []).some((cat: any) => cat?.id && allowedIds.has(cat.id))
+    lcEquestrianProducts = raw.filter(isInLcCategory).slice(0, 8)
   }
 
-  let newProducts: any[] = []
-  try {
-    const result = await getProductsList({
-      queryParams: {
-        limit: 8,
-        region_id: region.id,
-        order: "-created_at",
-        fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images,+categories.handle,+categories.id",
-      } as any,
-      countryCode,
-    })
-    newProducts = result.response.products || []
-  } catch (error) {
-    console.error("Erreur lors de la récupération des nouveautés:", error)
-  }
+  const newProducts = newResult.response.products || []
 
   const parentCategories = allCategories.filter(
     (c: any) => c.parent_category_id == null && c.is_active !== false
@@ -133,12 +143,32 @@ export default async function Home({
     _image: getCategoryImage(c),
   }))
 
+  const lcProductCards = lcEquestrianProducts.map((product) => (
+    <div
+      key={product.id}
+      className="flex-none w-[calc(50%-6px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(25%-12px)] xl:w-[calc(20%-13px)]"
+    >
+      <ProductCardModern region={region} product={product} />
+    </div>
+  ))
+
+  const newProductCards = newProducts.map((product) => (
+    <div
+      key={product.id}
+      className="flex-none w-[calc(50%-6px)] sm:w-[calc(33.333%-11px)] lg:w-[calc(25%-12px)] xl:w-[calc(20%-13px)]"
+    >
+      <ProductCardModern region={region} product={product} />
+    </div>
+  ))
+
   return (
     <HomeContent
       region={region}
       lcEquestrianProducts={lcEquestrianProducts}
       newProducts={newProducts}
       mainCategories={mainCategories}
+      lcProductCards={lcProductCards}
+      newProductCards={newProductCards}
     />
   )
 }

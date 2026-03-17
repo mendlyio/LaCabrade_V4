@@ -34,14 +34,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       }
     }
 
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+    const description = `Découvrez les ${brand.count} produits de la marque ${brand.name} sur La Cabrade, sellerie équestre de qualité.`
+
     return {
-      title: `${brand.name} | Marques`,
-      description: `Découvrez les produits de la marque ${brand.name}`,
+      title: `${brand.name} | Marques | La Cabrade`,
+      description,
+      openGraph: {
+        type: "website",
+        title: `${brand.name} | La Cabrade`,
+        description,
+        url: `${baseUrl}/${params.countryCode}/marques/${params.handle}`,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: `${brand.name} | La Cabrade`,
+        description,
+      },
+      alternates: {
+        canonical: `${baseUrl}/${params.countryCode}/marques/${params.handle}`,
+      },
     }
   } catch {
     return {
-      title: "Marque",
-      description: "Découvrez nos marques",
+      title: "Marque | La Cabrade",
+      description: "Découvrez nos marques équestres sur La Cabrade.",
     }
   }
 }
@@ -49,23 +66,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export const dynamic = "force-dynamic"
 
 export default async function BrandPage({ params, searchParams }: Props) {
-  const brand = await getBrandBySlug(params.handle)
+  const [brand, allCategories, brands] = await Promise.all([
+    getBrandBySlug(params.handle),
+    listCategories().catch((error) => {
+      console.error("Erreur lors du chargement des catégories:", error)
+      return [] as any[]
+    }),
+    listBrands().catch((error) => {
+      console.error("Erreur lors du chargement des marques:", error)
+      return [] as any[]
+    }),
+  ])
 
   if (!brand) {
     notFound()
-  }
-
-  let allCategories: any[] = []
-  let brands: any[] = []
-  try {
-    allCategories = await listCategories()
-  } catch (error) {
-    console.error("Erreur lors du chargement des catégories:", error)
-  }
-  try {
-    brands = await listBrands()
-  } catch (error) {
-    console.error("Erreur lors du chargement des marques:", error)
   }
 
   const searchParamsWithBrand = {

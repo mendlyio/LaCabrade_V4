@@ -45,7 +45,7 @@ export default async function Nav() {
   const parentCategories = roots.filter((c) => (c as any).is_active !== false)
 
   return (
-    <div className="sticky top-0 inset-x-0 z-50 group">
+    <div className="sticky top-0 inset-x-0 z-[120] isolate group">
       {/* Header principal */}
       <header className="relative bg-white border-b border-ui-border-base shadow-sm transition-all duration-300 hover:shadow-md">
         {/* Top Bar - Call to action + Langue */}

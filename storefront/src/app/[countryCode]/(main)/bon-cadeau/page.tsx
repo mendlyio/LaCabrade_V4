@@ -3,10 +3,15 @@ import { getRegion } from "@lib/data/regions"
 import { getGiftCardProduct } from "@lib/data/gift-card"
 import GiftCardForm from "@modules/gift-card/components/gift-card-form"
 
+const BON_CADEAU_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+
 export const metadata: Metadata = {
   title: "Bon Cadeau | La Cabrade",
   description:
     "Offrez un bon cadeau La Cabrade - Le cadeau idéal pour tous les passionnés d'équitation. Valable 1 an, utilisable en ligne et en magasin.",
+  alternates: {
+    canonical: `${BON_CADEAU_BASE_URL}/be/bon-cadeau`,
+  },
 }
 
 type Props = {
