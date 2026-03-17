@@ -127,11 +127,9 @@ export default function NewsletterPopup() {
             {t("popup.title" as any)}
           </h2>
           <p className="text-gray-500 text-xs mb-4 leading-relaxed text-center sm:text-left">
-            {t("popup.subtitle" as any).replace("10%", "")}
+            {t("popup.subtitle" as any).split("10%")[0]}
             <span className="text-[#9e354a] font-bold">10&nbsp;%</span>
-            {t("popup.subtitle" as any).includes("10%")
-              ? t("popup.subtitle" as any).split("10%")[1]
-              : ""}
+            {t("popup.subtitle" as any).split("10%")[1] ?? ""}
           </p>
 
           {status === "success" ? (

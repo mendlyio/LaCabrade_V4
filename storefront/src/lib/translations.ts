@@ -161,7 +161,7 @@ export const translations = {
     // Newsletter Popup
     "popup.close": "Fermer",
     "popup.title": "Un petit bonus pour toi !",
-    "popup.subtitle": "Rejoins-nous et économise 10% sur ta prochaine commande.",
+    "popup.subtitle": "Inscris-toi et profite de 10% de réduction sur ta prochaine commande.",
     "popup.success_title": "C'est parti !",
     "popup.success_code": "Ton code -10% vient d'être envoyé à ton adresse email.",
     "popup.success_spam": "Vérifie aussi tes spams 📬",
