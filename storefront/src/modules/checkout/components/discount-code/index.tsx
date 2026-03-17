@@ -3,7 +3,7 @@
 import { Badge, Input, Text } from "@medusajs/ui"
 import React, { useEffect, useState } from "react"
 
-import { applyPromotions } from "@lib/data/cart"
+import { applyPromotions, submitPromotionForm } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
 import Trash from "@modules/common/icons/trash"
@@ -98,21 +98,18 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
 
   const addPromotionCode = async (formData: FormData) => {
     const rawCode = formData.get("code")
-    if (!rawCode) return
-    const code = rawCode.toString().toUpperCase().trim()
+    if (!rawCode || !rawCode.toString().trim()) return
     const input = document.getElementById(
       "promotion-input"
     ) as HTMLInputElement
-    const codes = validPromotions
-      .filter((p) => p.code != null)
-      .map((p) => p.code!)
-    codes.push(code)
-    try {
-      await applyPromotions(codes)
+    // submitPromotionForm retourne le message d'erreur ou undefined (succès)
+    // Il ne throw jamais → pas de crash page Next.js App Router
+    const error = await submitPromotionForm(null, formData)
+    if (error) {
+      setPromoError(error)
+    } else {
       setPromoError(null)
       if (input) input.value = ""
-    } catch (e: any) {
-      setPromoError(e.message)
     }
   }
 

@@ -494,10 +494,7 @@ export async function applyPromotions(codes: string[]) {
   }
 
   await updateCart({ promo_codes: codes })
-    .then(() => {
-      revalidateTag("cart")
-    })
-    .catch(medusaError)
+  // updateCart gère déjà revalidateTag("cart") et medusaError en interne
 }
 
 export async function applyGiftCard(code: string) {
