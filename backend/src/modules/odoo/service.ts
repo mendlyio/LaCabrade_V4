@@ -517,8 +517,10 @@ export default class OdooModuleService {
       quantity: number
       price: number
       name: string
+      isGiftCard?: boolean
     }>
-    shippingCost?: number // Ajout frais de port
+    shippingCost?: number
+    discountTotal?: number
     total: number
     shippingAddress?: {
       address_1?: string
@@ -526,8 +528,8 @@ export default class OdooModuleService {
       postal_code?: string
       country_code?: string
     }
-    companyName?: string // Nom de la société
-    vatNumber?: string   // Numéro de TVA intracommunautaire
+    companyName?: string
+    vatNumber?: string
   }): Promise<number> {
     if (!this.uid) {
       await this.login()
@@ -668,13 +670,15 @@ export default class OdooModuleService {
       }
 
       if (productId) {
+        const priceUnit = item.isGiftCard ? item.price / 100 : item.price
+        console.log(`📦 [ODOO] Ligne article: SKU=${item.sku}, raw_price=${item.price}, isGC=${!!item.isGiftCard}, price_unit_odoo=${priceUnit}, qty=${item.quantity}`)
         orderLines.push([
           0,
           0,
           {
             product_id: productId,
             product_uom_qty: item.quantity,
-            price_unit: item.price / 100, // Medusa uses cents
+            price_unit: priceUnit,
             name: item.name,
           },
         ])
@@ -703,7 +707,7 @@ export default class OdooModuleService {
 
       const deliveryLine: any = {
         product_uom_qty: 1,
-        price_unit: orderData.shippingCost / 100,
+        price_unit: orderData.shippingCost,
         name: "Frais de livraison",
       }
 
@@ -716,6 +720,45 @@ export default class OdooModuleService {
       }
 
       orderLines.push([0, 0, deliveryLine])
+    }
+
+    // Ajouter une ligne de remise si discountTotal > 0
+    if (orderData.discountTotal && orderData.discountTotal > 0) {
+      const discountAmount = orderData.discountTotal
+
+      let discountProductIds: number[] = []
+      try {
+        discountProductIds = await this.client.request("call", {
+          service: "object",
+          method: "execute_kw",
+          args: [
+            this.options.dbName,
+            this.uid,
+            this.options.apiKey,
+            "product.product",
+            "search",
+            [[["default_code", "=", "DISCOUNT"]]],
+            { limit: 1 },
+          ],
+        })
+      } catch {
+        // Ignore
+      }
+
+      const discountLine: any = {
+        product_uom_qty: 1,
+        price_unit: -discountAmount,
+        name: "Réduction / Code promo",
+      }
+
+      if (discountProductIds.length > 0) {
+        discountLine.product_id = discountProductIds[0]
+      } else {
+        console.warn("[ODOO] Produit DISCOUNT non trouvé, ajout ligne remise sans ID produit")
+      }
+
+      orderLines.push([0, 0, discountLine])
+      console.log(`🏷️ [ODOO] Ligne remise ajoutée: -${discountAmount}€`)
     }
 
     // 3. Create sale.order

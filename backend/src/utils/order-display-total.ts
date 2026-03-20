@@ -36,6 +36,7 @@ function getItemsTotalEuros(order: {
     unit_price?: number | null
     subtotal?: number | null
     quantity?: number | null
+    adjustments?: Array<{ amount?: number | null }> | null
     metadata?: Record<string, unknown> | null
     product_title?: string | null
     title?: string | null
@@ -62,6 +63,25 @@ function getItemsTotalEuros(order: {
   return toDisplayEuros(itemTotal)
 }
 
+/**
+ * Calcule le total des réductions item par item (en euros) depuis les adjustments.
+ * Retourne null si les adjustments ne sont pas disponibles.
+ * N'inclut PAS les réductions livraison (elles sont sur les shipping methods, pas les items).
+ */
+function getItemAdjustmentsEuros(order: OrderForDisplayTotal | null | undefined): number | null {
+  const items = order?.items
+  if (!items?.length) return null
+  if (!items.some(item => Array.isArray(item.adjustments))) return null
+  let sum = 0
+  for (const item of items) {
+    const isGiftCard = isGiftCardItem(item)
+    for (const adj of item.adjustments || []) {
+      sum += Math.abs(lineItemAmountToEuros(adj.amount, isGiftCard))
+    }
+  }
+  return sum
+}
+
 function isIntraCommunityExempt(order: {
   metadata?: Record<string, unknown> | null
   shipping_address?: { country_code?: string | null } | null
@@ -83,11 +103,24 @@ function isFreeShippingDiscount(
   return matchStandard || matchExpress
 }
 
+/**
+ * Calcule la réduction en euros à soustraire du total.
+ * Préfère les adjustments item (précis) ; fallback sur discount_total + heuristique.
+ */
+function getDiscountEuros(order: OrderForDisplayTotal | null | undefined): number {
+  const itemAdj = getItemAdjustmentsEuros(order)
+  if (itemAdj !== null) return itemAdj
+  return isFreeShippingDiscount(order?.shipping_total, order?.discount_total)
+    ? 0
+    : toDisplayEuros(order?.discount_total)
+}
+
 export type OrderForDisplayTotal = {
   items?: Array<{
     unit_price?: number | null
     subtotal?: number | null
     quantity?: number | null
+    adjustments?: Array<{ amount?: number | null }> | null
     metadata?: Record<string, unknown> | null
     product_title?: string | null
     title?: string | null
@@ -106,6 +139,9 @@ export type OrderForDisplayTotal = {
 /**
  * Calcule le total à afficher pour une commande (identique au checkout).
  * Gère : exonération TVA intracommunautaire, promo livraison gratuite, carte cadeau.
+ *
+ * Utilise les adjustments item par item quand disponibles pour éviter la double
+ * déduction lorsque livraison gratuite + code promo sont combinés.
  */
 export function getOrderDisplayTotalEuros(order: OrderForDisplayTotal | null | undefined): number {
   if (!order) return 0
@@ -114,9 +150,7 @@ export function getOrderDisplayTotalEuros(order: OrderForDisplayTotal | null | u
 
   const itemTotalEuros = getItemsTotalEuros(order)
   const shippingEuros = toDisplayEuros(order.shipping_total)
-  const discountEuros = isFreeShippingDiscount(order.shipping_total, order.discount_total)
-    ? 0
-    : toDisplayEuros(order.discount_total)
+  const discountEuros = getDiscountEuros(order)
 
   const totalTTC = itemTotalEuros + shippingEuros - discountEuros - giftCardDeduction
 

@@ -74,6 +74,7 @@ export type CartAmountsInput = {
     unit_price?: number | null
     subtotal?: number | null
     quantity?: number | null
+    adjustments?: Array<{ amount?: number | null; code?: string | null }> | null
     metadata?: Record<string, unknown> | null
     product_title?: string | null
     title?: string | null
@@ -159,6 +160,67 @@ export function getItemsDisplayTotalEuros(cart: CartAmountsInput | null | undefi
   return getItemsTotalEuros(cart)
 }
 
+/**
+ * Calcule le total des réductions item par item (en euros) depuis les adjustments.
+ * Retourne null si les adjustments ne sont pas disponibles (fallback nécessaire).
+ * N'inclut PAS les réductions livraison (elles sont sur les shipping methods, pas les items).
+ */
+export function getItemAdjustmentsEuros(cart: CartAmountsInput | null | undefined): number | null {
+  const items = cart?.items
+  if (!items?.length) return null
+  if (!items.some(item => Array.isArray(item.adjustments))) return null
+  let sum = 0
+  for (const item of items) {
+    const isGC = isGiftCardItem(item)
+    for (const adj of item.adjustments || []) {
+      sum += Math.abs(lineItemAmountToEuros(adj.amount, isGC))
+    }
+  }
+  return sum
+}
+
+/**
+ * Calcule le total des réductions item par item (en centimes) depuis les adjustments.
+ * Retourne null si les adjustments ne sont pas disponibles.
+ */
+function getItemAdjustmentsCents(cart: CartAmountsInput | null | undefined): number | null {
+  const items = cart?.items
+  if (!items?.length) return null
+  if (!items.some(item => Array.isArray(item.adjustments))) return null
+  let sum = 0
+  for (const item of items) {
+    const isGC = isGiftCardItem(item)
+    for (const adj of item.adjustments || []) {
+      sum += Math.abs(toPaymentCents(adj.amount ?? 0, isGC))
+    }
+  }
+  return sum
+}
+
+/**
+ * Calcule la réduction en euros à soustraire du total.
+ * Préfère les adjustments item (précis) ; fallback sur discount_total + heuristique.
+ */
+function getDiscountEuros(cart: CartAmountsInput | null | undefined): number {
+  const itemAdj = getItemAdjustmentsEuros(cart)
+  if (itemAdj !== null) return itemAdj
+  return isFreeShippingDiscount(cart?.shipping_total, cart?.discount_total)
+    ? 0
+    : toDisplayEuros(cart?.discount_total)
+}
+
+/**
+ * Calcule la réduction en centimes à soustraire du total (pour Stripe).
+ * Préfère les adjustments item (précis) ; fallback sur discount_total + heuristique.
+ */
+function getDiscountCents(cart: CartAmountsInput | null | undefined): number {
+  const itemAdj = getItemAdjustmentsCents(cart)
+  if (itemAdj !== null) return itemAdj
+  return isFreeShippingDiscount(cart?.shipping_total, cart?.discount_total)
+    ? 0
+    : toPaymentCents(cart?.discount_total)
+}
+
 /** TVA belge standard 21 %. TVA = TTC × 0.21 / 1.21 */
 const VAT_RATE = 0.21
 
@@ -189,9 +251,7 @@ export function getDisplayTaxEuros(cart: CartAmountsInput | null | undefined): n
 
   const itemTotalEuros = getItemsTotalEuros(cart)
   const shippingEuros = toDisplayEuros(cart.shipping_total)
-  const discountEuros = isFreeShippingDiscount(cart.shipping_total, cart.discount_total)
-    ? 0
-    : toDisplayEuros(cart.discount_total)
+  const discountEuros = getDiscountEuros(cart)
   const giftCardDeduction = toDisplayEuros(cart.gift_card_total, true)
   const totalTTC = itemTotalEuros + shippingEuros - discountEuros - giftCardDeduction
 
@@ -206,6 +266,9 @@ export function getDisplayTaxEuros(cart: CartAmountsInput | null | undefined): n
 /**
  * Calcule le total à afficher (en euros).
  * Cas intracommunautaire : total HT = TTC - TVA (TVA déduite).
+ *
+ * Utilise les adjustments item par item quand disponibles pour éviter la double
+ * déduction lorsque livraison gratuite + code promo sont combinés.
  */
 export function getDisplayTotalTvacEuros(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
@@ -214,9 +277,7 @@ export function getDisplayTotalTvacEuros(cart: CartAmountsInput | null | undefin
 
   const itemTotalEuros = getItemsTotalEuros(cart)
   const shippingEuros = toDisplayEuros(cart.shipping_total)
-  const discountEuros = isFreeShippingDiscount(cart.shipping_total, cart.discount_total)
-    ? 0
-    : toDisplayEuros(cart.discount_total)
+  const discountEuros = getDiscountEuros(cart)
 
   const totalTTC = itemTotalEuros + shippingEuros - discountEuros - giftCardDeduction
 
@@ -231,6 +292,9 @@ export function getDisplayTotalTvacEuros(cart: CartAmountsInput | null | undefin
  * Calcule le montant à charger (Stripe) en centimes.
  * Stripe attend les minor units.
  * Cas intracommunautaire : déduit la TVA (total HT).
+ *
+ * Utilise les adjustments item par item quand disponibles pour éviter la double
+ * déduction lorsque livraison gratuite + code promo sont combinés.
  */
 export function getPaymentAmountCents(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
@@ -238,9 +302,7 @@ export function getPaymentAmountCents(cart: CartAmountsInput | null | undefined)
 
   const itemCents = getItemsTotalCents(cart)
   const shippingCents = toPaymentCents(cart.shipping_total)
-  const discountCents = isFreeShippingDiscount(cart.shipping_total, cart.discount_total)
-    ? 0
-    : toPaymentCents(cart.discount_total)
+  const discountCents = getDiscountCents(cart)
   const giftCardCents = toPaymentCents(cart.gift_card_total, true)
 
   let totalCents = itemCents + shippingCents - discountCents - giftCardCents

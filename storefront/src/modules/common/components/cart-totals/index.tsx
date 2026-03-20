@@ -4,8 +4,11 @@ import {
   getDisplayTaxEuros,
   getDisplayTotalTvacEuros,
   getItemsDisplayTotalEuros,
+  getItemAdjustmentsEuros,
   isFreeShippingDiscount,
   isIntraCommunityExempt,
+  lineItemAmountToEuros,
+  isGiftCardItem,
 } from "@lib/util/cart-amounts"
 import { formatAmount, formatAmountFromCents } from "@lib/util/money"
 import React from "react"
@@ -29,6 +32,10 @@ type CartTotalsProps = {
       subtotal?: number | null
       unit_price?: number | null
       adjustments?: Array<{ code?: string | null; amount?: number | null }> | null
+      metadata?: Record<string, unknown> | null
+      product_title?: string | null
+      title?: string | null
+      variant_sku?: string | null
     }>
   } | null
 }
@@ -76,13 +83,13 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
     .filter((p) => p.code && gcPattern.test(p.code))
     .map((p) => p.code!)
 
-  // Separate gift card adjustments from regular discounts
   let gcDiscountEuros = 0
   let regularDiscountEuros = 0
-  if (items && gcCodes.length > 0) {
+  if (items && items.some(item => Array.isArray(item.adjustments))) {
     for (const item of items) {
+      const isGC = isGiftCardItem(item as any)
       for (const adj of item.adjustments || []) {
-        const amount = Math.abs(Number(adj.amount || 0))
+        const amount = Math.abs(lineItemAmountToEuros(adj.amount, isGC))
         if (adj.code && gcCodes.includes(adj.code)) {
           gcDiscountEuros += amount
         } else {
@@ -91,7 +98,8 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
       }
     }
   } else {
-    regularDiscountEuros = discount_total ?? 0
+    const isFreeShip = isFreeShippingDiscount(shipping_total, discount_total)
+    regularDiscountEuros = isFreeShip ? 0 : (discount_total ?? 0)
   }
 
   const shippingEuros = shipping_total ?? 0
@@ -135,11 +143,7 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
 
         {regularDiscountEuros > 0 && (
           <div className="flex items-center justify-between">
-            <span className="text-gray-600">
-              {isFreeShippingDiscount(shipping_total, regularDiscountEuros)
-                ? "Livraison gratuite dès 75€"
-                : "Réduction"}
-            </span>
+            <span className="text-gray-600">Réduction</span>
             <span
               className="font-medium text-green-600"
               data-testid="cart-discount"
@@ -151,9 +155,16 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
         )}
 
         <div className="flex items-center justify-between">
-          <span className="text-gray-600">Livraison</span>
+          <span className="text-gray-600">
+            Livraison
+            {shipping_total === 0 && (discount_total ?? 0) > 0 && (
+              <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium ml-1.5">
+                Gratuite
+              </span>
+            )}
+          </span>
           <span className="font-medium text-gray-900" data-testid="cart-shipping" data-value={shippingEuros}>
-            {shipping_total
+            {shipping_total != null && (shipping_total > 0 || (discount_total ?? 0) > 0)
               ? formatAmount(shippingEuros, currency_code)
               : <span className="text-gray-400 italic text-xs">Calculé à l'étape suivante</span>
             }
