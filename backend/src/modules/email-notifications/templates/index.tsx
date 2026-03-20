@@ -9,6 +9,7 @@ import { GiftCardDeliveryTemplate, GIFT_CARD_DELIVERY, isGiftCardDeliveryData } 
 import { PasswordResetTemplate, PASSWORD_RESET, isPasswordResetTemplateData } from './password-reset'
 import { NewsletterWelcomeTemplate, NEWSLETTER_WELCOME, isNewsletterWelcomeData } from './newsletter-welcome'
 import { NewsletterBirthdayTemplate, NEWSLETTER_BIRTHDAY, isNewsletterBirthdayData } from './newsletter-birthday'
+import { NewsletterBugfixReminderTemplate, NEWSLETTER_BUGFIX_REMINDER, isNewsletterBugfixReminderData } from './newsletter-bugfix-reminder'
 
 export const EmailTemplates = {
   INVITE_USER,
@@ -20,6 +21,7 @@ export const EmailTemplates = {
   PASSWORD_RESET,
   NEWSLETTER_WELCOME,
   NEWSLETTER_BIRTHDAY,
+  NEWSLETTER_BUGFIX_REMINDER,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -107,6 +109,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <NewsletterBirthdayTemplate {...data} />
 
+    case EmailTemplates.NEWSLETTER_BUGFIX_REMINDER:
+      if (!isNewsletterBugfixReminderData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.NEWSLETTER_BUGFIX_REMINDER}"`
+        )
+      }
+      return <NewsletterBugfixReminderTemplate {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -115,4 +126,4 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
   }
 }
 
-export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, WelcomeTemplate, StockAlertTemplate, GiftCardDeliveryTemplate, PasswordResetTemplate, NewsletterWelcomeTemplate, NewsletterBirthdayTemplate }
+export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, WelcomeTemplate, StockAlertTemplate, GiftCardDeliveryTemplate, PasswordResetTemplate, NewsletterWelcomeTemplate, NewsletterBirthdayTemplate, NewsletterBugfixReminderTemplate }
