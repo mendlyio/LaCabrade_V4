@@ -115,10 +115,12 @@ const CartDropdown = ({
         >
           <Popover.Panel
             static
-            className="hidden small:block absolute top-[calc(100%+0.75rem)] right-0 bg-white rounded-xl shadow-2xl border border-gray-200 w-[440px] text-ui-fg-base overflow-hidden flex flex-col max-h-[calc(100vh-6rem)]"
+            className="hidden small:block absolute top-[calc(100%+0.75rem)] right-0 bg-white rounded-xl shadow-2xl border border-gray-200 w-[440px] text-ui-fg-base"
+            style={{ maxHeight: 'calc(100vh - 6rem)' }}
             data-testid="nav-cart-dropdown"
           >
-            <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100 flex-shrink-0">
+            <div style={{ display: 'flex', flexDirection: 'column', maxHeight: 'inherit', borderRadius: 'inherit', overflow: 'hidden' }}>
+            <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100" style={{ flexShrink: 0 }}>
               <div>
                 <h3 className="text-sm font-semibold text-gray-900">{t("cart.my_cart" as any)}</h3>
                 <p className="text-xs text-gray-500">
@@ -128,7 +130,7 @@ const CartDropdown = ({
             </div>
             {cartState && cartState.items?.length ? (
               <>
-                <div className="overflow-y-auto overflow-x-hidden flex-1 min-h-0 px-6 py-4 grid grid-cols-1 gap-y-4 no-scrollbar">
+                <div className="px-6 py-4 grid grid-cols-1 gap-y-4" style={{ flex: '1 1 0%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
                   {cartState.items
                     .sort((a, b) => {
                       return (a.created_at ?? "") > (b.created_at ?? "")
@@ -199,7 +201,7 @@ const CartDropdown = ({
                       </div>
                     ))}
                 </div>
-                <div className="p-6 flex flex-col gap-y-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+                <div className="p-6 flex flex-col gap-y-4 border-t border-gray-200 bg-gray-50" style={{ flexShrink: 0 }}>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">
                       {t("cart.subtotal_label" as any)}{" "}
@@ -262,6 +264,7 @@ const CartDropdown = ({
                 </div>
               </div>
             )}
+            </div>
           </Popover.Panel>
         </Transition>
       </Popover>
