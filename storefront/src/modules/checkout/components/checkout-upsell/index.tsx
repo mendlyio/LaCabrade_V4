@@ -2,11 +2,16 @@
 
 import { addToCart, addOutletItem } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
+import { isVariantAvailable } from "@lib/util/product-stock"
 import { trackGA4AddToCart, trackMetaAddToCart } from "@lib/tracking"
 import { HttpTypes } from "@medusajs/types"
 import Thumbnail from "@modules/products/components/thumbnail"
 import { useParams } from "next/navigation"
 import { useRef, useState } from "react"
+
+function getFirstAvailableVariant(product: HttpTypes.StoreProduct) {
+  return product.variants?.find((v) => isVariantAvailable(v)) ?? null
+}
 
 type CheckoutUpsellProps = {
   products: HttpTypes.StoreProduct[]
@@ -26,7 +31,7 @@ const CheckoutUpsell = ({ products, cartItems, currencyCode, stepNumber = 3 }: C
   const filteredProducts = products.filter(p => !cartProductIds.includes(p.id) && !addedIds.has(p.id))
 
   const handleAdd = async (product: HttpTypes.StoreProduct) => {
-    const variant = product.variants?.[0]
+    const variant = getFirstAvailableVariant(product)
     if (!variant) return
 
     const categories = (product as any).categories || []
@@ -75,7 +80,7 @@ const CheckoutUpsell = ({ products, cartItems, currencyCode, stepNumber = 3 }: C
   }
 
   const getPrice = (product: HttpTypes.StoreProduct) => {
-    const variant = product.variants?.[0]
+    const variant = getFirstAvailableVariant(product)
     const categories = (product as any).categories || []
     const isOutlet = categories.some((cat: any) =>
       (cat.handle || "").toLowerCase().startsWith("outlet")

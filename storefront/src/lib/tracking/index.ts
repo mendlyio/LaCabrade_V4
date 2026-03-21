@@ -7,6 +7,8 @@
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
+const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID
+const GOOGLE_ADS_PURCHASE_LABEL = process.env.NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL
 
 export function hasConsent(): boolean {
   if (typeof document === "undefined") return false
@@ -248,6 +250,25 @@ export function trackGA4AddPaymentInfo(
       item_category: i.item_category,
       index: idx,
     })),
+  })
+}
+
+// ── Google Ads ───────────────────────────────────────────────────────────────
+
+export function trackGoogleAdsPurchase(
+  transactionId: string,
+  value: number,
+  currency = "EUR"
+) {
+  if (!GOOGLE_ADS_ID || !GOOGLE_ADS_PURCHASE_LABEL || !hasConsent()) return
+  const gtag = (window as any).gtag
+  if (!gtag) return
+
+  gtag("event", "conversion", {
+    send_to: `${GOOGLE_ADS_ID}/${GOOGLE_ADS_PURCHASE_LABEL}`,
+    transaction_id: transactionId,
+    value,
+    currency,
   })
 }
 

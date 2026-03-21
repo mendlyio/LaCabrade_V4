@@ -3,6 +3,7 @@ import { listCartPaymentMethods } from "@lib/data/payment"
 import { getProductByHandle, getProductsList } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import { isGiftCardOnlyCart } from "@lib/util/cart-amounts"
+import { isVariantAvailable } from "@lib/util/product-stock"
 import { HttpTypes } from "@medusajs/types"
 import Addresses from "@modules/checkout/components/addresses"
 import Payment from "@modules/checkout/components/payment"
@@ -39,6 +40,10 @@ const LAST_CHANCE_HANDLES = [
   "ponge-xl-qhp-odoo-21413",
 ]
 
+function getFirstAvailableVariant(product: HttpTypes.StoreProduct) {
+  return product.variants?.find((v) => isVariantAvailable(v)) ?? null
+}
+
 async function fetchUpsellProducts(
   cart: HttpTypes.StoreCart,
   countryCode: string
@@ -47,18 +52,24 @@ async function fetchUpsellProducts(
     const region = await getRegion(countryCode)
     if (!region) return [[], []]
 
-    // "Complétez votre commande" = produits fixes LC Equestrian
+    const safeGetProduct = async (handle: string) => {
+      try {
+        return await getProductByHandle(handle, region.id)
+      } catch {
+        return null
+      }
+    }
+
     const upsellRaw = await Promise.all(
-      CHECKOUT_UPSELL_HANDLES.map((h) => getProductByHandle(h, region.id, { skipInventoryCheck: true }))
+      CHECKOUT_UPSELL_HANDLES.map(safeGetProduct)
     )
     let upsell = upsellRaw
       .filter((p): p is HttpTypes.StoreProduct => p != null)
       .filter((p) => {
-        const variant = p.variants?.[0] as any
+        const variant = getFirstAvailableVariant(p) as any
         const price = variant?.calculated_price?.calculated_amount
         return price != null && price > 0
       })
-    // Garder l'ordre défini par CHECKOUT_UPSELL_HANDLES
     upsell = CHECKOUT_UPSELL_HANDLES
       .map((h) => upsell.find((p) => (p.handle || "").toLowerCase() === h.toLowerCase()))
       .filter((p): p is HttpTypes.StoreProduct => p != null)
@@ -66,14 +77,13 @@ async function fetchUpsellProducts(
     const cartProductIds = cart.items?.map((item) => item.product_id) || []
     upsell = upsell.filter((p) => !cartProductIds.includes(p.id))
 
-    // "Vérification et validation" (Last chance) = produits fixes
     const lastChanceRaw = await Promise.all(
-      LAST_CHANCE_HANDLES.map((h) => getProductByHandle(h, region.id, { skipInventoryCheck: true }))
+      LAST_CHANCE_HANDLES.map(safeGetProduct)
     )
     let lastChance = lastChanceRaw
       .filter((p): p is HttpTypes.StoreProduct => p != null)
       .filter((p) => {
-        const variant = p.variants?.[0] as any
+        const variant = getFirstAvailableVariant(p) as any
         const price = variant?.calculated_price?.calculated_amount
         return price != null && price > 0
       })

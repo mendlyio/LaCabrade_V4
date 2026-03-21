@@ -4,10 +4,12 @@ import Script from "next/script"
 
 const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID
+const GOOGLE_ADS_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_ID
 
 export const GoogleConsentMode = () => {
   const hasGA = !!GA_MEASUREMENT_ID
   const hasMeta = !!META_PIXEL_ID
+  const hasAds = !!GOOGLE_ADS_ID
 
   if (!hasGA && !hasMeta) return null
 
@@ -65,6 +67,7 @@ export const GoogleConsentMode = () => {
                 page_path: window.location.pathname,
                 anonymize_ip: true
               });
+              ${hasAds ? `gtag('config', '${GOOGLE_ADS_ID}');` : ""}
             `}
           </Script>
         </>

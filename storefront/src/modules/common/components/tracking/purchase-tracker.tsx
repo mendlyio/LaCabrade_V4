@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react"
 import {
   trackGA4Purchase,
+  trackGoogleAdsPurchase,
   trackMetaPurchase,
   orderToTrackingCart,
   hasConsent,
@@ -25,6 +26,7 @@ export default function PurchaseTracker({ order }: PurchaseTrackerProps) {
     const shipping = order.shipping_total != null ? order.shipping_total / 100 : 0
 
     trackGA4Purchase(order.id, cart, tax, shipping)
+    trackGoogleAdsPurchase(order.id, cart.value, cart.currency)
     trackMetaPurchase(order.id, cart, tax, shipping)
 
     // CAPI (server-side) - uniquement si consentement cookies

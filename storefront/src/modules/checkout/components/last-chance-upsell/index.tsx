@@ -2,11 +2,16 @@
 
 import { addLastChanceItem } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
+import { isVariantAvailable } from "@lib/util/product-stock"
 import { trackGA4AddToCart, trackMetaAddToCart } from "@lib/tracking"
 import { HttpTypes } from "@medusajs/types"
 import Thumbnail from "@modules/products/components/thumbnail"
 import { useParams } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
+
+function getFirstAvailableVariant(product: HttpTypes.StoreProduct) {
+  return product.variants?.find((v) => isVariantAvailable(v)) ?? null
+}
 
 const DISCOUNT_PERCENT = 10
 
@@ -54,7 +59,7 @@ const LastChanceUpsell = ({
   if (promoUsed || dismissed || filteredProducts.length === 0) return null
 
   const handleAdd = async (product: HttpTypes.StoreProduct) => {
-    const variant = product.variants?.[0]
+    const variant = getFirstAvailableVariant(product)
     if (!variant) return
 
     setLoadingId(product.id)
@@ -96,7 +101,7 @@ const LastChanceUpsell = ({
   }
 
   const getPrice = (product: HttpTypes.StoreProduct) => {
-    const variant = product.variants?.[0]
+    const variant = getFirstAvailableVariant(product)
     const rawPrice = (variant as any)?.calculated_price?.calculated_amount
     if (rawPrice != null) {
       return {
