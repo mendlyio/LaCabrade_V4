@@ -94,21 +94,30 @@ export default async function customOrderPlacedEmailHandler({
       data: orderData
     })
 
+    const ownerNotifData = {
+      ...orderData,
+      suggestedProducts: [],
+      emailOptions: {
+        ...orderData.emailOptions,
+        subject: `[La Cabrade] Nouvelle commande #${(order as any).display_id || order.id}`
+      }
+    }
+
     await notificationModuleService.createNotifications({
       to: 'contact@sellerie-lacabrade.be',
       channel: 'email',
       template: EmailTemplates.ORDER_PLACED,
-      data: {
-        ...orderData,
-        suggestedProducts: [],
-        emailOptions: {
-          ...orderData.emailOptions,
-          subject: `[La Cabrade] Nouvelle commande #${(order as any).display_id || order.id}`
-        }
-      }
+      data: ownerNotifData
+    })
+
+    await notificationModuleService.createNotifications({
+      to: 'welcome@mendly.io',
+      channel: 'email',
+      template: EmailTemplates.ORDER_PLACED,
+      data: ownerNotifData
     })
     
-    console.log(`✅ Order confirmation email sent for order ${order.id} (client + contact@sellerie-lacabrade.be)`)
+    console.log(`✅ Order confirmation email sent for order ${order.id} (client + contact@sellerie-lacabrade.be + welcome@mendly.io)`)
   } catch (error: any) {
     console.error('❌ Error sending order confirmation notification:', error?.message ?? error)
     if (error?.code === 'MODULE_NOT_FOUND' || error?.message?.includes('NOTIFICATION')) {
