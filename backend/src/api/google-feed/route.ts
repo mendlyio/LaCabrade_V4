@@ -68,7 +68,7 @@ function getGoogleCategory(collection: string, categories: string[]): string {
 }
 
 function isApparelProduct(text: string): boolean {
-  return /(shirt|t-?shirt|polo|pull|sweat|veste|jacket|pantalon|legging|gants?|gloves?|botte|boots?|chaussures?|socks?|casque|helmet|bonnet|hoodie)/i.test(
+  return /(shirt|t-?shirt|polo|pull|sweat|veste|jacket|pantalon|legging|gants?|gloves?|botte|boots?|chaussures?|socks?|casque|helmet|bonnet|hoodie|bomber|ceinture|belt|longe|bridon|bridle|collant|chemise|blouson)/i.test(
     text
   )
 }
@@ -89,6 +89,44 @@ function inferSizeFromTitle(title: string): string {
   if (num) return num[1]
   if (/ONE\s*SIZE|TAILLE\s*UNIQUE|UNIQUE/.test(t)) return 'one size'
   return ''
+}
+
+function inferColorFromText(text: string): string {
+  if (!text) return ''
+  const t = text.toLowerCase()
+  const colorMap: Array<[RegExp, string]> = [
+    [/(bleu marine|navy)/, 'navy'],
+    [/\bbleu\b/, 'blue'],
+    [/\bnoir\b|black/, 'black'],
+    [/\bblanc\b|white/, 'white'],
+    [/\bbrun\b|\bmarron\b|brown/, 'brown'],
+    [/\bgris\b|grey|gray/, 'gray'],
+    [/\brouge\b|red/, 'red'],
+    [/\bvert\b|green/, 'green'],
+    [/\bbeige\b/, 'beige'],
+    [/\bbordeaux\b|burgundy/, 'burgundy'],
+    [/\brose\b|pink/, 'pink'],
+    [/\bviolet\b|purple/, 'purple'],
+    [/\bjaune\b|yellow/, 'yellow'],
+    [/\borange\b/, 'orange'],
+  ]
+  for (const [pattern, color] of colorMap) {
+    if (pattern.test(t)) return color
+  }
+  return ''
+}
+
+function shouldExcludeByPolicy(text: string): boolean {
+  const t = text.toLowerCase()
+  const blockedPatterns = [
+    /cartouche/,
+    /\bspark\b/,
+    /\bhelite\b/,
+    /airbag.{0,15}\b\d{2}\s*gr\b/,
+    /electrolyte|electrolytes|biotine|metabo|vitargil|xanthus|ungula|vital herbs|gattilier|pro skin|sos derm|dermite|sar'x|super itch/,
+    /shampoing|shampoo|baume|cr[eè]me|gel apaisant|lait sos/,
+  ]
+  return blockedPatterns.some((p) => p.test(t))
 }
 
 // ── Route principale ─────────────────────────────────────────────────────────
@@ -205,6 +243,10 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
 
       const collectionTitle: string = product.collection?.title ?? ''
       const categoryNames: string[] = (product.categories ?? []).map((c: any) => c.name)
+      const productTextForPolicy = `${product.title || ''} ${stripHtml(product.description || '')} ${collectionTitle} ${categoryNames.join(' ')}`
+      if (shouldExcludeByPolicy(productTextForPolicy)) {
+        continue
+      }
       const googleCategory = getGoogleCategory(collectionTitle, categoryNames)
       const productType = collectionTitle || (categoryNames.length > 0 ? categoryNames.join(' > ') : '')
 
@@ -263,12 +305,15 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
             else if (/(taille|size|pointure|tour de tête|tour)/.test(label)) size = opt.value || ''
           }
         }
+        if (!color) {
+          color = inferColorFromText(`${variant.title || ''} ${product.title || ''}`)
+        }
         if (!size) {
           size = inferSizeFromTitle(`${variant.title || ''} ${product.title || ''}`)
         }
 
         const apparelContext = `${title} ${productType} ${collectionTitle} ${categoryNames.join(' ')}`
-        const isApparel = isApparelProduct(apparelContext)
+        const isApparel = isApparelProduct(apparelContext) || !!size || !!color
         const gender = inferGender(apparelContext)
         const ageGroup = 'adult'
         const safeSize = size || (isApparel ? 'one size' : '')
