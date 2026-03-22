@@ -80,7 +80,7 @@ export default async function giftCardOrderedHandler({
         console.log(`[GiftCard] Code généré: ${code} (${amount}€ pour ${recipientEmail})`)
 
         // Create the Medusa promotion for checkout redemption
-        const amountInCents = Math.round(amount * 100)
+        // Medusa v2 promotion value/limit = unité principale (EUR), pas centimes
         let promotionId: string | null = null
         try {
           const createPromotions = createPromotionsWorkflow(container)
@@ -97,15 +97,14 @@ export default async function giftCardOrderedHandler({
                     campaign_identifier: code,
                     budget: {
                       type: "spend",
-                      limit: amountInCents,
+                      limit: amount,
                       currency_code: "eur",
                     },
                   },
                   application_method: {
                     type: "fixed",
-                    target_type: "items",
-                    allocation: "across",
-                    value: amountInCents,
+                    target_type: "order",
+                    value: amount,
                     currency_code: "eur",
                   },
                 },

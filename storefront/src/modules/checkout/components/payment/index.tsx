@@ -197,10 +197,7 @@ const Payment = ({
     setIsLoading(true)
     setError(null)
     try {
-      const needNewSession =
-        !selectedSession || selectedSession.provider_id !== selectedPaymentMethod
-
-      if (needNewSession) {
+      if (!paidByGiftcard && selectedPaymentMethod) {
         const updatedPaymentCollection = await initiatePaymentSession(cart, {
           provider_id: selectedPaymentMethod,
         })

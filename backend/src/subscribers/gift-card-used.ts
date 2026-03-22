@@ -26,10 +26,9 @@ export default async function giftCardUsedHandler({
 
   try {
     const order = await orderModuleService.retrieveOrder(data.id, {
-      relations: ["items"],
+      relations: ["items", "items.adjustments"],
     })
 
-    // Look for applied promotions with LC- pattern (gift card codes)
     const adjustments = (order.items || []).flatMap(
       (item: any) => item.adjustments || []
     )
@@ -69,14 +68,16 @@ export default async function giftCardUsedHandler({
           continue
         }
 
-        // Calculate the total discount applied by this code
         const totalDeducted = adjustments
           .filter((adj: any) => adj.code === code)
           .reduce((sum: number, adj: any) => sum + Math.abs(Number(adj.amount || 0)), 0)
 
-        // Amount deducted is in the same unit as order amounts (Medusa internal)
-        // Promotions with target_type "order" store amounts in cents
-        const deductedEuros = totalDeducted / 100
+        // Promotion value et adjustment amounts sont en euros (unité principale)
+        const deductedEuros = totalDeducted
+
+        console.log(
+          `[GiftCard Used] ${code}: adjustment total = ${totalDeducted}, déduit = ${deductedEuros}€`
+        )
 
         const newBalance = Math.max(0, Number(gc.balance) - deductedEuros)
         const newStatus = newBalance <= 0 ? "depleted" : "active"
@@ -97,12 +98,11 @@ export default async function giftCardUsedHandler({
         // so the next use only applies the remaining amount
         if (newBalance > 0 && gc.promotion_id) {
           try {
-            const newValueCents = Math.round(newBalance * 100)
             await promotionModuleService.updatePromotions([
               {
                 id: gc.promotion_id,
                 application_method: {
-                  value: newValueCents,
+                  value: newBalance,
                 },
               },
             ])
