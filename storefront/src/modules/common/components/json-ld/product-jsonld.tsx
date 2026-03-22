@@ -1,6 +1,5 @@
 import { HttpTypes } from "@medusajs/types"
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+import { headers } from "next/headers"
 
 type ProductJsonLdProps = {
   product: HttpTypes.StoreProduct
@@ -13,6 +12,12 @@ export default function ProductJsonLd({
   countryCode,
   breadcrumb,
 }: ProductJsonLdProps) {
+  const headersList = headers()
+  const host = headersList.get("host") || ""
+  const proto = headersList.get("x-forwarded-proto") || "https"
+  const BASE_URL =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (host ? `${proto}://${host}` : "https://sellerie-lacabrade.be")
   const variant = product.variants?.[0]
   const price = (variant as any)?.calculated_price?.calculated_amount
   const currency =

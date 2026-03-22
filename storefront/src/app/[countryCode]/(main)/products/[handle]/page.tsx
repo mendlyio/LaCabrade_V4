@@ -56,7 +56,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { handle, countryCode } = params
   if (handle === GIFT_CARD_PRODUCT_HANDLE) {
-    return { title: "Bon Cadeau | La Cabrade" }
+    return { title: { absolute: "Bon Cadeau | La Cabrade" } }
   }
   const region = await getRegion(countryCode)
 
@@ -72,7 +72,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
   return {
-    title: `${product.title} | La Cabrade`,
+    title: { absolute: `${product.title} | La Cabrade` },
     description: product.description || `Découvrez ${product.title} sur La Cabrade - Sellerie équestre de qualité`,
     openGraph: {
       type: "website",
