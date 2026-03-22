@@ -137,26 +137,45 @@ export type OrderForDisplayTotal = {
 }
 
 /**
+ * Retourne la déduction bon cadeau en euros depuis order.metadata.applied_gift_cards.
+ * Plafonnée au total avant GC pour ne jamais produire un total négatif.
+ */
+function getAppliedGiftCardsDeduction(
+  order: OrderForDisplayTotal,
+  totalBeforeGC: number
+): number {
+  const applied = (order.metadata as any)?.applied_gift_cards as
+    | Array<{ balance: number }>
+    | undefined
+  if (!applied?.length) return 0
+  const gcTotal = applied.reduce((sum, gc) => sum + Number(gc.balance || 0), 0)
+  return Math.min(gcTotal, totalBeforeGC)
+}
+
+/**
  * Calcule le total à afficher pour une commande (identique au checkout).
- * Gère : exonération TVA intracommunautaire, promo livraison gratuite, carte cadeau.
+ * Gère : exonération TVA intracommunautaire, promo livraison gratuite, bon cadeau.
  *
- * Utilise les adjustments item par item quand disponibles pour éviter la double
- * déduction lorsque livraison gratuite + code promo sont combinés.
+ * Le bon cadeau est lu depuis order.metadata.applied_gift_cards (déduction TTC pure,
+ * appliquée après la TVA — c'est un moyen de paiement, pas une réduction fiscale).
  */
 export function getOrderDisplayTotalEuros(order: OrderForDisplayTotal | null | undefined): number {
   if (!order) return 0
   const exempt = isIntraCommunityExempt(order)
-  const giftCardDeduction = toDisplayEuros(order.gift_card_total, true)
 
   const itemTotalEuros = getItemsTotalEuros(order)
   const shippingEuros = toDisplayEuros(order.shipping_total)
   const discountEuros = getDiscountEuros(order)
 
-  const totalTTC = itemTotalEuros + shippingEuros - discountEuros - giftCardDeduction
+  const totalBeforeGC = Math.max(0, itemTotalEuros + shippingEuros - discountEuros)
 
   if (exempt) {
-    const vatAmount = Math.round(totalTTC * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
-    return Math.round((totalTTC - vatAmount) * 100) / 100
+    const vatAmount = Math.round(totalBeforeGC * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
+    const totalHT = Math.round((totalBeforeGC - vatAmount) * 100) / 100
+    const gcDeduction = getAppliedGiftCardsDeduction(order, totalHT)
+    return Math.max(0, totalHT - gcDeduction)
   }
-  return Math.max(0, totalTTC)
+
+  const gcDeduction = getAppliedGiftCardsDeduction(order, totalBeforeGC)
+  return Math.max(0, totalBeforeGC - gcDeduction)
 }

@@ -1,5 +1,5 @@
 import { Modules } from "@medusajs/framework/utils"
-import { IOrderModuleService } from "@medusajs/framework/types"
+import { IOrderModuleService, ICartModuleService } from "@medusajs/framework/types"
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
 import { GIFT_CARD_TRACKING_MODULE } from "../modules/gift-card-tracking/constants"
 
@@ -7,8 +7,10 @@ type AppliedGiftCard = { code: string; balance: number }
 
 /**
  * Debits gift card balances when an order is placed.
- * Reads applied gift cards from order.metadata.applied_gift_cards
- * (transferred from cart metadata by transfer-cart-metadata subscriber).
+ *
+ * Reads applied gift cards directly from CART metadata (cart_id is available
+ * on the order). This avoids a race condition with transfer-cart-metadata.ts,
+ * which also runs on order.placed and writes to order.metadata.
  *
  * Each gift card covers up to its balance of the order total (TTC).
  * Multiple gift cards are applied in order: first GC covers as much as
@@ -26,6 +28,7 @@ export default async function giftCardUsedHandler({
   }
 
   const orderModuleService: IOrderModuleService = container.resolve(Modules.ORDER)
+  const cartModuleService: ICartModuleService = container.resolve(Modules.CART)
   const promotionModuleService = container.resolve(Modules.PROMOTION) as any
 
   try {
@@ -33,8 +36,26 @@ export default async function giftCardUsedHandler({
       relations: ["items"],
     })
 
-    const appliedGiftCards: AppliedGiftCard[] =
-      (order.metadata as any)?.applied_gift_cards ?? []
+    // Read applied_gift_cards from the CART (source of truth).
+    // Avoids race condition with transfer-cart-metadata subscriber.
+    const cartId = (order as any).cart_id as string | undefined
+    let appliedGiftCards: AppliedGiftCard[] = []
+
+    if (cartId) {
+      try {
+        const cart = await cartModuleService.retrieveCart(cartId, {
+          select: ["metadata"],
+        })
+        appliedGiftCards = (cart.metadata as any)?.applied_gift_cards ?? []
+      } catch (e: any) {
+        console.warn(`[GiftCard Used] Impossible de lire le panier ${cartId}:`, e.message)
+        // Fallback: try order.metadata (may already be transferred)
+        appliedGiftCards = (order.metadata as any)?.applied_gift_cards ?? []
+      }
+    } else {
+      // No cart_id: fallback on order.metadata
+      appliedGiftCards = (order.metadata as any)?.applied_gift_cards ?? []
+    }
 
     if (appliedGiftCards.length === 0) {
       return
@@ -45,8 +66,7 @@ export default async function giftCardUsedHandler({
       appliedGiftCards.map((g) => g.code)
     )
 
-    // Compute order total in euros (items are in euros for Odoo products).
-    // shipping_total, discount_total are also in euros.
+    // Compute order total in euros (Odoo products = euros, gift card items = centimes).
     const itemTotalEuros = (order.items || []).reduce((sum, item: any) => {
       const isGC = !!(item.metadata as any)?.is_gift_card
       const unitPrice = Number(item.unit_price ?? 0)
