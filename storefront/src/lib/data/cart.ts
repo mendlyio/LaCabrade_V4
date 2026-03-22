@@ -497,47 +497,61 @@ export async function applyPromotions(codes: string[]) {
   // updateCart gère déjà revalidateTag("cart") et medusaError en interne
 }
 
-export async function applyGiftCard(code: string) {
-  //   const cartId = getCartId()
-  //   if (!cartId) return "No cartId cookie found"
-  //   try {
-  //     await updateCart(cartId, { gift_cards: [{ code }] }).then(() => {
-  //       revalidateTag("cart")
-  //     })
-  //   } catch (error: any) {
-  //     throw error
-  //   }
+export async function applyGiftCardToCart(code: string) {
+  const cartId = await getCartIdSafe()
+  if (!cartId) throw new Error("Aucun panier trouvé")
+
+  const backendUrl =
+    process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+  if (publishableKey) headers["x-publishable-api-key"] = publishableKey
+
+  const res = await fetch(`${backendUrl}/store/custom/apply-gift-card`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ cart_id: cartId, code }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: "Erreur inconnue" }))
+    throw new Error(err.message || "Impossible d'appliquer le bon cadeau")
+  }
+
+  revalidateTag("cart")
+  return res.json()
+}
+
+export async function removeGiftCardFromCart(code: string) {
+  const cartId = await getCartIdSafe()
+  if (!cartId) throw new Error("Aucun panier trouvé")
+
+  const backendUrl =
+    process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+  if (publishableKey) headers["x-publishable-api-key"] = publishableKey
+
+  const res = await fetch(`${backendUrl}/store/custom/remove-gift-card`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ cart_id: cartId, code }),
+  })
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: "Erreur inconnue" }))
+    throw new Error(err.message || "Impossible de retirer le bon cadeau")
+  }
+
+  revalidateTag("cart")
 }
 
 export async function removeDiscount(code: string) {
-  // const cartId = getCartId()
-  // if (!cartId) return "No cartId cookie found"
-  // try {
-  //   await deleteDiscount(cartId, code)
-  //   revalidateTag("cart")
-  // } catch (error: any) {
-  //   throw error
-  // }
+  // unused – kept for backwards compat
 }
 
-export async function removeGiftCard(
-  codeToRemove: string,
-  giftCards: any[]
-  // giftCards: GiftCard[]
-) {
-  //   const cartId = getCartId()
-  //   if (!cartId) return "No cartId cookie found"
-  //   try {
-  //     await updateCart(cartId, {
-  //       gift_cards: [...giftCards]
-  //         .filter((gc) => gc.code !== codeToRemove)
-  //         .map((gc) => ({ code: gc.code })),
-  //     }).then(() => {
-  //       revalidateTag("cart")
-  //     })
-  //   } catch (error: any) {
-  //     throw error
-  //   }
+export async function removeGiftCard(codeToRemove: string, _giftCards?: any[]) {
+  return removeGiftCardFromCart(codeToRemove)
 }
 
 const ONE_TIME_PROMO_CODES = ["SORRY15"]

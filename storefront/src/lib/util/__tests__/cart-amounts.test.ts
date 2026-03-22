@@ -8,6 +8,7 @@ import {
   getDisplayTaxEuros,
   getItemsDisplayTotalEuros,
   getItemAdjustmentsEuros,
+  getGiftCardDeductionEuros,
   isFreeShippingDiscount,
   isIntraCommunityExempt,
   CartAmountsInput,
@@ -252,16 +253,16 @@ assert("Total HT", totalHT, 88.35, 0.02) // 106.9 - 18.55
 assert("Stripe (cents)", getPaymentAmountCents(cart7), 8835, 2)
 
 // ═══════════════════════════════════════════════════════════
-// SCÉNARIO 8: Utilisation d'une carte cadeau Medusa
+// SCÉNARIO 8: Bon cadeau via metadata (nouveau système)
 // ═══════════════════════════════════════════════════════════
-heading("SCÉNARIO 8: Article 50€ + carte cadeau 20€ + livraison")
+heading("SCÉNARIO 8: Article 50€ + bon cadeau 20€ (metadata) + livraison")
 
 const cart8: CartAmountsInput = {
   item_total: 50,
   subtotal: 50,
   shipping_total: 6.9,
   discount_total: 0,
-  gift_card_total: 2000, // 20€ en centimes (carte cadeau Medusa)
+  gift_card_total: 0,
   items: [
     {
       unit_price: 50,
@@ -272,10 +273,13 @@ const cart8: CartAmountsInput = {
       variant_sku: "SELLE-002",
     },
   ],
+  metadata: { applied_gift_cards: [{ code: "LC-TEST-AAAA-BBBB", balance: 20 }] },
   shipping_address: { country_code: "be" },
 }
 
 assert("Sous-total articles", getItemsDisplayTotalEuros(cart8), 50)
+assert("GC déduction", getGiftCardDeductionEuros(cart8), 20)
+assert("TVA (sur total avant GC)", getDisplayTaxEuros(cart8), 9.88, 0.02) // (56.9 × 21/121)
 assert("Total affiché", getDisplayTotalTvacEuros(cart8), 36.9) // 50 + 6.90 - 20
 assert("Stripe (cents)", getPaymentAmountCents(cart8), 3690)
 

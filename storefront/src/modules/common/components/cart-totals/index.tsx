@@ -5,12 +5,11 @@ import {
   getDisplayTotalTvacEuros,
   getItemsDisplayTotalEuros,
   getItemAdjustmentsEuros,
+  getGiftCardDeductionEuros,
   isFreeShippingDiscount,
   isIntraCommunityExempt,
-  lineItemAmountToEuros,
-  isGiftCardItem,
 } from "@lib/util/cart-amounts"
-import { formatAmount, formatAmountFromCents } from "@lib/util/money"
+import { formatAmount } from "@lib/util/money"
 import React from "react"
 
 type CartTotalsProps = {
@@ -45,7 +44,6 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
 
   const {
     currency_code,
-    total,
     item_total,
     item_tax_total,
     subtotal,
@@ -56,7 +54,6 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
     items,
     metadata,
     shipping_address,
-    promotions,
   } = totals
 
   const cartInput = {
@@ -67,7 +64,6 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
     shipping_total,
     discount_total,
     gift_card_total,
-    total,
     items,
     metadata,
     shipping_address,
@@ -75,40 +71,27 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
 
   const exempt = isIntraCommunityExempt(cartInput)
 
-  // Sous-total articles TVAC (ou HT si exempt). Montants Odoo en euros.
   const displayedSubtotal = getItemsDisplayTotalEuros(cartInput)
 
-  const gcPattern = /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
-  const gcCodes = (promotions || [])
-    .filter((p) => p.code && gcPattern.test(p.code))
-    .map((p) => p.code!)
-
-  let gcDiscountEuros = 0
+  // Regular discounts only (from item adjustments, no gift cards)
   let regularDiscountEuros = 0
   if (items && items.some(item => Array.isArray(item.adjustments))) {
-    for (const item of items) {
-      const isGC = isGiftCardItem(item as any)
-      for (const adj of item.adjustments || []) {
-        const amount = Math.abs(lineItemAmountToEuros(adj.amount, isGC))
-        if (adj.code && gcCodes.includes(adj.code)) {
-          gcDiscountEuros += amount
-        } else {
-          regularDiscountEuros += amount
-        }
-      }
-    }
+    const adjTotal = getItemAdjustmentsEuros(cartInput)
+    regularDiscountEuros = adjTotal ?? 0
   } else {
     const isFreeShip = isFreeShippingDiscount(shipping_total, discount_total)
     regularDiscountEuros = isFreeShip ? 0 : (discount_total ?? 0)
   }
 
   const shippingEuros = shipping_total ?? 0
-  const giftCardDeduction = (gift_card_total ?? 0) / 100
 
-  // TVA affichée : 0 si exempt, sinon tax_total (euros)
+  // TVA on total BEFORE gift card (GC is a payment method, not a tax reduction)
   const displayedTaxTotal = getDisplayTaxEuros(cartInput)
 
-  // Total TVAC (ou HT si exempt)
+  // Gift card deduction from metadata (TTC, after TVA line)
+  const gcDeduction = getGiftCardDeductionEuros(cartInput)
+
+  // Final total = what the customer pays
   const displayedTotal = getDisplayTotalTvacEuros(cartInput)
 
   return (
@@ -122,24 +105,6 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
             {formatAmount(displayedSubtotal, currency_code)}
           </span>
         </div>
-
-        {gcCodes.length > 0 && gcDiscountEuros > 0 && (
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600 flex items-center gap-1">
-              <svg className="w-3.5 h-3.5 text-amber-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M9.375 3a1.875 1.875 0 000 3.75h1.875v4.5H3.375A1.875 1.875 0 011.5 9.375v-.75c0-1.036.84-1.875 1.875-1.875h3.193A3.375 3.375 0 019.375 3zM12.75 12h8.625c.621 0 1.125-.504 1.125-1.125v-.75a1.875 1.875 0 00-1.875-1.875h-3.193A3.375 3.375 0 0014.625 3a1.875 1.875 0 000 3.75h-1.875v4.5zm-1.5 0H1.5v6.75C1.5 19.993 2.507 21 3.75 21h6.75V12zm1.5 0V21h6.75c1.243 0 2.25-1.007 2.25-2.25V12h-9z" />
-              </svg>
-              Bon cadeau
-            </span>
-            <span
-              className="font-medium text-green-600"
-              data-testid="cart-gift-card-discount"
-              data-value={gcDiscountEuros}
-            >
-              - {formatAmount(gcDiscountEuros, currency_code)}
-            </span>
-          </div>
-        )}
 
         {regularDiscountEuros > 0 && (
           <div className="flex items-center justify-between">
@@ -185,17 +150,25 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
           </span>
         </div>
 
-        {!!gift_card_total && (
-          <div className="flex items-center justify-between">
-            <span className="text-gray-600">Carte cadeau</span>
-            <span
-              className="font-medium text-green-600"
-              data-testid="cart-gift-card-amount"
-              data-value={gift_card_total || 0}
-            >
-              - {formatAmountFromCents(gift_card_total ?? 0, currency_code)}
-            </span>
-          </div>
+        {gcDeduction > 0 && (
+          <>
+            <div className="h-px w-full bg-gray-100 my-1" />
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5 text-amber-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M9.375 3a1.875 1.875 0 000 3.75h1.875v4.5H3.375A1.875 1.875 0 011.5 9.375v-.75c0-1.036.84-1.875 1.875-1.875h3.193A3.375 3.375 0 019.375 3zM12.75 12h8.625c.621 0 1.125-.504 1.125-1.125v-.75a1.875 1.875 0 00-1.875-1.875h-3.193A3.375 3.375 0 0014.625 3a1.875 1.875 0 000 3.75h-1.875v4.5zm-1.5 0H1.5v6.75C1.5 19.993 2.507 21 3.75 21h6.75V12zm1.5 0V21h6.75c1.243 0 2.25-1.007 2.25-2.25V12h-9z" />
+                </svg>
+                Bon cadeau
+              </span>
+              <span
+                className="font-medium text-green-600"
+                data-testid="cart-gift-card-discount"
+                data-value={gcDeduction}
+              >
+                - {formatAmount(gcDeduction, currency_code)}
+              </span>
+            </div>
+          </>
         )}
       </div>
 

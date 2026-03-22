@@ -54,6 +54,14 @@ export default async function transferCartMetadataHandler({
         metadataToTransfer.vat_number = cart.metadata.vat_number
         console.log(`[TransferMetadata] ✅ Numéro de TVA transféré vers order ${orderId}: ${cart.metadata.vat_number}`)
       }
+
+      if (Array.isArray(cart.metadata.applied_gift_cards) && cart.metadata.applied_gift_cards.length > 0) {
+        metadataToTransfer.applied_gift_cards = cart.metadata.applied_gift_cards
+        console.log(
+          `[TransferMetadata] ✅ Bon(s) cadeau(x) transféré(s) vers order ${orderId}:`,
+          (cart.metadata.applied_gift_cards as any[]).map((g: any) => g.code)
+        )
+      }
     }
     
     // Mettre à jour la commande si on a des métadonnées à transférer

@@ -8,6 +8,7 @@ import React, { useCallback, useContext, useRef, useState } from "react"
 import ErrorMessage from "../error-message"
 import Spinner from "@modules/common/icons/spinner"
 import { placeOrder } from "@lib/data/cart"
+import { getPaymentAmountCents } from "@lib/util/cart-amounts"
 import { HttpTypes } from "@medusajs/types"
 import { isManual, isPaypal, isStripe } from "@lib/constants"
 import { getActivePaymentSession } from "@lib/util/payment-session"
@@ -51,11 +52,11 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
     !cart.email ||
     (cart.shipping_methods?.length ?? 0) < 1
 
-  const hasGiftCardPromotion = (cart?.promotions || []).some(
-    (p: any) => p?.code && /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(p.code)
-  )
+  const appliedGiftCards: Array<{ balance: number }> =
+    (cart?.metadata as any)?.applied_gift_cards ?? []
+  const hasGiftCard = appliedGiftCards.length > 0
   const paidByGiftcard =
-    hasGiftCardPromotion && cart?.total !== undefined && cart?.total !== null && cart.total === 0
+    hasGiftCard && getPaymentAmountCents(cart as any) === 0
 
   if (paidByGiftcard) {
     return <GiftCardPaymentButton />

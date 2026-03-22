@@ -242,20 +242,51 @@ export function isFreeShippingDiscount(
 }
 
 /**
+ * Retourne la somme des soldes des bons cadeau appliqués (en euros TTC)
+ * depuis cart.metadata.applied_gift_cards.
+ */
+export function getAppliedGiftCardsEuros(cart: CartAmountsInput | null | undefined): number {
+  const applied = (cart?.metadata as any)?.applied_gift_cards as
+    | Array<{ code: string; balance: number }>
+    | undefined
+  if (!applied?.length) return 0
+  return applied.reduce((sum, gc) => sum + Number(gc.balance || 0), 0)
+}
+
+/**
+ * Calcule le total avant déduction bon cadeau (en euros TTC).
+ * = articles + livraison − réductions classiques
+ */
+function getTotalBeforeGiftCardEuros(cart: CartAmountsInput | null | undefined): number {
+  if (!cart) return 0
+  const itemTotalEuros = getItemsTotalEuros(cart)
+  const shippingEuros = toDisplayEuros(cart.shipping_total)
+  const discountEuros = getDiscountEuros(cart)
+  return Math.max(0, itemTotalEuros + shippingEuros - discountEuros)
+}
+
+/**
+ * Déduction effective du bon cadeau (en euros).
+ * = MIN(somme des soldes GC, total avant GC)
+ */
+export function getGiftCardDeductionEuros(cart: CartAmountsInput | null | undefined): number {
+  const gcTotal = getAppliedGiftCardsEuros(cart)
+  if (gcTotal <= 0) return 0
+  const totalBeforeGC = getTotalBeforeGiftCardEuros(cart)
+  return Math.min(gcTotal, totalBeforeGC)
+}
+
+/**
  * Calcule la TVA à afficher (en euros).
- * Toujours calculée côté frontend pour éviter les bugs d'unité (API peut renvoyer centimes).
+ * La TVA est calculée sur le total AVANT déduction bon cadeau, car le bon cadeau
+ * est un moyen de paiement (TTC), pas une réduction fiscale.
  * Cas intracommunautaire : retourne la TVA en NÉGATIF (montant déduit).
  */
 export function getDisplayTaxEuros(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
 
-  const itemTotalEuros = getItemsTotalEuros(cart)
-  const shippingEuros = toDisplayEuros(cart.shipping_total)
-  const discountEuros = getDiscountEuros(cart)
-  const giftCardDeduction = toDisplayEuros(cart.gift_card_total, true)
-  const totalTTC = itemTotalEuros + shippingEuros - discountEuros - giftCardDeduction
-
-  const vatAmount = Math.round(totalTTC * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
+  const totalTTCBeforeGC = getTotalBeforeGiftCardEuros(cart)
+  const vatAmount = Math.round(totalTTCBeforeGC * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
 
   if (isIntraCommunityExempt(cart)) {
     return -vatAmount
@@ -264,37 +295,29 @@ export function getDisplayTaxEuros(cart: CartAmountsInput | null | undefined): n
 }
 
 /**
- * Calcule le total à afficher (en euros).
- * Cas intracommunautaire : total HT = TTC - TVA (TVA déduite).
- *
- * Utilise les adjustments item par item quand disponibles pour éviter la double
- * déduction lorsque livraison gratuite + code promo sont combinés.
+ * Calcule le total à afficher (en euros) = montant à payer.
+ * = (articles + livraison − réductions) − bon cadeau
+ * Cas intracommunautaire : total HT = TTC − TVA, puis − bon cadeau.
  */
 export function getDisplayTotalTvacEuros(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
   const exempt = isIntraCommunityExempt(cart)
-  const giftCardDeduction = toDisplayEuros(cart.gift_card_total, true)
-
-  const itemTotalEuros = getItemsTotalEuros(cart)
-  const shippingEuros = toDisplayEuros(cart.shipping_total)
-  const discountEuros = getDiscountEuros(cart)
-
-  const totalTTC = itemTotalEuros + shippingEuros - discountEuros - giftCardDeduction
+  const totalTTCBeforeGC = getTotalBeforeGiftCardEuros(cart)
+  const gcDeduction = getGiftCardDeductionEuros(cart)
 
   if (exempt) {
-    const vatAmount = Math.round(totalTTC * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
-    return Math.round((totalTTC - vatAmount) * 100) / 100
+    const vatAmount = Math.round(totalTTCBeforeGC * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
+    const totalHT = Math.round((totalTTCBeforeGC - vatAmount) * 100) / 100
+    return Math.max(0, totalHT - gcDeduction)
   }
-  return Math.max(0, totalTTC)
+  return Math.max(0, totalTTCBeforeGC - gcDeduction)
 }
 
 /**
  * Calcule le montant à charger (Stripe) en centimes.
  * Stripe attend les minor units.
- * Cas intracommunautaire : déduit la TVA (total HT).
- *
- * Utilise les adjustments item par item quand disponibles pour éviter la double
- * déduction lorsque livraison gratuite + code promo sont combinés.
+ * = (articles + livraison − réductions − bon cadeau) en centimes
+ * Cas intracommunautaire : déduit la TVA avant le bon cadeau.
  */
 export function getPaymentAmountCents(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
@@ -303,15 +326,16 @@ export function getPaymentAmountCents(cart: CartAmountsInput | null | undefined)
   const itemCents = getItemsTotalCents(cart)
   const shippingCents = toPaymentCents(cart.shipping_total)
   const discountCents = getDiscountCents(cart)
-  const giftCardCents = toPaymentCents(cart.gift_card_total, true)
 
-  let totalCents = itemCents + shippingCents - discountCents - giftCardCents
+  let totalBeforeGCCents = itemCents + shippingCents - discountCents
 
   if (exempt) {
-    const totalTTC = totalCents / 100
+    const totalTTC = totalBeforeGCCents / 100
     const vatAmount = totalTTC * (VAT_RATE / (1 + VAT_RATE))
-    totalCents = Math.round((totalTTC - vatAmount) * 100)
+    totalBeforeGCCents = Math.round((totalTTC - vatAmount) * 100)
   }
 
-  return Math.max(0, totalCents)
+  const gcDeductionCents = Math.round(getGiftCardDeductionEuros(cart) * 100)
+
+  return Math.max(0, totalBeforeGCCents - gcDeductionCents)
 }

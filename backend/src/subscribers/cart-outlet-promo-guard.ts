@@ -2,8 +2,6 @@ import { Modules } from "@medusajs/framework/utils"
 import type { ICartModuleService } from "@medusajs/framework/types"
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
 
-const GC_CODE_PATTERN = /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
-
 /**
  * Empêche le cumul de promotions sur les articles outlet.
  *
@@ -11,8 +9,8 @@ const GC_CODE_PATTERN = /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
  * (via outlet-add-to-cart). Medusa peut quand même leur ajouter des
  * adjustments (OUTLET_50 auto, etc.) → il faut les retirer.
  *
- * Les bons cadeau (LC-XXXX-XXXX-XXXX) sont préservés : ils s'appliquent
- * au total de la commande et ne doivent pas être supprimés.
+ * Les bons cadeau ne passent plus par le système de promotions
+ * (ils sont gérés via cart.metadata.applied_gift_cards).
  */
 export default async function cartOutletPromoGuardHandler({
   event: { data },
@@ -46,12 +44,7 @@ export default async function cartOutletPromoGuardHandler({
 
     if (!adjustments?.length) return
 
-    const idsToRemove = adjustments
-      .filter((adj: { id: string; code?: string | null }) => {
-        if (adj.code && GC_CODE_PATTERN.test(adj.code)) return false
-        return true
-      })
-      .map((adj: { id: string }) => adj.id)
+    const idsToRemove = adjustments.map((adj: { id: string }) => adj.id)
 
     if (idsToRemove.length === 0) return
 

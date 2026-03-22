@@ -23,6 +23,7 @@ import {
   StripeContext,
 } from "@modules/checkout/components/payment-wrapper"
 import { initiatePaymentSession } from "@lib/data/cart"
+import { getPaymentAmountCents } from "@lib/util/cart-amounts"
 import { getActivePaymentSession } from "@lib/util/payment-session"
 
 const extractPaymentSessionsFromResponse = (
@@ -128,11 +129,11 @@ const Payment = ({
     isStripeSessionReady &&
     !isSwitching
 
-  const hasGiftCardPromotion = (cart?.promotions || []).some(
-    (p: any) => p?.code && /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(p.code)
-  )
+  const appliedGiftCards: Array<{ balance: number }> =
+    (cart?.metadata as any)?.applied_gift_cards ?? []
+  const hasGiftCard = appliedGiftCards.length > 0
   const paidByGiftcard =
-    hasGiftCardPromotion && cart?.total !== undefined && cart?.total !== null && cart.total === 0
+    hasGiftCard && getPaymentAmountCents(cart as any) === 0
 
   const paymentReady =
     (activeSession && cart?.shipping_methods.length !== 0) || paidByGiftcard

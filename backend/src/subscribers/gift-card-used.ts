@@ -3,12 +3,16 @@ import { IOrderModuleService } from "@medusajs/framework/types"
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
 import { GIFT_CARD_TRACKING_MODULE } from "../modules/gift-card-tracking/constants"
 
+type AppliedGiftCard = { code: string; balance: number }
+
 /**
- * Detects when a gift card promotion (LC-XXXX-XXXX-XXXX) is used in an order
- * and updates the balance in the gift-card-tracking module.
+ * Debits gift card balances when an order is placed.
+ * Reads applied gift cards from order.metadata.applied_gift_cards
+ * (transferred from cart metadata by transfer-cart-metadata subscriber).
  *
- * Triggered on `order.placed` - runs after gift-card-ordered but targets
- * orders that *use* a gift card code (not orders that *sell* one).
+ * Each gift card covers up to its balance of the order total (TTC).
+ * Multiple gift cards are applied in order: first GC covers as much as
+ * possible, then the next one covers the remainder, etc.
  */
 export default async function giftCardUsedHandler({
   event: { data },
@@ -26,89 +30,76 @@ export default async function giftCardUsedHandler({
 
   try {
     const order = await orderModuleService.retrieveOrder(data.id, {
-      relations: ["items", "items.adjustments"],
+      relations: ["items"],
     })
 
-    const adjustments = (order.items || []).flatMap(
-      (item: any) => item.adjustments || []
-    )
+    const appliedGiftCards: AppliedGiftCard[] =
+      (order.metadata as any)?.applied_gift_cards ?? []
 
-    const gcCodePattern = /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
-    const usedCodes = new Set<string>()
-
-    for (const adj of adjustments) {
-      if (adj.code && gcCodePattern.test(adj.code)) {
-        usedCodes.add(adj.code)
-      }
-    }
-
-    if (usedCodes.size === 0) {
+    if (appliedGiftCards.length === 0) {
       return
     }
 
     console.log(
-      `[GiftCard Used] Bon(s) cadeau(x) utilisé(s) dans commande ${order.id}:`,
-      [...usedCodes]
+      `[GiftCard Used] Bon(s) cadeau(x) dans commande ${order.id}:`,
+      appliedGiftCards.map((g) => g.code)
     )
 
-    for (const code of usedCodes) {
+    // Compute order total in euros (items are in euros for Odoo products).
+    // shipping_total, discount_total are also in euros.
+    const itemTotalEuros = (order.items || []).reduce((sum, item: any) => {
+      const isGC = !!(item.metadata as any)?.is_gift_card
+      const unitPrice = Number(item.unit_price ?? 0)
+      const price = isGC ? unitPrice / 100 : unitPrice
+      return sum + price * (item.quantity ?? 1)
+    }, 0)
+
+    const shippingEuros = Number((order as any).shipping_total ?? 0)
+    const discountEuros = Number((order as any).discount_total ?? 0)
+    let remainingTotal = Math.max(0, itemTotalEuros + shippingEuros - discountEuros)
+
+    for (const applied of appliedGiftCards) {
+      if (remainingTotal <= 0) break
+
       try {
         const [giftCards] = await giftCardTrackingService.listAndCountGiftCards(
-          { code },
+          { code: applied.code },
           { take: 1 }
         )
 
         if (!giftCards.length) {
-          console.warn(`[GiftCard Used] Code ${code} non trouvé dans le tracking`)
+          console.warn(`[GiftCard Used] Code ${applied.code} non trouvé dans le tracking`)
           continue
         }
 
         const gc = giftCards[0]
-        if (gc.status === "disabled") {
+        if (gc.status === "disabled" || gc.status === "depleted") {
           continue
         }
 
-        const totalDeducted = adjustments
-          .filter((adj: any) => adj.code === code)
-          .reduce((sum: number, adj: any) => sum + Math.abs(Number(adj.amount || 0)), 0)
+        const currentBalance = Number(gc.balance)
+        const deducted = Math.min(currentBalance, remainingTotal)
+        remainingTotal -= deducted
 
-        // Promotion value et adjustment amounts sont en euros (unité principale)
-        const deductedEuros = totalDeducted
-
-        console.log(
-          `[GiftCard Used] ${code}: adjustment total = ${totalDeducted}, déduit = ${deductedEuros}€`
-        )
-
-        const newBalance = Math.max(0, Number(gc.balance) - deductedEuros)
+        const newBalance = Math.max(0, currentBalance - deducted)
         const newStatus = newBalance <= 0 ? "depleted" : "active"
 
         await giftCardTrackingService.updateGiftCards([
-          {
-            id: gc.id,
-            balance: newBalance,
-            status: newStatus,
-          },
+          { id: gc.id, balance: newBalance, status: newStatus },
         ])
 
         console.log(
-          `[GiftCard Used] ${code}: -${deductedEuros}€, solde: ${newBalance}€ (${newStatus})`
+          `[GiftCard Used] ${applied.code}: -${deducted}€, solde: ${newBalance}€ (${newStatus})`
         )
 
-        // Also update the promotion's application_method value to the remaining balance
-        // so the next use only applies the remaining amount
         if (newBalance > 0 && gc.promotion_id) {
           try {
             await promotionModuleService.updatePromotions([
-              {
-                id: gc.promotion_id,
-                application_method: {
-                  value: newBalance,
-                },
-              },
+              { id: gc.promotion_id, application_method: { value: newBalance } },
             ])
           } catch (e: any) {
             console.warn(
-              `[GiftCard Used] Could not update promotion value for ${code}:`,
+              `[GiftCard Used] Could not update promotion value for ${applied.code}:`,
               e.message
             )
           }
@@ -121,13 +112,13 @@ export default async function giftCardUsedHandler({
             ])
           } catch (e: any) {
             console.warn(
-              `[GiftCard Used] Could not disable promotion for depleted ${code}:`,
+              `[GiftCard Used] Could not disable promotion for depleted ${applied.code}:`,
               e.message
             )
           }
         }
       } catch (e: any) {
-        console.error(`[GiftCard Used] Error processing code ${code}:`, e.message)
+        console.error(`[GiftCard Used] Error processing code ${applied.code}:`, e.message)
       }
     }
   } catch (error: any) {
