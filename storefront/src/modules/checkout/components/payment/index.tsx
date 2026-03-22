@@ -422,27 +422,35 @@ const Payment = ({
           <Button
             size="large"
             className={`mt-6 w-full font-semibold py-3.5 px-6 rounded-lg transition-all duration-200 text-base ${
-              (isStripe && !paymentElementReady) || (!selectedPaymentMethod && !paidByGiftcard) || isSwitching
-                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                : "bg-amber-600 hover:bg-amber-700 text-white shadow-md hover:shadow-lg"
+              isLoading
+                ? "bg-amber-700 text-white cursor-wait opacity-90"
+                : (isStripe && !paymentElementReady) || (!selectedPaymentMethod && !paidByGiftcard) || isSwitching
+                  ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  : "bg-amber-600 hover:bg-amber-700 text-white shadow-md hover:shadow-lg"
             }`}
             onClick={handleSubmit}
             isLoading={isLoading}
             disabled={
+              isLoading ||
               (isStripe && !paymentElementReady) ||
               (!selectedPaymentMethod && !paidByGiftcard) ||
               isSwitching
             }
             data-testid="submit-payment-button"
           >
-            Continuer vers la vérification
+            {isLoading ? "Préparation du paiement..." : "Continuer vers la vérification"}
           </Button>
-          {(isStripe && !paymentElementReady) && selectedPaymentMethod && (
+          {isLoading && (
+            <p className="text-xs text-amber-600 text-center mt-2 animate-pulse">
+              Vérification en cours, veuillez patienter...
+            </p>
+          )}
+          {!isLoading && (isStripe && !paymentElementReady) && selectedPaymentMethod && (
             <p className="text-xs text-gray-500 text-center mt-2">
               Veuillez remplir les informations de paiement ci-dessus
             </p>
           )}
-          {!selectedPaymentMethod && !paidByGiftcard && (
+          {!isLoading && !selectedPaymentMethod && !paidByGiftcard && (
             <p className="text-xs text-gray-500 text-center mt-2">
               Sélectionnez un moyen de paiement ci-dessus
             </p>
