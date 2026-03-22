@@ -35,10 +35,23 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
     (p): p is NonNullable<typeof p> => p != null
   )
 
-  // Regular promotions only (no gift cards in promotions anymore)
-  const regularPromotions = validPromotions.filter(
-    (p) => !p.code || !GC_CODE_PATTERN.test(p.code)
-  )
+  // Regular promotions only (no gift cards in promotions anymore).
+  // Hide automatic promotions that have no visible effect (e.g. FREE_SHIPPING_75
+  // showing even when the cart doesn't meet the threshold).
+  const regularPromotions = validPromotions.filter((p) => {
+    if (p.code && GC_CODE_PATTERN.test(p.code)) return false
+    if (p.is_automatic) {
+      const hasItemAdjustment = (cart.items ?? []).some((item: any) =>
+        (item.adjustments ?? []).some((adj: any) => adj.code === p.code)
+      )
+      const hasShippingAdjustment = (cart.shipping_methods ?? []).some(
+        (sm: any) =>
+          (sm.adjustments ?? []).some((adj: any) => adj.code === p.code)
+      )
+      if (!hasItemAdjustment && !hasShippingAdjustment) return false
+    }
+    return true
+  })
 
   // Gift cards from cart metadata
   const appliedGiftCards: AppliedGiftCard[] =
