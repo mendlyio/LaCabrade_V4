@@ -208,7 +208,6 @@ const Payment = ({
         if (nextPaymentSessions?.length) {
           paymentSessionsContext?.setPaymentSessions(nextPaymentSessions as any)
         }
-        router.refresh()
       }
 
       if (cart?.items?.length) {
@@ -222,10 +221,11 @@ const Payment = ({
         trackGA4AddPaymentInfo(trackingCart, paymentLabel)
       }
 
-      return router.push(
+      router.push(
         pathname + "?" + createQueryString("step", "review"),
         { scroll: false }
       )
+      return
     } catch (err: any) {
       setError(err?.message ?? "Une erreur est survenue. Réessayez.")
     } finally {
