@@ -70,22 +70,35 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
 }) => {
   const items = order.items || []
   const shippingMethods = (order as any).shipping_methods || []
-  const shippingCost = shippingMethods.reduce(
+  const pickupLocation = (order as any).metadata?.pickup_location
+
+  // Coût brut de livraison (avant ajustements/promos)
+  const shippingCostRaw = shippingMethods.reduce(
     (sum: number, m: any) => sum + (Number(m.amount) || 0),
     0
   )
-  const pickupLocation = (order as any).metadata?.pickup_location
+  // Ajustements sur les méthodes de livraison (livraison gratuite via code promo = montant négatif)
+  const shippingAdjustmentTotal = shippingMethods.reduce((sum: number, m: any) => {
+    const adjs: any[] = m.adjustments || []
+    return sum + adjs.reduce((s: number, a: any) => s + Number(a.amount || 0), 0)
+  }, 0)
+  // Coût effectif de livraison après promos (0 si livraison offerte)
+  const shippingCost = Math.max(0, shippingCostRaw + shippingAdjustmentTotal)
 
-  // Total payé : display_total (calculé par le subscriber avec shipping inclus),
-  // ou fallback sur summary.original_order_total, ou calcul depuis les items + livraison
-  const itemsSubtotal = items.reduce(
-    (sum, item) => sum + getItemUnitPriceEuros(item) * (item.quantity || 1),
-    0
-  )
+  // Réductions sur les articles (depuis les adjustments Medusa)
+  const itemDiscountTotal = items.reduce((sum, item) => {
+    const adjs: any[] = (item as any).adjustments || []
+    return sum + adjs.reduce((s: number, a: any) => s + Math.abs(Number(a.amount || 0)), 0)
+  }, 0)
+  // Réduction livraison (différence entre brut et effectif)
+  const shippingDiscountTotal = Math.max(0, shippingCostRaw - shippingCost)
+  const totalDiscount = itemDiscountTotal + shippingDiscountTotal
+
+  // Total payé : display_total autoritatif (calculé depuis order.total dans le subscriber)
   const total = Number(
     (order as any).display_total
+    ?? (order as any).summary?.current_order_total
     ?? (order as any).summary?.original_order_total
-    ?? (itemsSubtotal + shippingCost)
   )
 
   return (
@@ -231,6 +244,25 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
                 fontWeight: shippingCost === 0 ? ('600' as const) : ('400' as const),
               }}>
                 {shippingCost > 0 ? formatPrice(shippingCost) : 'Offerte'}
+              </Text>
+            </Column>
+          </Row>
+        )}
+        {totalDiscount > 0 && (
+          <Row>
+            <Column>
+              <Text style={{ margin: '0 0 4px', fontSize: '14px', color: '#059669' }}>
+                Réduction(s)
+              </Text>
+            </Column>
+            <Column style={{ textAlign: 'right' as const }}>
+              <Text style={{
+                margin: '0 0 4px',
+                fontSize: '14px',
+                fontWeight: '600' as const,
+                color: '#059669',
+              }}>
+                -{formatPrice(totalDiscount)}
               </Text>
             </Column>
           </Row>
