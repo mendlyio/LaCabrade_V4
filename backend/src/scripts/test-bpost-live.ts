@@ -165,7 +165,7 @@ try {
 step(`5. Génération étiquette (ref: ${createdRef || TEST_REF})`)
 const labelRef = createdRef || TEST_REF
 try {
-  const { labelUrl, labelData } = await svc.getLabel(labelRef, labelRef)
+  const { labelUrl, labelData, trackingNumber: trackingFromLabel } = await svc.getLabel(labelRef, labelRef)
 
   if (labelData && labelData.length > 100) {
     ok(`PDF obtenu (base64)`, `${labelData.length} chars`)
@@ -175,6 +175,12 @@ try {
       ok("Magic bytes %PDF- vérifiés", `${decoded.length} bytes`)
     } else {
       fail("Le labelData n'est pas un PDF valide", decoded.subarray(0, 20).toString("utf-8"))
+    }
+    // Afficher le tracking
+    if (trackingFromLabel) {
+      ok("TrackingId extrait du label", trackingFromLabel)
+    } else {
+      console.log("  ⚠️  Pas de TrackingId dans la réponse label (email ne sera pas envoyé)")
     }
   } else if (labelUrl && labelUrl.startsWith("http")) {
     ok("URL étiquette obtenue", labelUrl.slice(0, 80) + "...")

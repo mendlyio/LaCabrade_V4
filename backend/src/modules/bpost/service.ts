@@ -377,10 +377,16 @@ export default class BpostModuleService {
     const clientRef = input.reference || input.orderId
     const countryCode = (input.recipient.address.country_code || "BE").toUpperCase()
 
-    // Structure conforme à la doc Bpost Shipping Manager API v3
-    // https://bpostapidev.shiptimize.me/v3/apidocs/usa/endpoints/shipments/POST
+    // Structure conforme à l'API Bpost Shipping Manager v3
+    // Champs obligatoires confirmés en live : ClientReferenceCode + ShopItemId
+    // Produits : 302 = bpack 24h Pro (domicile), 301 = Bpack 24/7 (point relais)
+    const productId = input.pickupPointId ? "301" : "302"
+
     const shipment: Record<string, any> = {
-      ClientReference: clientRef,
+      ClientReferenceCode: clientRef,
+      ShopItemId: clientRef,      // requis par Bpost
+      Carrier: { Id: 68 },        // bpost shm — carrier confirmé en live
+      OptionList: [{ Id: 126, Value: productId }],  // produit explicite (évite auto-select erroné)
       Address: {
         Name: input.recipient.name,
         Email: input.recipient.email || "",
@@ -684,11 +690,16 @@ export default class BpostModuleService {
         const pdfResult = this.handleLabelResponse(response, rawBuffer, refId, `poll #${attempt}`)
         if (pdfResult) return pdfResult
 
-        // Pas un PDF → essayer de parser pour statut
+        // Pas un PDF → parser pour statut et logguer le contenu complet pour debug
         if (rawBuffer && rawBuffer.length > 0) {
           const text = Buffer.from(rawBuffer).toString("utf-8")
           let parsed: any = null
           try { parsed = JSON.parse(text) } catch { parsed = text }
+
+          // Log complet au premier poll pour diagnostiquer le format de réponse
+          if (attempt === 1) {
+            console.log(`[Bpost] getLabel(${refId}): contenu poll #1 (${rawBuffer.length} bytes):`, text.slice(0, 1000))
+          }
 
           const errorInfo = typeof parsed === "object" ? this.extractErrorInfo(parsed) : null
           if (errorInfo && !errorInfo.toLowerCase().includes("pending") && !errorInfo.toLowerCase().includes("processing")) {
@@ -740,15 +751,23 @@ export default class BpostModuleService {
     const firstLabel = labelArray[0] || {}
 
     // Extraire le tracking depuis la réponse label (barcode = numéro de suivi Bpost)
+    // Bpost v3 live : tracking dans ClientReferenceCodeList[0].TrackingId
+    const firstRefItem = Array.isArray(response.ClientReferenceCodeList)
+      ? response.ClientReferenceCodeList[0]
+      : null
     const trackingNumber: string | undefined =
+      (firstRefItem?.TrackingId && firstRefItem.TrackingId !== "") ? firstRefItem.TrackingId :
       firstLabel.Barcode || firstLabel.TrackingNumber || firstLabel.TrackingCode ||
       firstLabel.barcode || firstLabel.trackingNumber ||
       response.Barcode || response.TrackingNumber ||
       undefined
 
+    // LabelPDF = champ réel retourné par Bpost Shipping Manager v3 (confirmé en live)
     const labelData =
+      response.LabelPDF || response.labelPdf ||
       firstLabel.LabelData || firstLabel.labelData ||
       response.LabelData || response.labelData ||
+      response.LabelFile || response.labelFile ||
       response.labels?.[0]?.data || ""
 
     if (labelData && typeof labelData === "string" && labelData.length > 100) {
