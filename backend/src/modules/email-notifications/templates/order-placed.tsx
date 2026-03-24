@@ -85,11 +85,13 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
   // Coût effectif de livraison après promos (0 si livraison offerte)
   const shippingCost = Math.max(0, shippingCostRaw + shippingAdjustmentTotal)
 
-  // Réductions sur les articles (depuis les adjustments Medusa)
-  const itemDiscountTotal = items.reduce((sum, item) => {
+  // Réductions sur les articles (depuis les adjustments Medusa — HT → TTC)
+  const VAT_RATE = 0.21
+  const itemDiscountHT = items.reduce((sum, item) => {
     const adjs: any[] = (item as any).adjustments || []
     return sum + adjs.reduce((s: number, a: any) => s + Math.abs(Number(a.amount || 0)), 0)
   }, 0)
+  const itemDiscountTotal = Math.round(itemDiscountHT * (1 + VAT_RATE) * 100) / 100
   // Réduction livraison (différence entre brut et effectif)
   const shippingDiscountTotal = Math.max(0, shippingCostRaw - shippingCost)
   const totalDiscount = itemDiscountTotal + shippingDiscountTotal

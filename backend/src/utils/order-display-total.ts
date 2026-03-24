@@ -7,6 +7,10 @@
 const AMOUNTS_IN_EUROS = true
 const VAT_RATE = 0.21
 
+function adjustmentHtToTtc(htAmount: number, isGiftCard: boolean): number {
+  return isGiftCard ? htAmount : htAmount * (1 + VAT_RATE)
+}
+
 function toDisplayEuros(value: number | null | undefined, isGiftCard = false): number {
   const v = value ?? 0
   if (isGiftCard) return v / 100
@@ -31,6 +35,10 @@ function lineItemAmountToEuros(value: number | null | undefined, isGiftCard: boo
   return isGiftCard ? v / 100 : (AMOUNTS_IN_EUROS ? v : v / 100)
 }
 
+/**
+ * Total articles TTC. Utilise toujours unit_price × quantity (TTC garanti).
+ * item.subtotal dans le contexte order peut être HT (Medusa v2 tax-inclusive).
+ */
 function getItemsTotalEuros(order: {
   items?: Array<{
     unit_price?: number | null
@@ -51,10 +59,7 @@ function getItemsTotalEuros(order: {
     let sum = 0
     for (const item of items) {
       const isGiftCard = isGiftCardItem(item)
-      const lineTotal =
-        item.subtotal != null
-          ? lineItemAmountToEuros(item.subtotal, isGiftCard)
-          : lineItemAmountToEuros(item.unit_price, isGiftCard) * (item.quantity ?? 1)
+      const lineTotal = lineItemAmountToEuros(item.unit_price, isGiftCard) * (item.quantity ?? 1)
       sum += lineTotal
     }
     return sum
@@ -64,9 +69,11 @@ function getItemsTotalEuros(order: {
 }
 
 /**
- * Calcule le total des réductions item par item (en euros) depuis les adjustments.
+ * Calcule le total des réductions item par item (en euros TTC) depuis les adjustments.
  * Retourne null si les adjustments ne sont pas disponibles.
  * N'inclut PAS les réductions livraison (elles sont sur les shipping methods, pas les items).
+ *
+ * Medusa v2 tax-inclusive: adjustments sont en HT → conversion TTC via × (1 + TVA).
  */
 function getItemAdjustmentsEuros(order: OrderForDisplayTotal | null | undefined): number | null {
   const items = order?.items
@@ -75,11 +82,13 @@ function getItemAdjustmentsEuros(order: OrderForDisplayTotal | null | undefined)
   let sum = 0
   for (const item of items) {
     const isGiftCard = isGiftCardItem(item)
+    let itemAdjHt = 0
     for (const adj of item.adjustments || []) {
-      sum += Math.abs(lineItemAmountToEuros(adj.amount, isGiftCard))
+      itemAdjHt += Math.abs(lineItemAmountToEuros(adj.amount, isGiftCard))
     }
+    sum += adjustmentHtToTtc(itemAdjHt, isGiftCard)
   }
-  return sum
+  return Math.round(sum * 100) / 100
 }
 
 function isIntraCommunityExempt(order: {

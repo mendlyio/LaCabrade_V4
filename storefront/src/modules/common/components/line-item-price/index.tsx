@@ -1,6 +1,6 @@
 import { clx } from "@medusajs/ui"
 
-import { isGiftCardItem, lineItemAmountToEuros } from "@lib/util/cart-amounts"
+import { isGiftCardItem, lineItemAmountToEuros, adjustmentHtToTtc } from "@lib/util/cart-amounts"
 import { getPercentageDiff } from "@lib/util/get-precentage-diff"
 import { getPricesForVariant } from "@lib/util/get-product-price"
 import { convertToLocale } from "@lib/util/money"
@@ -19,10 +19,11 @@ const LineItemPrice = ({ item, style = "default" }: LineItemPriceProps) => {
     getPricesForVariant(item.variant, item.unit_price, compareAt) ?? {}
 
   const isGiftCard = isGiftCardItem(item as any)
-  const adjustmentsSum = (item.adjustments || []).reduce(
+  const adjustmentsHtSum = (item.adjustments || []).reduce(
     (acc, adjustment) => acc + lineItemAmountToEuros(adjustment.amount, isGiftCard),
     0
   )
+  const adjustmentsSum = Math.round(adjustmentHtToTtc(adjustmentsHtSum, isGiftCard) * 100) / 100
 
   const originalPrice = original_price_number * item.quantity
   const currentPrice = calculated_price_number * item.quantity - adjustmentsSum

@@ -1,6 +1,6 @@
 "use client"
 
-import { lineItemAmountToEuros } from "@lib/util/cart-amounts"
+import { lineItemAmountToEuros, adjustmentHtToTtc } from "@lib/util/cart-amounts"
 import { convertToLocale } from "@lib/util/money"
 import repeat from "@lib/util/repeat"
 import { HttpTypes } from "@medusajs/types"
@@ -48,16 +48,14 @@ const ItemsPreviewTemplate = ({ items }: ItemsTemplateProps) => {
           (item as any).compare_at_unit_price ?? (item.metadata as any)?.outlet_original_price
         const comparePrice = lineItemAmountToEuros(compareAtRaw, isGiftCard)
         const hasDiscount = comparePrice && comparePrice > unitPrice
-        const lineTotal =
-          item.subtotal != null
-            ? lineItemAmountToEuros(item.subtotal, isGiftCard)
-            : unitPrice * item.quantity
+        const lineTotal = unitPrice * item.quantity
 
-        // Adjustments : même unité que le line item
-        const adjustmentsSum = (item.adjustments || []).reduce(
+        // Adjustments Medusa v2 sont en HT ; convertir en TTC
+        const adjustmentsHtSum = (item.adjustments || []).reduce(
           (acc, adj) => acc + lineItemAmountToEuros(adj.amount, isGiftCard),
           0
         )
+        const adjustmentsSum = Math.round(adjustmentHtToTtc(adjustmentsHtSum, isGiftCard) * 100) / 100
         const finalTotal = lineTotal - adjustmentsSum
 
         // Options du variant

@@ -1,6 +1,9 @@
 /**
  * Tests du calcul de total commande (backend).
  * Exécuter : cd backend && npx tsx src/utils/__tests__/order-display-total.test.ts
+ *
+ * IMPORTANT : Medusa v2 tax-inclusive → les adjustments item sont en HT.
+ * getOrderDisplayTotalEuros convertit en TTC via × (1 + 0.21).
  */
 import { getOrderDisplayTotalEuros, OrderForDisplayTotal } from "../order-display-total"
 
@@ -43,33 +46,57 @@ const order1: OrderForDisplayTotal = {
 assert("Total", getOrderDisplayTotalEuros(order1), 21.9)
 
 // ═══════════════════════════════════════════════════════
-// 2. Livraison gratuite + promo combinées (BUG principal)
+// 2. Commande #31 réelle : 79,99€ -10% + livraison
+// adjustment HT = 6.61, TTC = 8.00
 // ═══════════════════════════════════════════════════════
-heading("2. BUG PRINCIPAL: 80€ + free shipping + promo -10€")
+heading("2. COMMANDE #31: 79,99€ + promo -10% + livraison 6,90€")
 
 const order2: OrderForDisplayTotal = {
+  item_total: 79.99,
+  shipping_total: 6.9,
+  discount_total: 8,
+  gift_card_total: 0,
+  items: [
+    {
+      unit_price: 79.99, subtotal: 79.99, quantity: 1,
+      adjustments: [{ amount: 6.61 }], // HT: 66.11 × 10%
+      product_title: "Ceinture surpiqure décorative", variant_sku: "CEINT-001",
+    },
+  ],
+  shipping_address: { country_code: "be" },
+}
+
+assert("Total correct (78.89)", getOrderDisplayTotalEuros(order2), 78.89)
+
+// ═══════════════════════════════════════════════════════
+// 3. Livraison gratuite + promo -10% combinées
+// adjustment HT = 6.61, TTC = 8.00
+// ═══════════════════════════════════════════════════════
+heading("3. 80€ + free shipping + promo -10%")
+
+const order3: OrderForDisplayTotal = {
   item_total: 80,
   shipping_total: 0,
-  discount_total: 16.9,
+  discount_total: 14.9,
   gift_card_total: 0,
   items: [
     {
       unit_price: 80, subtotal: 80, quantity: 1,
-      adjustments: [{ amount: 10 }],
+      adjustments: [{ amount: 6.61 }], // HT: ~66.12 × 10%
       product_title: "Selle", variant_sku: "SELLE-001",
     },
   ],
   shipping_address: { country_code: "be" },
 }
 
-assert("Total CORRECT (80 - 10 = 70)", getOrderDisplayTotalEuros(order2), 70)
+assert("Total (80 - 8.00 = 72)", getOrderDisplayTotalEuros(order3), 72)
 
 // ═══════════════════════════════════════════════════════
-// 3. Bon cadeau seul (50€ en centimes)
+// 4. Bon cadeau seul (50€ en centimes)
 // ═══════════════════════════════════════════════════════
-heading("3. Bon cadeau 50€ (unit_price centimes)")
+heading("4. Bon cadeau 50€ (unit_price centimes)")
 
-const order3: OrderForDisplayTotal = {
+const order4: OrderForDisplayTotal = {
   shipping_total: 0,
   discount_total: 0,
   gift_card_total: 0,
@@ -84,14 +111,14 @@ const order3: OrderForDisplayTotal = {
   shipping_address: { country_code: "be" },
 }
 
-assert("Total bon cadeau", getOrderDisplayTotalEuros(order3), 50)
+assert("Total bon cadeau", getOrderDisplayTotalEuros(order4), 50)
 
 // ═══════════════════════════════════════════════════════
-// 4. Mix : article Odoo 15€ + bon cadeau 25€ + livraison
+// 5. Mix : article Odoo 15€ + bon cadeau 25€ + livraison
 // ═══════════════════════════════════════════════════════
-heading("4. Mix : article 15€ + bon cadeau 25€ + livraison 6,90€")
+heading("5. Mix : article 15€ + bon cadeau 25€ + livraison 6,90€")
 
-const order4: OrderForDisplayTotal = {
+const order5: OrderForDisplayTotal = {
   shipping_total: 6.9,
   discount_total: 0,
   gift_card_total: 0,
@@ -107,32 +134,33 @@ const order4: OrderForDisplayTotal = {
   shipping_address: { country_code: "be" },
 }
 
-assert("Total mix", getOrderDisplayTotalEuros(order4), 46.9)
+assert("Total mix", getOrderDisplayTotalEuros(order5), 46.9)
 
 // ═══════════════════════════════════════════════════════
-// 5. Carte cadeau Medusa utilisée
+// 6. Bon cadeau appliqué via metadata
 // ═══════════════════════════════════════════════════════
-heading("5. Article 50€ + carte cadeau Medusa 20€")
+heading("6. Article 50€ + bon cadeau appliqué 20€ (metadata) + livraison")
 
-const order5: OrderForDisplayTotal = {
+const order6: OrderForDisplayTotal = {
   item_total: 50,
   shipping_total: 6.9,
   discount_total: 0,
-  gift_card_total: 2000,
+  gift_card_total: 0,
   items: [
     { unit_price: 50, subtotal: 50, quantity: 1, adjustments: [], product_title: "Selle", variant_sku: "SELLE-002" },
   ],
+  metadata: { applied_gift_cards: [{ balance: 20 }] },
   shipping_address: { country_code: "be" },
 }
 
-assert("Total avec carte cadeau", getOrderDisplayTotalEuros(order5), 36.9)
+assert("Total avec bon cadeau", getOrderDisplayTotalEuros(order6), 36.9)
 
 // ═══════════════════════════════════════════════════════
-// 6. Livraison gratuite SEULE (heuristique fallback)
+// 7. Livraison gratuite SEULE (heuristique fallback)
 // ═══════════════════════════════════════════════════════
-heading("6. Fallback heuristique livraison gratuite")
+heading("7. Fallback heuristique livraison gratuite")
 
-const order6: OrderForDisplayTotal = {
+const order7: OrderForDisplayTotal = {
   item_total: 80,
   shipping_total: 0,
   discount_total: 6.9,
@@ -140,7 +168,7 @@ const order6: OrderForDisplayTotal = {
   shipping_address: { country_code: "be" },
 }
 
-assert("Total fallback", getOrderDisplayTotalEuros(order6), 80)
+assert("Total fallback", getOrderDisplayTotalEuros(order7), 80)
 
 // ═══════════════════════════════════════════════════════
 // RÉSULTAT

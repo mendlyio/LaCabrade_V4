@@ -85,17 +85,18 @@ export type CartAmountsInput = {
   shipping_address?: { country_code?: string | null } | null
 }
 
-/** Calcule le total articles en euros à partir des line items (Odoo=euros, bon cadeau=centimes). */
+/**
+ * Calcule le total articles en euros à partir des line items (Odoo=euros, bon cadeau=centimes).
+ * Utilise toujours unit_price × quantity (TTC garanti). item.subtotal peut être HT
+ * dans le contexte order (Medusa v2 tax-inclusive décompose en HT).
+ */
 function getItemsTotalEurosFromItems(cart: CartAmountsInput | null | undefined): number | null {
   const items = cart?.items
   if (!items?.length) return null
   let sum = 0
   for (const item of items) {
     const isGiftCard = isGiftCardItem(item)
-    const lineTotal =
-      item.subtotal != null
-        ? lineItemAmountToEuros(item.subtotal, isGiftCard)
-        : lineItemAmountToEuros(item.unit_price, isGiftCard) * (item.quantity ?? 1)
+    const lineTotal = lineItemAmountToEuros(item.unit_price, isGiftCard) * (item.quantity ?? 1)
     sum += lineTotal
   }
   return sum
@@ -110,7 +111,7 @@ function getItemsTotalEuros(cart: CartAmountsInput | null | undefined): number {
   return toDisplayEuros(itemTotal)
 }
 
-/** Total articles en centimes (paiement). Utilise items si dispo, sinon item_total. */
+/** Total articles en centimes (paiement). Utilise unit_price × qty (TTC garanti). */
 function getItemsTotalCents(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
   const items = cart.items
@@ -118,10 +119,7 @@ function getItemsTotalCents(cart: CartAmountsInput | null | undefined): number {
     let sum = 0
     for (const item of items) {
       const isGiftCard = isGiftCardItem(item)
-      const lineCents =
-        item.subtotal != null
-          ? toPaymentCents(item.subtotal, isGiftCard)
-          : toPaymentCents(item.unit_price, isGiftCard) * (item.quantity ?? 1)
+      const lineCents = toPaymentCents(item.unit_price, isGiftCard) * (item.quantity ?? 1)
       sum += lineCents
     }
     return sum
@@ -161,9 +159,12 @@ export function getItemsDisplayTotalEuros(cart: CartAmountsInput | null | undefi
 }
 
 /**
- * Calcule le total des réductions item par item (en euros) depuis les adjustments.
+ * Calcule le total des réductions item par item (en euros TTC) depuis les adjustments.
  * Retourne null si les adjustments ne sont pas disponibles (fallback nécessaire).
  * N'inclut PAS les réductions livraison (elles sont sur les shipping methods, pas les items).
+ *
+ * IMPORTANT: Medusa v2 tax-inclusive calcule les adjustments sur la base HT.
+ * On convertit en TTC via × (1 + TVA) pour cohérence avec les prix affichés.
  */
 export function getItemAdjustmentsEuros(cart: CartAmountsInput | null | undefined): number | null {
   const items = cart?.items
@@ -172,16 +173,19 @@ export function getItemAdjustmentsEuros(cart: CartAmountsInput | null | undefine
   let sum = 0
   for (const item of items) {
     const isGC = isGiftCardItem(item)
+    let itemAdjHt = 0
     for (const adj of item.adjustments || []) {
-      sum += Math.abs(lineItemAmountToEuros(adj.amount, isGC))
+      itemAdjHt += Math.abs(lineItemAmountToEuros(adj.amount, isGC))
     }
+    sum += adjustmentHtToTtc(itemAdjHt, isGC)
   }
-  return sum
+  return Math.round(sum * 100) / 100
 }
 
 /**
- * Calcule le total des réductions item par item (en centimes) depuis les adjustments.
+ * Calcule le total des réductions item par item (en centimes TTC) depuis les adjustments.
  * Retourne null si les adjustments ne sont pas disponibles.
+ * Conversion HT → TTC identique à getItemAdjustmentsEuros.
  */
 function getItemAdjustmentsCents(cart: CartAmountsInput | null | undefined): number | null {
   const items = cart?.items
@@ -190,11 +194,13 @@ function getItemAdjustmentsCents(cart: CartAmountsInput | null | undefined): num
   let sum = 0
   for (const item of items) {
     const isGC = isGiftCardItem(item)
+    let itemAdjHtCents = 0
     for (const adj of item.adjustments || []) {
-      sum += Math.abs(toPaymentCents(adj.amount ?? 0, isGC))
+      itemAdjHtCents += Math.abs(toPaymentCents(adj.amount ?? 0, isGC))
     }
+    sum += adjustmentHtToTtc(itemAdjHtCents, isGC)
   }
-  return sum
+  return Math.round(sum)
 }
 
 /**
@@ -223,6 +229,15 @@ function getDiscountCents(cart: CartAmountsInput | null | undefined): number {
 
 /** TVA belge standard 21 %. TVA = TTC × 0.21 / 1.21 */
 const VAT_RATE = 0.21
+
+/**
+ * Convertit un montant d'adjustment HT en TTC.
+ * Medusa v2 tax-inclusive : les adjustments sont calculés sur la base HT.
+ * Les bons cadeau ont 0 % de TVA, donc pas de conversion nécessaire.
+ */
+export function adjustmentHtToTtc(htAmount: number, isGiftCard: boolean): number {
+  return isGiftCard ? htAmount : htAmount * (1 + VAT_RATE)
+}
 
 /**
  * Détecte si discount_total provient de la promo livraison gratuite (FREE_SHIPPING_75).

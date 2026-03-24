@@ -155,12 +155,16 @@ export default async function customOrderPlacedEmailHandler({
 
     const shippingCost = order.shipping_methods?.reduce((acc, method) => acc + (Number(method.amount) || 0), 0) || 0
 
-    let totalItemDiscount = 0
+    // Adjustments Medusa v2 tax-inclusive sont en HT ; convertir en TTC
+    // pour cohérence avec les unit_price (TTC) envoyés à Odoo
+    const VAT_RATE = 0.21
+    let totalItemDiscountHT = 0
     for (const item of order.items) {
       for (const adj of (item as any).adjustments || []) {
-        totalItemDiscount += Math.abs(Number(adj.amount || 0))
+        totalItemDiscountHT += Math.abs(Number(adj.amount || 0))
       }
     }
+    const totalItemDiscount = Math.round(totalItemDiscountHT * (1 + VAT_RATE) * 100) / 100
 
     console.log(
       `💰 [ODOO SYNC] Commande #${(order as any).display_id || order.id}\n` +
