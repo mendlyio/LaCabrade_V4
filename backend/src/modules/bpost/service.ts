@@ -332,6 +332,8 @@ export default class BpostModuleService {
     reference?: string
   }): Promise<{ shipmentId: string; labelUrl?: string; trackingNumber?: string }> {
     // Schéma simplifié; adapter selon contrat Bpost
+    await this.ensureToken()
+
     const shipment = {
       ClientReference: input.reference || input.orderId,
       Recipient: {
@@ -363,6 +365,8 @@ export default class BpostModuleService {
   }
 
   async getLabel(shipmentId: string): Promise<{ labelUrl: string; labelData?: string }> {
+    await this.ensureToken()
+
     const { response } = await this.sendToApi<any>({
       method: "POST",
       endpoint: "/labels",
