@@ -470,7 +470,7 @@ export default class BpostModuleService {
     }
 
     if (input.pickupPointId) {
-      shipment.PickupPoint = { Id: input.pickupPointId }
+      shipment.PickupPoint = { PointId: input.pickupPointId }  // champ correct Bpost (confirmé live)
     }
 
     console.log(`[Bpost] createShipment payload:`, JSON.stringify({ Shipment: [shipment] }).slice(0, 1500))
@@ -747,7 +747,7 @@ export default class BpostModuleService {
     errors: string[]
   ): Promise<{ labelUrl: string; labelData?: string; trackingNumber?: string } | null> {
     console.log(`[Bpost] getLabel: polling ${callbackUrl}`)
-    const maxAttempts = 15
+    const maxAttempts = 20   // 20 × 2s = 40s max (international peut prendre plus longtemps)
     const delayMs = 2000
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -788,15 +788,26 @@ export default class BpostModuleService {
             } catch { console.log(`[Bpost] poll #1 raw:`, text.slice(0, 500)) }
           }
 
+          const finished = typeof parsed === "object" ? (parsed?.Finished ?? parsed?.finished ?? null) : null
+          const errorId = typeof parsed === "object" ? (parsed?.Error?.Id ?? parsed?.error?.id ?? null) : null
+
+          // Id=900 = "API work in progress" (génération en cours, pas une erreur)
+          // Finished < 100 = pas encore terminé, continuer le polling
+          const isStillProcessing =
+            errorId === 900 ||
+            errorId === 0 ||
+            (finished !== null && finished < 100)
+
           const errorInfo = typeof parsed === "object" ? this.extractErrorInfo(parsed) : null
-          if (errorInfo && !errorInfo.toLowerCase().includes("pending") && !errorInfo.toLowerCase().includes("processing")) {
-            console.error(`[Bpost] getLabel(${refId}): erreur au poll #${attempt}: ${errorInfo}`)
+
+          if (!isStillProcessing && errorInfo) {
+            console.error(`[Bpost] getLabel(${refId}): erreur définitive au poll #${attempt}: ${errorInfo}`)
             errors.push(`Poll #${attempt}: ${errorInfo}`)
             break
           }
 
           const status = parsed?.Status || parsed?.status
-          console.log(`[Bpost] getLabel(${refId}): poll #${attempt}/${maxAttempts} — pas encore prêt (status: ${status || "unknown"})`)
+          console.log(`[Bpost] getLabel(${refId}): poll #${attempt}/${maxAttempts} — en cours (Finished=${finished ?? "?"}%, errorId=${errorId ?? "?"}, status=${status || "?"})`)
         } else {
           console.log(`[Bpost] getLabel(${refId}): poll #${attempt}/${maxAttempts} — aucune donnée`)
         }
