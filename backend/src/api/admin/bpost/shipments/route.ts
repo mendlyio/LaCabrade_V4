@@ -11,12 +11,16 @@ import { STORE_URL } from "../../../../lib/constants"
 async function sendTrackingEmail(
   req: MedusaRequest,
   order: any,
-  trackingNumber: string,
+  trackingNumber: string,   // peut être vide ""
   labelUrl: string
 ) {
   const notificationSvc = req.scope.resolve(Modules.NOTIFICATION) as INotificationModuleService
   const postalCode = order.shipping_address?.postal_code || ""
-  const publicTrackingUrl = `https://track.bpost.cloud/btr/web/#/search?itemCode=${trackingNumber}&lang=fr&postalCode=${postalCode}`
+
+  // URL de suivi Bpost (domaine officiel actuel)
+  const publicTrackingUrl = trackingNumber
+    ? `https://track.bpost.cloud/btr/web/#/search?itemCode=${trackingNumber}&lang=fr&postalCode=${postalCode}`
+    : ""
 
   let suggestedProducts: Array<{ title: string; thumbnail: string; url: string }> = []
   try {
@@ -44,9 +48,13 @@ async function sendTrackingEmail(
       },
       order: { ...order, display_id: (order as any).display_id || order.id },
       fulfillment: {
-        id: `bpost-manual-${trackingNumber}`,
-        tracking_numbers: [trackingNumber],
-        data: { public_tracking_url: publicTrackingUrl, label_url: labelUrl },
+        id: `bpost-manual-${trackingNumber || "no-tracking"}`,
+        // Tableau vide si pas de tracking → le template n'affiche pas le bloc suivi
+        tracking_numbers: trackingNumber ? [trackingNumber] : [],
+        data: {
+          public_tracking_url: publicTrackingUrl,
+          label_url: labelUrl,
+        },
       },
       shippingAddress: order.shipping_address,
       suggestedProducts,
@@ -179,8 +187,8 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
     return res.json({
       success: true,
-      shipment: { ...result, labelUrl: finalLabelUrl },
-      tracking_number: result.trackingNumber,
+      shipment: { ...result, labelUrl: finalLabelUrl, trackingNumber: finalTracking },
+      tracking_number: finalTracking,
       email_sent: emailSent,
       order: updated,
     })

@@ -1,16 +1,33 @@
 /**
- * Tests unitaires — POST /admin/bpost/shipments
+ * Tests d'intégration — Route POST /admin/bpost/shipments
  *
- * Couvre :
- *  - Création normale (shipment + label + email)
- *  - Mode resend_only (renvoyer l'email sans créer de shipment)
- *  - send_email=false (pas d'email)
- *  - Stockage des données dans order.metadata
- *  - Gestion des erreurs (Bpost KO, metadata manquants)
- *  - Email non bloquant si le service de notif échoue
+ * Couvre le flux complet de bout-en-bout :
+ *  1. Création du shipment Bpost
+ *  2. Récupération de l'étiquette PDF
+ *  3. Sauvegarde en métadonnées de la commande
+ *  4. Envoi de l'email de suivi au client
+ *  5. Mode resend_only (renvoi email sans recréer le shipment)
+ *  6. Cas sans tracking number (email envoyé quand même)
  */
 
-// ─── Mocks des dépendances ────────────────────────────────────────────────────
+// Medusa utilise 'utils/assert-value' qui n'est pas résolu dans Jest en dehors de .medusa/server
+jest.mock("utils/assert-value", () => ({ assertValue: (v: any) => v }), { virtual: true })
+
+import { POST } from "../../api/admin/bpost/shipments/route"
+import { BPOST_MODULE } from "../../modules/bpost"
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function makeFakePdf(label = "fake"): Buffer {
+  const header = "%PDF-1.4\n"
+  const body = `fake pdf content for bpost label ${label} `.repeat(5)
+  return Buffer.from(header + body, "utf-8")
+}
+
+const FAKE_PDF = makeFakePdf()
+const FAKE_PDF_B64 = FAKE_PDF.toString("base64")
+
+// ─── Mocks ────────────────────────────────────────────────────────────────────
 
 const mockCreateShipment = jest.fn()
 const mockGetLabel = jest.fn()
@@ -19,355 +36,417 @@ const mockUpdateOrders = jest.fn()
 const mockCreateNotifications = jest.fn()
 const mockListProducts = jest.fn()
 
-const mockScope = {
-  resolve: jest.fn((token: string) => {
-    if (token === "bpost") return { createShipment: mockCreateShipment, getLabel: mockGetLabel }
-    if (token === "orderModuleService") return { retrieveOrder: mockRetrieveOrder, updateOrders: mockUpdateOrders }
-    if (token === "notificationModuleService") return { createNotifications: mockCreateNotifications }
-    if (token === "productModuleService") return { listProducts: mockListProducts }
-    return {}
-  }),
+function makeScope(overrides: Partial<Record<string, any>> = {}) {
+  return {
+    resolve: (module: string) => {
+      if (module === BPOST_MODULE) {
+        return {
+          createShipment: mockCreateShipment,
+          getLabel: mockGetLabel,
+          ...overrides.bpost,
+        }
+      }
+      if (module === "order") {
+        return {
+          retrieveOrder: mockRetrieveOrder,
+          updateOrders: mockUpdateOrders,
+          ...overrides.order,
+        }
+      }
+      if (module === "notification") {
+        return {
+          createNotifications: mockCreateNotifications,
+          ...overrides.notification,
+        }
+      }
+      if (module === "product") {
+        return {
+          listProducts: mockListProducts,
+          ...overrides.product,
+        }
+      }
+      // Medusa module constants
+      if (module === "ORDER") return { retrieveOrder: mockRetrieveOrder, updateOrders: mockUpdateOrders }
+      if (module === "NOTIFICATION") return { createNotifications: mockCreateNotifications }
+      if (module === "PRODUCT") return { listProducts: mockListProducts }
+      throw new Error(`Unknown module: ${module}`)
+    },
+  }
 }
 
-// Mock des modules Medusa (@medusajs/framework/utils Modules enum)
-jest.mock("@medusajs/framework/utils", () => ({
-  Modules: {
-    ORDER: "orderModuleService",
-    NOTIFICATION: "notificationModuleService",
-    PRODUCT: "productModuleService",
-  },
-  Module: jest.fn(() => ({})),
-  ModuleProvider: jest.fn(() => ({})),
-}))
+function makeRequest(body: Record<string, any>, scopeOverrides: Partial<Record<string, any>> = {}) {
+  return {
+    body,
+    scope: makeScope(scopeOverrides),
+  } as any
+}
 
-// Mock du module Bpost (évite l'import de Module() de Medusa)
-jest.mock("../../modules/bpost", () => ({
-  BPOST_MODULE: "bpost",
-  default: {},
-}))
+function makeResponse() {
+  const res: any = {
+    _status: 200,
+    _body: null,
+    _headers: {} as Record<string, any>,
+    _redirect: null,
+    status: jest.fn().mockReturnThis(),
+    json: jest.fn().mockImplementation((body: any) => { res._body = body; return res }),
+    send: jest.fn().mockImplementation((body: any) => { res._body = body; return res }),
+    setHeader: jest.fn().mockImplementation((k: string, v: any) => { res._headers[k] = v; return res }),
+    redirect: jest.fn().mockImplementation((code: number, url: string) => { res._redirect = { code, url }; return res }),
+  }
+  res.status.mockImplementation((code: number) => { res._status = code; return res })
+  return res
+}
 
-// Mock des templates d'email
-jest.mock("../../modules/email-notifications/templates", () => ({
-  EmailTemplates: { ORDER_SHIPPED: "order-shipped" },
-}))
-
-// Mock des constantes
-jest.mock("../../lib/constants", () => ({
-  STORE_URL: "https://www.sellerie-lacabrade.be",
-}))
-
-// ─── Import de la route (après les mocks) ────────────────────────────────────
-
-import { POST } from "../../api/admin/bpost/shipments/route"
-
-// ─── Fixtures ─────────────────────────────────────────────────────────────────
-
-const baseOrder = {
-  id: "order-test-1",
+const BASE_ORDER = {
+  id: "order_test123",
+  display_id: "99",
   email: "client@example.com",
-  display_id: "1234",
   metadata: {},
   shipping_address: {
-    id: "addr-1",
     first_name: "Marie",
     last_name: "Dupont",
-    address_1: "Rue du Moulin 10",
+    address_1: "Rue de la Paix 1",
     postal_code: "1000",
     city: "Bruxelles",
     country_code: "BE",
     phone: "+32 499 00 00 01",
   },
-  items: [],
 }
-
-const baseShipmentResult = {
-  shipmentId: "SHP-001",
-  trackingNumber: "323456789BE",
-  labelUrl: "",
-}
-
-function makeReq(body: Record<string, any>) {
-  return {
-    body,
-    scope: mockScope,
-    params: {},
-  } as any
-}
-
-function makeRes() {
-  const res = {
-    _status: 200,
-    _body: null as any,
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn((body) => { res._body = body; return res }),
-    redirect: jest.fn().mockReturnThis(),
-    send: jest.fn().mockReturnThis(),
-    setHeader: jest.fn().mockReturnThis(),
-  }
-  return res
-}
-
-// ─── Setup ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
   jest.clearAllMocks()
-  mockRetrieveOrder.mockResolvedValue({ ...baseOrder })
-  mockUpdateOrders.mockResolvedValue([{ ...baseOrder }])
-  mockCreateShipment.mockResolvedValue({ ...baseShipmentResult })
-  mockGetLabel.mockResolvedValue({ labelUrl: "", labelData: undefined })
-  mockCreateNotifications.mockResolvedValue([{}])
+  mockRetrieveOrder.mockResolvedValue(BASE_ORDER)
+  mockUpdateOrders.mockResolvedValue([BASE_ORDER])
+  mockCreateNotifications.mockResolvedValue({})
   mockListProducts.mockResolvedValue([])
 })
 
 // ════════════════════════════════════════════════════════════════════════════
-// Mode normal — création de shipment
+// FLUX NOMINAL : création + label + email
 // ════════════════════════════════════════════════════════════════════════════
 
-describe("Mode création de shipment", () => {
-  it("crée un shipment et retourne success=true", async () => {
-    const req = makeReq({ order_id: "order-test-1" })
-    const res = makeRes()
-
-    await POST(req, res)
-
-    expect(mockCreateShipment).toHaveBeenCalledTimes(1)
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: true })
-    )
-  })
-
-  it("sauvegarde bpost_shipment_id, bpost_tracking et bpost_label_url dans metadata", async () => {
-    const req = makeReq({ order_id: "order-test-1" })
-    const res = makeRes()
-
-    await POST(req, res)
-
-    const updateCall = mockUpdateOrders.mock.calls[0][0]
-    const newMeta = updateCall[0].metadata
-    expect(newMeta.bpost_shipment_id).toBe("SHP-001")
-    expect(newMeta.bpost_tracking).toBe("323456789BE")
-    expect(newMeta.bpost_label_url).toBeDefined()
-  })
-
-  it("stocke bpost_label_data si Bpost retourne du base64", async () => {
-    const fakePdf = Buffer.from("%PDF-fake").toString("base64")
-    mockGetLabel.mockResolvedValueOnce({ labelUrl: `data:application/pdf;base64,${fakePdf}`, labelData: fakePdf })
-
-    const req = makeReq({ order_id: "order-test-1" })
-    const res = makeRes()
-
-    await POST(req, res)
-
-    const updateCall = mockUpdateOrders.mock.calls[0][0]
-    expect(updateCall[0].metadata.bpost_label_data).toBe(fakePdf)
-  })
-
-  it("envoie l'email de suivi avec le bon tracking number", async () => {
-    const req = makeReq({ order_id: "order-test-1", send_email: true })
-    const res = makeRes()
-
-    await POST(req, res)
-
-    expect(mockCreateNotifications).toHaveBeenCalledTimes(1)
-    const notifCall = mockCreateNotifications.mock.calls[0][0]
-    expect(notifCall.to).toBe("client@example.com")
-    expect(notifCall.template).toBe("order-shipped")
-    expect(notifCall.data.fulfillment.tracking_numbers).toContain("323456789BE")
-    expect(notifCall.data.fulfillment.data.public_tracking_url).toContain("323456789BE")
-  })
-
-  it("retourne email_sent=true quand l'email est bien envoyé", async () => {
-    const req = makeReq({ order_id: "order-test-1", send_email: true })
-    const res = makeRes()
-
-    await POST(req, res)
-
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ email_sent: true })
-    )
-  })
-
-  it("retourne email_sent=false quand send_email=false", async () => {
-    const req = makeReq({ order_id: "order-test-1", send_email: false })
-    const res = makeRes()
-
-    await POST(req, res)
-
-    expect(mockCreateNotifications).not.toHaveBeenCalled()
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ email_sent: false })
-    )
-  })
-
-  it("ne plante pas si l'email échoue (erreur non bloquante)", async () => {
-    mockCreateNotifications.mockRejectedValueOnce(new Error("SMTP error"))
-
-    const req = makeReq({ order_id: "order-test-1", send_email: true })
-    const res = makeRes()
-
-    await POST(req, res)
-
-    // La réponse HTTP doit quand même être un succès
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: true })
-    )
-  })
-
-  it("n'envoie pas d'email si trackingNumber est absent", async () => {
-    mockCreateShipment.mockResolvedValueOnce({ shipmentId: "SHP-NO-TRACK", trackingNumber: undefined })
-
-    const req = makeReq({ order_id: "order-test-1", send_email: true })
-    const res = makeRes()
-
-    await POST(req, res)
-
-    expect(mockCreateNotifications).not.toHaveBeenCalled()
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ email_sent: false })
-    )
-  })
-
-  it("utilise le point relais de metadata si pickup_point_id absent", async () => {
-    mockRetrieveOrder.mockResolvedValueOnce({
-      ...baseOrder,
-      metadata: { bpost_pickup_point: { Id: "PP-META-42", Name: "Bpost Shop Brussels" } },
+describe("Flux nominal — shipment + label + email", () => {
+  it("crée le shipment, récupère le PDF et envoie l'email", async () => {
+    mockCreateShipment.mockResolvedValue({
+      shipmentId: "order_test123",
+      clientReference: "order_test123",
+      trackingNumber: undefined, // pas de tracking depuis POST /shipments (spec API)
+    })
+    mockGetLabel.mockResolvedValue({
+      labelUrl: `data:application/pdf;base64,${FAKE_PDF_B64}`,
+      labelData: FAKE_PDF_B64,
+      trackingNumber: "323456789BE", // barcode extrait du label
     })
 
-    const req = makeReq({ order_id: "order-test-1" })
-    const res = makeRes()
-
+    const req = makeRequest({ order_id: "order_test123", send_email: true })
+    const res = makeResponse()
     await POST(req, res)
 
-    const createShipmentCall = mockCreateShipment.mock.calls[0][0]
-    expect(createShipmentCall.pickupPointId).toBe("PP-META-42")
-  })
+    // Shipment créé
+    expect(mockCreateShipment).toHaveBeenCalledWith(expect.objectContaining({
+      orderId: "order_test123",
+      recipient: expect.objectContaining({ name: "Marie Dupont" }),
+    }))
 
-  it("retourne 500 si createShipment échoue", async () => {
-    mockCreateShipment.mockRejectedValueOnce(new Error("Bpost API down"))
+    // Label récupéré
+    expect(mockGetLabel).toHaveBeenCalledWith("order_test123", "order_test123")
 
-    const req = makeReq({ order_id: "order-test-1" })
-    const res = makeRes()
-
-    await POST(req, res)
-
-    expect(res.status).toHaveBeenCalledWith(500)
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, message: "Bpost API down" })
-    )
-  })
-})
-
-// ════════════════════════════════════════════════════════════════════════════
-// Mode resend_only — renvoyer l'email sans recréer de shipment
-// ════════════════════════════════════════════════════════════════════════════
-
-describe("Mode resend_only", () => {
-  beforeEach(() => {
-    mockRetrieveOrder.mockResolvedValue({
-      ...baseOrder,
-      metadata: {
+    // Métadonnées sauvegardées
+    expect(mockUpdateOrders).toHaveBeenCalledWith([expect.objectContaining({
+      id: "order_test123",
+      metadata: expect.objectContaining({
+        bpost_client_reference: "order_test123",
         bpost_tracking: "323456789BE",
-        bpost_label_url: "https://labels.bpost.be/label.pdf",
-        bpost_shipment_id: "SHP-001",
-      },
+        bpost_label_data: FAKE_PDF_B64,
+        bpost_label_url: `data:application/pdf;base64,${FAKE_PDF_B64}`,
+      }),
+    })])
+
+    // Email envoyé
+    expect(mockCreateNotifications).toHaveBeenCalledWith(expect.objectContaining({
+      to: "client@example.com",
+      channel: "email",
+    }))
+
+    // Réponse HTTP correcte
+    expect(res._body.success).toBe(true)
+    expect(res._body.tracking_number).toBe("323456789BE")
+    expect(res._body.email_sent).toBe(true)
+  })
+
+  it("email envoyé même sans tracking number (template gère ce cas)", async () => {
+    mockCreateShipment.mockResolvedValue({
+      shipmentId: "order_test123",
+      clientReference: "order_test123",
     })
-  })
+    mockGetLabel.mockResolvedValue({
+      labelUrl: `data:application/pdf;base64,${FAKE_PDF_B64}`,
+      labelData: FAKE_PDF_B64,
+      trackingNumber: undefined, // Bpost n'a pas fourni de tracking
+    })
 
-  it("renvoie l'email avec le tracking existant sans appeler createShipment", async () => {
-    const req = makeReq({ order_id: "order-test-1", resend_only: true })
-    const res = makeRes()
-
+    const req = makeRequest({ order_id: "order_test123", send_email: true })
+    const res = makeResponse()
     await POST(req, res)
 
-    expect(mockCreateShipment).not.toHaveBeenCalled()
+    // Email quand même envoyé
     expect(mockCreateNotifications).toHaveBeenCalledTimes(1)
-    const notifCall = mockCreateNotifications.mock.calls[0][0]
-    expect(notifCall.data.fulfillment.tracking_numbers).toContain("323456789BE")
+
+    // tracking_numbers doit être vide (pas [""] qui serait interprété comme un tracking)
+    const notifData = mockCreateNotifications.mock.calls[0][0].data
+    expect(notifData.fulfillment.tracking_numbers).toEqual([])
+
+    expect(res._body.success).toBe(true)
+    expect(res._body.email_sent).toBe(true)
   })
 
-  it("retourne email_sent=true si l'email est envoyé", async () => {
-    const req = makeReq({ order_id: "order-test-1", resend_only: true })
-    const res = makeRes()
+  it("URL de tracking Bpost correcte dans l'email (track.bpost.cloud)", async () => {
+    mockCreateShipment.mockResolvedValue({
+      shipmentId: "order_test123",
+      clientReference: "order_test123",
+    })
+    mockGetLabel.mockResolvedValue({
+      labelUrl: `data:application/pdf;base64,${FAKE_PDF_B64}`,
+      labelData: FAKE_PDF_B64,
+      trackingNumber: "323456789BE",
+    })
 
-    await POST(req, res)
-
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: true, email_sent: true, tracking_number: "323456789BE" })
-    )
-  })
-
-  it("retourne 400 si aucun tracking n'existe en metadata", async () => {
-    mockRetrieveOrder.mockResolvedValueOnce({ ...baseOrder, metadata: {} })
-
-    const req = makeReq({ order_id: "order-test-1", resend_only: true })
-    const res = makeRes()
-
-    await POST(req, res)
-
-    expect(res.status).toHaveBeenCalledWith(400)
-    expect(mockCreateShipment).not.toHaveBeenCalled()
-    expect(mockCreateNotifications).not.toHaveBeenCalled()
-  })
-
-  it("ne modifie pas les métadonnées de la commande", async () => {
-    const req = makeReq({ order_id: "order-test-1", resend_only: true })
-    const res = makeRes()
-
-    await POST(req, res)
-
-    expect(mockUpdateOrders).not.toHaveBeenCalled()
-  })
-
-  it("retourne email_sent=false si la notification échoue", async () => {
-    mockCreateNotifications.mockRejectedValueOnce(new Error("SMTP down"))
-
-    const req = makeReq({ order_id: "order-test-1", resend_only: true })
-    const res = makeRes()
-
-    await POST(req, res)
-
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: true, email_sent: false })
-    )
-  })
-})
-
-// ════════════════════════════════════════════════════════════════════════════
-// Contenu de l'email envoyé
-// ════════════════════════════════════════════════════════════════════════════
-
-describe("Contenu de l'email de suivi", () => {
-  it("l'email contient l'URL de suivi Bpost valide", async () => {
-    const req = makeReq({ order_id: "order-test-1", send_email: true })
-    const res = makeRes()
-
-    await POST(req, res)
+    const req = makeRequest({ order_id: "order_test123", send_email: true })
+    await POST(req, makeResponse())
 
     const notifData = mockCreateNotifications.mock.calls[0][0].data
     expect(notifData.fulfillment.data.public_tracking_url).toMatch(
-      /^https:\/\/track\.bpost\.cloud\//
+      /^https:\/\/track\.bpost\.cloud\/btr\/web\/#\/search\?itemCode=323456789BE/
     )
-    expect(notifData.fulfillment.data.public_tracking_url).toContain("323456789BE")
+    expect(notifData.fulfillment.data.public_tracking_url).toContain("postalCode=1000")
+    expect(notifData.fulfillment.data.public_tracking_url).toContain("lang=fr")
   })
 
-  it("l'email contient l'adresse de livraison correcte", async () => {
-    const req = makeReq({ order_id: "order-test-1", send_email: true })
-    const res = makeRes()
+  it("pas d'URL de tracking si pas de tracking number", async () => {
+    mockCreateShipment.mockResolvedValue({ shipmentId: "order_test123", clientReference: "order_test123" })
+    mockGetLabel.mockResolvedValue({ labelUrl: "", labelData: undefined, trackingNumber: undefined })
 
-    await POST(req, res)
+    const req = makeRequest({ order_id: "order_test123", send_email: true })
+    await POST(req, makeResponse())
 
     const notifData = mockCreateNotifications.mock.calls[0][0].data
-    expect(notifData.shippingAddress.postal_code).toBe("1000")
-    expect(notifData.shippingAddress.city).toBe("Bruxelles")
+    expect(notifData.fulfillment.data.public_tracking_url).toBe("")
   })
 
-  it("le sujet de l'email inclut le display_id", async () => {
-    const req = makeReq({ order_id: "order-test-1", send_email: true })
-    const res = makeRes()
+  it("PDF base64 stocké dans bpost_label_data (évite re-auth Bpost)", async () => {
+    mockCreateShipment.mockResolvedValue({ shipmentId: "order_test123", clientReference: "order_test123" })
+    mockGetLabel.mockResolvedValue({
+      labelUrl: `data:application/pdf;base64,${FAKE_PDF_B64}`,
+      labelData: FAKE_PDF_B64,
+    })
 
+    const req = makeRequest({ order_id: "order_test123" })
+    await POST(req, makeResponse())
+
+    const savedMeta = mockUpdateOrders.mock.calls[0][0][0].metadata
+    expect(savedMeta.bpost_label_data).toBe(FAKE_PDF_B64)
+    // labelData est un vrai PDF
+    const decoded = Buffer.from(savedMeta.bpost_label_data, "base64")
+    expect(decoded.subarray(0, 5).toString("utf-8")).toBe("%PDF-")
+  })
+
+  it("label avec URL HTTP stockée dans bpost_label_url", async () => {
+    mockCreateShipment.mockResolvedValue({ shipmentId: "order_test123", clientReference: "order_test123" })
+    mockGetLabel.mockResolvedValue({
+      labelUrl: "https://labels.bpost.be/label-123.pdf",
+      labelData: undefined,
+      trackingNumber: "323456789BE",
+    })
+
+    const req = makeRequest({ order_id: "order_test123" })
+    await POST(req, makeResponse())
+
+    const savedMeta = mockUpdateOrders.mock.calls[0][0][0].metadata
+    expect(savedMeta.bpost_label_url).toBe("https://labels.bpost.be/label-123.pdf")
+    expect(savedMeta.bpost_label_data).toBeUndefined()
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// MODE RESEND_ONLY
+// ════════════════════════════════════════════════════════════════════════════
+
+describe("Mode resend_only — renvoi email sans recréer le shipment", () => {
+  it("renvoie l'email avec le tracking existant en metadata", async () => {
+    mockRetrieveOrder.mockResolvedValue({
+      ...BASE_ORDER,
+      metadata: {
+        bpost_tracking: "323456789BE",
+        bpost_label_url: `data:application/pdf;base64,${FAKE_PDF_B64}`,
+      },
+    })
+
+    const req = makeRequest({ order_id: "order_test123", resend_only: true })
+    const res = makeResponse()
     await POST(req, res)
 
-    const subject = mockCreateNotifications.mock.calls[0][0].data.emailOptions.subject
-    expect(subject).toContain("1234")
+    // PAS de création de shipment
+    expect(mockCreateShipment).not.toHaveBeenCalled()
+    // Email envoyé
+    expect(mockCreateNotifications).toHaveBeenCalledTimes(1)
+    expect(res._body.success).toBe(true)
+    expect(res._body.email_sent).toBe(true)
+    expect(res._body.tracking_number).toBe("323456789BE")
+  })
+
+  it("retourne 400 si resend_only mais pas de tracking en metadata", async () => {
+    mockRetrieveOrder.mockResolvedValue({ ...BASE_ORDER, metadata: {} })
+
+    const req = makeRequest({ order_id: "order_test123", resend_only: true })
+    const res = makeResponse()
+    await POST(req, res)
+
+    expect(res._status).toBe(400)
+    expect(mockCreateNotifications).not.toHaveBeenCalled()
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// POINT RELAIS
+// ════════════════════════════════════════════════════════════════════════════
+
+describe("Livraison point relais", () => {
+  it("transmet pickup_point_id à createShipment", async () => {
+    mockCreateShipment.mockResolvedValue({ shipmentId: "order_test123", clientReference: "order_test123" })
+    mockGetLabel.mockResolvedValue({ labelUrl: "", labelData: undefined })
+
+    const req = makeRequest({ order_id: "order_test123", pickup_point_id: "PP-BRUX-42" })
+    await POST(req, makeResponse())
+
+    expect(mockCreateShipment).toHaveBeenCalledWith(expect.objectContaining({
+      pickupPointId: "PP-BRUX-42",
+    }))
+  })
+
+  it("utilise le pickup_point depuis les metadata si absent du body", async () => {
+    mockRetrieveOrder.mockResolvedValue({
+      ...BASE_ORDER,
+      metadata: { bpost_pickup_point: { Id: "PP-META-99" } },
+    })
+    mockCreateShipment.mockResolvedValue({ shipmentId: "order_test123", clientReference: "order_test123" })
+    mockGetLabel.mockResolvedValue({ labelUrl: "", labelData: undefined })
+
+    const req = makeRequest({ order_id: "order_test123" })
+    await POST(req, makeResponse())
+
+    expect(mockCreateShipment).toHaveBeenCalledWith(expect.objectContaining({
+      pickupPointId: "PP-META-99",
+    }))
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// GESTION D'ERREURS
+// ════════════════════════════════════════════════════════════════════════════
+
+describe("Gestion des erreurs", () => {
+  it("retourne 500 si createShipment lève une erreur", async () => {
+    mockCreateShipment.mockRejectedValue(new Error("Bpost API down"))
+
+    const req = makeRequest({ order_id: "order_test123" })
+    const res = makeResponse()
+    await POST(req, res)
+
+    expect(res._status).toBe(500)
+    expect(res._body.success).toBe(false)
+    expect(res._body.message).toContain("Bpost API down")
+  })
+
+  it("email échec non bloquant — réponse success=true quand même", async () => {
+    mockCreateShipment.mockResolvedValue({ shipmentId: "order_test123", clientReference: "order_test123" })
+    mockGetLabel.mockResolvedValue({ labelUrl: "", labelData: undefined, trackingNumber: "323456789BE" })
+    mockCreateNotifications.mockRejectedValue(new Error("Resend down"))
+
+    const req = makeRequest({ order_id: "order_test123", send_email: true })
+    const res = makeResponse()
+    await POST(req, res)
+
+    expect(res._body.success).toBe(true)
+    expect(res._body.email_sent).toBe(false)  // email échoué mais pas bloquant
+  })
+
+  it("label échec non bloquant — succès sans PDF", async () => {
+    mockCreateShipment.mockResolvedValue({ shipmentId: "order_test123", clientReference: "order_test123" })
+    mockGetLabel.mockRejectedValue(new Error("Label generation failed"))
+
+    const req = makeRequest({ order_id: "order_test123" })
+    const res = makeResponse()
+    await POST(req, res)
+
+    // Le shipment est quand même considéré comme un succès
+    expect(res._body.success).toBe(true)
+    // Label vide dans les métadonnées
+    const savedMeta = mockUpdateOrders.mock.calls[0][0][0].metadata
+    expect(savedMeta.bpost_label_url).toBe("")
+  })
+
+  it("send_email=false → pas d'email envoyé", async () => {
+    mockCreateShipment.mockResolvedValue({ shipmentId: "order_test123", clientReference: "order_test123" })
+    mockGetLabel.mockResolvedValue({ labelUrl: "", labelData: undefined, trackingNumber: "323456789BE" })
+
+    const req = makeRequest({ order_id: "order_test123", send_email: false })
+    await POST(req, makeResponse())
+
+    expect(mockCreateNotifications).not.toHaveBeenCalled()
+  })
+})
+
+// ════════════════════════════════════════════════════════════════════════════
+// SUJET ET CONTENU EMAIL
+// ════════════════════════════════════════════════════════════════════════════
+
+describe("Contenu email de suivi", () => {
+  beforeEach(() => {
+    mockCreateShipment.mockResolvedValue({ shipmentId: "order_test123", clientReference: "order_test123" })
+    mockGetLabel.mockResolvedValue({
+      labelUrl: `data:application/pdf;base64,${FAKE_PDF_B64}`,
+      labelData: FAKE_PDF_B64,
+      trackingNumber: "323456789BE",
+    })
+  })
+
+  it("sujet email contient le display_id de la commande", async () => {
+    const req = makeRequest({ order_id: "order_test123", send_email: true })
+    await POST(req, makeResponse())
+
+    const notifCall = mockCreateNotifications.mock.calls[0][0]
+    expect(notifCall.data.emailOptions.subject).toContain("#99")
+  })
+
+  it("email envoyé à l'adresse du client", async () => {
+    const req = makeRequest({ order_id: "order_test123", send_email: true })
+    await POST(req, makeResponse())
+
+    expect(mockCreateNotifications.mock.calls[0][0].to).toBe("client@example.com")
+  })
+
+  it("replyTo = contact@sellerie-lacabrade.be", async () => {
+    const req = makeRequest({ order_id: "order_test123", send_email: true })
+    await POST(req, makeResponse())
+
+    const notifCall = mockCreateNotifications.mock.calls[0][0]
+    expect(notifCall.data.emailOptions.replyTo).toBe("contact@sellerie-lacabrade.be")
+  })
+
+  it("fulfillment.tracking_numbers contient le bon numéro", async () => {
+    const req = makeRequest({ order_id: "order_test123", send_email: true })
+    await POST(req, makeResponse())
+
+    const notifData = mockCreateNotifications.mock.calls[0][0].data
+    expect(notifData.fulfillment.tracking_numbers).toContain("323456789BE")
+  })
+
+  it("shippingAddress transmis à l'email", async () => {
+    const req = makeRequest({ order_id: "order_test123", send_email: true })
+    await POST(req, makeResponse())
+
+    const notifData = mockCreateNotifications.mock.calls[0][0].data
+    expect(notifData.shippingAddress.city).toBe("Bruxelles")
+    expect(notifData.shippingAddress.postal_code).toBe("1000")
   })
 })

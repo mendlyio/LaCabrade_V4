@@ -33,7 +33,7 @@ export const OrderShippedTemplate: React.FC<OrderShippedTemplateProps> & {
 
   const trackingUrl = fulfillment.data?.public_tracking_url || 
     (trackingNumber 
-      ? `https://track.bpost.be/btr/web/#/search?itemCode=${trackingNumber}&lang=fr&postalCode=${shippingAddress.postal_code}` 
+      ? `https://track.bpost.cloud/btr/web/#/search?itemCode=${trackingNumber}&lang=fr&postalCode=${shippingAddress.postal_code}` 
       : '#')
 
   return (
