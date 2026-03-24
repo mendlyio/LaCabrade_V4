@@ -379,8 +379,22 @@ export default class BpostModuleService {
 
     // Structure conforme à l'API Bpost Shipping Manager v3
     // Champs obligatoires confirmés en live : ClientReferenceCode + ShopItemId
-    // Produits : 302 = bpack 24h Pro (domicile), 301 = Bpack 24/7 (point relais)
-    const productId = input.pickupPointId ? "301" : "302"
+    //
+    // Produits Bpost (confirmés depuis /carriers en live) :
+    //   301 = Bpack 24/7 & Bpack@bpost  → point relais (IsPickup: 1)
+    //   302 = bpack 24h Pro              → domicile Belgique (IsPickup: 0)
+    //   303 = bpack World Business       → international domicile (IsPickup: 0)
+    //   306 = bpack World Express Pro    → international express (IsPickup: 0)
+    const BELGIUM_CODES = new Set(["BE", "BEL"])
+    const isBelgium = BELGIUM_CODES.has(countryCode)
+    let productId: string
+    if (input.pickupPointId) {
+      productId = "301"             // point relais (Belgique uniquement)
+    } else if (isBelgium) {
+      productId = "302"             // bpack 24h Pro — domicile Belgique
+    } else {
+      productId = "303"             // bpack World Business — international
+    }
 
     const shipment: Record<string, any> = {
       ClientReferenceCode: clientRef,
@@ -609,6 +623,16 @@ export default class BpostModuleService {
         const extracted = this.extractPdfFromResponse(parsed)
         if (extracted) {
           console.log(`[Bpost] getLabel(${refId}): PDF extrait du JSON via ${source}`)
+          // Log les champs de tracking pour diagnostic
+          const refItem = Array.isArray(parsed.ClientReferenceCodeList) ? parsed.ClientReferenceCodeList[0] : null
+          console.log(`[Bpost] tracking fields:`, JSON.stringify({
+            TrackingId: refItem?.TrackingId || null,
+            TrackingUrl: refItem?.TrackingUrl || null,
+            Barcode: refItem?.Barcode || null,
+            ReferenceCode: refItem?.ReferenceCode || null,
+            Finished: parsed.Finished,
+            ErrorId: parsed.Error?.Id,
+          }))
           return extracted
         }
       } catch {}
@@ -696,9 +720,19 @@ export default class BpostModuleService {
           let parsed: any = null
           try { parsed = JSON.parse(text) } catch { parsed = text }
 
-          // Log complet au premier poll pour diagnostiquer le format de réponse
+          // Log complet au premier poll (on masque LabelPDF qui est très long)
           if (attempt === 1) {
-            console.log(`[Bpost] getLabel(${refId}): contenu poll #1 (${rawBuffer.length} bytes):`, text.slice(0, 1000))
+            try {
+              const logObj = typeof parsed === "object" ? { ...parsed } : parsed
+              if (logObj && typeof logObj === "object") {
+                const masked = { ...logObj }
+                if (masked.LabelPDF) masked.LabelPDF = `[base64 ${(masked.LabelPDF as string).length} chars]`
+                if (masked.LabelFile) masked.LabelFile = `[base64 ${(masked.LabelFile as string).length} chars]`
+                console.log(`[Bpost] getLabel(${refId}): réponse poll #1:`, JSON.stringify(masked))
+              } else {
+                console.log(`[Bpost] getLabel(${refId}): contenu poll #1 (${rawBuffer.length} bytes):`, text.slice(0, 500))
+              }
+            } catch { console.log(`[Bpost] poll #1 raw:`, text.slice(0, 500)) }
           }
 
           const errorInfo = typeof parsed === "object" ? this.extractErrorInfo(parsed) : null

@@ -74,6 +74,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       reference,
       send_email = true,
       resend_only = false,
+      force_email = false,  // envoie l'email même sans tracking (label suffit)
     } = req.body as any
 
     const orderService = req.scope.resolve(Modules.ORDER)
@@ -171,21 +172,27 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
     const updated = await orderService.updateOrders([{ id: order_id, metadata: newMetadata }])
 
-    // Envoyer l'email uniquement si l'étiquette ET le tracking sont obtenus
+    // Envoyer l'email si : (label + tracking) OU (force_email + label)
+    // Le tracking null signifie que le compte Bpost n'a pas de plages de codes-barres allouées.
     const labelReady = !!(labelData || labelUrl)
+    const canSendEmail = send_email && labelReady && (finalTracking || force_email)
     let emailSent = false
-    if (send_email && labelReady && finalTracking) {
+    if (canSendEmail) {
       try {
-        await sendTrackingEmail(req, order, finalTracking, finalLabelUrl)
+        await sendTrackingEmail(req, order, finalTracking || "", finalLabelUrl)
         emailSent = true
-        console.log(`[Bpost] ✅ Email de suivi envoyé à ${order.email} — tracking: ${finalTracking}`)
+        console.log(`[Bpost] ✅ Email de suivi envoyé à ${order.email} — tracking: ${finalTracking || "(absent - force_email)"}`)
       } catch (emailErr: any) {
         console.error("[Bpost] ❌ Erreur envoi email de suivi:", emailErr?.message)
       }
-    } else if (send_email) {
+    } else if (send_email && labelReady && !finalTracking) {
       console.warn(
-        `[Bpost] ⚠️ Email NON envoyé — label: ${labelReady ? "OK" : "ABSENT"}, tracking: ${finalTracking || "ABSENT"}`
+        `[Bpost] ⚠️ Email NON envoyé : label OK mais TrackingId absent.\n` +
+        `   → Cause probable : plages de codes-barres non allouées sur le compte Bpost.\n` +
+        `   → Solution : contacter Bpost pour activer les barcodes, OU passer force_email=true.`
       )
+    } else if (send_email && !labelReady) {
+      console.warn(`[Bpost] ⚠️ Email NON envoyé — label ABSENT`)
     }
 
     return res.json({

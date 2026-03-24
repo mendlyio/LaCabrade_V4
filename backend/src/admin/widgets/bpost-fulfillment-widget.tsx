@@ -90,7 +90,7 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
 
   // ─── Générer l'étiquette ─────────────────────────────────────────────────
 
-  const handleGenerateLabel = async () => {
+  const handleGenerateLabel = async (forceEmail = false) => {
     if (!effectiveOrderId) return
     setIsGenerating(true)
     setError(null)
@@ -99,7 +99,11 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ order_id: effectiveOrderId, send_email: true }),
+        body: JSON.stringify({
+          order_id: effectiveOrderId,
+          send_email: true,
+          force_email: forceEmail,
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -187,7 +191,7 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
             <Button
               variant="primary"
               size="base"
-              onClick={handleGenerateLabel}
+              onClick={() => handleGenerateLabel(false)}
               disabled={isGenerating}
               className="self-start"
             >
@@ -233,10 +237,25 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
                 <MailIcon className="w-4 h-4 flex-shrink-0" />
                 <Text className="text-sm">Email de suivi envoyé au client</Text>
               </div>
+            ) : generated.trackingNumber ? (
+              <Text className="text-ui-fg-subtle text-sm">Email non envoyé (erreur).</Text>
             ) : (
-              <Text className="text-ui-fg-subtle text-sm">
-                Aucun numéro de suivi reçu — l&apos;email n&apos;a pas pu être envoyé automatiquement.
-              </Text>
+              <div className="bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex flex-col gap-2">
+                <Text className="text-amber-800 text-xs">
+                  ⚠️ Aucun numéro de suivi reçu — le compte Bpost n&apos;a pas de plages de codes-barres activées.
+                  Contactez Bpost pour les activer, ou envoyez l&apos;email sans lien de suivi.
+                </Text>
+                <Button
+                  variant="secondary"
+                  size="small"
+                  onClick={() => handleGenerateLabel(true)}
+                  disabled={isGenerating}
+                  className="self-start"
+                >
+                  <MailIcon className="w-3.5 h-3.5 mr-1" />
+                  Envoyer l&apos;email sans tracking
+                </Button>
+              </div>
             )}
 
             <div className="flex flex-wrap gap-2 pt-1">
@@ -391,10 +410,10 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
             <Button
               variant="secondary"
               size="small"
-              onClick={handleGenerateLabel}
-              disabled={isGenerating}
-            >
-              {isGenerating ? "Génération…" : "Regénérer"}
+          onClick={() => handleGenerateLabel(false)}
+          disabled={isGenerating}
+        >
+          {isGenerating ? "Génération…" : "Regénérer"}
             </Button>
           </div>
         )}
