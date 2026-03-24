@@ -462,7 +462,7 @@ export default class BpostModuleService {
     }
   }
 
-  async getLabel(shipmentId: string, clientReference?: string): Promise<{ labelUrl: string; labelData?: string }> {
+  async getLabel(shipmentId: string, clientReference?: string): Promise<{ labelUrl: string; labelData?: string; trackingNumber?: string }> {
     await this.ensureToken()
 
     const idsToTry = clientReference && clientReference !== shipmentId
@@ -496,7 +496,7 @@ export default class BpostModuleService {
     return { labelUrl: "" }
   }
 
-  private async tryPostLabels(refId: string, errors: string[]): Promise<{ labelUrl: string; labelData?: string } | null> {
+  private async tryPostLabels(refId: string, errors: string[]): Promise<{ labelUrl: string; labelData?: string; trackingNumber?: string } | null> {
     try {
       const { response, rawBuffer } = await this.sendToApi<any>({
         method: "POST",
@@ -530,7 +530,7 @@ export default class BpostModuleService {
     return null
   }
 
-  private async tryPostLabelsOrderRef(refId: string, errors: string[]): Promise<{ labelUrl: string; labelData?: string } | null> {
+  private async tryPostLabelsOrderRef(refId: string, errors: string[]): Promise<{ labelUrl: string; labelData?: string; trackingNumber?: string } | null> {
     try {
       // Certains contrats Bpost utilisent OrderReference au lieu de ClientReferenceCodeList
       const { response, rawBuffer } = await this.sendToApi<any>({
@@ -559,7 +559,7 @@ export default class BpostModuleService {
     return null
   }
 
-  private async tryGetLabelDirect(refId: string, errors: string[]): Promise<{ labelUrl: string; labelData?: string } | null> {
+  private async tryGetLabelDirect(refId: string, errors: string[]): Promise<{ labelUrl: string; labelData?: string; trackingNumber?: string } | null> {
     // Certaines versions de l'API exposent GET /labels/{ref}
     const endpoints = [`/labels/${refId}`, `/shipments/${refId}/label`]
     for (const endpoint of endpoints) {
@@ -585,7 +585,7 @@ export default class BpostModuleService {
     rawBuffer: Buffer | undefined,
     refId: string,
     source: string
-  ): { labelUrl: string; labelData?: string } | null {
+  ): { labelUrl: string; labelData?: string; trackingNumber?: string } | null {
     // PDF binaire direct
     if (rawBuffer && rawBuffer.length > 100) {
       const buf = Buffer.from(rawBuffer)
@@ -662,7 +662,7 @@ export default class BpostModuleService {
     callbackUrl: string,
     refId: string,
     errors: string[]
-  ): Promise<{ labelUrl: string; labelData?: string } | null> {
+  ): Promise<{ labelUrl: string; labelData?: string; trackingNumber?: string } | null> {
     console.log(`[Bpost] getLabel: polling ${callbackUrl}`)
     const maxAttempts = 15
     const delayMs = 2000
@@ -712,7 +712,7 @@ export default class BpostModuleService {
     return null
   }
 
-  private extractPdfFromResponse(response: any): { labelUrl: string; labelData: string } | null {
+  private extractPdfFromResponse(response: any): { labelUrl: string; labelData: string; trackingNumber?: string } | null {
     if (!response) return null
 
     // String qui est un PDF brut
@@ -739,6 +739,13 @@ export default class BpostModuleService {
     const labelArray = Array.isArray(response.Label) ? response.Label : []
     const firstLabel = labelArray[0] || {}
 
+    // Extraire le tracking depuis la réponse label (barcode = numéro de suivi Bpost)
+    const trackingNumber: string | undefined =
+      firstLabel.Barcode || firstLabel.TrackingNumber || firstLabel.TrackingCode ||
+      firstLabel.barcode || firstLabel.trackingNumber ||
+      response.Barcode || response.TrackingNumber ||
+      undefined
+
     const labelData =
       firstLabel.LabelData || firstLabel.labelData ||
       response.LabelData || response.labelData ||
@@ -749,12 +756,13 @@ export default class BpostModuleService {
       return {
         labelUrl: directUrl || `data:application/pdf;base64,${labelData}`,
         labelData,
+        trackingNumber,
       }
     }
 
     const directUrl = response.Url || response.LabelUrl || firstLabel.Url || firstLabel.url || ""
     if (directUrl) {
-      return { labelUrl: directUrl, labelData: "" }
+      return { labelUrl: directUrl, labelData: "", trackingNumber }
     }
 
     return null

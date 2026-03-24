@@ -65,6 +65,10 @@ function step(title: string) {
   console.log("═".repeat(60))
 }
 
+// ─── Exécution principale ─────────────────────────────────────────────────────
+
+async function main() {
+
 // ─── ÉTAPE 1 : Token / Auth ───────────────────────────────────────────────────
 
 step("1. Authentification (token /keys)")
@@ -199,3 +203,7 @@ if (issues.length > 0) {
 console.log("═".repeat(60))
 
 if (failed > 0) process.exit(1)
+
+} // fin main()
+
+main().catch(e => { console.error("Erreur fatale:", e); process.exit(1) })

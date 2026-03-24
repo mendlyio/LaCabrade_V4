@@ -128,29 +128,34 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     })
 
     // Récupérer l'étiquette PDF via POST /labels (séparé de POST /shipments)
+    // Le tracking number vient aussi de la réponse /labels (barcode), pas de POST /shipments
     let labelUrl = result.labelUrl || ""
     let labelData: string | undefined = result.labelData
+    let trackingFromLabel: string | undefined
     if (!labelData && !labelUrl && result.clientReference) {
       try {
         console.log(`[Bpost] Récupération étiquette pour ref "${result.clientReference}"...`)
         const labelResult = await svc.getLabel(result.clientReference, result.clientReference)
         labelUrl = labelResult.labelUrl || ""
         labelData = labelResult.labelData
+        trackingFromLabel = labelResult.trackingNumber
       } catch (e: any) {
         console.warn("[Bpost] Impossible de récupérer l'étiquette:", e?.message)
       }
     }
 
     const finalLabelUrl = labelUrl || ""
+    // Tracking : préférer celui du label (barcode), sinon celui de createShipment (absent selon spec)
+    const finalTracking = trackingFromLabel || result.trackingNumber || undefined
 
     // Sauvegarder dans les métadonnées de la commande
     const newMetadata: Record<string, any> = {
       ...meta,
       bpost_shipment_id: result.shipmentId,
       bpost_client_reference: result.clientReference,
-      bpost_tracking: result.trackingNumber,
       bpost_label_url: finalLabelUrl,
     }
+    if (finalTracking) newMetadata.bpost_tracking = finalTracking
     if (labelData) {
       // PDF base64 stocké pour téléchargement sans re-auth Bpost
       newMetadata.bpost_label_data = labelData
@@ -158,13 +163,14 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
     const updated = await orderService.updateOrders([{ id: order_id, metadata: newMetadata }])
 
-    // Envoyer l'email de suivi au client
+    // Envoyer l'email de suivi au client — toujours envoyé si demandé, même sans tracking.
+    // Le template affiche le lien de suivi uniquement si trackingNumber est présent.
     let emailSent = false
-    if (send_email && result.trackingNumber) {
+    if (send_email) {
       try {
-        await sendTrackingEmail(req, order, result.trackingNumber, finalLabelUrl)
+        await sendTrackingEmail(req, order, finalTracking || "", finalLabelUrl)
         emailSent = true
-        console.log(`[Bpost] ✅ Email de suivi envoyé à ${order.email} — tracking: ${result.trackingNumber}`)
+        console.log(`[Bpost] ✅ Email de suivi envoyé à ${order.email} — tracking: ${finalTracking || "(absent)"}`)
       } catch (emailErr: any) {
         console.error("[Bpost] ❌ Erreur envoi email de suivi:", emailErr?.message)
         // Non bloquant
