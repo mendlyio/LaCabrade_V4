@@ -13,40 +13,113 @@ const OrderShippingWidget = ({ data: order }: { data: any }) => {
   try {
     const shippingMethods = Array.isArray(order?.shipping_methods) ? order.shipping_methods : []
     const pickupLocation = order?.metadata?.pickup_location as { id?: string; name?: string; address?: string } | undefined
+    const bpostPickup = order?.metadata?.bpost_pickup_point as Record<string, any> | undefined
+    const shippingAddress = order?.shipping_address
 
-    if (shippingMethods.length === 0 && !pickupLocation) {
+    if (shippingMethods.length === 0 && !pickupLocation && !shippingAddress) {
       return null
     }
 
     const method = shippingMethods[0]
 
+    // Point relais : soit retrait magasin (pickup_location), soit Bpost (bpost_pickup_point)
+    const isPickup = !!(pickupLocation || bpostPickup)
+    const pickupName = pickupLocation?.name || bpostPickup?.Name || bpostPickup?.name
+    const pickupAddr = pickupLocation?.address || bpostPickup?.Address || bpostPickup?.address
+    const pickupZip = bpostPickup?.ZipCode || bpostPickup?.PostalCode || bpostPickup?.zipCode || ""
+    const pickupCity = bpostPickup?.City || bpostPickup?.city || ""
+
+    const countryCode = (shippingAddress?.country_code || "").toUpperCase()
+
     return (
-    <Container className="divide-y divide-gray-200 dark:divide-gray-700 p-0">
-      <div className="flex items-center gap-x-2 px-6 py-4">
-        <TruckIcon className="text-gray-500 w-5 h-5" />
-        <Heading level="h2" className="text-base-semi">Livraison</Heading>
-      </div>
-      <div className="px-6 py-4 flex flex-col gap-3">
-        {method && (
-          <div>
-            <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Méthode</Text>
-            <Text className="font-medium">{(method as any).name}</Text>
-            {(method as any).amount !== undefined && (method as any).amount > 0 && (
-              <Text className="text-xs text-gray-600 dark:text-gray-300">{(method as any).amount} €</Text>
-            )}
-          </div>
-        )}
-        {pickupLocation && (pickupLocation.name || pickupLocation.address) && (
-          <div>
-            <Text className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Point de retrait</Text>
-            <Text className="font-medium">{pickupLocation.name || "—"}</Text>
-            {pickupLocation.address && (
-              <Text className="text-sm text-gray-600 dark:text-gray-300">{pickupLocation.address}</Text>
-            )}
-          </div>
-        )}
-      </div>
-    </Container>
+      <Container className="divide-y divide-gray-200 dark:divide-gray-700 p-0">
+        <div className="flex items-center gap-x-2 px-6 py-4">
+          <TruckIcon className="text-gray-500 w-5 h-5" />
+          <Heading level="h2" className="text-base-semi">Livraison</Heading>
+        </div>
+
+        <div className="px-6 py-4 flex flex-col gap-4">
+
+          {/* Méthode */}
+          {method && (
+            <div>
+              <Text className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Méthode</Text>
+              <div className="flex items-center gap-2">
+                <Text className="font-medium">{(method as any).name}</Text>
+                {(method as any).amount !== undefined && (method as any).amount > 0 && (
+                  <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                    {(method as any).amount} €
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Point relais Bpost */}
+          {bpostPickup && (pickupName || pickupAddr) && (
+            <div>
+              <Text className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Point relais Bpost</Text>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 flex flex-col gap-0.5">
+                {pickupName && <Text className="font-semibold text-sm text-amber-900">{pickupName}</Text>}
+                {pickupAddr && <Text className="text-xs text-amber-700">{pickupAddr}</Text>}
+                {(pickupZip || pickupCity) && (
+                  <Text className="text-xs text-amber-700">{pickupZip} {pickupCity}</Text>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Point de retrait magasin */}
+          {pickupLocation && (pickupLocation.name || pickupLocation.address) && (
+            <div>
+              <Text className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Point de retrait</Text>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 flex flex-col gap-0.5">
+                {pickupLocation.name && <Text className="font-semibold text-sm text-amber-900">{pickupLocation.name}</Text>}
+                {pickupLocation.address && <Text className="text-xs text-amber-700">{pickupLocation.address}</Text>}
+              </div>
+            </div>
+          )}
+
+          {/* Adresse de livraison domicile */}
+          {shippingAddress && !isPickup && (
+            <div>
+              <Text className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Adresse de livraison</Text>
+              <div className="flex flex-col gap-0.5">
+                <Text className="font-semibold text-sm">
+                  {shippingAddress.first_name} {shippingAddress.last_name}
+                  {shippingAddress.company && <span className="font-normal text-gray-500"> — {shippingAddress.company}</span>}
+                </Text>
+                <Text className="text-sm text-gray-600">{shippingAddress.address_1}</Text>
+                {shippingAddress.address_2 && (
+                  <Text className="text-sm text-gray-600">{shippingAddress.address_2}</Text>
+                )}
+                <Text className="text-sm text-gray-600">
+                  {shippingAddress.postal_code} {shippingAddress.city}
+                  {shippingAddress.province && `, ${shippingAddress.province}`}
+                  {countryCode && ` — ${countryCode}`}
+                </Text>
+                {shippingAddress.phone && (
+                  <Text className="text-xs text-gray-500 mt-0.5">📞 {shippingAddress.phone}</Text>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Adresse de livraison pour point relais (destinataire) */}
+          {shippingAddress && isPickup && (
+            <div>
+              <Text className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Destinataire</Text>
+              <Text className="text-sm font-medium">
+                {shippingAddress.first_name} {shippingAddress.last_name}
+              </Text>
+              {shippingAddress.phone && (
+                <Text className="text-xs text-gray-500">📞 {shippingAddress.phone}</Text>
+              )}
+            </div>
+          )}
+
+        </div>
+      </Container>
     )
   } catch {
     return null
