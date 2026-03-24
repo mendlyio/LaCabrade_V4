@@ -4,6 +4,7 @@ import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa'
 import { EmailTemplates } from '../modules/email-notifications/templates'
 import { ODOO_MODULE } from '../modules/odoo'
 import OdooModuleService from '../modules/odoo/service'
+import { getOrderDisplayTotalEuros } from '../utils/order-display-total'
 import { STORE_URL } from '../lib/constants'
 
 export default async function customOrderPlacedEmailHandler({
@@ -31,24 +32,18 @@ export default async function customOrderPlacedEmailHandler({
   try {
     const notificationModuleService: INotificationModuleService = container.resolve(Modules.NOTIFICATION)
 
-    // Utilise le total autoritatif de Medusa (déjà calculé avec promos, livraison gratuite, codes promo)
-    let displayTotal = Number(order.total) || 0
+    // Livraison effective = somme des montants bruts + ajustements (promos livraison gratuite = ajustement négatif)
+    const shippingTotal = (order.shipping_methods || []).reduce((acc: number, m: any) => {
+      const raw = Number(m.amount) || 0
+      const adj = (m.adjustments || []).reduce((s: number, a: any) => s + Number(a.amount || 0), 0)
+      return acc + Math.max(0, raw + adj)
+    }, 0)
 
-    // Déduire les bons cadeaux maison (stockés en metadata, pas reflétés dans order.total Medusa)
-    const appliedGiftCards = (order.metadata as any)?.applied_gift_cards as Array<{ balance: number }> | undefined
-    if (appliedGiftCards?.length) {
-      const gcDeduction = appliedGiftCards.reduce((sum, gc) => sum + Number(gc.balance || 0), 0)
-      displayTotal = Math.max(0, displayTotal - gcDeduction)
-    }
-
-    // Exonération TVA intracommunautaire (B2B hors Belgique avec numéro de TVA)
-    const vatNumber = (order.metadata as any)?.vat_number
-    const shipCountry = (shippingAddress || (order as any).shipping_address)?.country_code?.toLowerCase()
-    if (vatNumber && shipCountry && shipCountry !== 'be') {
-      const VAT_RATE = 0.21
-      const vatAmount = Math.round(displayTotal * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
-      displayTotal = Math.round((displayTotal - vatAmount) * 100) / 100
-    }
+    const displayTotal = getOrderDisplayTotalEuros({
+      ...order,
+      shipping_total: shippingTotal,
+      shipping_address: shippingAddress || order.shipping_address,
+    } as any)
 
     // Récupérer 2 produits suggérés (cross-sell)
     let suggestedProducts: Array<{ title: string; thumbnail: string; url: string }> = []
