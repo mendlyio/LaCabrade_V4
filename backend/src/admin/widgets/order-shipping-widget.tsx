@@ -23,11 +23,20 @@ const OrderShippingWidget = ({ data: order }: { data: any }) => {
     const method = shippingMethods[0]
 
     // Point relais : soit retrait magasin (pickup_location), soit Bpost (bpost_pickup_point)
+    // NB: bpostPickup.Address est un objet { Streetname1, PostalCode, City, ... } — pas une string
     const isPickup = !!(pickupLocation || bpostPickup)
-    const pickupName = pickupLocation?.name || bpostPickup?.Name || bpostPickup?.name
-    const pickupAddr = pickupLocation?.address || bpostPickup?.Address || bpostPickup?.address
-    const pickupZip = bpostPickup?.ZipCode || bpostPickup?.PostalCode || bpostPickup?.zipCode || ""
-    const pickupCity = bpostPickup?.City || bpostPickup?.city || ""
+    const pickupName = pickupLocation?.name
+      || (typeof bpostPickup?.Name === "string" ? bpostPickup.Name : null)
+      || (typeof bpostPickup?.name === "string" ? bpostPickup.name : null)
+    const bpostAddrObj = bpostPickup?.Address && typeof bpostPickup.Address === "object"
+      ? bpostPickup.Address
+      : null
+    const pickupAddr = pickupLocation?.address
+      || (typeof bpostPickup?.Address === "string" ? bpostPickup.Address : null)
+      || (bpostAddrObj?.Streetname1 ? String(bpostAddrObj.Streetname1) : null)
+      || null
+    const pickupZip = String(bpostAddrObj?.PostalCode || bpostPickup?.ZipCode || bpostPickup?.PostalCode || "")
+    const pickupCity = String(bpostAddrObj?.City || bpostPickup?.City || bpostPickup?.city || "")
 
     const countryCode = (shippingAddress?.country_code || "").toUpperCase()
 

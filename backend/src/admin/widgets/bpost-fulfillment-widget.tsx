@@ -249,22 +249,30 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
             )}
 
             {/* Point relais */}
-            {isPickup && (
-              <div className="mt-1 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2 text-xs text-amber-800 leading-relaxed">
-                <div className="font-semibold">{pickupPoint?.Name || pickupPoint?.name || "Point relais"}</div>
-                {(pickupPoint?.Address || pickupPoint?.address) && (
-                  <div>{pickupPoint.Address || pickupPoint.address}</div>
-                )}
-                {(pickupPoint?.ZipCode || pickupPoint?.PostalCode) && (
-                  <div>{pickupPoint.ZipCode || pickupPoint.PostalCode} {pickupPoint.City || pickupPoint.city}</div>
-                )}
-                {shippingAddress && (
-                  <div className="mt-1 pt-1 border-t border-amber-200 text-amber-700">
-                    Destinataire : {shippingAddress.first_name} {shippingAddress.last_name}
-                  </div>
-                )}
-              </div>
-            )}
+            {isPickup && (() => {
+              // NB: pickupPoint.Address est un objet { Streetname1, PostalCode, City } — pas une string
+              const ppName = typeof pickupPoint?.Name === "string" ? pickupPoint.Name
+                : typeof pickupPoint?.name === "string" ? pickupPoint.name : "Point relais"
+              const ppAddrObj = pickupPoint?.Address && typeof pickupPoint.Address === "object"
+                ? pickupPoint.Address : null
+              const ppStreet = ppAddrObj?.Streetname1
+                ? String(ppAddrObj.Streetname1)
+                : typeof pickupPoint?.Address === "string" ? pickupPoint.Address : null
+              const ppZip = String(ppAddrObj?.PostalCode || pickupPoint?.ZipCode || pickupPoint?.PostalCode || "")
+              const ppCity = String(ppAddrObj?.City || pickupPoint?.City || pickupPoint?.city || "")
+              return (
+                <div className="mt-1 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2 text-xs text-amber-800 leading-relaxed">
+                  <div className="font-semibold">{ppName}</div>
+                  {ppStreet && <div>{ppStreet}</div>}
+                  {(ppZip || ppCity) && <div>{[ppZip, ppCity].filter(Boolean).join(" ")}</div>}
+                  {shippingAddress && (
+                    <div className="mt-1 pt-1 border-t border-amber-200 text-amber-700">
+                      Destinataire : {shippingAddress.first_name} {shippingAddress.last_name}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
         </div>
 
