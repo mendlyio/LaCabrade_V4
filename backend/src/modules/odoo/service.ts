@@ -478,7 +478,7 @@ export default class OdooModuleService {
           productIds = [odooId]
         }
       } else {
-        // Rechercher le produit par SKU (default_code)
+        // 1ère tentative : produits actifs uniquement
         productIds = await this.client.request("call", {
           service: "object",
           method: "execute_kw",
@@ -492,6 +492,23 @@ export default class OdooModuleService {
             { limit: 1 },
           ],
         })
+
+        // 2ème tentative : inclure les produits archivés
+        if (!productIds.length) {
+          productIds = await this.client.request("call", {
+            service: "object",
+            method: "execute_kw",
+            args: [
+              this.options.dbName,
+              this.uid,
+              this.options.apiKey,
+              "product.product",
+              "search",
+              [[["default_code", "=", sku]]],
+              { limit: 1, context: { active_test: false } },
+            ],
+          })
+        }
       }
 
       if (!productIds.length) {

@@ -371,12 +371,14 @@ export default class BpostModuleService {
     pickupPointId?: string
     weightGrams?: number
     reference?: string
-  }): Promise<{ shipmentId: string; labelUrl?: string; trackingNumber?: string; clientReference?: string }> {
-    // Schéma simplifié; adapter selon contrat Bpost
+  }): Promise<{ shipmentId: string; labelUrl?: string; labelData?: string; trackingNumber?: string; clientReference?: string }> {
     await this.ensureToken()
 
-    const shipment = {
-      ClientReference: input.reference || input.orderId,
+    const clientRef = input.reference || input.orderId
+    const countryCode = (input.recipient.address.country_code || "BE").toUpperCase()
+
+    const shipment: Record<string, any> = {
+      ClientReference: clientRef,
       Recipient: {
         Name: input.recipient.name,
         Email: input.recipient.email,
@@ -386,7 +388,7 @@ export default class BpostModuleService {
           Streetname2: input.recipient.address.address_2 || "",
           PostalCode: input.recipient.address.postal_code,
           City: input.recipient.address.city,
-          Country: input.recipient.address.country_code,
+          Country: countryCode,
         },
       },
       Delivery: input.pickupPointId
@@ -397,15 +399,57 @@ export default class BpostModuleService {
       },
     }
 
-    const { response } = await this.sendToApi<any>({ method: "POST", endpoint: "/shipments", data: { Shipment: [shipment] } })
-    console.log(`[Bpost] createShipment response keys:`, response ? Object.keys(response) : "null")
-    console.log(`[Bpost] createShipment full response:`, JSON.stringify(response)?.slice(0, 1000))
+    console.log(`[Bpost] createShipment payload:`, JSON.stringify({ Shipment: [shipment] }).slice(0, 1500))
 
+    const { response, rawBuffer } = await this.sendToApi<any>({
+      method: "POST",
+      endpoint: "/shipments",
+      data: { Shipment: [shipment] },
+    })
+
+    console.log(`[Bpost] createShipment response keys:`, response ? Object.keys(response) : "null")
+    console.log(`[Bpost] createShipment full response:`, JSON.stringify(response)?.slice(0, 2000))
+
+    // Certains contrats retournent un PDF directement dans la réponse shipment
+    if (rawBuffer && rawBuffer.length > 100) {
+      const buf = Buffer.from(rawBuffer)
+      if (buf.subarray(0, 5).toString("utf-8") === "%PDF-") {
+        const labelData = buf.toString("base64")
+        console.log(`[Bpost] createShipment: PDF inline reçu (${buf.length} bytes)`)
+        return {
+          shipmentId: clientRef,
+          trackingNumber: undefined,
+          clientReference: clientRef,
+          labelUrl: `data:application/pdf;base64,${labelData}`,
+          labelData,
+        }
+      }
+    }
+
+    // Extraire les infos du shipment créé
     const created = Array.isArray(response?.Shipment) ? response.Shipment[0] : response?.Shipment || response
-    const shipmentId = created?.Id || created?.ShipmentId || input.reference || input.orderId
+    const shipmentId = created?.Id || created?.ShipmentId || created?.OrderReference || clientRef
     const trackingNumber = created?.TrackingNumber || created?.TrackingCode || created?.Barcode
-    const clientReference = shipment.ClientReference
-    return { shipmentId, trackingNumber, clientReference }
+      || created?.TrackingInfo?.TrackingNumber
+
+    // Vérifier les erreurs
+    const errorInfo = this.extractErrorInfo(response) || this.extractErrorInfo(created)
+    if (errorInfo) {
+      console.warn(`[Bpost] createShipment: avertissement Bpost: ${errorInfo}`)
+    }
+
+    // Si la réponse contient déjà un label
+    const inlineLabel = this.extractPdfFromResponse(response) || this.extractPdfFromResponse(created)
+
+    console.log(`[Bpost] createShipment résultat: shipmentId=${shipmentId}, tracking=${trackingNumber || "(aucun)"}, hasLabel=${!!inlineLabel}`)
+
+    return {
+      shipmentId,
+      trackingNumber,
+      clientReference: clientRef,
+      labelUrl: inlineLabel?.labelUrl,
+      labelData: inlineLabel?.labelData,
+    }
   }
 
   async getLabel(shipmentId: string, clientReference?: string): Promise<{ labelUrl: string; labelData?: string }> {
@@ -420,116 +464,223 @@ export default class BpostModuleService {
     for (const refId of idsToTry) {
       console.log(`[Bpost] getLabel: lancement création label pour ref "${refId}"`)
 
-      // Étape 1 : POST /labels → déclenche la génération, retourne CallbackURL
-      let callbackUrl: string | null = null
-      try {
-        const { response, rawBuffer } = await this.sendToApi<any>({
-          method: "POST",
-          endpoint: "/labels",
-          data: { ClientReferenceCodeList: [refId], LabelStart: 1, LabelType: 0 },
-        })
+      // Stratégie 1 : POST /labels avec ClientReferenceCodeList
+      const result = await this.tryPostLabels(refId, errors)
+      if (result) return result
 
-        // POST /labels peut directement retourner un PDF binaire
-        if (rawBuffer && rawBuffer.length > 0) {
-          const labelData = Buffer.from(rawBuffer).toString("base64")
-          console.log(`[Bpost] getLabel(${refId}): PDF obtenu directement depuis POST /labels (${rawBuffer.length} bytes)`)
-          return { labelUrl: `data:application/pdf;base64,${labelData}`, labelData }
-        }
+      // Stratégie 2 : POST /labels avec OrderReferenceList (alternative Bpost)
+      const result2 = await this.tryPostLabelsOrderRef(refId, errors)
+      if (result2) return result2
+    }
 
-        console.log(`[Bpost] POST /labels response:`, JSON.stringify(response)?.slice(0, 1000))
-
-        callbackUrl = response?.CallbackURL || response?.CallbackUrl || response?.callbackUrl || response?.callbackURL || null
-
-        const immediate = this.extractPdfFromResponse(response)
-        if (immediate) {
-          console.log(`[Bpost] getLabel(${refId}): PDF obtenu immédiatement depuis la réponse JSON`)
-          return immediate
-        }
-      } catch (e: any) {
-        const msg = e?.message || String(e)
-        console.warn(`[Bpost] getLabel POST /labels échoué pour ref "${refId}": ${msg}`)
-        errors.push(`POST /labels "${refId}": ${msg}`)
-        continue
-      }
-
-      if (!callbackUrl) {
-        console.warn(`[Bpost] getLabel(${refId}): pas de CallbackURL dans la réponse`)
-        errors.push(`Pas de CallbackURL pour ref "${refId}"`)
-        continue
-      }
-
-      // Étape 2 : Poll GET CallbackURL jusqu'à obtenir le PDF
-      console.log(`[Bpost] getLabel: polling ${callbackUrl}`)
-      const maxAttempts = 15
-      const delayMs = 2000
-
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        await new Promise((r) => setTimeout(r, delayMs))
-
-        try {
-          const endpoint = callbackUrl.includes("/v3/")
-            ? callbackUrl.substring(callbackUrl.indexOf("/v3/") + 3)
-            : callbackUrl.startsWith("/") ? callbackUrl : `/${callbackUrl}`
-
-          const { response, rawBuffer } = await this.sendToApi<any>({
-            method: "GET",
-            endpoint,
-            rawBinary: true,
-          })
-
-          // PDF binaire direct (le cas le plus courant après polling)
-          if (rawBuffer && rawBuffer.length > 100) {
-            const buf = Buffer.from(rawBuffer)
-            const isPdf = buf.subarray(0, 5).toString("utf-8") === "%PDF-"
-            if (isPdf) {
-              const labelData = buf.toString("base64")
-              console.log(`[Bpost] getLabel(${refId}): PDF reçu au poll #${attempt} (${buf.length} bytes)`)
-              return { labelUrl: `data:application/pdf;base64,${labelData}`, labelData }
-            }
-
-            // Pas un PDF → essayer de parser comme JSON (ex: statut "pending")
-            const text = buf.toString("utf-8")
-            let parsed: any = null
-            try { parsed = JSON.parse(text) } catch { parsed = text }
-
-            const result = this.extractPdfFromResponse(parsed)
-            if (result) {
-              console.log(`[Bpost] getLabel(${refId}): PDF extrait de la réponse JSON au poll #${attempt}`)
-              return result
-            }
-
-            const status = parsed?.Status || parsed?.status
-            const errorInfo = parsed?.Error?.Info || parsed?.ErrorList?.[0]?.Info
-            if (errorInfo && !errorInfo.toLowerCase().includes("pending") && !errorInfo.toLowerCase().includes("processing")) {
-              console.error(`[Bpost] getLabel(${refId}): erreur au poll #${attempt}: ${errorInfo}`)
-              errors.push(`Poll #${attempt}: ${errorInfo}`)
-              break
-            }
-
-            console.log(`[Bpost] getLabel(${refId}): poll #${attempt}/${maxAttempts} — pas encore prêt (status: ${status || "unknown"})`)
-            continue
-          }
-
-          // Fallback: vérifier la réponse JSON
-          const result = this.extractPdfFromResponse(response)
-          if (result) {
-            console.log(`[Bpost] getLabel(${refId}): PDF extrait au poll #${attempt}`)
-            return result
-          }
-
-          console.log(`[Bpost] getLabel(${refId}): poll #${attempt}/${maxAttempts} — aucune donnée`)
-        } catch (e: any) {
-          console.warn(`[Bpost] getLabel poll #${attempt} erreur: ${e?.message}`)
-        }
-      }
-
-      console.warn(`[Bpost] getLabel(${refId}): timeout après ${maxAttempts} tentatives de polling`)
-      errors.push(`Timeout polling pour ref "${refId}" après ${maxAttempts} tentatives`)
+    // Stratégie 3 : POST /labels avec GenerateLabel=true dans le shipment même
+    // Certains contrats Bpost renvoient le label inline quand on recrée le shipment
+    // On ne re-crée pas ici, mais on tente GET /shipments/{ref}/label
+    for (const refId of idsToTry) {
+      const result = await this.tryGetLabelDirect(refId, errors)
+      if (result) return result
     }
 
     const errSummary = errors.length > 0 ? ` Détails: ${errors.join(" | ")}` : ""
     console.error(`[Bpost] getLabel: aucune étiquette obtenue (refs: ${idsToTry.join(", ")}).${errSummary}`)
     return { labelUrl: "" }
+  }
+
+  private async tryPostLabels(refId: string, errors: string[]): Promise<{ labelUrl: string; labelData?: string } | null> {
+    try {
+      const { response, rawBuffer } = await this.sendToApi<any>({
+        method: "POST",
+        endpoint: "/labels",
+        data: { ClientReferenceCodeList: [refId], LabelStart: 1, LabelType: 0 },
+      })
+
+      const pdfResult = this.handleLabelResponse(response, rawBuffer, refId, "POST /labels (ClientRef)")
+      if (pdfResult) return pdfResult
+
+      // Check for CallbackURL and poll
+      const callbackUrl = this.findCallbackUrl(response)
+      if (callbackUrl) {
+        const polled = await this.pollCallbackUrl(callbackUrl, refId, errors)
+        if (polled) return polled
+      }
+
+      // Log the full response for debugging when nothing found
+      console.warn(`[Bpost] POST /labels (ClientRef="${refId}"): ni PDF, ni CallbackURL. Réponse complète:`, JSON.stringify(response)?.slice(0, 2000))
+      const errorInfo = this.extractErrorInfo(response)
+      if (errorInfo) {
+        errors.push(`POST /labels ClientRef "${refId}": ${errorInfo}`)
+      } else {
+        errors.push(`POST /labels ClientRef "${refId}": pas de PDF ni CallbackURL`)
+      }
+    } catch (e: any) {
+      const msg = e?.message || String(e)
+      console.warn(`[Bpost] POST /labels (ClientRef) échoué pour ref "${refId}": ${msg}`)
+      errors.push(`POST /labels ClientRef "${refId}": ${msg}`)
+    }
+    return null
+  }
+
+  private async tryPostLabelsOrderRef(refId: string, errors: string[]): Promise<{ labelUrl: string; labelData?: string } | null> {
+    try {
+      // Certains contrats Bpost utilisent OrderReference au lieu de ClientReferenceCodeList
+      const { response, rawBuffer } = await this.sendToApi<any>({
+        method: "POST",
+        endpoint: "/labels",
+        data: { OrderReferenceList: [refId], LabelStart: 1, LabelType: 0 },
+      })
+
+      const pdfResult = this.handleLabelResponse(response, rawBuffer, refId, "POST /labels (OrderRef)")
+      if (pdfResult) return pdfResult
+
+      const callbackUrl = this.findCallbackUrl(response)
+      if (callbackUrl) {
+        const polled = await this.pollCallbackUrl(callbackUrl, refId, errors)
+        if (polled) return polled
+      }
+
+      const errorInfo = this.extractErrorInfo(response)
+      if (errorInfo) {
+        console.warn(`[Bpost] POST /labels (OrderRef="${refId}"): ${errorInfo}`)
+      }
+    } catch (e: any) {
+      // Silencieux — c'est un fallback
+      console.log(`[Bpost] POST /labels (OrderRef) échoué pour "${refId}": ${e?.message || e}`)
+    }
+    return null
+  }
+
+  private async tryGetLabelDirect(refId: string, errors: string[]): Promise<{ labelUrl: string; labelData?: string } | null> {
+    // Certaines versions de l'API exposent GET /labels/{ref}
+    const endpoints = [`/labels/${refId}`, `/shipments/${refId}/label`]
+    for (const endpoint of endpoints) {
+      try {
+        const { response, rawBuffer } = await this.sendToApi<any>({
+          method: "GET",
+          endpoint,
+          rawBinary: true,
+        })
+
+        const pdfResult = this.handleLabelResponse(response, rawBuffer, refId, `GET ${endpoint}`)
+        if (pdfResult) return pdfResult
+      } catch (e: any) {
+        // Expected to fail for most endpoints — silencieux
+        console.log(`[Bpost] GET ${endpoint} échoué: ${e?.message || e}`)
+      }
+    }
+    return null
+  }
+
+  private handleLabelResponse(
+    response: any,
+    rawBuffer: Buffer | undefined,
+    refId: string,
+    source: string
+  ): { labelUrl: string; labelData?: string } | null {
+    // PDF binaire direct
+    if (rawBuffer && rawBuffer.length > 100) {
+      const buf = Buffer.from(rawBuffer)
+      const isPdf = buf.subarray(0, 5).toString("utf-8") === "%PDF-"
+      if (isPdf) {
+        const labelData = buf.toString("base64")
+        console.log(`[Bpost] getLabel(${refId}): PDF obtenu via ${source} (${buf.length} bytes)`)
+        return { labelUrl: `data:application/pdf;base64,${labelData}`, labelData }
+      }
+
+      // Raw buffer qui n'est pas un PDF — essayer JSON
+      const text = buf.toString("utf-8")
+      try {
+        const parsed = JSON.parse(text)
+        const extracted = this.extractPdfFromResponse(parsed)
+        if (extracted) {
+          console.log(`[Bpost] getLabel(${refId}): PDF extrait du JSON via ${source}`)
+          return extracted
+        }
+      } catch {}
+    }
+
+    // Réponse JSON directe
+    const extracted = this.extractPdfFromResponse(response)
+    if (extracted) {
+      console.log(`[Bpost] getLabel(${refId}): PDF extrait de la réponse via ${source}`)
+      return extracted
+    }
+
+    return null
+  }
+
+  private findCallbackUrl(response: any): string | null {
+    if (!response || typeof response !== "object") return null
+    return response.CallbackURL || response.CallbackUrl
+      || response.callbackUrl || response.callbackURL
+      || response.Callback || response.callback
+      || null
+  }
+
+  private extractErrorInfo(response: any): string | null {
+    if (!response || typeof response !== "object") return null
+    const errorList = response.ErrorList || response.errorList || response.Errors || response.errors
+    if (Array.isArray(errorList) && errorList.length > 0) {
+      return errorList.map((e: any) => e.Info || e.Message || e.message || e.info || JSON.stringify(e)).join("; ")
+    }
+    const error = response.Error || response.error
+    if (error) {
+      return typeof error === "string" ? error : (error.Info || error.Message || error.message || JSON.stringify(error))
+    }
+    return null
+  }
+
+  private async pollCallbackUrl(
+    callbackUrl: string,
+    refId: string,
+    errors: string[]
+  ): Promise<{ labelUrl: string; labelData?: string } | null> {
+    console.log(`[Bpost] getLabel: polling ${callbackUrl}`)
+    const maxAttempts = 15
+    const delayMs = 2000
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      await new Promise((r) => setTimeout(r, delayMs))
+
+      try {
+        const endpoint = callbackUrl.includes("/v3/")
+          ? callbackUrl.substring(callbackUrl.indexOf("/v3/") + 3)
+          : callbackUrl.startsWith("/") ? callbackUrl : `/${callbackUrl}`
+
+        const { response, rawBuffer } = await this.sendToApi<any>({
+          method: "GET",
+          endpoint,
+          rawBinary: true,
+        })
+
+        const pdfResult = this.handleLabelResponse(response, rawBuffer, refId, `poll #${attempt}`)
+        if (pdfResult) return pdfResult
+
+        // Pas un PDF → essayer de parser pour statut
+        if (rawBuffer && rawBuffer.length > 0) {
+          const text = Buffer.from(rawBuffer).toString("utf-8")
+          let parsed: any = null
+          try { parsed = JSON.parse(text) } catch { parsed = text }
+
+          const errorInfo = typeof parsed === "object" ? this.extractErrorInfo(parsed) : null
+          if (errorInfo && !errorInfo.toLowerCase().includes("pending") && !errorInfo.toLowerCase().includes("processing")) {
+            console.error(`[Bpost] getLabel(${refId}): erreur au poll #${attempt}: ${errorInfo}`)
+            errors.push(`Poll #${attempt}: ${errorInfo}`)
+            break
+          }
+
+          const status = parsed?.Status || parsed?.status
+          console.log(`[Bpost] getLabel(${refId}): poll #${attempt}/${maxAttempts} — pas encore prêt (status: ${status || "unknown"})`)
+        } else {
+          console.log(`[Bpost] getLabel(${refId}): poll #${attempt}/${maxAttempts} — aucune donnée`)
+        }
+      } catch (e: any) {
+        console.warn(`[Bpost] getLabel poll #${attempt} erreur: ${e?.message}`)
+      }
+    }
+
+    console.warn(`[Bpost] getLabel(${refId}): timeout après ${maxAttempts} tentatives de polling`)
+    errors.push(`Timeout polling pour ref "${refId}" après ${maxAttempts} tentatives`)
+    return null
   }
 
   private extractPdfFromResponse(response: any): { labelUrl: string; labelData: string } | null {

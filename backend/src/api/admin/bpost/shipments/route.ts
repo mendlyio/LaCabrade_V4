@@ -127,20 +127,22 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       reference,
     })
 
-    // Récupérer l'étiquette PDF
-    let labelUrl = ""
-    let labelData: string | undefined
-    try {
-      if (result.shipmentId) {
-        const labelResult = await svc.getLabel(result.shipmentId, result.clientReference)
-        labelUrl = labelResult.labelUrl || ""
-        labelData = labelResult.labelData
+    // Récupérer l'étiquette PDF (peut déjà être dans le résultat du createShipment)
+    let labelUrl = result.labelUrl || ""
+    let labelData: string | undefined = result.labelData
+    if (!labelData && !labelUrl) {
+      try {
+        if (result.shipmentId) {
+          const labelResult = await svc.getLabel(result.shipmentId, result.clientReference)
+          labelUrl = labelResult.labelUrl || ""
+          labelData = labelResult.labelData
+        }
+      } catch (e: any) {
+        console.warn("[Bpost] Impossible de récupérer l'étiquette:", e?.message)
       }
-    } catch (e: any) {
-      console.warn("[Bpost] Impossible de récupérer l'étiquette:", e?.message)
     }
 
-    const finalLabelUrl = labelUrl || result.labelUrl || ""
+    const finalLabelUrl = labelUrl || ""
 
     // Sauvegarder dans les métadonnées de la commande
     const newMetadata: Record<string, any> = {
