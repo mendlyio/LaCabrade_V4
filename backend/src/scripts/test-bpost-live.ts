@@ -169,18 +169,21 @@ try {
 
   if (labelData && labelData.length > 100) {
     ok(`PDF obtenu (base64)`, `${labelData.length} chars`)
-    // Vérifier que c'est vraiment un PDF
     const decoded = Buffer.from(labelData, "base64")
     if (decoded.subarray(0, 5).toString("utf-8") === "%PDF-") {
       ok("Magic bytes %PDF- vérifiés", `${decoded.length} bytes`)
+      // Sauvegarder le PDF pour inspection visuelle
+      const { writeFileSync } = await import("fs")
+      const pdfPath = `/tmp/bpost-label-test.pdf`
+      writeFileSync(pdfPath, decoded)
+      console.log(`  📄 PDF sauvegardé : ${pdfPath} → ouvrez-le pour voir si un barcode est présent`)
     } else {
       fail("Le labelData n'est pas un PDF valide", decoded.subarray(0, 20).toString("utf-8"))
     }
-    // Afficher le tracking
     if (trackingFromLabel) {
       ok("TrackingId extrait du label", trackingFromLabel)
     } else {
-      console.log("  ⚠️  Pas de TrackingId dans la réponse label (email ne sera pas envoyé)")
+      console.log("  ⚠️  TrackingId absent dans la réponse JSON")
     }
   } else if (labelUrl && labelUrl.startsWith("http")) {
     ok("URL étiquette obtenue", labelUrl.slice(0, 80) + "...")
