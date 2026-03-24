@@ -171,18 +171,21 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
     const updated = await orderService.updateOrders([{ id: order_id, metadata: newMetadata }])
 
-    // Envoyer l'email de suivi au client — toujours envoyé si demandé, même sans tracking.
-    // Le template affiche le lien de suivi uniquement si trackingNumber est présent.
+    // Envoyer l'email uniquement si l'étiquette ET le tracking sont obtenus
+    const labelReady = !!(labelData || labelUrl)
     let emailSent = false
-    if (send_email) {
+    if (send_email && labelReady && finalTracking) {
       try {
-        await sendTrackingEmail(req, order, finalTracking || "", finalLabelUrl)
+        await sendTrackingEmail(req, order, finalTracking, finalLabelUrl)
         emailSent = true
-        console.log(`[Bpost] ✅ Email de suivi envoyé à ${order.email} — tracking: ${finalTracking || "(absent)"}`)
+        console.log(`[Bpost] ✅ Email de suivi envoyé à ${order.email} — tracking: ${finalTracking}`)
       } catch (emailErr: any) {
         console.error("[Bpost] ❌ Erreur envoi email de suivi:", emailErr?.message)
-        // Non bloquant
       }
+    } else if (send_email) {
+      console.warn(
+        `[Bpost] ⚠️ Email NON envoyé — label: ${labelReady ? "OK" : "ABSENT"}, tracking: ${finalTracking || "ABSENT"}`
+      )
     }
 
     return res.json({

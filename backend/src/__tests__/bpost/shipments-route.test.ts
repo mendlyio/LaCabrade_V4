@@ -174,7 +174,7 @@ describe("Flux nominal — shipment + label + email", () => {
     expect(res._body.email_sent).toBe(true)
   })
 
-  it("email envoyé même sans tracking number (template gère ce cas)", async () => {
+  it("email NON envoyé si pas de tracking number (même avec label)", async () => {
     mockCreateShipment.mockResolvedValue({
       shipmentId: "order_test123",
       clientReference: "order_test123",
@@ -182,22 +182,36 @@ describe("Flux nominal — shipment + label + email", () => {
     mockGetLabel.mockResolvedValue({
       labelUrl: `data:application/pdf;base64,${FAKE_PDF_B64}`,
       labelData: FAKE_PDF_B64,
-      trackingNumber: undefined, // Bpost n'a pas fourni de tracking
+      trackingNumber: undefined, // pas de tracking
     })
 
     const req = makeRequest({ order_id: "order_test123", send_email: true })
     const res = makeResponse()
     await POST(req, res)
 
-    // Email quand même envoyé
-    expect(mockCreateNotifications).toHaveBeenCalledTimes(1)
-
-    // tracking_numbers doit être vide (pas [""] qui serait interprété comme un tracking)
-    const notifData = mockCreateNotifications.mock.calls[0][0].data
-    expect(notifData.fulfillment.tracking_numbers).toEqual([])
-
+    // Email pas envoyé car pas de tracking
+    expect(mockCreateNotifications).not.toHaveBeenCalled()
     expect(res._body.success).toBe(true)
-    expect(res._body.email_sent).toBe(true)
+    expect(res._body.email_sent).toBe(false)
+  })
+
+  it("email NON envoyé si pas de label (même avec tracking)", async () => {
+    mockCreateShipment.mockResolvedValue({
+      shipmentId: "order_test123",
+      clientReference: "order_test123",
+    })
+    mockGetLabel.mockResolvedValue({
+      labelUrl: "", // pas de label
+      labelData: undefined,
+      trackingNumber: "323456789BE",
+    })
+
+    const req = makeRequest({ order_id: "order_test123", send_email: true })
+    const res = makeResponse()
+    await POST(req, res)
+
+    expect(mockCreateNotifications).not.toHaveBeenCalled()
+    expect(res._body.email_sent).toBe(false)
   })
 
   it("URL de tracking Bpost correcte dans l'email (track.bpost.cloud)", async () => {
@@ -222,15 +236,16 @@ describe("Flux nominal — shipment + label + email", () => {
     expect(notifData.fulfillment.data.public_tracking_url).toContain("lang=fr")
   })
 
-  it("pas d'URL de tracking si pas de tracking number", async () => {
+  it("pas de tracking + pas de label → email non envoyé du tout", async () => {
     mockCreateShipment.mockResolvedValue({ shipmentId: "order_test123", clientReference: "order_test123" })
     mockGetLabel.mockResolvedValue({ labelUrl: "", labelData: undefined, trackingNumber: undefined })
 
     const req = makeRequest({ order_id: "order_test123", send_email: true })
-    await POST(req, makeResponse())
+    const res = makeResponse()
+    await POST(req, res)
 
-    const notifData = mockCreateNotifications.mock.calls[0][0].data
-    expect(notifData.fulfillment.data.public_tracking_url).toBe("")
+    expect(mockCreateNotifications).not.toHaveBeenCalled()
+    expect(res._body.email_sent).toBe(false)
   })
 
   it("PDF base64 stocké dans bpost_label_data (évite re-auth Bpost)", async () => {
@@ -370,17 +385,17 @@ describe("Gestion des erreurs", () => {
     expect(res._body.email_sent).toBe(false)  // email échoué mais pas bloquant
   })
 
-  it("label échec non bloquant — succès sans PDF", async () => {
+  it("label échec : success=true mais email_sent=false (email non envoyé sans étiquette)", async () => {
     mockCreateShipment.mockResolvedValue({ shipmentId: "order_test123", clientReference: "order_test123" })
     mockGetLabel.mockRejectedValue(new Error("Label generation failed"))
 
-    const req = makeRequest({ order_id: "order_test123" })
+    const req = makeRequest({ order_id: "order_test123", send_email: true })
     const res = makeResponse()
     await POST(req, res)
 
-    // Le shipment est quand même considéré comme un succès
     expect(res._body.success).toBe(true)
-    // Label vide dans les métadonnées
+    expect(res._body.email_sent).toBe(false) // pas d'étiquette → pas d'email
+    expect(mockCreateNotifications).not.toHaveBeenCalled()
     const savedMeta = mockUpdateOrders.mock.calls[0][0][0].metadata
     expect(savedMeta.bpost_label_url).toBe("")
   })
