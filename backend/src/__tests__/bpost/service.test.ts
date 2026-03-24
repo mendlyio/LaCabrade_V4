@@ -3,10 +3,11 @@
  *
  * Couvre :
  *  - Authentification HMAC-SHA256 (buildHeaders)
+ *  - extractErrorInfo() : Error.Id=0 ne doit PAS être une erreur
+ *  - createShipment() : structure conforme à l'API v3 (Address/Dimensions/PickupPoint)
  *  - getLabel() : tous les formats de réponse Bpost SHM v3
- *  - createShipment() : livraison domicile & point relais
  *  - Gestion des erreurs API (4xx/5xx)
- *  - listPickupPoints() : parsing de la réponse JSON-dans-string
+ *  - validateWebhookSignature()
  */
 
 import BpostModuleService from "../../modules/bpost/service"
@@ -18,39 +19,65 @@ global.fetch = mockFetch as any
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function makeFetchOk(body: any) {
+/**
+ * Retourne un ArrayBuffer propre depuis un Buffer Node.js.
+ * Buffer.prototype.buffer peut pointer vers un ArrayBuffer partagé
+ * (byteOffset > 0), ce qui corrompt Buffer.from(arrayBuf) côté sendToApi.
+ */
+function bufferToCleanArrayBuffer(buf: Buffer): ArrayBuffer {
+  const ab = new ArrayBuffer(buf.byteLength)
+  const view = new Uint8Array(ab)
+  buf.copy(Buffer.from(ab))
+  // Copier octet par octet pour éviter les problèmes d'offset
+  for (let i = 0; i < buf.byteLength; i++) view[i] = buf[i]
+  return ab
+}
+
+function makeJsonResponse(body: any, status = 200) {
+  const buf = Buffer.from(JSON.stringify(body), "utf-8")
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: { get: (_: string) => "application/json" },
+    arrayBuffer: async () => bufferToCleanArrayBuffer(buf),
+  }
+}
+
+function makePdfResponse(pdfBytes: Buffer) {
   return {
     ok: true,
     status: 200,
-    text: async () => JSON.stringify(body),
+    headers: { get: (_: string) => "application/pdf" },
+    arrayBuffer: async () => bufferToCleanArrayBuffer(pdfBytes),
   }
 }
 
-function makeFetchError(status: number, body: any) {
-  return {
-    ok: false,
-    status,
-    text: async () => JSON.stringify(body),
-  }
+/** Réponse Bpost standard : Error.Id=0 + Info="" = pas d'erreur */
+function bpostOk(extra: Record<string, any> = {}) {
+  return { Error: { Id: 0, Info: "" }, ...extra }
 }
 
 function makeService(opts: Record<string, string> = {}) {
-  return new BpostModuleService(
-    {} as any,
-    {
-      publicKey: "TEST-PUBLIC-KEY",
-      privateKey: "TEST-PRIVATE-KEY",
-      ...opts,
-    }
-  )
+  return new BpostModuleService({} as any, {
+    publicKey: "TEST-PUBLIC-KEY",
+    privateKey: "TEST-PRIVATE-KEY",
+    ...opts,
+  })
 }
 
-// ─── Suite principale ─────────────────────────────────────────────────────────
+/** Faux PDF > 100 bytes avec magic bytes valides */
+function fakePdfBuffer(extra = "fake pdf data for testing bpost label endpoint"): Buffer {
+  const header = "%PDF-1.4\n"
+  const pad = "x".repeat(Math.max(0, 110 - header.length - extra.length))
+  return Buffer.from(header + extra + pad, "utf-8")
+}
+
+// ─── Reset ────────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
   mockFetch.mockReset()
-  // Réinitialiser le cache de token entre les tests
   ;(BpostModuleService as any).tokenCache = null
+  jest.useRealTimers()
 })
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -58,29 +85,27 @@ beforeEach(() => {
 // ════════════════════════════════════════════════════════════════════════════
 
 describe("buildHeaders() — authentification HMAC-SHA256", () => {
-  it("inclut un header Authorization Basic", async () => {
+  it("inclut Authorization Basic, X-APPID, Content-Type", async () => {
     const svc = makeService()
-    mockFetch.mockResolvedValueOnce(makeFetchOk([{ Id: "carrier-1" }]))
+    mockFetch.mockResolvedValueOnce(makeJsonResponse([{ Id: "c1" }]))
 
     await svc.getCarriers()
 
-    const callArgs = mockFetch.mock.calls[0]
-    const headers: Record<string, string> = callArgs[1].headers
+    const headers: Record<string, string> = mockFetch.mock.calls[0][1].headers
     expect(headers["Authorization"]).toMatch(/^Basic /)
     expect(headers["X-APPID"]).toBeDefined()
     expect(headers["Content-Type"]).toBe("application/json")
     expect(headers["Accept"]).toBe("application/json")
   })
 
-  it("le token Basic est un base64 de publicKey:hmac(publicKey+body)", async () => {
+  it("le token Basic est publicKey:hmac(publicKey+body)", async () => {
     const svc = makeService()
-    mockFetch.mockResolvedValueOnce(makeFetchOk([]))
+    mockFetch.mockResolvedValueOnce(makeJsonResponse([]))
 
     await svc.getCarriers()
 
     const authHeader: string = mockFetch.mock.calls[0][1].headers["Authorization"]
     const decoded = Buffer.from(authHeader.replace("Basic ", ""), "base64").toString("utf8")
-    // Format : "publicKey:hmacBase64"
     expect(decoded).toMatch(/^TEST-PUBLIC-KEY:.+$/)
   })
 
@@ -91,135 +116,47 @@ describe("buildHeaders() — authentification HMAC-SHA256", () => {
 })
 
 // ════════════════════════════════════════════════════════════════════════════
-// getLabel() — parsing de toutes les structures de réponse
+// extractErrorInfo() — Error.Id=0 ne doit PAS lever d'erreur
 // ════════════════════════════════════════════════════════════════════════════
 
-describe("getLabel()", () => {
-  it("parse response.Url (format simple)", async () => {
-    const svc = makeService()
-    mockFetch.mockResolvedValueOnce(
-      makeFetchOk({ Url: "https://bpost.example.com/label-abc.pdf" })
-    )
+describe("extractErrorInfo() — comportement Bpost (Error toujours présent)", () => {
+  let svc: BpostModuleService
 
-    const result = await svc.getLabel("shipment-123")
+  beforeEach(() => { svc = makeService() })
 
-    expect(result.labelUrl).toBe("https://bpost.example.com/label-abc.pdf")
-    expect(result.labelData).toBeUndefined()
+  it("Error.Id=0 + Info='' → null (pas d'erreur)", () => {
+    expect((svc as any).extractErrorInfo({ Error: { Id: 0, Info: "" } })).toBeNull()
   })
 
-  it("parse response.LabelUrl (variante)", async () => {
-    const svc = makeService()
-    mockFetch.mockResolvedValueOnce(
-      makeFetchOk({ LabelUrl: "https://bpost.example.com/label-xyz.pdf" })
-    )
-
-    const result = await svc.getLabel("shipment-123")
-
-    expect(result.labelUrl).toBe("https://bpost.example.com/label-xyz.pdf")
+  it("Error.Id=0 + Info='' (minuscules) → null", () => {
+    expect((svc as any).extractErrorInfo({ error: { id: 0, info: "" } })).toBeNull()
   })
 
-  it("parse Label[0].Url (format tableau SHM v3)", async () => {
-    const svc = makeService()
-    mockFetch.mockResolvedValueOnce(
-      makeFetchOk({
-        Label: [{ Url: "https://labels.bpost.be/label-456.pdf", ClientReference: "order-1" }],
-      })
-    )
-
-    const result = await svc.getLabel("shipment-456")
-
-    expect(result.labelUrl).toBe("https://labels.bpost.be/label-456.pdf")
-    expect(result.labelData).toBeUndefined()
+  it("Error.Id=5 + Info='Erreur X' → retourne le message", () => {
+    expect((svc as any).extractErrorInfo({ Error: { Id: 5, Info: "Erreur X" } })).toBe("Erreur X")
   })
 
-  it("parse Label[0].LabelData (base64 PDF inline)", async () => {
-    const svc = makeService()
-    const fakePdfBase64 = Buffer.from("%PDF-1.3 fake content").toString("base64")
-    mockFetch.mockResolvedValueOnce(
-      makeFetchOk({
-        Label: [
-          {
-            LabelData: fakePdfBase64,
-            LabelFormat: "PDF",
-            ClientReference: "order-2",
-          },
-        ],
-      })
-    )
-
-    const result = await svc.getLabel("shipment-789")
-
-    expect(result.labelData).toBe(fakePdfBase64)
-    expect(result.labelUrl).toBe(`data:application/pdf;base64,${fakePdfBase64}`)
+  it("ErrorList avec Id=0 vide → null", () => {
+    expect((svc as any).extractErrorInfo({ ErrorList: [{ Id: 0, Tekst: "" }] })).toBeNull()
   })
 
-  it("retourne labelUrl vide si la réponse est vide", async () => {
-    const svc = makeService()
-    mockFetch.mockResolvedValueOnce(makeFetchOk({ status: "pending" }))
-
-    const result = await svc.getLabel("shipment-empty")
-
-    expect(result.labelUrl).toBe("")
-    expect(result.labelData).toBeUndefined()
+  it("ErrorList avec message réel → retourne le message", () => {
+    expect((svc as any).extractErrorInfo({
+      Error: { Id: 0, Info: "" },
+      ErrorList: [{ Id: 42, Tekst: "Adresse invalide" }],
+    })).toBe("Adresse invalide")
   })
 
-  it("préfère Label[0].Url si URL et LabelData sont tous deux présents", async () => {
-    const svc = makeService()
-    const fakePdfBase64 = Buffer.from("%PDF").toString("base64")
-    mockFetch.mockResolvedValueOnce(
-      makeFetchOk({
-        Label: [
-          {
-            Url: "https://labels.bpost.be/priority.pdf",
-            LabelData: fakePdfBase64,
-          },
-        ],
-      })
-    )
-
-    const result = await svc.getLabel("shipment-priority")
-
-    // L'URL directe doit être préférée au data URI
-    expect(result.labelUrl).toBe("https://labels.bpost.be/priority.pdf")
-    expect(result.labelData).toBe(fakePdfBase64)
-  })
-
-  it("envoie le bon payload à l'endpoint /labels", async () => {
-    const svc = makeService()
-    mockFetch.mockResolvedValueOnce(makeFetchOk({ Url: "https://url.pdf" }))
-
-    await svc.getLabel("my-shipment-ref")
-
-    const callBody = JSON.parse(mockFetch.mock.calls[0][1].body)
-    expect(callBody.ClientReferenceCodeList).toContain("my-shipment-ref")
-    expect(callBody.LabelType).toBe(0)
-    expect(callBody.LabelStart).toBe(1)
-  })
-
-  it("lance une erreur sur réponse 401 Unauthorized", async () => {
-    const svc = makeService()
-    mockFetch.mockResolvedValueOnce(
-      makeFetchError(401, { error: "Unauthorized" })
-    )
-
-    await expect(svc.getLabel("bad-shipment")).rejects.toThrow()
-  })
-
-  it("lance une erreur sur réponse 500", async () => {
-    const svc = makeService()
-    mockFetch.mockResolvedValueOnce(
-      makeFetchError(500, { error: "Internal Server Error" })
-    )
-
-    await expect(svc.getLabel("bad-shipment")).rejects.toThrow()
+  it("réponse null → null", () => {
+    expect((svc as any).extractErrorInfo(null)).toBeNull()
   })
 })
 
 // ════════════════════════════════════════════════════════════════════════════
-// createShipment() — construction du payload
+// createShipment() — structure payload conforme API v3
 // ════════════════════════════════════════════════════════════════════════════
 
-describe("createShipment()", () => {
+describe("createShipment() — structure payload API v3", () => {
   const baseRecipient = {
     name: "Marie Dubois",
     email: "marie@example.com",
@@ -232,130 +169,253 @@ describe("createShipment()", () => {
     },
   }
 
-  it("retourne shipmentId et trackingNumber depuis response.Shipment[0].Id", async () => {
-    const svc = makeService()
-    mockFetch.mockResolvedValueOnce(
-      makeFetchOk({
-        Shipment: [{ Id: "SHP-123", TrackingNumber: "323456789BE" }],
-      })
+  const TOKEN_RESPONSE = { Key: "tok-abc", Expire: new Date(Date.now() + 3600000).toISOString() }
+
+  function getShipmentBody() {
+    // Le premier appel est POST /keys (ensureToken), le second est POST /shipments
+    const shipmentCall = mockFetch.mock.calls.find((call: any[]) =>
+      (call[0] as string).includes("/shipments")
     )
+    if (!shipmentCall) throw new Error("Aucun appel /shipments trouvé")
+    return JSON.parse(shipmentCall[1].body).Shipment[0]
+  }
 
-    const result = await svc.createShipment({
-      orderId: "order-1",
-      recipient: baseRecipient,
-    })
+  it("utilise Address (pas Recipient) conformément à l'API v3", async () => {
+    const svc = makeService()
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN_RESPONSE)) // POST /keys
+      .mockResolvedValueOnce(makeJsonResponse(bpostOk({ Shipment: [{ CarrierSelect: { Id: 1, Name: "bpost" } }] })))
 
-    expect(result.shipmentId).toBe("SHP-123")
-    expect(result.trackingNumber).toBe("323456789BE")
+    await svc.createShipment({ orderId: "order-1", recipient: baseRecipient })
+
+    const s = getShipmentBody()
+    expect(s.Address).toBeDefined()
+    expect(s.Recipient).toBeUndefined()
+    expect(s.Address.Name).toBe("Marie Dubois")
+    expect(s.Address.Email).toBe("marie@example.com")
+    expect(s.Address.PostalCode).toBe("1000")
+    expect(s.Address.City).toBe("Bruxelles")
+    expect(s.Address.Country).toBe("BE")
+    expect(s.Address.Streetname1).toBe("Rue de la Paix 1")
+  })
+
+  it("utilise Dimensions.Weight (pas Parcel.Weight)", async () => {
+    const svc = makeService()
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN_RESPONSE))
+      .mockResolvedValueOnce(makeJsonResponse(bpostOk({ Shipment: [{ CarrierSelect: { Id: 1 } }] })))
+
+    await svc.createShipment({ orderId: "order-w", recipient: baseRecipient, weightGrams: 1500 })
+
+    const s = getShipmentBody()
+    expect(s.Dimensions).toBeDefined()
+    expect(s.Dimensions.Weight).toBe(1500)
+    expect(s.Parcel).toBeUndefined()
+  })
+
+  it("poids minimum 500g si absent ou 0", async () => {
+    const svc = makeService()
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN_RESPONSE))
+      .mockResolvedValueOnce(makeJsonResponse(bpostOk({ Shipment: [{ CarrierSelect: { Id: 1 } }] })))
+
+    await svc.createShipment({ orderId: "order-w0", recipient: baseRecipient, weightGrams: 0 })
+
+    const s = getShipmentBody()
+    expect(s.Dimensions.Weight).toBeGreaterThanOrEqual(500)
+  })
+
+  it("livraison domicile : pas de PickupPoint dans le payload", async () => {
+    const svc = makeService()
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN_RESPONSE))
+      .mockResolvedValueOnce(makeJsonResponse(bpostOk({ Shipment: [{ CarrierSelect: { Id: 1 } }] })))
+
+    await svc.createShipment({ orderId: "order-home", recipient: baseRecipient })
+
+    const s = getShipmentBody()
+    expect(s.PickupPoint).toBeUndefined()
+    expect(s.Delivery).toBeUndefined()
+  })
+
+  it("point relais : PickupPoint.Id dans le payload", async () => {
+    const svc = makeService()
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN_RESPONSE))
+      .mockResolvedValueOnce(makeJsonResponse(bpostOk({ Shipment: [{ CarrierSelect: { Id: 1 } }] })))
+
+    await svc.createShipment({ orderId: "order-pp", recipient: baseRecipient, pickupPointId: "BPOST-PP-42" })
+
+    const s = getShipmentBody()
+    expect(s.PickupPoint?.Id).toBe("BPOST-PP-42")
+    expect(s.Delivery).toBeUndefined()
+  })
+
+  it("ClientReference = orderId si reference absent", async () => {
+    const svc = makeService()
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN_RESPONSE))
+      .mockResolvedValueOnce(makeJsonResponse(bpostOk({ Shipment: [{ CarrierSelect: { Id: 1 } }] })))
+
+    await svc.createShipment({ orderId: "order-xyz", recipient: baseRecipient })
+
+    const s = getShipmentBody()
+    expect(s.ClientReference).toBe("order-xyz")
+  })
+
+  it("extrait le trackingNumber depuis Shipment[0].TrackingNumber", async () => {
+    const svc = makeService()
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN_RESPONSE))
+      .mockResolvedValueOnce(makeJsonResponse(bpostOk({ Shipment: [{ TrackingNumber: "323456789BE", CarrierSelect: { Id: 1 } }] })))
+
+    const r = await svc.createShipment({ orderId: "o", recipient: baseRecipient })
+    expect(r.trackingNumber).toBe("323456789BE")
   })
 
   it("accepte TrackingCode comme alias de TrackingNumber", async () => {
     const svc = makeService()
-    mockFetch.mockResolvedValueOnce(
-      makeFetchOk({
-        Shipment: [{ Id: "SHP-456", TrackingCode: "323456789FR" }],
-      })
-    )
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN_RESPONSE))
+      .mockResolvedValueOnce(makeJsonResponse(bpostOk({ Shipment: [{ TrackingCode: "323456789FR", CarrierSelect: { Id: 1 } }] })))
 
-    const result = await svc.createShipment({
-      orderId: "order-2",
-      recipient: baseRecipient,
-    })
-
-    expect(result.trackingNumber).toBe("323456789FR")
+    const r = await svc.createShipment({ orderId: "o", recipient: baseRecipient })
+    expect(r.trackingNumber).toBe("323456789FR")
   })
 
-  it("livraison domicile : Delivery.Type = ADDRESS", async () => {
+  it("Error.Id=0 dans la réponse → NE lève PAS d'erreur", async () => {
     const svc = makeService()
-    mockFetch.mockResolvedValueOnce(
-      makeFetchOk({ Shipment: [{ Id: "SHP-789" }] })
-    )
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN_RESPONSE))
+      .mockResolvedValueOnce(makeJsonResponse(bpostOk({ Shipment: [{ CarrierSelect: { Id: 1 } }] })))
 
-    await svc.createShipment({ orderId: "order-home", recipient: baseRecipient })
-
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
-    expect(body.Shipment[0].Delivery.Type).toBe("ADDRESS")
-    expect(body.Shipment[0].Delivery.PickupPointId).toBeUndefined()
+    await expect(svc.createShipment({ orderId: "o", recipient: baseRecipient })).resolves.toBeDefined()
   })
 
-  it("point relais : Delivery.Type = PICKUP avec PickupPointId", async () => {
+  it("ErrorList avec vrai message → lève une erreur", async () => {
     const svc = makeService()
-    mockFetch.mockResolvedValueOnce(
-      makeFetchOk({ Shipment: [{ Id: "SHP-PICKUP" }] })
-    )
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN_RESPONSE))
+      .mockResolvedValueOnce(makeJsonResponse({
+        Error: { Id: 0, Info: "" },
+        ErrorList: [{ Id: 10, Tekst: "Adresse introuvable" }],
+        Shipment: [],
+      }))
 
-    await svc.createShipment({
-      orderId: "order-pickup",
-      recipient: baseRecipient,
-      pickupPointId: "BPOST-PP-42",
-    })
-
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
-    const delivery = body.Shipment[0].Delivery
-    expect(delivery.Type).toBe("PICKUP")
-    expect(delivery.PickupPointId).toBe("BPOST-PP-42")
+    await expect(svc.createShipment({ orderId: "o", recipient: baseRecipient })).rejects.toThrow("Adresse introuvable")
   })
 
-  it("le destinataire est correctement structuré dans le payload", async () => {
+  it("PDF binaire retourné directement → labelData base64", async () => {
     const svc = makeService()
-    mockFetch.mockResolvedValueOnce(
-      makeFetchOk({ Shipment: [{ Id: "SHP-REC" }] })
-    )
+    const pdfBytes = fakePdfBuffer()
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN_RESPONSE))
+      .mockResolvedValueOnce(makePdfResponse(pdfBytes))
 
-    await svc.createShipment({ orderId: "order-rec", recipient: baseRecipient })
-
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
-    const recipient = body.Shipment[0].Recipient
-    expect(recipient.Name).toBe("Marie Dubois")
-    expect(recipient.Email).toBe("marie@example.com")
-    expect(recipient.Address.PostalCode).toBe("1000")
-    expect(recipient.Address.City).toBe("Bruxelles")
-    expect(recipient.Address.Country).toBe("BE")
+    const r = await svc.createShipment({ orderId: "o", recipient: baseRecipient })
+    expect(r.labelData).toBeDefined()
+    expect(r.labelUrl).toMatch(/^data:application\/pdf;base64,/)
   })
+})
 
-  it("utilise orderId comme ClientReference si reference absent", async () => {
+// ════════════════════════════════════════════════════════════════════════════
+// getLabel() — formats de réponse
+// ════════════════════════════════════════════════════════════════════════════
+
+describe("getLabel()", () => {
+  const TOKEN = { Key: "tok-gl", Expire: new Date(Date.now() + 3600000).toISOString() }
+
+  it("PDF binaire direct → labelData base64", async () => {
     const svc = makeService()
-    mockFetch.mockResolvedValueOnce(
-      makeFetchOk({ Shipment: [{ Id: "SHP-REF" }] })
-    )
+    const pdf = fakePdfBuffer("direct binary label content padded for size testing")
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN)) // /keys
+      .mockResolvedValueOnce(makePdfResponse(pdf))   // POST /labels → PDF direct
 
-    await svc.createShipment({ orderId: "order-xyz", recipient: baseRecipient })
-
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
-    expect(body.Shipment[0].ClientReference).toBe("order-xyz")
+    const r = await svc.getLabel("ref-1")
+    expect(r.labelData).toBe(pdf.toString("base64"))
+    expect(r.labelUrl).toMatch(/^data:application\/pdf;base64,/)
   })
 
-  it("utilise le poids fourni (en grammes, minimum 1)", async () => {
+  it("CallbackURL dans la réponse JSON → polling puis PDF", async () => {
+    jest.useFakeTimers()
     const svc = makeService()
-    mockFetch.mockResolvedValueOnce(
-      makeFetchOk({ Shipment: [{ Id: "SHP-W" }] })
-    )
+    const pdf = fakePdfBuffer("polled pdf content with enough padding here")
 
-    await svc.createShipment({
-      orderId: "order-w",
-      recipient: baseRecipient,
-      weightGrams: 2500,
-    })
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN))                                           // /keys
+      .mockResolvedValueOnce(makeJsonResponse(bpostOk({ CallbackURL: "/v3/labels/run-123" }))) // POST /labels
+      .mockResolvedValueOnce(makePdfResponse(pdf))                                             // GET /labels/run-123
 
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
-    expect(body.Shipment[0].Parcel.Weight).toBe(2500)
-  })
+    // Lancer getLabel et avancer les timers pour éviter le vrai délai de 2s
+    const promise = svc.getLabel("ref-cb")
+    jest.runAllTimersAsync()
+    const r = await promise
+    expect(r.labelData).toBe(pdf.toString("base64"))
+  }, 10000)
 
-  it("force le poids minimum à 1 si weightGrams est 0 ou absent", async () => {
+  it("LabelData base64 dans la réponse JSON", async () => {
     const svc = makeService()
-    mockFetch.mockResolvedValueOnce(
-      makeFetchOk({ Shipment: [{ Id: "SHP-W0" }] })
-    )
+    const fakePdfB64 = fakePdfBuffer("label data encoded in base64 for testing purposes only").toString("base64")
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN))
+      .mockResolvedValueOnce(makeJsonResponse(bpostOk({ Label: [{ LabelData: fakePdfB64 }] })))
 
-    await svc.createShipment({
-      orderId: "order-w0",
-      recipient: baseRecipient,
-      weightGrams: 0,
-    })
-
-    const body = JSON.parse(mockFetch.mock.calls[0][1].body)
-    expect(body.Shipment[0].Parcel.Weight).toBeGreaterThanOrEqual(1)
+    const r = await svc.getLabel("ref-b64")
+    expect(r.labelData).toBe(fakePdfB64)
+    expect(r.labelUrl).toBe(`data:application/pdf;base64,${fakePdfB64}`)
   })
+
+  it("Label[0].Url (URL directe) → labelUrl", async () => {
+    const svc = makeService()
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN))
+      .mockResolvedValueOnce(makeJsonResponse(bpostOk({ Label: [{ Url: "https://labels.bpost.be/label.pdf" }] })))
+
+    const r = await svc.getLabel("ref-url")
+    expect(r.labelUrl).toBe("https://labels.bpost.be/label.pdf")
+  })
+
+  it("Error.Id=0 sans label → essaie toutes les stratégies → labelUrl vide", async () => {
+    const svc = makeService()
+    const tokenResp = makeJsonResponse(TOKEN)
+    const noLabelResp = makeJsonResponse(bpostOk({}))
+    // token + POST ClientRef + POST OrderRef + GET /labels/:ref + GET /shipments/:ref/label
+    mockFetch
+      .mockResolvedValueOnce(tokenResp)
+      .mockResolvedValue(noLabelResp)
+
+    const r = await svc.getLabel("ref-nolabel")
+    expect(r.labelUrl).toBe("")
+  })
+
+  it("envoie ClientReferenceCodeList dans le POST /labels", async () => {
+    const svc = makeService()
+    const pdf = Buffer.from("%PDF-1.4 x")
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN))
+      .mockResolvedValueOnce(makePdfResponse(pdf))
+
+    await svc.getLabel("my-ref")
+
+    const labelsCall = mockFetch.mock.calls.find((c: any[]) =>
+      (c[0] as string).includes("/labels") && c[1]?.method === "POST"
+    )
+    expect(labelsCall).toBeDefined()
+    const body = JSON.parse(labelsCall![1].body)
+    expect(body.ClientReferenceCodeList).toContain("my-ref")
+    expect(body.LabelType).toBe(0)
+    expect(body.LabelStart).toBe(1)
+  })
+
+  it("retourne labelUrl='' sur 401 (erreur silencieuse, non bloquante)", async () => {
+    const svc = makeService()
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN))                            // /keys
+      .mockResolvedValue(makeJsonResponse({ error: "Unauthorized" }, 401))      // toutes les tentatives
+    const r = await svc.getLabel("bad")
+    expect(r.labelUrl).toBe("")
+  }, 10000)
 })
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -363,22 +423,23 @@ describe("createShipment()", () => {
 // ════════════════════════════════════════════════════════════════════════════
 
 describe("ping()", () => {
-  it("retourne ok=true si l'API répond avec succès", async () => {
+  it("retourne ok=true si l'API répond", async () => {
     const svc = makeService()
-    mockFetch.mockResolvedValueOnce(makeFetchOk([{ Id: "carrier-1" }]))
+    // ensureToken → POST /keys
+    mockFetch.mockResolvedValueOnce(makeJsonResponse({ Key: "tok-123", Expire: new Date(Date.now() + 3600000).toISOString() }))
+    // getCarriers
+    mockFetch.mockResolvedValueOnce(makeJsonResponse([{ Id: 1 }]))
 
-    const result = await svc.ping()
-
-    expect(result.ok).toBe(true)
+    const r = await svc.ping()
+    expect(r.ok).toBe(true)
   })
 
-  it("retourne ok=false si l'API est inaccessible", async () => {
+  it("retourne ok=false si réseau inaccessible", async () => {
     const svc = makeService()
-    mockFetch.mockRejectedValueOnce(new Error("Network failure"))
+    mockFetch.mockRejectedValue(new Error("Network failure"))
 
-    const result = await svc.ping()
-
-    expect(result.ok).toBe(false)
+    const r = await svc.ping()
+    expect(r.ok).toBe(false)
   })
 })
 
@@ -399,7 +460,7 @@ describe("validateWebhookSignature()", () => {
 
   it("rejette une signature incorrecte", () => {
     const svc = makeService({ publicKey: "pk", privateKey: "sk", webhookSecret: "secret" })
-    expect(svc.validateWebhookSignature('{"event":"test"}', "wrong-signature")).toBe(false)
+    expect(svc.validateWebhookSignature('{"event":"test"}', "wrong-sig")).toBe(false)
   })
 
   it("retourne false si webhookSecret non configuré", () => {

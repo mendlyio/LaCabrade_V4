@@ -629,27 +629,30 @@ export default class BpostModuleService {
   private extractErrorInfo(response: any): string | null {
     if (!response || typeof response !== "object") return null
 
-    // Bpost always returns Error { Id, Info } — Id=0 + empty Info means NO error
-    const error = response.Error || response.error
-    if (error && typeof error === "object") {
-      const id = error.Id ?? error.id
-      const info = error.Info || error.Message || error.message || ""
-      if (id === 0 && !info) return null
-      if (info) return info
-    } else if (error && typeof error === "string" && error.trim()) {
-      return error
-    }
-
+    // Vérifier d'abord l'ErrorList (liste détaillée, prioritaire)
     const errorList = response.ErrorList || response.errorList || response.Errors || response.errors
     if (Array.isArray(errorList) && errorList.length > 0) {
       const messages = errorList
         .filter((e: any) => {
           const id = e.Id ?? e.id
           const text = e.Tekst || e.Info || e.Message || e.message || e.info || ""
+          // Id=0 + texte vide = pas d'erreur
           return !(id === 0 && !text)
         })
         .map((e: any) => e.Tekst || e.Info || e.Message || e.message || e.info || JSON.stringify(e))
-      return messages.length > 0 ? messages.join("; ") : null
+        .filter((m: string) => m.trim())
+      if (messages.length > 0) return messages.join("; ")
+    }
+
+    // Puis vérifier Error { Id, Info } — Id=0 + Info="" = pas d'erreur
+    const error = response.Error || response.error
+    if (error && typeof error === "object") {
+      const id = error.Id ?? error.id
+      const info = (error.Info || error.Message || error.message || "").trim()
+      if (id === 0 && !info) return null
+      if (info) return info
+    } else if (error && typeof error === "string" && error.trim()) {
+      return error
     }
 
     return null
