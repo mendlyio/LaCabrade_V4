@@ -316,7 +316,8 @@ export default class OdooModuleService {
   }
 
   async login() {
-    this.uid = await this.client.request("call", {
+    console.log(`[ODOO] Authentification sur ${this.options.url} (db: ${this.options.dbName}, user: ${this.options.username})...`)
+    const result = await this.client.request("call", {
       service: "common",
       method: "authenticate",
       args: [
@@ -326,6 +327,16 @@ export default class OdooModuleService {
         {},
       ],
     })
+
+    if (!result || result === false) {
+      throw new Error(
+        `[ODOO] Authentification échouée (uid=${result}). ` +
+        `Vérifiez ODOO_URL, ODOO_DB_NAME, ODOO_USERNAME, ODOO_API_KEY.`
+      )
+    }
+
+    this.uid = result
+    console.log(`[ODOO] Authentifié avec succès (uid=${this.uid})`)
   }
 
   /**
@@ -509,6 +520,57 @@ export default class OdooModuleService {
     }
   }
 
+  /**
+   * Cherche un produit de service par default_code. Le crée dans Odoo s'il n'existe pas.
+   * Utilisé pour les lignes "Livraison" et "Remise" qui nécessitent un product_id.
+   */
+  private async ensureServiceProduct(
+    defaultCode: string,
+    name: string,
+    productType: string = "service"
+  ): Promise<number> {
+    const ids: number[] = await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid,
+        this.options.apiKey,
+        "product.product",
+        "search",
+        [[["default_code", "=", defaultCode]]],
+        { limit: 1 },
+      ],
+    })
+
+    if (ids.length > 0) {
+      return ids[0]
+    }
+
+    console.log(`[ODOO] Produit "${defaultCode}" non trouvé, création automatique...`)
+    const newId: number = await this.client.request("call", {
+      service: "object",
+      method: "execute_kw",
+      args: [
+        this.options.dbName,
+        this.uid,
+        this.options.apiKey,
+        "product.product",
+        "create",
+        [{
+          name,
+          default_code: defaultCode,
+          type: productType,
+          list_price: 0,
+          sale_ok: true,
+          purchase_ok: false,
+        }],
+      ],
+    })
+    console.log(`[ODOO] Produit "${defaultCode}" créé (id=${newId})`)
+    return newId
+  }
+
   async createOrder(orderData: {
     customerEmail: string
     customerName: string
@@ -535,7 +597,8 @@ export default class OdooModuleService {
       await this.login()
     }
 
-    // ... (Partner creation logic - unchanged)
+    console.log(`[ODOO] createOrder: Début création commande pour ${orderData.customerEmail} (${orderData.items.length} article(s))`)
+
     // 1. Find or create customer (res.partner)
     let partnerIds: number[] = await this.client.request("call", {
       service: "object",
@@ -689,97 +752,71 @@ export default class OdooModuleService {
 
     // Ajouter la ligne de livraison si shippingCost > 0
     if (orderData.shippingCost && orderData.shippingCost > 0) {
-      // On cherche un produit "Livraison" générique dans Odoo ou on crée une ligne sans product_id (si autorisé)
-      // Pour faire propre, on cherche un produit avec référence "DELIVERY"
-      const deliveryProductIds: number[] = await this.client.request("call", {
+      const deliveryProductId = await this.ensureServiceProduct(
+        "DELIVERY",
+        "Frais de livraison (Medusa)",
+        "service"
+      )
+      orderLines.push([0, 0, {
+        product_id: deliveryProductId,
+        product_uom_qty: 1,
+        price_unit: orderData.shippingCost,
+        name: "Frais de livraison",
+      }])
+      console.log(`🚚 [ODOO] Ligne livraison: ${orderData.shippingCost}€ (product_id=${deliveryProductId})`)
+    }
+
+    // Ajouter une ligne de remise si discountTotal > 0
+    if (orderData.discountTotal && orderData.discountTotal > 0) {
+      const discountProductId = await this.ensureServiceProduct(
+        "DISCOUNT",
+        "Réduction / Code promo (Medusa)",
+        "service"
+      )
+      orderLines.push([0, 0, {
+        product_id: discountProductId,
+        product_uom_qty: 1,
+        price_unit: -orderData.discountTotal,
+        name: "Réduction / Code promo",
+      }])
+      console.log(`🏷️ [ODOO] Ligne remise: -${orderData.discountTotal}€ (product_id=${discountProductId})`)
+    }
+
+    if (orderLines.length === 0) {
+      console.error(`[ODOO] createOrder: AUCUNE ligne de commande créée ! Tous les SKUs sont introuvables dans Odoo.`)
+      console.error(`[ODOO] SKUs demandés: ${orderData.items.map(i => i.sku).join(', ')}`)
+      throw new Error(`Aucun produit trouvé dans Odoo pour les SKUs: ${orderData.items.map(i => i.sku).join(', ')}`)
+    }
+
+    console.log(`[ODOO] createOrder: Création sale.order avec ${orderLines.length} ligne(s) pour partner ${partnerId}`)
+
+    // 3. Create sale.order
+    let orderId: number
+    try {
+      orderId = await this.client.request("call", {
         service: "object",
         method: "execute_kw",
         args: [
           this.options.dbName,
           this.uid,
           this.options.apiKey,
-          "product.product",
-          "search",
-          [[["default_code", "=", "DELIVERY"]]],
-          { limit: 1 },
+          "sale.order",
+          "create",
+          [
+            {
+              partner_id: partnerId,
+              order_line: orderLines,
+              note: "Order created from Medusa",
+            },
+          ],
         ],
       })
-
-      const deliveryLine: any = {
-        product_uom_qty: 1,
-        price_unit: orderData.shippingCost,
-        name: "Frais de livraison",
-      }
-
-      if (deliveryProductIds.length > 0) {
-        deliveryLine.product_id = deliveryProductIds[0]
-      } else {
-         // Si pas de produit DELIVERY, on essaie sans product_id (peut échouer selon config Odoo)
-         // Ou mieux, on log un warning et on met juste le nom
-         console.warn("[ODOO] Produit DELIVERY non trouvé, ajout ligne livraison sans ID produit")
-      }
-
-      orderLines.push([0, 0, deliveryLine])
+    } catch (createErr: any) {
+      const errMsg = createErr?.data?.message || createErr?.message || String(createErr)
+      console.error(`[ODOO] createOrder: Erreur création sale.order:`, errMsg)
+      console.error(`[ODOO] Détails orderLines:`, JSON.stringify(orderLines, null, 2))
+      throw new Error(`Odoo sale.order create failed: ${errMsg}`)
     }
-
-    // Ajouter une ligne de remise si discountTotal > 0
-    if (orderData.discountTotal && orderData.discountTotal > 0) {
-      const discountAmount = orderData.discountTotal
-
-      let discountProductIds: number[] = []
-      try {
-        discountProductIds = await this.client.request("call", {
-          service: "object",
-          method: "execute_kw",
-          args: [
-            this.options.dbName,
-            this.uid,
-            this.options.apiKey,
-            "product.product",
-            "search",
-            [[["default_code", "=", "DISCOUNT"]]],
-            { limit: 1 },
-          ],
-        })
-      } catch {
-        // Ignore
-      }
-
-      const discountLine: any = {
-        product_uom_qty: 1,
-        price_unit: -discountAmount,
-        name: "Réduction / Code promo",
-      }
-
-      if (discountProductIds.length > 0) {
-        discountLine.product_id = discountProductIds[0]
-      } else {
-        console.warn("[ODOO] Produit DISCOUNT non trouvé, ajout ligne remise sans ID produit")
-      }
-
-      orderLines.push([0, 0, discountLine])
-      console.log(`🏷️ [ODOO] Ligne remise ajoutée: -${discountAmount}€`)
-    }
-
-    // 3. Create sale.order
-    const orderId: number = await this.client.request("call", {
-      service: "object",
-      method: "execute_kw",
-      args: [
-        this.options.dbName,
-        this.uid,
-        this.options.apiKey,
-        "sale.order",
-        "create",
-        [
-          {
-            partner_id: partnerId,
-            order_line: orderLines,
-            note: "Order created from Medusa",
-          },
-        ],
-      ],
-    })
 
     // 4. Confirm sale.order (Réserve le stock)
     try {

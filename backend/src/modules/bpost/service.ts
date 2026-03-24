@@ -77,20 +77,56 @@ export default class BpostModuleService {
     const httpCode = res.status
     const contentType = res.headers.get("content-type") || ""
 
-    // Si la réponse est un PDF binaire, la lire en buffer
-    if (contentType.includes("application/pdf") || rawBinary) {
+    const isBinaryContentType =
+      contentType.includes("application/pdf") ||
+      contentType.includes("application/octet-stream") ||
+      contentType.includes("application/x-pdf") ||
+      contentType.includes("binary/octet-stream")
+
+    if (isBinaryContentType || rawBinary) {
       const arrayBuf = await res.arrayBuffer()
       const buffer = Buffer.from(arrayBuf)
-      console.log(`[Bpost] Réponse ${httpCode}: binaire PDF (${buffer.length} bytes)`)
-      if (!res.ok) {
-        throw new Error(`Bpost API ${httpCode}`)
+
+      // Vérifier que c'est bien un PDF (magic bytes %PDF-)
+      const isPdf = buffer.length > 5 && buffer.subarray(0, 5).toString("utf-8") === "%PDF-"
+
+      if (isPdf || rawBinary) {
+        console.log(`[Bpost] Réponse ${httpCode}: binaire ${isPdf ? "PDF" : "raw"} (${buffer.length} bytes, Content-Type: ${contentType})`)
+        if (!res.ok) {
+          throw new Error(`Bpost API ${httpCode}`)
+        }
+        return { httpCode, response: null as any, rawBuffer: buffer }
       }
+
+      // Content-Type binaire mais pas un vrai PDF → traiter comme JSON/texte
+      const responseText = buffer.toString("utf-8")
+      let response: any = null
+      try {
+        response = JSON.parse(responseText)
+      } catch {
+        response = responseText
+      }
+      console.log(`[Bpost] Réponse ${httpCode} (${contentType} mais pas PDF):`, typeof response === 'object' ? JSON.stringify(response).slice(0, 500) : responseText?.slice?.(0, 500))
+      if (!res.ok) {
+        const message = (response && (response.Error?.Info || response.error || response.message)) || `Bpost API ${httpCode}`
+        throw new Error(message)
+      }
+      return { httpCode, response }
+    }
+
+    // Lire comme texte puis essayer de parser en JSON
+    const arrayBuf = await res.arrayBuffer()
+    const buffer = Buffer.from(arrayBuf)
+
+    // Vérifier si c'est un PDF malgré un Content-Type texte/JSON (certains serveurs mal configurés)
+    if (buffer.length > 5 && buffer.subarray(0, 5).toString("utf-8") === "%PDF-") {
+      console.log(`[Bpost] Réponse ${httpCode}: PDF détecté par magic bytes malgré Content-Type "${contentType}" (${buffer.length} bytes)`)
+      if (!res.ok) throw new Error(`Bpost API ${httpCode}`)
       return { httpCode, response: null as any, rawBuffer: buffer }
     }
 
+    const responseText = buffer.toString("utf-8")
     let response: any = null
-    const responseText = await res.text()
-    
     try {
       response = JSON.parse(responseText)
     } catch {
@@ -109,7 +145,7 @@ export default class BpostModuleService {
 
   async ping(): Promise<{ ok: boolean }> {
     try {
-      // Appel léger: récupérer la liste des transporteurs
+      await this.ensureToken()
       await this.getCarriers()
       return { ok: true }
     } catch {
@@ -379,48 +415,58 @@ export default class BpostModuleService {
       ? [clientReference, shipmentId]
       : [shipmentId]
 
+    const errors: string[] = []
+
     for (const refId of idsToTry) {
       console.log(`[Bpost] getLabel: lancement création label pour ref "${refId}"`)
 
       // Étape 1 : POST /labels → déclenche la génération, retourne CallbackURL
       let callbackUrl: string | null = null
       try {
-        const { response } = await this.sendToApi<any>({
+        const { response, rawBuffer } = await this.sendToApi<any>({
           method: "POST",
           endpoint: "/labels",
           data: { ClientReferenceCodeList: [refId], LabelStart: 1, LabelType: 0 },
         })
 
+        // POST /labels peut directement retourner un PDF binaire
+        if (rawBuffer && rawBuffer.length > 0) {
+          const labelData = Buffer.from(rawBuffer).toString("base64")
+          console.log(`[Bpost] getLabel(${refId}): PDF obtenu directement depuis POST /labels (${rawBuffer.length} bytes)`)
+          return { labelUrl: `data:application/pdf;base64,${labelData}`, labelData }
+        }
+
         console.log(`[Bpost] POST /labels response:`, JSON.stringify(response)?.slice(0, 1000))
 
         callbackUrl = response?.CallbackURL || response?.CallbackUrl || response?.callbackUrl || response?.callbackURL || null
 
-        // Parfois la réponse contient déjà le PDF (ancien format)
         const immediate = this.extractPdfFromResponse(response)
         if (immediate) {
-          console.log(`[Bpost] getLabel(${refId}): PDF obtenu immédiatement`)
+          console.log(`[Bpost] getLabel(${refId}): PDF obtenu immédiatement depuis la réponse JSON`)
           return immediate
         }
       } catch (e: any) {
-        console.warn(`[Bpost] getLabel POST /labels échoué pour ref "${refId}": ${e?.message}`)
+        const msg = e?.message || String(e)
+        console.warn(`[Bpost] getLabel POST /labels échoué pour ref "${refId}": ${msg}`)
+        errors.push(`POST /labels "${refId}": ${msg}`)
         continue
       }
 
       if (!callbackUrl) {
         console.warn(`[Bpost] getLabel(${refId}): pas de CallbackURL dans la réponse`)
+        errors.push(`Pas de CallbackURL pour ref "${refId}"`)
         continue
       }
 
       // Étape 2 : Poll GET CallbackURL jusqu'à obtenir le PDF
       console.log(`[Bpost] getLabel: polling ${callbackUrl}`)
-      const maxAttempts = 10
+      const maxAttempts = 15
       const delayMs = 2000
 
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         await new Promise((r) => setTimeout(r, delayMs))
 
         try {
-          // Extraire le path relatif du callbackUrl
           const endpoint = callbackUrl.includes("/v3/")
             ? callbackUrl.substring(callbackUrl.indexOf("/v3/") + 3)
             : callbackUrl.startsWith("/") ? callbackUrl : `/${callbackUrl}`
@@ -428,40 +474,61 @@ export default class BpostModuleService {
           const { response, rawBuffer } = await this.sendToApi<any>({
             method: "GET",
             endpoint,
+            rawBinary: true,
           })
 
-          // PDF binaire direct
-          if (rawBuffer && rawBuffer.length > 0) {
-            const labelData = Buffer.from(rawBuffer).toString("base64")
-            console.log(`[Bpost] getLabel(${refId}): PDF reçu au poll #${attempt} (${rawBuffer.length} bytes)`)
-            return { labelUrl: `data:application/pdf;base64,${labelData}`, labelData }
+          // PDF binaire direct (le cas le plus courant après polling)
+          if (rawBuffer && rawBuffer.length > 100) {
+            const buf = Buffer.from(rawBuffer)
+            const isPdf = buf.subarray(0, 5).toString("utf-8") === "%PDF-"
+            if (isPdf) {
+              const labelData = buf.toString("base64")
+              console.log(`[Bpost] getLabel(${refId}): PDF reçu au poll #${attempt} (${buf.length} bytes)`)
+              return { labelUrl: `data:application/pdf;base64,${labelData}`, labelData }
+            }
+
+            // Pas un PDF → essayer de parser comme JSON (ex: statut "pending")
+            const text = buf.toString("utf-8")
+            let parsed: any = null
+            try { parsed = JSON.parse(text) } catch { parsed = text }
+
+            const result = this.extractPdfFromResponse(parsed)
+            if (result) {
+              console.log(`[Bpost] getLabel(${refId}): PDF extrait de la réponse JSON au poll #${attempt}`)
+              return result
+            }
+
+            const status = parsed?.Status || parsed?.status
+            const errorInfo = parsed?.Error?.Info || parsed?.ErrorList?.[0]?.Info
+            if (errorInfo && !errorInfo.toLowerCase().includes("pending") && !errorInfo.toLowerCase().includes("processing")) {
+              console.error(`[Bpost] getLabel(${refId}): erreur au poll #${attempt}: ${errorInfo}`)
+              errors.push(`Poll #${attempt}: ${errorInfo}`)
+              break
+            }
+
+            console.log(`[Bpost] getLabel(${refId}): poll #${attempt}/${maxAttempts} — pas encore prêt (status: ${status || "unknown"})`)
+            continue
           }
 
-          // Réponse JSON — vérifier si le PDF est dedans ou s'il faut encore attendre
+          // Fallback: vérifier la réponse JSON
           const result = this.extractPdfFromResponse(response)
           if (result) {
             console.log(`[Bpost] getLabel(${refId}): PDF extrait au poll #${attempt}`)
             return result
           }
 
-          // Vérifier s'il y a une erreur ou un statut "pending"
-          const status = response?.Status || response?.status
-          const errorInfo = response?.Error?.Info || response?.ErrorList?.[0]?.Info
-          if (errorInfo && !errorInfo.toLowerCase().includes("pending") && !errorInfo.toLowerCase().includes("processing")) {
-            console.error(`[Bpost] getLabel(${refId}): erreur au poll #${attempt}: ${errorInfo}`)
-            break
-          }
-
-          console.log(`[Bpost] getLabel(${refId}): poll #${attempt}/${maxAttempts} — pas encore prêt (status: ${status || "unknown"})`)
+          console.log(`[Bpost] getLabel(${refId}): poll #${attempt}/${maxAttempts} — aucune donnée`)
         } catch (e: any) {
           console.warn(`[Bpost] getLabel poll #${attempt} erreur: ${e?.message}`)
         }
       }
 
       console.warn(`[Bpost] getLabel(${refId}): timeout après ${maxAttempts} tentatives de polling`)
+      errors.push(`Timeout polling pour ref "${refId}" après ${maxAttempts} tentatives`)
     }
 
-    console.error(`[Bpost] getLabel: aucune étiquette obtenue (refs: ${idsToTry.join(", ")})`)
+    const errSummary = errors.length > 0 ? ` Détails: ${errors.join(" | ")}` : ""
+    console.error(`[Bpost] getLabel: aucune étiquette obtenue (refs: ${idsToTry.join(", ")}).${errSummary}`)
     return { labelUrl: "" }
   }
 

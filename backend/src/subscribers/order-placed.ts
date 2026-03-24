@@ -124,86 +124,91 @@ export default async function customOrderPlacedEmailHandler({
 
   // 2. Synchroniser avec Odoo
   try {
-    // Vérifier si le module Odoo est actif
     let odooService: OdooModuleService
     try {
       odooService = container.resolve(ODOO_MODULE)
-    } catch (e) {
-      console.log('ℹ️ Module Odoo non configuré, pas de sync commande.')
+    } catch (e: any) {
+      console.log(`ℹ️ Module Odoo non configuré (resolve "${ODOO_MODULE}" échoué: ${e?.message}). Pas de sync commande.`)
       return
     }
 
-    if (odooService) {
-      console.log(`🔄 Syncing order ${order.id} to Odoo...`)
-      
-      const items = order.items.map((item) => ({
-        sku: item.variant_sku || '',
-        quantity: item.quantity,
-        price: item.unit_price,
-        name: item.title,
-        isGiftCard: !!(
-          (item.metadata as any)?.is_gift_card ||
-          String(item.product_title || item.title || "").toLowerCase().includes("bon cadeau") ||
-          (item.variant_sku || "").startsWith("GC-")
-        ),
-      })).filter(i => i.sku)
+    if (!odooService) {
+      console.warn('⚠️ odooService résolu mais null/undefined. Pas de sync commande.')
+      return
+    }
 
-      // Calcul du coût de livraison
-      const shippingCost = order.shipping_methods?.reduce((acc, method) => acc + (Number(method.amount) || 0), 0) || 0
+    console.log(`🔄 [ODOO SYNC] Début sync commande ${(order as any).display_id || order.id} (${order.email}) vers Odoo...`)
 
-      // Calcul des réductions (item-level adjustments = promos appliquées aux articles)
-      let totalItemDiscount = 0
-      for (const item of order.items) {
-        for (const adj of (item as any).adjustments || []) {
-          totalItemDiscount += Math.abs(Number(adj.amount || 0))
-        }
-      }
+    const allItems = order.items.map((item) => ({
+      sku: item.variant_sku || '',
+      quantity: item.quantity,
+      price: item.unit_price,
+      name: item.title,
+      isGiftCard: !!(
+        (item.metadata as any)?.is_gift_card ||
+        String(item.product_title || item.title || "").toLowerCase().includes("bon cadeau") ||
+        (item.variant_sku || "").startsWith("GC-")
+      ),
+    }))
 
-      // LOG DIAGNOSTIC : vérifier les unités des montants Medusa
-      console.log(
-        `💰 [ODOO SYNC DIAGNOSTIC] Commande ${(order as any).display_id || order.id}\n` +
-        `   order.total = ${order.total}\n` +
-        `   order.summary.total = ${(order.summary as any)?.total}\n` +
-        `   order.summary.original_order_total = ${(order.summary as any)?.original_order_total}\n` +
-        `   Premier item: unit_price = ${order.items[0]?.unit_price}, qty = ${order.items[0]?.quantity}, title = "${order.items[0]?.title}"\n` +
-        `   Shipping methods: ${JSON.stringify(order.shipping_methods?.map((m: any) => ({ name: m.name, amount: m.amount })))}\n` +
-        `   shippingCost calculé = ${shippingCost}\n` +
-        `   totalItemDiscount (adjustments) = ${totalItemDiscount}\n` +
-        `   Items envoyés à Odoo: ${JSON.stringify(items.map(i => ({ sku: i.sku, price: i.price, isGC: i.isGiftCard })))}`
-      )
+    const items = allItems.filter(i => i.sku)
 
-      if (items.length > 0) {
-        const vatNumber = (order.metadata as any)?.vat_number || null
-        const companyName = shippingAddress?.company || null
+    const shippingCost = order.shipping_methods?.reduce((acc, method) => acc + (Number(method.amount) || 0), 0) || 0
 
-        if (vatNumber) {
-          console.log(`🏢 Commande avec TVA intracommunautaire: ${vatNumber} (société: ${companyName || 'N/A'})`)
-        }
-
-        const odooOrderId = await odooService.createOrder({
-          customerEmail: order.email,
-          customerName: shippingAddress ? `${shippingAddress.first_name} ${shippingAddress.last_name}` : 'Client Web',
-          items: items,
-          shippingCost: shippingCost,
-          discountTotal: totalItemDiscount,
-          total: (order.summary as any)?.total || order.total || 0,
-          shippingAddress: shippingAddress ? {
-            address_1: shippingAddress.address_1,
-            city: shippingAddress.city,
-            postal_code: shippingAddress.postal_code,
-            country_code: shippingAddress.country_code
-          } : undefined,
-          companyName: companyName || undefined,
-          vatNumber: vatNumber || undefined,
-        })
-        console.log(`✅ Order synced to Odoo successfully! Odoo ID: ${odooOrderId}`)
-      } else {
-        console.warn(`⚠️ Order ${order.id} has no items with SKU, skipping Odoo sync.`)
+    let totalItemDiscount = 0
+    for (const item of order.items) {
+      for (const adj of (item as any).adjustments || []) {
+        totalItemDiscount += Math.abs(Number(adj.amount || 0))
       }
     }
+
+    console.log(
+      `💰 [ODOO SYNC] Commande #${(order as any).display_id || order.id}\n` +
+      `   Total items: ${allItems.length}, avec SKU: ${items.length}, sans SKU: ${allItems.length - items.length}\n` +
+      `   Items sans SKU: ${allItems.filter(i => !i.sku).map(i => `"${i.name}"`).join(', ') || '(aucun)'}\n` +
+      `   order.total = ${order.total}\n` +
+      `   Premier item: unit_price=${order.items[0]?.unit_price}, qty=${order.items[0]?.quantity}, sku="${order.items[0]?.variant_sku}", title="${order.items[0]?.title}"\n` +
+      `   shippingCost = ${shippingCost}, totalItemDiscount = ${totalItemDiscount}\n` +
+      `   Items → Odoo: ${JSON.stringify(items.map(i => ({ sku: i.sku, price: i.price, qty: i.quantity, isGC: i.isGiftCard })))}`
+    )
+
+    if (items.length === 0) {
+      console.error(`❌ [ODOO SYNC] Commande ${order.id} : AUCUN item avec SKU ! Sync Odoo impossible.`)
+      console.error(`   Tous les items: ${JSON.stringify(allItems.map(i => ({ sku: i.sku || '(vide)', name: i.name })))}`)
+      return
+    }
+
+    const vatNumber = (order.metadata as any)?.vat_number || null
+    const companyName = shippingAddress?.company || null
+
+    if (vatNumber) {
+      console.log(`🏢 Commande avec TVA intracommunautaire: ${vatNumber} (société: ${companyName || 'N/A'})`)
+    }
+
+    const odooOrderId = await odooService.createOrder({
+      customerEmail: order.email,
+      customerName: shippingAddress ? `${shippingAddress.first_name} ${shippingAddress.last_name}` : 'Client Web',
+      items: items,
+      shippingCost: shippingCost,
+      discountTotal: totalItemDiscount,
+      total: (order.summary as any)?.total || order.total || 0,
+      shippingAddress: shippingAddress ? {
+        address_1: shippingAddress.address_1,
+        city: shippingAddress.city,
+        postal_code: shippingAddress.postal_code,
+        country_code: shippingAddress.country_code
+      } : undefined,
+      companyName: companyName || undefined,
+      vatNumber: vatNumber || undefined,
+    })
+    console.log(`✅ [ODOO SYNC] Commande sync OK ! Odoo sale.order ID: ${odooOrderId}`)
   } catch (error: any) {
-    console.error('❌ Error syncing order to Odoo:', error.message)
-    // On ne throw pas pour ne pas bloquer le flow Medusa, mais on log l'erreur
+    console.error(`❌ [ODOO SYNC] Erreur sync commande ${order.id} vers Odoo:`)
+    console.error(`   Message: ${error?.message}`)
+    console.error(`   Data: ${JSON.stringify(error?.data || error?.response || '(none)')}`)
+    if (error?.stack) {
+      console.error(`   Stack: ${error.stack.split('\n').slice(0, 5).join('\n   ')}`)
+    }
   }
 }
 
