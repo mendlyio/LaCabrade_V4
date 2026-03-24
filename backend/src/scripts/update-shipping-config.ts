@@ -1,6 +1,8 @@
 /**
  * Met à jour la configuration des livraisons :
- * - Standard Bpost & Point relais Bpost : 6,90 €
+ * - Standard Bpost (Belgique) & Point relais Bpost : 6,90 €
+ * - Livraison internationale (Europe) : 9,90 €
+ * - Express : 12,90 €
  * - Crée une promotion automatique "Livraison gratuite dès 75€"
  *   pour : Bpost Livraison internationale (Europe), Point relais (Belgique), Livraison à domicile (Belgique)
  *   (exclut express)
@@ -22,8 +24,9 @@ import {
 import { Client } from "pg"
 import { ApplicationMethodTargetType, ApplicationMethodType } from "@medusajs/framework/utils"
 
-const STANDARD_PRICE = 6.9  // 6,90 €
-const EXPRESS_PRICE  = 12.9 // 12,90 €
+const STANDARD_PRICE       = 6.9  // 6,90 € — Belgique (domicile + point relais)
+const INTERNATIONAL_PRICE  = 9.9  // 9,90 € — International Europe
+const EXPRESS_PRICE        = 12.9 // 12,90 € — Express (BE + EU)
 const FREE_SHIPPING_THRESHOLD = 75 // 75 € panier minimum (subtotal en euros dans Medusa)
 
 export default async function updateShippingConfig({ container }: ExecArgs) {
@@ -101,8 +104,11 @@ export default async function updateShippingConfig({ container }: ExecArgs) {
       continue
     }
 
-    const targetAmount = isExpress ? EXPRESS_PRICE : STANDARD_PRICE
-    const label = isExpress ? "12,90 €" : "6,90 €"
+    const isInternational =
+      opt.name?.toLowerCase().includes("international") ||
+      (opt.name?.toLowerCase().includes("europe") && !opt.name?.toLowerCase().includes("express"))
+    const targetAmount = isExpress ? EXPRESS_PRICE : isInternational ? INTERNATIONAL_PRICE : STANDARD_PRICE
+    const label = isExpress ? "12,90 €" : isInternational ? "9,90 €" : "6,90 €"
 
     const link = links.find((l) => l.shipping_option_id === opt.id)
     if (!link) {
@@ -198,6 +204,7 @@ export default async function updateShippingConfig({ container }: ExecArgs) {
   logger.info("")
   logger.info("🎉 Configuration terminée !")
   logger.info("   Standard / Point relais : 6,90 €")
+  logger.info("   International (Europe)  : 9,90 €")
   logger.info("   Express                 : 12,90 €")
   logger.info("   Livraison gratuite      : dès 75€ (hors express)")
 }
