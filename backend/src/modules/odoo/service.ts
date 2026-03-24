@@ -694,59 +694,50 @@ export default class OdooModuleService {
       if (item.sku.startsWith('ODOO-')) {
         const odooId = parseInt(item.sku.replace('ODOO-', ''))
         if (!isNaN(odooId)) {
-          // Vérifier que le produit existe dans Odoo
           const exists: number[] = await this.client.request("call", {
-            service: "object",
-            method: "execute_kw",
-            args: [
-              this.options.dbName,
-              this.uid,
-              this.options.apiKey,
-              "product.product",
-              "search",
-              [[["id", "=", odooId]]],
-              { limit: 1 },
-            ],
+            service: "object", method: "execute_kw",
+            args: [this.options.dbName, this.uid, this.options.apiKey,
+              "product.product", "search", [[["id", "=", odooId]]],
+              { limit: 1, context: { active_test: false } }],
           })
-          if (exists.length > 0) {
-            productId = odooId
-          }
+          if (exists.length > 0) productId = odooId
         }
       } else {
-        // Recherche par default_code (référence interne)
-        const productIds: number[] = await this.client.request("call", {
-          service: "object",
-          method: "execute_kw",
-          args: [
-            this.options.dbName,
-            this.uid,
-            this.options.apiKey,
-            "product.product",
-            "search",
-            [[["default_code", "=", item.sku]]],
-            { limit: 1 },
-          ],
+        // 1ère tentative : produits actifs uniquement
+        const activeIds: number[] = await this.client.request("call", {
+          service: "object", method: "execute_kw",
+          args: [this.options.dbName, this.uid, this.options.apiKey,
+            "product.product", "search", [[["default_code", "=", item.sku]]],
+            { limit: 1 }],
         })
-        if (productIds.length > 0) {
-          productId = productIds[0]
+        if (activeIds.length > 0) {
+          productId = activeIds[0]
+        } else {
+          // 2ème tentative (solution la moins destructive) : inclure les produits archivés
+          const archivedIds: number[] = await this.client.request("call", {
+            service: "object", method: "execute_kw",
+            args: [this.options.dbName, this.uid, this.options.apiKey,
+              "product.product", "search", [[["default_code", "=", item.sku]]],
+              { limit: 1, context: { active_test: false } }],
+          })
+          if (archivedIds.length > 0) {
+            productId = archivedIds[0]
+            console.log(`[ODOO] ℹ️ Produit SKU=${item.sku} trouvé mais archivé dans Odoo (id=${productId}) — inclus dans la commande`)
+          }
         }
       }
 
       if (productId) {
         const priceUnit = item.isGiftCard ? item.price / 100 : item.price
         console.log(`📦 [ODOO] Ligne article: SKU=${item.sku}, raw_price=${item.price}, isGC=${!!item.isGiftCard}, price_unit_odoo=${priceUnit}, qty=${item.quantity}`)
-        orderLines.push([
-          0,
-          0,
-          {
-            product_id: productId,
-            product_uom_qty: item.quantity,
-            price_unit: priceUnit,
-            name: item.name,
-          },
-        ])
+        orderLines.push([0, 0, {
+          product_id: productId,
+          product_uom_qty: item.quantity,
+          price_unit: priceUnit,
+          name: item.name,
+        }])
       } else {
-        console.warn(`[ODOO] Produit non trouvé pour SKU: ${item.sku}`)
+        console.warn(`[ODOO] Produit non trouvé pour SKU: ${item.sku} (ni actif ni archivé)`)
       }
     }
 
