@@ -377,26 +377,27 @@ export default class BpostModuleService {
     const clientRef = input.reference || input.orderId
     const countryCode = (input.recipient.address.country_code || "BE").toUpperCase()
 
+    // Structure conforme à la doc Bpost Shipping Manager API v3
+    // https://bpostapidev.shiptimize.me/v3/apidocs/usa/endpoints/shipments/POST
     const shipment: Record<string, any> = {
       ClientReference: clientRef,
-      Recipient: {
+      Address: {
         Name: input.recipient.name,
-        Email: input.recipient.email,
-        Phone: input.recipient.phone,
-        Address: {
-          Streetname1: input.recipient.address.address_1,
-          Streetname2: input.recipient.address.address_2 || "",
-          PostalCode: input.recipient.address.postal_code,
-          City: input.recipient.address.city,
-          Country: countryCode,
-        },
+        Email: input.recipient.email || "",
+        Phone: input.recipient.phone || "",
+        Streetname1: input.recipient.address.address_1,
+        Streetname2: input.recipient.address.address_2 || "",
+        PostalCode: input.recipient.address.postal_code,
+        City: input.recipient.address.city,
+        Country: countryCode,
       },
-      Delivery: input.pickupPointId
-        ? { Type: "PICKUP", PickupPointId: input.pickupPointId }
-        : { Type: "ADDRESS" },
-      Parcel: {
-        Weight: Math.max(1, Math.round(input.weightGrams || 1)),
+      Dimensions: {
+        Weight: Math.max(1, Math.round(input.weightGrams || 500)),
       },
+    }
+
+    if (input.pickupPointId) {
+      shipment.PickupPoint = { Id: input.pickupPointId }
     }
 
     console.log(`[Bpost] createShipment payload:`, JSON.stringify({ Shipment: [shipment] }).slice(0, 1500))
@@ -407,10 +408,16 @@ export default class BpostModuleService {
       data: { Shipment: [shipment] },
     })
 
-    console.log(`[Bpost] createShipment response keys:`, response ? Object.keys(response) : "null")
     console.log(`[Bpost] createShipment full response:`, JSON.stringify(response)?.slice(0, 2000))
 
-    // Certains contrats retournent un PDF directement dans la réponse shipment
+    // Vérifier les erreurs globales
+    const globalError = this.extractErrorInfo(response)
+    if (globalError) {
+      console.error(`[Bpost] createShipment ERREUR globale: ${globalError}`)
+      throw new Error(`Bpost createShipment: ${globalError}`)
+    }
+
+    // PDF binaire direct
     if (rawBuffer && rawBuffer.length > 100) {
       const buf = Buffer.from(rawBuffer)
       if (buf.subarray(0, 5).toString("utf-8") === "%PDF-") {
@@ -418,7 +425,6 @@ export default class BpostModuleService {
         console.log(`[Bpost] createShipment: PDF inline reçu (${buf.length} bytes)`)
         return {
           shipmentId: clientRef,
-          trackingNumber: undefined,
           clientReference: clientRef,
           labelUrl: `data:application/pdf;base64,${labelData}`,
           labelData,
@@ -427,28 +433,32 @@ export default class BpostModuleService {
     }
 
     // Extraire les infos du shipment créé
-    const created = Array.isArray(response?.Shipment) ? response.Shipment[0] : response?.Shipment || response
-    const shipmentId = created?.Id || created?.ShipmentId || created?.OrderReference || clientRef
-    const trackingNumber = created?.TrackingNumber || created?.TrackingCode || created?.Barcode
-      || created?.TrackingInfo?.TrackingNumber
+    const shipments = Array.isArray(response?.Shipment) ? response.Shipment : []
+    const created = shipments[0] || response?.Shipment || {}
 
-    // Vérifier les erreurs
-    const errorInfo = this.extractErrorInfo(response) || this.extractErrorInfo(created)
-    if (errorInfo) {
-      console.warn(`[Bpost] createShipment: avertissement Bpost: ${errorInfo}`)
+    // Vérifier les erreurs par shipment
+    const shipmentError = this.extractErrorInfo(created)
+    if (shipmentError) {
+      console.error(`[Bpost] createShipment ERREUR shipment: ${shipmentError}`)
+      throw new Error(`Bpost createShipment: ${shipmentError}`)
     }
 
-    // Si la réponse contient déjà un label
-    const inlineLabel = this.extractPdfFromResponse(response) || this.extractPdfFromResponse(created)
+    // Warnings (non bloquants)
+    const warnings = created?.WarningList
+    if (Array.isArray(warnings) && warnings.length > 0) {
+      console.warn(`[Bpost] createShipment warnings:`, warnings.map((w: any) => w.Tekst || w.Info || JSON.stringify(w)).join("; "))
+    }
 
-    console.log(`[Bpost] createShipment résultat: shipmentId=${shipmentId}, tracking=${trackingNumber || "(aucun)"}, hasLabel=${!!inlineLabel}`)
+    const carrier = created?.CarrierSelect
+    const trackingNumber = created?.TrackingNumber || created?.TrackingCode || created?.Barcode || undefined
 
+    console.log(`[Bpost] createShipment OK: carrier=${carrier?.Name || "(auto)"} (id=${carrier?.Id}), tracking=${trackingNumber || "(à venir)"}, ref=${clientRef}`)
+
+    // Le label n'est PAS retourné par POST /shipments — il faut un POST /labels séparé
     return {
-      shipmentId,
+      shipmentId: clientRef,
       trackingNumber,
       clientReference: clientRef,
-      labelUrl: inlineLabel?.labelUrl,
-      labelData: inlineLabel?.labelData,
     }
   }
 

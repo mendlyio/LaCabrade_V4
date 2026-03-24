@@ -15,9 +15,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   try {
     const { orderId } = req.params as { orderId: string }
     const orderService = req.scope.resolve(Modules.ORDER)
-    const order = await orderService.retrieveOrder(orderId, {
-      relations: ["fulfillments"],
-    })
+    const order = await orderService.retrieveOrder(orderId)
     const meta = (order.metadata as Record<string, any>) || {}
 
     // Cas 1 : données PDF base64 déjà stockées dans les métadonnées
@@ -35,7 +33,6 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         return sendPdfBuffer(res, Buffer.from(base64, "base64"), orderId)
       }
       if (storedUrl.startsWith("http")) {
-        // Tenter de fetcher le PDF au lieu de rediriger (évite les problèmes d'auth Bpost)
         try {
           console.log(`[Bpost] download-label ${orderId}: fetch PDF depuis URL externe: ${storedUrl.slice(0, 100)}`)
           const pdfRes = await fetch(storedUrl)
@@ -43,7 +40,6 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
             const arrayBuf = await pdfRes.arrayBuffer()
             const buffer = Buffer.from(arrayBuf)
             if (buffer.length > 100 && buffer.subarray(0, 5).toString("utf-8") === "%PDF-") {
-              // Stocker pour les prochaines fois
               try {
                 await orderService.updateOrders([{
                   id: orderId,
@@ -60,34 +56,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       }
     }
 
-    // Cas 3 : Chercher dans les fulfillments
-    const fulfillments = (order as any).fulfillments || []
-    for (const f of fulfillments) {
-      const fData = f.data || {}
-      const fLabelUrl = fData.label_url || fData.labelUrl || ""
-      if (fLabelUrl) {
-        if (fLabelUrl.startsWith("data:application/pdf;base64,")) {
-          const base64 = fLabelUrl.split(",")[1]
-          console.log(`[Bpost] download-label ${orderId}: PDF trouvé dans fulfillment.data.label_url`)
-          return sendPdfBuffer(res, Buffer.from(base64, "base64"), orderId)
-        }
-        if (fLabelUrl.startsWith("http")) {
-          try {
-            const pdfRes = await fetch(fLabelUrl)
-            if (pdfRes.ok) {
-              const arrayBuf = await pdfRes.arrayBuffer()
-              const buffer = Buffer.from(arrayBuf)
-              if (buffer.length > 100 && buffer.subarray(0, 5).toString("utf-8") === "%PDF-") {
-                return sendPdfBuffer(res, buffer, orderId)
-              }
-            }
-          } catch {}
-          return res.redirect(302, fLabelUrl)
-        }
-      }
-    }
-
-    // Cas 4 : re-demander l'étiquette à Bpost via le shipment ID
+    // Cas 3 : re-demander l'étiquette à Bpost via le shipment ID
     const shipmentId = meta.bpost_shipment_id as string | undefined
     if (!shipmentId) {
       return res.status(404).json({

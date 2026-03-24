@@ -127,16 +127,15 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       reference,
     })
 
-    // Récupérer l'étiquette PDF (peut déjà être dans le résultat du createShipment)
+    // Récupérer l'étiquette PDF via POST /labels (séparé de POST /shipments)
     let labelUrl = result.labelUrl || ""
     let labelData: string | undefined = result.labelData
-    if (!labelData && !labelUrl) {
+    if (!labelData && !labelUrl && result.clientReference) {
       try {
-        if (result.shipmentId) {
-          const labelResult = await svc.getLabel(result.shipmentId, result.clientReference)
-          labelUrl = labelResult.labelUrl || ""
-          labelData = labelResult.labelData
-        }
+        console.log(`[Bpost] Récupération étiquette pour ref "${result.clientReference}"...`)
+        const labelResult = await svc.getLabel(result.clientReference, result.clientReference)
+        labelUrl = labelResult.labelUrl || ""
+        labelData = labelResult.labelData
       } catch (e: any) {
         console.warn("[Bpost] Impossible de récupérer l'étiquette:", e?.message)
       }
