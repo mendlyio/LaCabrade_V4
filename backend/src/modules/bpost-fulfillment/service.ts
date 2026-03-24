@@ -116,7 +116,7 @@ export default class BpostFulfillmentProviderService extends AbstractFulfillment
       let labelUrl = ""
       try {
         if (result.shipmentId) {
-            const labelResult = await bpost.getLabel(result.shipmentId)
+            const labelResult = await bpost.getLabel(result.shipmentId, result.clientReference)
             labelUrl = labelResult.labelUrl
         }
       } catch (e) {

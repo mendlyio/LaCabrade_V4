@@ -53,7 +53,8 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     }
 
     const svc = req.scope.resolve(BPOST_MODULE) as BpostModuleService
-    const { labelUrl, labelData } = await svc.getLabel(shipmentId)
+    const clientReference = meta.bpost_client_reference as string | undefined
+    const { labelUrl, labelData } = await svc.getLabel(shipmentId, clientReference)
 
     if (labelData) {
       // Mettre à jour la commande avec les données pour les prochains téléchargements

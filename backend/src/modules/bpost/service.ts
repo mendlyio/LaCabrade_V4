@@ -50,39 +50,44 @@ export default class BpostModuleService {
     }
   }
 
-  private async sendToApi<T = any>({ method, endpoint, data, headers }: { method: string; endpoint: string; data?: any; headers?: Record<string, string> }): Promise<{ httpCode: number; response: T }> {
+  private async sendToApi<T = any>({ method, endpoint, data, headers, rawBinary }: { method: string; endpoint: string; data?: any; headers?: Record<string, string>; rawBinary?: boolean }): Promise<{ httpCode: number; response: T; rawBuffer?: Buffer }> {
     this.ensureKeys()
-    // Aligné sur le plugin WP : pluginsapi.bpost.be/v3 (SHM v3)
-    // Si l'ENV pointe vers api.bpost.cloud/shm/v3, on force pluginsapi (sinon pickup/shipments échouent)
     const envUrl = process.env.BPOST_API_URL || this.options.apiUrl
     const resolvedBase =
       envUrl && envUrl.includes("api.bpost.cloud")
         ? "https://pluginsapi.bpost.be/v3"
         : envUrl || "https://pluginsapi.bpost.be/v3"
-    if (envUrl && envUrl.includes("api.bpost.cloud")) {
-      console.warn("[Bpost] BPOST_API_URL redirigé vers pluginsapi.bpost.be/v3 pour compatibilité plugin")
-    }
     const baseUrl = resolvedBase
     const url = `${baseUrl.replace(/\/$/, "")}${endpoint.startsWith("/") ? endpoint : "/" + endpoint}`
     const body = data ? JSON.stringify(data) : ""
     const baseHeaders = this.buildHeaders(body)
 
     console.log(`[Bpost] ${method} ${url}`)
-    console.log(`[Bpost] Body:`, body || "(empty)")
 
     const fetchOptions: RequestInit = {
       method,
       headers: { ...baseHeaders, ...(headers || {}) },
     }
     
-    // Seulement ajouter body si on a des données et si ce n'est pas GET
     if (body && method !== "GET") {
       fetchOptions.body = body
     }
 
     const res = await fetch(url, fetchOptions)
-
     const httpCode = res.status
+    const contentType = res.headers.get("content-type") || ""
+
+    // Si la réponse est un PDF binaire, la lire en buffer
+    if (contentType.includes("application/pdf") || rawBinary) {
+      const arrayBuf = await res.arrayBuffer()
+      const buffer = Buffer.from(arrayBuf)
+      console.log(`[Bpost] Réponse ${httpCode}: binaire PDF (${buffer.length} bytes)`)
+      if (!res.ok) {
+        throw new Error(`Bpost API ${httpCode}`)
+      }
+      return { httpCode, response: null as any, rawBuffer: buffer }
+    }
+
     let response: any = null
     const responseText = await res.text()
     
@@ -92,7 +97,7 @@ export default class BpostModuleService {
       response = responseText
     }
 
-    console.log(`[Bpost] Réponse ${httpCode}:`, typeof response === 'object' ? JSON.stringify(response).slice(0, 500) : response?.slice?.(0, 500))
+    console.log(`[Bpost] Réponse ${httpCode}:`, typeof response === 'object' ? JSON.stringify(response).slice(0, 500) : responseText?.slice?.(0, 500))
 
     if (!res.ok) {
       const message = (response && (response.Error?.Info || response.error || response.message)) || `Bpost API ${httpCode}`
@@ -357,51 +362,115 @@ export default class BpostModuleService {
     }
 
     const { response } = await this.sendToApi<any>({ method: "POST", endpoint: "/shipments", data: { Shipment: [shipment] } })
-    // Réponse attendue: identifiants/numéro de suivi
+    console.log(`[Bpost] createShipment response keys:`, response ? Object.keys(response) : "null")
+    console.log(`[Bpost] createShipment full response:`, JSON.stringify(response)?.slice(0, 1000))
+
     const created = Array.isArray(response?.Shipment) ? response.Shipment[0] : response?.Shipment || response
     const shipmentId = created?.Id || created?.ShipmentId || input.reference || input.orderId
-    const trackingNumber = created?.TrackingNumber || created?.TrackingCode
-    return { shipmentId, trackingNumber }
+    const trackingNumber = created?.TrackingNumber || created?.TrackingCode || created?.Barcode
+    const clientReference = shipment.ClientReference
+    return { shipmentId, trackingNumber, clientReference }
   }
 
-  async getLabel(shipmentId: string): Promise<{ labelUrl: string; labelData?: string }> {
+  async getLabel(shipmentId: string, clientReference?: string): Promise<{ labelUrl: string; labelData?: string }> {
     await this.ensureToken()
 
-    const { response } = await this.sendToApi<any>({
-      method: "POST",
-      endpoint: "/labels",
-      data: { ClientReferenceCodeList: [shipmentId], LabelStart: 1, LabelType: 0 },
-    })
+    // Essayer d'abord avec le clientReference (= order ID), puis le shipmentId (= Bpost ID)
+    const idsToTry = clientReference && clientReference !== shipmentId
+      ? [clientReference, shipmentId]
+      : [shipmentId]
 
-    // Essayer toutes les structures de réponse connues de l'API Bpost SHM v3
-    const labelArray = Array.isArray(response?.Label) ? response.Label : []
-    const firstLabel = labelArray[0] || {}
+    for (const refId of idsToTry) {
+      console.log(`[Bpost] getLabel tentative avec ref: ${refId}`)
 
-    // URL directe
-    const directUrl =
-      response?.Url ||
-      response?.LabelUrl ||
-      firstLabel?.Url ||
-      firstLabel?.url ||
-      response?.labels?.[0]?.url ||
-      ""
+      const { response, rawBuffer } = await this.sendToApi<any>({
+        method: "POST",
+        endpoint: "/labels",
+        data: { ClientReferenceCodeList: [refId], LabelStart: 1, LabelType: 0 },
+      })
 
-    // Données base64 (PDF inline dans la réponse)
-    const labelData =
-      firstLabel?.LabelData ||
-      firstLabel?.labelData ||
-      response?.LabelData ||
-      response?.labels?.[0]?.data ||
-      ""
+      // Cas 1 : réponse binaire PDF directe
+      if (rawBuffer && rawBuffer.length > 0) {
+        const labelData = rawBuffer.toString("base64")
+        console.log(`[Bpost] getLabel(${refId}): PDF binaire reçu (${rawBuffer.length} bytes)`)
+        return { labelUrl: `data:application/pdf;base64,${labelData}`, labelData }
+      }
 
-    let labelUrl = directUrl
-    if (!labelUrl && labelData) {
-      // Construire une data URI PDF pour le stockage/prévisualisation
-      labelUrl = `data:application/pdf;base64,${labelData}`
+      console.log(`[Bpost] getLabel response type: ${typeof response}, keys:`, response && typeof response === "object" ? Object.keys(response) : "N/A")
+      console.log(`[Bpost] getLabel full response:`, typeof response === "object" ? JSON.stringify(response)?.slice(0, 1000) : String(response)?.slice(0, 500))
+
+      // Cas 2 : réponse string qui est un PDF brut (commence par %PDF)
+      if (typeof response === "string" && response.startsWith("%PDF")) {
+        const labelData = Buffer.from(response, "binary").toString("base64")
+        console.log(`[Bpost] getLabel(${refId}): PDF texte brut détecté`)
+        return { labelUrl: `data:application/pdf;base64,${labelData}`, labelData }
+      }
+
+      // Cas 3 : réponse string contenant du base64 (pas de JSON wrapper)
+      if (typeof response === "string" && response.length > 100 && !response.startsWith("{") && !response.startsWith("<")) {
+        try {
+          const decoded = Buffer.from(response, "base64")
+          if (decoded.toString("utf-8", 0, 5) === "%PDF-") {
+            console.log(`[Bpost] getLabel(${refId}): base64 brut détecté`)
+            return { labelUrl: `data:application/pdf;base64,${response}`, labelData: response }
+          }
+        } catch {}
+      }
+
+      // Cas 4 : JSON structuré
+      if (response && typeof response === "object") {
+        const labelArray = Array.isArray(response.Label) ? response.Label : []
+        const firstLabel = labelArray[0] || {}
+
+        const directUrl =
+          response.Url || response.LabelUrl ||
+          firstLabel.Url || firstLabel.url ||
+          response.labels?.[0]?.url || ""
+
+        const labelData =
+          firstLabel.LabelData || firstLabel.labelData ||
+          response.LabelData || response.labelData ||
+          response.labels?.[0]?.data || ""
+
+        if (labelData) {
+          console.log(`[Bpost] getLabel(${refId}): JSON avec LabelData (${labelData.length} chars)`)
+          return {
+            labelUrl: directUrl || `data:application/pdf;base64,${labelData}`,
+            labelData,
+          }
+        }
+        if (directUrl) {
+          console.log(`[Bpost] getLabel(${refId}): JSON avec URL directe`)
+          return { labelUrl: directUrl }
+        }
+
+        // Cas 5 : réponse JSON avec une structure imbriquée inattendue — chercher récursivement
+        const deepSearch = (obj: any, depth = 0): string | null => {
+          if (depth > 3 || !obj || typeof obj !== "object") return null
+          for (const key of Object.keys(obj)) {
+            if (/label.*data/i.test(key) && typeof obj[key] === "string" && obj[key].length > 100) return obj[key]
+            if (/pdf/i.test(key) && typeof obj[key] === "string" && obj[key].length > 100) return obj[key]
+          }
+          for (const key of Object.keys(obj)) {
+            if (typeof obj[key] === "object") {
+              const found = deepSearch(obj[key], depth + 1)
+              if (found) return found
+            }
+          }
+          return null
+        }
+        const deepData = deepSearch(response)
+        if (deepData) {
+          console.log(`[Bpost] getLabel(${refId}): donnée trouvée en recherche profonde (${deepData.length} chars)`)
+          return { labelUrl: `data:application/pdf;base64,${deepData}`, labelData: deepData }
+        }
+      }
+
+      console.log(`[Bpost] getLabel(${refId}): aucune étiquette trouvée dans cette réponse`)
     }
 
-    console.log(`[Bpost] getLabel(${shipmentId}): url=${labelUrl ? "ok" : "vide"}, data=${labelData ? `${labelData.length} chars` : "absent"}`)
-    return { labelUrl, labelData: labelData || undefined }
+    console.error(`[Bpost] getLabel: aucune étiquette trouvée pour aucune ref (${idsToTry.join(", ")})`)
+    return { labelUrl: "" }
   }
 
   validateWebhookSignature(rawBody: string, signature: string): boolean {

@@ -132,7 +132,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     let labelData: string | undefined
     try {
       if (result.shipmentId) {
-        const labelResult = await svc.getLabel(result.shipmentId)
+        const labelResult = await svc.getLabel(result.shipmentId, result.clientReference)
         labelUrl = labelResult.labelUrl || ""
         labelData = labelResult.labelData
       }
@@ -146,6 +146,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     const newMetadata: Record<string, any> = {
       ...meta,
       bpost_shipment_id: result.shipmentId,
+      bpost_client_reference: result.clientReference,
       bpost_tracking: result.trackingNumber,
       bpost_label_url: finalLabelUrl,
     }
