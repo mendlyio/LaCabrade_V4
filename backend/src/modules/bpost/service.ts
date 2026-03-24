@@ -1,4 +1,57 @@
 import crypto from "crypto"
+import { inflateSync } from "zlib"
+
+/**
+ * Extrait le numéro de tracking Bpost depuis un PDF en base64.
+ *
+ * Bpost génère le label avec un barcode Code 128 dessiné en vecteurs PDF.
+ * Le numéro de tracking (ex: "323200287659998195642030") est présent dans
+ * les streams compressés zlib du PDF sous forme de longue séquence de chiffres.
+ *
+ * Algorithme : décompresse tous les streams zlib, cherche des séquences
+ * de 15+ chiffres commençant par les préfixes Bpost connus.
+ */
+export function extractBpostTrackingFromPdf(base64Pdf: string): string | undefined {
+  try {
+    const pdfBuf = Buffer.from(base64Pdf, "base64")
+
+    // Décompresser tous les streams zlib (magic bytes 0x78 + 0x9C/0xDA/0x01/0x5E)
+    const allText: string[] = []
+    for (let i = 0; i < pdfBuf.length - 2; i++) {
+      if (pdfBuf[i] === 0x78 && [0x9C, 0xDA, 0x01, 0x5E].includes(pdfBuf[i + 1])) {
+        try {
+          const dec = inflateSync(pdfBuf.slice(i, Math.min(i + 80000, pdfBuf.length)))
+          if (dec.length > 50) {
+            allText.push(Buffer.from(dec).toString("utf-8"))
+          }
+        } catch {}
+      }
+    }
+
+    // Chercher les longues séquences numériques dans tous les streams
+    const combined = allText.join("\n")
+    const candidates = combined.match(/\d{15,30}/g) ?? []
+
+    for (const candidate of candidates) {
+      // Préfixes Bpost connus :
+      //  - "32320…" / "3232…" = bpack domestique/international
+      //  - "3S…" (mais ce serait alphanumérique)
+      //  - Longueur typique 12-24 chiffres
+      if (/^(3232|3230|323|3S)/i.test(candidate) && candidate.length >= 15) {
+        return candidate
+      }
+    }
+
+    // Fallback : retourner le premier candidat >= 15 chiffres qui n'est pas un timestamp
+    const nowMs = Date.now().toString()
+    const nonTimestamp = candidates.find(c =>
+      c.length >= 15 && !nowMs.startsWith(c.slice(0, 10)) && !c.startsWith("177") // pas de timestamp ms
+    )
+    return nonTimestamp || undefined
+  } catch {
+    return undefined
+  }
+}
 
 type BpostOptions = {
   publicKey?: string
@@ -806,10 +859,18 @@ export default class BpostModuleService {
 
     if (labelData && typeof labelData === "string" && labelData.length > 100) {
       const directUrl = response.Url || response.LabelUrl || firstLabel.Url || ""
+
+      // Si Bpost ne retourne pas TrackingId via JSON (modèle Day Closing),
+      // l'extraire directement depuis le barcode encodé dans le PDF.
+      const effectiveTracking = trackingNumber || extractBpostTrackingFromPdf(labelData)
+      if (effectiveTracking && !trackingNumber) {
+        console.log(`[Bpost] extractPdfFromResponse: tracking extrait du PDF: ${effectiveTracking}`)
+      }
+
       return {
         labelUrl: directUrl || `data:application/pdf;base64,${labelData}`,
         labelData,
-        trackingNumber,
+        trackingNumber: effectiveTracking,
       }
     }
 
