@@ -375,102 +375,142 @@ export default class BpostModuleService {
   async getLabel(shipmentId: string, clientReference?: string): Promise<{ labelUrl: string; labelData?: string }> {
     await this.ensureToken()
 
-    // Essayer d'abord avec le clientReference (= order ID), puis le shipmentId (= Bpost ID)
     const idsToTry = clientReference && clientReference !== shipmentId
       ? [clientReference, shipmentId]
       : [shipmentId]
 
     for (const refId of idsToTry) {
-      console.log(`[Bpost] getLabel tentative avec ref: ${refId}`)
+      console.log(`[Bpost] getLabel: lancement création label pour ref "${refId}"`)
 
-      const { response, rawBuffer } = await this.sendToApi<any>({
-        method: "POST",
-        endpoint: "/labels",
-        data: { ClientReferenceCodeList: [refId], LabelStart: 1, LabelType: 0 },
-      })
+      // Étape 1 : POST /labels → déclenche la génération, retourne CallbackURL
+      let callbackUrl: string | null = null
+      try {
+        const { response } = await this.sendToApi<any>({
+          method: "POST",
+          endpoint: "/labels",
+          data: { ClientReferenceCodeList: [refId], LabelStart: 1, LabelType: 0 },
+        })
 
-      // Cas 1 : réponse binaire PDF directe
-      if (rawBuffer && rawBuffer.length > 0) {
-        const labelData = Buffer.from(rawBuffer).toString("base64")
-        console.log(`[Bpost] getLabel(${refId}): PDF binaire reçu (${rawBuffer.length} bytes)`)
-        return { labelUrl: `data:application/pdf;base64,${labelData}`, labelData }
+        console.log(`[Bpost] POST /labels response:`, JSON.stringify(response)?.slice(0, 1000))
+
+        callbackUrl = response?.CallbackURL || response?.CallbackUrl || response?.callbackUrl || response?.callbackURL || null
+
+        // Parfois la réponse contient déjà le PDF (ancien format)
+        const immediate = this.extractPdfFromResponse(response)
+        if (immediate) {
+          console.log(`[Bpost] getLabel(${refId}): PDF obtenu immédiatement`)
+          return immediate
+        }
+      } catch (e: any) {
+        console.warn(`[Bpost] getLabel POST /labels échoué pour ref "${refId}": ${e?.message}`)
+        continue
       }
 
-      console.log(`[Bpost] getLabel response type: ${typeof response}, keys:`, response && typeof response === "object" ? Object.keys(response) : "N/A")
-      console.log(`[Bpost] getLabel full response:`, typeof response === "object" ? JSON.stringify(response)?.slice(0, 1000) : String(response)?.slice(0, 500))
+      if (!callbackUrl) {
+        console.warn(`[Bpost] getLabel(${refId}): pas de CallbackURL dans la réponse`)
+        continue
+      }
 
-      // Cas 2 : réponse string qui est un PDF brut (commence par %PDF)
-      if (typeof response === "string" && response.startsWith("%PDF")) {
+      // Étape 2 : Poll GET CallbackURL jusqu'à obtenir le PDF
+      console.log(`[Bpost] getLabel: polling ${callbackUrl}`)
+      const maxAttempts = 10
+      const delayMs = 2000
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        await new Promise((r) => setTimeout(r, delayMs))
+
+        try {
+          // Extraire le path relatif du callbackUrl
+          const endpoint = callbackUrl.includes("/v3/")
+            ? callbackUrl.substring(callbackUrl.indexOf("/v3/") + 3)
+            : callbackUrl.startsWith("/") ? callbackUrl : `/${callbackUrl}`
+
+          const { response, rawBuffer } = await this.sendToApi<any>({
+            method: "GET",
+            endpoint,
+          })
+
+          // PDF binaire direct
+          if (rawBuffer && rawBuffer.length > 0) {
+            const labelData = Buffer.from(rawBuffer).toString("base64")
+            console.log(`[Bpost] getLabel(${refId}): PDF reçu au poll #${attempt} (${rawBuffer.length} bytes)`)
+            return { labelUrl: `data:application/pdf;base64,${labelData}`, labelData }
+          }
+
+          // Réponse JSON — vérifier si le PDF est dedans ou s'il faut encore attendre
+          const result = this.extractPdfFromResponse(response)
+          if (result) {
+            console.log(`[Bpost] getLabel(${refId}): PDF extrait au poll #${attempt}`)
+            return result
+          }
+
+          // Vérifier s'il y a une erreur ou un statut "pending"
+          const status = response?.Status || response?.status
+          const errorInfo = response?.Error?.Info || response?.ErrorList?.[0]?.Info
+          if (errorInfo && !errorInfo.toLowerCase().includes("pending") && !errorInfo.toLowerCase().includes("processing")) {
+            console.error(`[Bpost] getLabel(${refId}): erreur au poll #${attempt}: ${errorInfo}`)
+            break
+          }
+
+          console.log(`[Bpost] getLabel(${refId}): poll #${attempt}/${maxAttempts} — pas encore prêt (status: ${status || "unknown"})`)
+        } catch (e: any) {
+          console.warn(`[Bpost] getLabel poll #${attempt} erreur: ${e?.message}`)
+        }
+      }
+
+      console.warn(`[Bpost] getLabel(${refId}): timeout après ${maxAttempts} tentatives de polling`)
+    }
+
+    console.error(`[Bpost] getLabel: aucune étiquette obtenue (refs: ${idsToTry.join(", ")})`)
+    return { labelUrl: "" }
+  }
+
+  private extractPdfFromResponse(response: any): { labelUrl: string; labelData: string } | null {
+    if (!response) return null
+
+    // String qui est un PDF brut
+    if (typeof response === "string") {
+      if (response.startsWith("%PDF")) {
         const labelData = Buffer.from(response, "binary").toString("base64")
-        console.log(`[Bpost] getLabel(${refId}): PDF texte brut détecté`)
         return { labelUrl: `data:application/pdf;base64,${labelData}`, labelData }
       }
-
-      // Cas 3 : réponse string contenant du base64 (pas de JSON wrapper)
-      if (typeof response === "string" && response.length > 100 && !response.startsWith("{") && !response.startsWith("<")) {
+      // String base64 qui décode en PDF
+      if (response.length > 200 && !response.startsWith("{") && !response.startsWith("<")) {
         try {
           const decoded = Buffer.from(response, "base64")
-          if (decoded.toString("utf-8", 0, 5) === "%PDF-") {
-            console.log(`[Bpost] getLabel(${refId}): base64 brut détecté`)
+          if (decoded.subarray(0, 5).toString("utf-8") === "%PDF-") {
             return { labelUrl: `data:application/pdf;base64,${response}`, labelData: response }
           }
         } catch {}
       }
-
-      // Cas 4 : JSON structuré
-      if (response && typeof response === "object") {
-        const labelArray = Array.isArray(response.Label) ? response.Label : []
-        const firstLabel = labelArray[0] || {}
-
-        const directUrl =
-          response.Url || response.LabelUrl ||
-          firstLabel.Url || firstLabel.url ||
-          response.labels?.[0]?.url || ""
-
-        const labelData =
-          firstLabel.LabelData || firstLabel.labelData ||
-          response.LabelData || response.labelData ||
-          response.labels?.[0]?.data || ""
-
-        if (labelData) {
-          console.log(`[Bpost] getLabel(${refId}): JSON avec LabelData (${labelData.length} chars)`)
-          return {
-            labelUrl: directUrl || `data:application/pdf;base64,${labelData}`,
-            labelData,
-          }
-        }
-        if (directUrl) {
-          console.log(`[Bpost] getLabel(${refId}): JSON avec URL directe`)
-          return { labelUrl: directUrl }
-        }
-
-        // Cas 5 : réponse JSON avec une structure imbriquée inattendue — chercher récursivement
-        const deepSearch = (obj: any, depth = 0): string | null => {
-          if (depth > 3 || !obj || typeof obj !== "object") return null
-          for (const key of Object.keys(obj)) {
-            if (/label.*data/i.test(key) && typeof obj[key] === "string" && obj[key].length > 100) return obj[key]
-            if (/pdf/i.test(key) && typeof obj[key] === "string" && obj[key].length > 100) return obj[key]
-          }
-          for (const key of Object.keys(obj)) {
-            if (typeof obj[key] === "object") {
-              const found = deepSearch(obj[key], depth + 1)
-              if (found) return found
-            }
-          }
-          return null
-        }
-        const deepData = deepSearch(response)
-        if (deepData) {
-          console.log(`[Bpost] getLabel(${refId}): donnée trouvée en recherche profonde (${deepData.length} chars)`)
-          return { labelUrl: `data:application/pdf;base64,${deepData}`, labelData: deepData }
-        }
-      }
-
-      console.log(`[Bpost] getLabel(${refId}): aucune étiquette trouvée dans cette réponse`)
+      return null
     }
 
-    console.error(`[Bpost] getLabel: aucune étiquette trouvée pour aucune ref (${idsToTry.join(", ")})`)
-    return { labelUrl: "" }
+    if (typeof response !== "object") return null
+
+    // JSON structuré: Label[].LabelData, ou LabelData direct
+    const labelArray = Array.isArray(response.Label) ? response.Label : []
+    const firstLabel = labelArray[0] || {}
+
+    const labelData =
+      firstLabel.LabelData || firstLabel.labelData ||
+      response.LabelData || response.labelData ||
+      response.labels?.[0]?.data || ""
+
+    if (labelData && typeof labelData === "string" && labelData.length > 100) {
+      const directUrl = response.Url || response.LabelUrl || firstLabel.Url || ""
+      return {
+        labelUrl: directUrl || `data:application/pdf;base64,${labelData}`,
+        labelData,
+      }
+    }
+
+    const directUrl = response.Url || response.LabelUrl || firstLabel.Url || firstLabel.url || ""
+    if (directUrl) {
+      return { labelUrl: directUrl, labelData: "" }
+    }
+
+    return null
   }
 
   validateWebhookSignature(rawBody: string, signature: string): boolean {
