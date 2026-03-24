@@ -38,6 +38,26 @@ const CheckIcon = (props: React.SVGAttributes<SVGElement>) => (
   </svg>
 )
 
+// ─── Icône maison ─────────────────────────────────────────────────────────────
+
+const HomeIcon = (props: React.SVGAttributes<SVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" {...props}>
+    <path fillRule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 11h-1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-6H3a1 1 0 01-.707-1.707l7-7z" clipRule="evenodd" />
+  </svg>
+)
+
+const PinIcon = (props: React.SVGAttributes<SVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" {...props}>
+    <path fillRule="evenodd" d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" clipRule="evenodd" />
+  </svg>
+)
+
+const GlobeIcon = (props: React.SVGAttributes<SVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" {...props}>
+    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clipRule="evenodd" />
+  </svg>
+)
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type GeneratedData = {
@@ -57,6 +77,7 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
 
   const shippingMethods = Array.isArray(order?.shipping_methods) ? order.shipping_methods : []
   const fulfillments = Array.isArray(order?.fulfillments) ? order.fulfillments : []
+  const shippingAddress = order?.shipping_address
 
   // Détecter une livraison Bpost
   const hasBpostShipping =
@@ -69,6 +90,13 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
   const bpostFulfillments = fulfillments.filter((f: any) =>
     (f.provider_id || "").toString().toLowerCase().includes("bpost")
   )
+
+  // Point relais et type de livraison
+  const pickupPoint = (order?.metadata as any)?.bpost_pickup_point
+  const isPickup = !!pickupPoint
+  const countryCode = (shippingAddress?.country_code || "BE").toUpperCase()
+  const isBelgium = countryCode === "BE" || countryCode === "BEL"
+  const deliveryType = isPickup ? "Point relais" : isBelgium ? "Domicile (Belgique)" : `International (${countryCode})`
 
   // Données déjà présentes dans les métadonnées de la commande
   const metaLabelUrl: string = (order?.metadata as any)?.bpost_label_url || ""
@@ -176,6 +204,76 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
           <Badge color="green" size="small">
             Étiquette générée
           </Badge>
+        )}
+      </div>
+
+      {/* ── SECTION : Infos livraison (toujours visible) ── */}
+      <div className="px-6 py-4 bg-ui-bg-subtle flex flex-col gap-3">
+
+        {/* Type de livraison + adresse */}
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex-shrink-0">
+            {isPickup
+              ? <PinIcon className="w-4 h-4 text-amber-600" />
+              : isBelgium
+                ? <HomeIcon className="w-4 h-4 text-blue-600" />
+                : <GlobeIcon className="w-4 h-4 text-purple-600" />
+            }
+          </div>
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Text className="text-sm font-semibold text-ui-fg-base">{deliveryType}</Text>
+              {shippingMethods[0]?.name && (
+                <Badge color="grey" size="small">{shippingMethods[0].name}</Badge>
+              )}
+            </div>
+
+            {/* Adresse domicile */}
+            {!isPickup && shippingAddress && (
+              <div className="text-xs text-ui-fg-subtle leading-relaxed mt-1">
+                <span className="font-medium text-ui-fg-base">
+                  {shippingAddress.first_name} {shippingAddress.last_name}
+                </span>
+                {shippingAddress.company && <span> — {shippingAddress.company}</span>}
+                <br />
+                {shippingAddress.address_1}
+                {shippingAddress.address_2 && <>, {shippingAddress.address_2}</>}
+                <br />
+                {shippingAddress.postal_code} {shippingAddress.city}
+                {shippingAddress.province && `, ${shippingAddress.province}`}
+                {" "}— {countryCode}
+                {shippingAddress.phone && (
+                  <><br /><span className="text-ui-fg-muted">📞 {shippingAddress.phone}</span></>
+                )}
+              </div>
+            )}
+
+            {/* Point relais */}
+            {isPickup && (
+              <div className="mt-1 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-2 text-xs text-amber-800 leading-relaxed">
+                <div className="font-semibold">{pickupPoint?.Name || pickupPoint?.name || "Point relais"}</div>
+                {(pickupPoint?.Address || pickupPoint?.address) && (
+                  <div>{pickupPoint.Address || pickupPoint.address}</div>
+                )}
+                {(pickupPoint?.ZipCode || pickupPoint?.PostalCode) && (
+                  <div>{pickupPoint.ZipCode || pickupPoint.PostalCode} {pickupPoint.City || pickupPoint.city}</div>
+                )}
+                {shippingAddress && (
+                  <div className="mt-1 pt-1 border-t border-amber-200 text-amber-700">
+                    Destinataire : {shippingAddress.first_name} {shippingAddress.last_name}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Email client */}
+        {order?.email && (
+          <div className="flex items-center gap-2 text-xs text-ui-fg-subtle">
+            <MailIcon className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>{order.email}</span>
+          </div>
         )}
       </div>
 
