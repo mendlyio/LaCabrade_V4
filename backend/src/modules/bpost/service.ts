@@ -335,7 +335,7 @@ export default class BpostModuleService {
     pickupPointId?: string
     weightGrams?: number
     reference?: string
-  }): Promise<{ shipmentId: string; labelUrl?: string; trackingNumber?: string }> {
+  }): Promise<{ shipmentId: string; labelUrl?: string; trackingNumber?: string; clientReference?: string }> {
     // Schéma simplifié; adapter selon contrat Bpost
     await this.ensureToken()
 
@@ -391,7 +391,7 @@ export default class BpostModuleService {
 
       // Cas 1 : réponse binaire PDF directe
       if (rawBuffer && rawBuffer.length > 0) {
-        const labelData = rawBuffer.toString("base64")
+        const labelData = Buffer.from(rawBuffer).toString("base64")
         console.log(`[Bpost] getLabel(${refId}): PDF binaire reçu (${rawBuffer.length} bytes)`)
         return { labelUrl: `data:application/pdf;base64,${labelData}`, labelData }
       }
