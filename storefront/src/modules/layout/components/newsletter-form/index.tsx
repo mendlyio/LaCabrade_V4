@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useId, useState } from "react"
 import { useTranslate } from "@lib/context/language-context"
 
 const BACKEND_URL =
@@ -11,6 +11,8 @@ const PUBLISHABLE_KEY =
 
 const NewsletterForm = () => {
   const t = useTranslate()
+  const emailInputId = useId()
+  const birthdayInputId = useId()
   const [email, setEmail] = useState("")
   const [birthday, setBirthday] = useState("")
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle")
@@ -70,7 +72,11 @@ const NewsletterForm = () => {
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         {/* Email */}
         <div className="relative">
+          <label htmlFor={emailInputId} className="sr-only">
+            {t("form.email_placeholder" as any)}
+          </label>
           <input
+            id={emailInputId}
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -91,11 +97,15 @@ const NewsletterForm = () => {
 
         {/* Anniversaire */}
         <div className="flex flex-col gap-1">
-          <label className="text-white/80 text-xs font-medium ml-1 flex items-center gap-1">
+          <label
+            htmlFor={birthdayInputId}
+            className="text-white/80 text-xs font-medium ml-1 flex items-center gap-1"
+          >
             🎂 {t("form.birthday_label" as any)}
             <span className="text-white/50 font-normal">{t("form.birthday_hint" as any)}</span>
           </label>
           <input
+            id={birthdayInputId}
             type="date"
             value={birthday}
             onChange={(e) => setBirthday(e.target.value)}

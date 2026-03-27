@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useId, useState } from "react"
 import { useTranslate } from "@lib/context/language-context"
 
 const BACKEND_URL =
@@ -11,6 +11,8 @@ const PUBLISHABLE_KEY =
 
 const NewsletterBanner = () => {
   const t = useTranslate()
+  const emailInputId = useId()
+  const birthdayInputId = useId()
   const [email, setEmail] = useState("")
   const [birthday, setBirthday] = useState("")
   const [honeypot, setHoneypot] = useState("")
@@ -105,7 +107,11 @@ const NewsletterBanner = () => {
             />
 
             {/* Email */}
+            <label htmlFor={emailInputId} className="sr-only">
+              {t("newsletter.email_placeholder" as any)}
+            </label>
             <input
+              id={emailInputId}
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -119,11 +125,15 @@ const NewsletterBanner = () => {
 
             {/* Anniversaire */}
             <div className="flex flex-col gap-1">
-              <label className="text-white/80 text-xs font-medium text-left ml-1 flex items-center gap-1">
+              <label
+                htmlFor={birthdayInputId}
+                className="text-white/80 text-xs font-medium text-left ml-1 flex items-center gap-1"
+              >
                 🎂 {t("newsletter.birthday_label" as any)}
                 <span className="text-white/50 font-normal">({t("newsletter.birthday_required" as any)})</span>
               </label>
               <input
+                id={birthdayInputId}
                 type="date"
                 value={birthday}
                 onChange={(e) => setBirthday(e.target.value)}

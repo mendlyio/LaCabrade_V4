@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useId } from "react"
 import { HttpTypes } from "@medusajs/types"
 import { isEqual } from "lodash"
 import { useParams } from "next/navigation"
@@ -47,6 +47,7 @@ export default function ProductActionsModern({
   const [notifyEmail, setNotifyEmail] = useState("")
   const [notifySubmitted, setNotifySubmitted] = useState(false)
   const countryCode = useParams().countryCode as string
+  const quantityInputId = useId()
 
   // Présélectionner les options si un seul variant ou si le produit n'a pas d'options réelles
   useEffect(() => {
@@ -402,20 +403,26 @@ export default function ProductActionsModern({
       {/* Quantity Selector */}
       {inStock && selectedVariant && (
         <div>
-          <label className="block text-sm font-semibold text-gray-900 mb-3">
+          <label
+            htmlFor={quantityInputId}
+            className="block text-sm font-semibold text-gray-900 mb-3"
+          >
             Quantité
           </label>
           <div className="inline-flex items-center border-2 border-gray-300 rounded-lg overflow-hidden">
             <button
+              type="button"
               onClick={() => setQuantity(Math.max(1, quantity - 1))}
               className="px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors"
               disabled={quantity <= 1}
+              aria-label="Diminuer la quantité"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" aria-hidden fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
               </svg>
             </button>
             <input
+              id={quantityInputId}
               type="number"
               value={quantity}
               onChange={(e) => {
@@ -427,13 +434,16 @@ export default function ProductActionsModern({
               min="1"
               max={availableQuantity}
               className="w-16 text-center py-3 border-0 font-semibold text-gray-900"
+              inputMode="numeric"
             />
             <button
+              type="button"
               onClick={() => setQuantity(Math.min(availableQuantity, quantity + 1))}
               className="px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors"
               disabled={quantity >= availableQuantity}
+              aria-label="Augmenter la quantité"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" aria-hidden fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             </button>

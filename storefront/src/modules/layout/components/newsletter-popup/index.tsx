@@ -1,6 +1,14 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import {
+  useState,
+  useEffect,
+  useCallback,
+  cloneElement,
+  isValidElement,
+  useId,
+  type ReactElement,
+} from "react"
 import Image from "next/image"
 import { useTranslate } from "@lib/context/language-context"
 
@@ -249,17 +257,35 @@ function Field({
   error?: string
   children: React.ReactNode
 }) {
+  const fieldId = useId()
+  const hintId = `${fieldId}-hint`
+  const errorId = `${fieldId}-error`
+
+  const describedBy = error ? errorId : hint ? hintId : undefined
+
+  const control = isValidElement(children)
+    ? cloneElement(children as ReactElement<Record<string, unknown>>, {
+        id: fieldId,
+        "aria-invalid": error ? true : undefined,
+        "aria-describedby": describedBy,
+      })
+    : children
+
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-semibold text-gray-700 flex items-center gap-1">
+      <label htmlFor={fieldId} className="text-xs font-semibold text-gray-700 flex items-center gap-1">
         {label}
         <span className="text-[#9e354a]">*</span>
       </label>
-      {children}
+      {control}
       {error ? (
-        <p className="text-[11px] text-red-500 leading-tight">{error}</p>
+        <p id={errorId} role="alert" className="text-[11px] text-red-500 leading-tight">
+          {error}
+        </p>
       ) : hint ? (
-        <p className="text-[10px] text-gray-400 leading-tight">{hint}</p>
+        <p id={hintId} className="text-[10px] text-gray-400 leading-tight">
+          {hint}
+        </p>
       ) : null}
     </div>
   )
