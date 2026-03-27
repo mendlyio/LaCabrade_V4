@@ -87,7 +87,8 @@ export default async function Home({
   const lcProductsPromise = lcCategory
     ? getProductsList({
         queryParams: {
-          limit: 48,
+          // 24 suffit largement pour filtrer puis afficher 8 cartes (évite une réponse API trop lourde).
+          limit: 24,
           region_id: region.id,
           category_id: [lcCategory.id],
           fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images,+categories.handle,+categories.id",
