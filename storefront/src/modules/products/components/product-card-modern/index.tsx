@@ -16,11 +16,14 @@ export default async function ProductCardModern({
   variant = "default",
   /** p.ex. carrousel « Articles similaires » : largeurs plus petites que la grille boutique */
   imageSizes,
+  /** Qualité de compression des images (défaut 70). Passer 50 pour les petites vignettes. */
+  imageQuality = 70,
 }: {
   product: HttpTypes.StoreProduct
   region: HttpTypes.StoreRegion
   variant?: "default" | "compact"
   imageSizes?: string
+  imageQuality?: number
 }) {
   const [pricedProduct] = await getProductsById({
     ids: [product.id!],
@@ -126,7 +129,7 @@ export default async function ProductCardModern({
                 src={thumbUrl}
                 alt={product.title || "Produit"}
                 fill
-                quality={65}
+                quality={imageQuality}
                 className="object-cover group-hover:scale-105 transition-transform duration-500"
                 sizes="80px"
               />
@@ -249,7 +252,7 @@ export default async function ProductCardModern({
               src={thumbUrl}
               alt={product.title || "Produit"}
               fill
-              quality={70}
+              quality={imageQuality}
               className={`object-cover transition-all duration-700 ease-out ${
                 hoverImage
                   ? "group-hover:opacity-0 group-hover:scale-105"
@@ -281,7 +284,8 @@ export default async function ProductCardModern({
               src={hoverImage}
               alt={`${product.title} - vue alternative`}
               fill
-              quality={70}
+              quality={imageQuality}
+              loading="lazy"
               className="object-cover absolute inset-0 opacity-0 scale-[1.08] rotate-[-1deg] group-hover:opacity-100 group-hover:scale-[1.03] group-hover:rotate-[1deg] transition-all duration-700 ease-out"
               sizes={cardImageSizes}
             />

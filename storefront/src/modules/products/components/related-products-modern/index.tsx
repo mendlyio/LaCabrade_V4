@@ -87,6 +87,7 @@ export default async function RelatedProductsModern({
                 product={relatedProduct}
                 region={region}
                 imageSizes="(max-width: 640px) 44vw, (max-width: 1024px) 240px, 230px"
+                imageQuality={50}
               />
             </div>
           ))}
