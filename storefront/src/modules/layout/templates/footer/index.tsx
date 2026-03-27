@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import NewsletterBanner from "@modules/layout/components/newsletter-banner"
 import ManageCookiesLink from "@modules/layout/components/manage-cookies-link"
@@ -20,9 +21,13 @@ export default function Footer() {
           {/* COLONNE 1 : LOGO + RÉSEAUX SOCIAUX */}
           <div className="space-y-4">
             <div>
-              <img
+              <Image
                 src="https://ik.imagekit.io/kodt9cn6f/Logo-cabrade-white.webp"
                 alt="La Cabrade"
+                width={280}
+                height={125}
+                quality={85}
+                sizes="(max-width: 768px) 200px, 240px"
                 className="h-14 w-auto object-contain"
               />
             </div>

@@ -1,4 +1,5 @@
 import { Suspense } from "react"
+import Image from "next/image"
 import { listRegions, FALLBACK_REGIONS } from "@lib/data/regions"
 import { listCategories } from "@lib/data/categories"
 import { listBrands } from "@lib/data/brands"
@@ -66,9 +67,14 @@ export default async function Nav() {
                 className="flex items-center group/logo"
                 data-testid="nav-store-link"
               >
-                <img 
-                  src="https://ik.imagekit.io/kodt9cn6f/Logo-cabrade.webp" 
-                  alt="La Cabrade" 
+                <Image
+                  src="https://ik.imagekit.io/kodt9cn6f/Logo-cabrade.webp"
+                  alt="La Cabrade"
+                  width={280}
+                  height={125}
+                  priority
+                  quality={85}
+                  sizes="(max-width: 1024px) 140px, 180px"
                   className="h-10 sm:h-12 lg:h-14 w-auto object-contain"
                 />
               </LocalizedClientLink>

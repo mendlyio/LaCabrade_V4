@@ -34,7 +34,8 @@ export default async function RelatedProductsModern({
 
   const queryParams: any = {
     limit: 12,
-    fields: "*variants.calculated_price,+variants.inventory_quantity,+variants.prices",
+    fields:
+      "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images",
   }
 
   if (!categoryId) {
@@ -74,6 +75,7 @@ export default async function RelatedProductsModern({
               <ProductCardModern
                 product={relatedProduct}
                 region={region}
+                imageSizes="(max-width: 640px) 44vw, (max-width: 1024px) 240px, 230px"
               />
             </div>
           ))}

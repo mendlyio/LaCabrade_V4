@@ -14,10 +14,13 @@ export default async function ProductCardModern({
   product,
   region,
   variant = "default",
+  /** p.ex. carrousel « Articles similaires » : largeurs plus petites que la grille boutique */
+  imageSizes,
 }: {
   product: HttpTypes.StoreProduct
   region: HttpTypes.StoreRegion
   variant?: "default" | "compact"
+  imageSizes?: string
 }) {
   const [pricedProduct] = await getProductsById({
     ids: [product.id!],
@@ -78,6 +81,16 @@ export default async function ProductCardModern({
 
   const collection = pricedProduct.collection?.title
 
+  const cardImageSizes =
+    imageSizes ?? "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+
+  // Liste API parfois sans thumbnail : la fiche complète (getProductsById) fournit images
+  const thumbUrl =
+    pricedProduct.thumbnail ||
+    pricedProduct.images?.[0]?.url ||
+    product.thumbnail ||
+    null
+
   // Images : 3ème image pour le hover
   const images = pricedProduct.images || []
   const hoverImage = images.length > 2 ? images[2]?.url : null
@@ -108,9 +121,9 @@ export default async function ProductCardModern({
             : "border border-gray-100 hover:border-amber-200"
         }`}>
           <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
-            {product.thumbnail ? (
+            {thumbUrl ? (
               <Image
-                src={product.thumbnail}
+                src={thumbUrl}
                 alt={product.title || "Produit"}
                 fill
                 quality={65}
@@ -231,9 +244,9 @@ export default async function ProductCardModern({
         {/* ── Image Container ── */}
         <div className="relative aspect-[4/5] overflow-hidden bg-gray-50">
           {/* Image principale */}
-          {product.thumbnail ? (
+          {thumbUrl ? (
             <Image
-              src={product.thumbnail}
+              src={thumbUrl}
               alt={product.title || "Produit"}
               fill
               quality={70}
@@ -242,7 +255,7 @@ export default async function ProductCardModern({
                   ? "group-hover:opacity-0 group-hover:scale-105"
                   : "group-hover:scale-[1.06] group-hover:rotate-[1.5deg]"
               }`}
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              sizes={cardImageSizes}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
@@ -270,7 +283,7 @@ export default async function ProductCardModern({
               fill
               quality={70}
               className="object-cover absolute inset-0 opacity-0 scale-[1.08] rotate-[-1deg] group-hover:opacity-100 group-hover:scale-[1.03] group-hover:rotate-[1deg] transition-all duration-700 ease-out"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              sizes={cardImageSizes}
             />
           )}
 
