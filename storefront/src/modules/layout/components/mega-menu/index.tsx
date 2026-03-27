@@ -28,15 +28,22 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
 
   const [panelTop, setPanelTop] = useState(160)
 
-  // Calculer la position top du panel en dessous du nav
+  // Calculer la position top une seule fois au montage + resize
+  // (évite getBoundingClientRect sur chaque ouverture = forced reflow)
   useEffect(() => {
-    if (!open || !containerRef.current) return
-    const nav = containerRef.current.closest(".mega-menu-nav")
-    if (nav) {
-      const rect = nav.getBoundingClientRect()
-      setPanelTop(rect.bottom)
+    const updatePanelTop = () => {
+      if (!containerRef.current) return
+      const nav = containerRef.current.closest(".mega-menu-nav")
+      if (nav) {
+        requestAnimationFrame(() => {
+          setPanelTop(nav.getBoundingClientRect().bottom)
+        })
+      }
     }
-  }, [open])
+    updatePanelTop()
+    window.addEventListener("resize", updatePanelTop)
+    return () => window.removeEventListener("resize", updatePanelTop)
+  }, [])
 
   // Fermer si clic en dehors
   useEffect(() => {

@@ -13,34 +13,42 @@ const ScrollCarousel = ({ children, className = "" }: ScrollCarouselProps) => {
   const [canScrollRight, setCanScrollRight] = useState(true)
 
   const checkScroll = () => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current
-      setCanScrollLeft(scrollLeft > 0)
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10)
-    }
+    // requestAnimationFrame diffère la lecture après le paint —
+    // évite un forced layout reflow quand le DOM vient d'être modifié
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current
+        setCanScrollLeft(scrollLeft > 0)
+        setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10)
+      }
+    })
   }
 
   useEffect(() => {
     checkScroll()
     const scrollElement = scrollRef.current
     if (scrollElement) {
-      scrollElement.addEventListener('scroll', checkScroll)
-      window.addEventListener('resize', checkScroll)
+      scrollElement.addEventListener("scroll", checkScroll, { passive: true })
+      window.addEventListener("resize", checkScroll, { passive: true })
       return () => {
-        scrollElement.removeEventListener('scroll', checkScroll)
-        window.removeEventListener('resize', checkScroll)
+        scrollElement.removeEventListener("scroll", checkScroll)
+        window.removeEventListener("resize", checkScroll)
       }
     }
   }, [])
 
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const scrollAmount = scrollRef.current.clientWidth * 0.8
-      scrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      })
-    }
+  const scroll = (direction: "left" | "right") => {
+    if (!scrollRef.current) return
+    // Lire clientWidth dans un rAF pour ne pas forcer le reflow
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        const scrollAmount = scrollRef.current.clientWidth * 0.8
+        scrollRef.current.scrollBy({
+          left: direction === "left" ? -scrollAmount : scrollAmount,
+          behavior: "smooth",
+        })
+      }
+    })
   }
 
   return (
