@@ -1,11 +1,30 @@
 import { HttpTypes } from "@medusajs/types"
 import { getProductsList } from "@lib/data/products"
 import { listCategories } from "@lib/data/categories"
+import { unstable_cache } from "next/cache"
 import ProductCardModern from "@modules/products/components/product-card-modern"
 import ScrollCarousel from "@modules/common/components/scroll-carousel"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
+
+// Cache 2h — les produits similaires ne changent pas souvent
+const getCachedRelatedProducts = unstable_cache(
+  async (categoryId: string, countryCode: string) => {
+    const { response } = await getProductsList({
+      queryParams: {
+        limit: 12,
+        fields:
+          "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images",
+        category_id: [categoryId],
+      } as any,
+      countryCode,
+    })
+    return response.products
+  },
+  ["related-products-lc-equestrian"],
+  { revalidate: 7200, tags: ["products"] }
+)
 
 type RelatedProductsModernProps = {
   product: HttpTypes.StoreProduct
@@ -20,7 +39,6 @@ export default async function RelatedProductsModern({
   region,
   categoryId: categoryIdProp,
 }: RelatedProductsModernProps) {
-  // Si le categoryId est fourni par le parent, on évite l'appel listCategories
   let categoryId: string | null = categoryIdProp ?? null
 
   if (!categoryId) {
@@ -41,20 +59,9 @@ export default async function RelatedProductsModern({
     return null
   }
 
-  const queryParams: any = {
-    limit: 12,
-    fields:
-      "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images",
-    category_id: [categoryId],
-  }
+  const products = await getCachedRelatedProducts(categoryId, countryCode)
 
-  const { response } = await getProductsList({
-    queryParams,
-    countryCode,
-  })
-
-  // Filtrer le produit actuel
-  const relatedProducts = response.products.filter((p) => p.id !== product.id)
+  const relatedProducts = products.filter((p) => p.id !== product.id)
 
   if (relatedProducts.length === 0) {
     return null
