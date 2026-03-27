@@ -70,8 +70,8 @@ export default async function Nav() {
                 <Image
                   src="https://ik.imagekit.io/kodt9cn6f/Logo-cabrade.webp"
                   alt="La Cabrade"
-                  width={280}
-                  height={125}
+                  width={180}
+                  height={80}
                   priority
                   quality={65}
                   sizes="(max-width: 1024px) 140px, 180px"
