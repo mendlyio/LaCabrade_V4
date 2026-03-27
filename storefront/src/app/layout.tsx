@@ -1,21 +1,12 @@
 import { getBaseURL } from "@lib/util/env"
 import { Metadata } from "next"
-import dynamic from "next/dynamic"
 import { preconnect, prefetchDNS } from "react-dom"
 import "styles/globals.css"
 import { Providers } from "@lib/context/providers"
 import { GoogleConsentMode } from "@modules/common/components/google-analytics/consent-mode"
 import OrganizationJsonLd from "@modules/common/components/json-ld/organization-jsonld"
 import HtmlLangUpdater from "@modules/common/components/html-lang-updater"
-
-const CookieBanner = dynamic(
-  () => import("@modules/layout/components/cookie-banner"),
-  { ssr: false }
-)
-const NewsletterPopup = dynamic(
-  () => import("@modules/layout/components/newsletter-popup"),
-  { ssr: false }
-)
+import ClientOnlyOverlays from "@modules/layout/components/client-only-overlays"
 
 const BASE_URL = getBaseURL()
 
@@ -85,8 +76,7 @@ export default function RootLayout(props: { children: React.ReactNode }) {
         <Providers>
           <HtmlLangUpdater />
           <main className="relative">{props.children}</main>
-          <CookieBanner />
-          <NewsletterPopup />
+          <ClientOnlyOverlays />
         </Providers>
       </body>
     </html>
