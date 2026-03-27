@@ -745,8 +745,8 @@ export default class OdooModuleService {
       }
 
       if (productId) {
-        const priceUnit = item.isGiftCard ? item.price / 100 : item.price
-        console.log(`📦 [ODOO] Ligne article: SKU=${item.sku}, raw_price=${item.price}, isGC=${!!item.isGiftCard}, price_unit_odoo=${priceUnit}, qty=${item.quantity}`)
+        const priceUnit = item.price
+        console.log(`📦 [ODOO] Ligne article: SKU=${item.sku}, price=${item.price}, isGC=${!!item.isGiftCard}, price_unit_odoo=${priceUnit}, qty=${item.quantity}`)
         orderLines.push([0, 0, {
           product_id: productId,
           product_uom_qty: item.quantity,

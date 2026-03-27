@@ -198,20 +198,20 @@ assert("Total CORRECT", getDisplayTotalTvacEuros(cart4), 72) // 80 + 0 - 8.00
 assert("Montant Stripe (cents)", getPaymentAmountCents(cart4), 7200)
 
 // ═══════════════════════════════════════════════════════════
-// SCÉNARIO 5: Bon cadeau 50€ (prix en CENTIMES)
+// SCÉNARIO 5: Bon cadeau 50€ (unit_price en euros)
 // ═══════════════════════════════════════════════════════════
-heading("SCÉNARIO 5: Bon cadeau 50€ (unit_price en centimes)")
+heading("SCÉNARIO 5: Bon cadeau 50€ (unit_price en euros)")
 
 const cart5: CartAmountsInput = {
-  item_total: 5000,
-  subtotal: 5000,
+  item_total: 50,
+  subtotal: 50,
   shipping_total: 0,
   discount_total: 0,
   gift_card_total: 0,
   items: [
     {
-      unit_price: 5000,
-      subtotal: 5000,
+      unit_price: 50,
+      subtotal: 50,
       quantity: 1,
       adjustments: [],
       metadata: { is_gift_card: true },
@@ -245,8 +245,8 @@ const cart6: CartAmountsInput = {
       variant_sku: "72333",
     },
     {
-      unit_price: 2500,
-      subtotal: 2500,
+      unit_price: 25,
+      subtotal: 25,
       quantity: 1,
       adjustments: [],
       metadata: { is_gift_card: true },

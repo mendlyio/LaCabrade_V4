@@ -12,8 +12,8 @@ function isGiftCardVariant(variant: any): boolean {
 
 /**
  * Retourne le prix en euros pour affichage.
- * @param lineItemUnitPrice - Odoo = euros, bon cadeau = centimes
- * @param lineItemCompareAtUnitPrice - Prix barré (outlet, last chance)
+ * Les unit_price des line items sont tous en euros.
+ * Les calculated_amount du pricing module restent en centimes pour les bons cadeaux.
  */
 export const getPricesForVariant = (
   variant: any,
@@ -23,11 +23,11 @@ export const getPricesForVariant = (
   const isGiftCard = isGiftCardVariant(variant)
   const cp = variant?.calculated_price
 
-  // Line item (panier) : Odoo en euros, bon cadeau en centimes
+  // Line item (panier) : tous les unit_price sont en euros
   if (lineItemUnitPrice != null && Number.isFinite(lineItemUnitPrice)) {
-    const amount = lineItemAmountToEuros(lineItemUnitPrice, isGiftCard)
+    const amount = lineItemAmountToEuros(lineItemUnitPrice)
     const compareAt = lineItemCompareAtUnitPrice != null && Number.isFinite(lineItemCompareAtUnitPrice)
-      ? lineItemAmountToEuros(lineItemCompareAtUnitPrice, isGiftCard)
+      ? lineItemAmountToEuros(lineItemCompareAtUnitPrice)
       : amount
     const hasReduction = compareAt > amount
     const originalAmount = hasReduction ? compareAt : amount
@@ -48,17 +48,19 @@ export const getPricesForVariant = (
   let amount: number
   let originalAmount: number
 
+  // Variant prices (du pricing module Medusa) : centimes pour GC, euros pour Odoo
   if ((rawAmount == null || !Number.isFinite(rawAmount)) && variant?.prices?.length) {
     const firstPrice = variant.prices[0] as { amount?: number; currency_code?: string } | undefined
     const pAmount = firstPrice?.amount
     if (pAmount != null && Number.isFinite(pAmount) && pAmount > 0) {
-      amount = lineItemAmountToEuros(pAmount, isGiftCard)
+      amount = isGiftCard ? pAmount / 100 : lineItemAmountToEuros(pAmount)
       originalAmount = amount
       currencyCode = (firstPrice?.currency_code || "eur").toLowerCase()
     } else {
       return null
     }
   } else if (rawAmount != null && Number.isFinite(rawAmount)) {
+    // calculated_amount du pricing module : centimes pour GC, euros pour Odoo
     const divisor = isGiftCard ? 100 : 1
     amount = rawAmount / divisor
     originalAmount = cp?.original_amount != null ? cp.original_amount / divisor : amount
@@ -93,13 +95,12 @@ export function getProductPrice({
       return null
     }
 
-    // Retourne le montant en euros pour le tri (Odoo = euros, bon cadeau = centimes)
     const getAmount = (v: any) => {
       const cp = v?.calculated_price?.calculated_amount ?? v?.calculated_price?.original_amount
       if (cp != null && Number.isFinite(cp)) return cp
       const p = v?.prices?.[0]?.amount
       if (p != null && Number.isFinite(p) && p > 0) {
-        return lineItemAmountToEuros(p, isGiftCardVariant(v))
+        return isGiftCardVariant(v) ? p / 100 : lineItemAmountToEuros(p)
       }
       return Infinity
     }

@@ -2,7 +2,7 @@
  * Calcule le total à afficher pour une commande (identique au checkout).
  * Aligné avec storefront/src/lib/util/cart-amounts.ts (getDisplayTotalTvacEuros).
  *
- * Les produits Odoo sont en euros. Seul gift_card_total est en centimes.
+ * Tous les unit_price (produits Odoo ET bons cadeaux) sont en euros.
  */
 const AMOUNTS_IN_EUROS = true
 const VAT_RATE = 0.21
@@ -11,9 +11,8 @@ function adjustmentHtToTtc(htAmount: number, isGiftCard: boolean): number {
   return isGiftCard ? htAmount : htAmount * (1 + VAT_RATE)
 }
 
-function toDisplayEuros(value: number | null | undefined, isGiftCard = false): number {
+function toDisplayEuros(value: number | null | undefined): number {
   const v = value ?? 0
-  if (isGiftCard) return v / 100
   return AMOUNTS_IN_EUROS ? v : v / 100
 }
 
@@ -30,9 +29,9 @@ function isGiftCardItem(item: {
   )
 }
 
-function lineItemAmountToEuros(value: number | null | undefined, isGiftCard: boolean): number {
+function lineItemAmountToEuros(value: number | null | undefined): number {
   const v = value ?? 0
-  return isGiftCard ? v / 100 : (AMOUNTS_IN_EUROS ? v : v / 100)
+  return AMOUNTS_IN_EUROS ? v : v / 100
 }
 
 /**
@@ -58,8 +57,7 @@ function getItemsTotalEuros(order: {
   if (items?.length) {
     let sum = 0
     for (const item of items) {
-      const isGiftCard = isGiftCardItem(item)
-      const lineTotal = lineItemAmountToEuros(item.unit_price, isGiftCard) * (item.quantity ?? 1)
+      const lineTotal = lineItemAmountToEuros(item.unit_price) * (item.quantity ?? 1)
       sum += lineTotal
     }
     return sum
@@ -84,7 +82,7 @@ function getItemAdjustmentsEuros(order: OrderForDisplayTotal | null | undefined)
     const isGiftCard = isGiftCardItem(item)
     let itemAdjHt = 0
     for (const adj of item.adjustments || []) {
-      itemAdjHt += Math.abs(lineItemAmountToEuros(adj.amount, isGiftCard))
+      itemAdjHt += Math.abs(lineItemAmountToEuros(adj.amount))
     }
     sum += adjustmentHtToTtc(itemAdjHt, isGiftCard)
   }

@@ -92,9 +92,9 @@ const order3: OrderForDisplayTotal = {
 assert("Total (80 - 8.00 = 72)", getOrderDisplayTotalEuros(order3), 72)
 
 // ═══════════════════════════════════════════════════════
-// 4. Bon cadeau seul (50€ en centimes)
+// 4. Bon cadeau seul (50€ — unit_price en euros)
 // ═══════════════════════════════════════════════════════
-heading("4. Bon cadeau 50€ (unit_price centimes)")
+heading("4. Bon cadeau 50€ (unit_price en euros)")
 
 const order4: OrderForDisplayTotal = {
   shipping_total: 0,
@@ -102,7 +102,7 @@ const order4: OrderForDisplayTotal = {
   gift_card_total: 0,
   items: [
     {
-      unit_price: 5000, subtotal: 5000, quantity: 1,
+      unit_price: 50, subtotal: 50, quantity: 1,
       adjustments: [],
       metadata: { is_gift_card: true },
       product_title: "Bon Cadeau La Cabrade - 50€", variant_sku: "GC-50",
@@ -125,7 +125,7 @@ const order5: OrderForDisplayTotal = {
   items: [
     { unit_price: 15, subtotal: 15, quantity: 1, adjustments: [], product_title: "Cartouche", variant_sku: "72333" },
     {
-      unit_price: 2500, subtotal: 2500, quantity: 1,
+      unit_price: 25, subtotal: 25, quantity: 1,
       adjustments: [],
       metadata: { is_gift_card: true },
       product_title: "Bon Cadeau La Cabrade - 25€", variant_sku: "GC-25",

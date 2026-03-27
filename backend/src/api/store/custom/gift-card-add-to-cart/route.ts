@@ -80,7 +80,6 @@ export async function POST(
 
     if (variant_id) {
       // --- Montant fixe via variant ---
-      // Utiliser le workflow standard add-to-cart
       const workflowEngine = req.scope.resolve(Modules.WORKFLOW_ENGINE) as any
 
       await workflowEngine.run("add-to-cart", {
@@ -91,7 +90,6 @@ export async function POST(
         transactionId: `gift-card-add-${cart_id}-${Date.now()}`,
       })
 
-      // Récupérer le cart pour trouver le line item ajouté
       const cart = await cartModuleService.retrieveCart(cart_id, {
         relations: ["items"],
       })
@@ -101,8 +99,14 @@ export async function POST(
       )
 
       if (lineItem) {
-        // Ajouter les métadonnées gift card au line item
+        // Medusa stocke le variant price en centimes, mais tous les produits
+        // de ce projet utilisent l'euro comme unité dans unit_price.
+        // On convertit pour rester cohérent avec les produits Odoo.
+        const priceInCents = Number(lineItem.unit_price) || 0
+        const priceInEuros = priceInCents / 100
+
         await cartModuleService.updateLineItems(lineItem.id, {
+          unit_price: priceInEuros,
           metadata: {
             ...((lineItem.metadata as Record<string, unknown>) || {}),
             ...giftCardMetadata,
@@ -122,7 +126,6 @@ export async function POST(
       })
     } else if (custom_amount) {
       // --- Montant personnalisé ---
-      // On cherche le produit gift card pour avoir les infos de base
       const giftCardProducts = await productModuleService.listProducts(
         { handle: "bon-cadeau" },
         { relations: ["variants"], take: 1 }
@@ -135,8 +138,6 @@ export async function POST(
 
       const giftCardProduct = giftCardProducts[0]
 
-      // Récupérer le variant : listProducts peut ne pas charger la relation "variants"
-      // selon la config Medusa, on utilise listProductVariants en fallback
       let referenceVariant = giftCardProduct.variants?.[0]
       if (!referenceVariant) {
         const variants = await productModuleService.listProductVariants(
@@ -154,10 +155,7 @@ export async function POST(
         return
       }
 
-      // Montant en centimes (Medusa attend la plus petite unité : 50€ = 5000)
-      const amountInCents = Math.round(custom_amount * 100)
-
-      // Ajouter le line item avec un prix personnalisé directement via le cart module
+      // unit_price en euros (cohérent avec les produits Odoo)
       const [lineItem] = await cartModuleService.addLineItems(cart_id, [
         {
           title: `Bon Cadeau ${custom_amount}€`,
@@ -167,9 +165,9 @@ export async function POST(
           product_title: giftCardProduct.title,
           variant_id: referenceVariant.id,
           variant_title: `Bon Cadeau ${custom_amount}€`,
-          variant_sku: `GC-CUSTOM-${amountInCents}`,
+          variant_sku: `GC-CUSTOM-${custom_amount}`,
           quantity: 1,
-          unit_price: amountInCents,
+          unit_price: custom_amount,
           is_custom_price: true,
           is_tax_inclusive: true,
           metadata: giftCardMetadata,

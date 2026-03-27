@@ -56,8 +56,7 @@ function isGiftCardItem(item: any): boolean {
 }
 
 function getItemUnitPriceEuros(item: any): number {
-  const price = Number(item.unit_price) || 0
-  return isGiftCardItem(item) ? price / 100 : price
+  return Number(item.unit_price) || 0
 }
 
 export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {

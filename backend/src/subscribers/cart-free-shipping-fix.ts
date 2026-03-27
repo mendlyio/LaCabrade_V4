@@ -6,43 +6,22 @@ const FREE_SHIPPING_THRESHOLD = 75 // 75 € minimum pour la livraison gratuite
 const FREE_SHIPPING_PROMO_CODE = "FREE_SHIPPING_75"
 
 /**
- * Détecte si un line item est un bon cadeau (prix en centimes).
- */
-function isGiftCardItem(item: {
-  metadata?: Record<string, unknown> | null
-  product_title?: string | null
-  title?: string | null
-  variant_sku?: string | null
-}): boolean {
-  return !!(
-    (item.metadata as Record<string, unknown>)?.is_gift_card ||
-    String(item.product_title || item.title || "").toLowerCase().includes("bon cadeau") ||
-    (item.variant_sku || "").startsWith("GC-")
-  )
-}
-
-/**
  * Calcule le sous-total du panier en euros.
- * Produits Odoo : unit_price en euros. Bons cadeau : unit_price en centimes.
+ * Tous les unit_price (produits Odoo ET bons cadeaux) sont en euros.
  */
 function getCartSubtotalEuros(items: Array<{
   unit_price?: number | null
   subtotal?: number | null
   quantity?: number | null
-  metadata?: Record<string, unknown> | null
-  product_title?: string | null
-  title?: string | null
-  variant_sku?: string | null
 }> | null | undefined): number {
   if (!items?.length) return 0
   let sum = 0
   for (const item of items) {
-    const isGiftCard = isGiftCardItem(item)
     const unitPrice = Number(item.unit_price ?? 0)
     const qty = item.quantity ?? 1
     const lineTotal = item.subtotal != null
-      ? (isGiftCard ? Number(item.subtotal) / 100 : Number(item.subtotal))
-      : (isGiftCard ? unitPrice / 100 : unitPrice) * qty
+      ? Number(item.subtotal)
+      : unitPrice * qty
     sum += lineTotal
   }
   return sum

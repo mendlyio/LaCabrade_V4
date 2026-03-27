@@ -41,8 +41,7 @@ export default async function testEmailAmounts({ container }: ExecArgs) {
   }
 
   function getItemUnitPriceEuros(item: any): number {
-    const price = Number(item.unit_price) || 0
-    return isGiftCardItem(item) ? price / 100 : price
+    return Number(item.unit_price) || 0
   }
 
   function formatPrice(amount: number): string {

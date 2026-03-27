@@ -2,8 +2,9 @@
  * Utilitaire centralisé pour les montants du panier.
  * Tous les produits sont en TVAC (TTC).
  *
- * IMPORTANT: Les produits Odoo sont stockés en EUROS (sync-from-erp).
- * Seul gift_card_total est en centimes. item_total, shipping_total, etc. = euros.
+ * Tous les unit_price (produits Odoo ET bons cadeaux) sont en EUROS.
+ * Les variant calculated_amount du pricing module restent en centimes
+ * (gérés séparément dans get-product-price.ts et gift-card-form).
  */
 const AMOUNTS_IN_EUROS = true
 
@@ -12,22 +13,20 @@ export function centsToEuros(cents: number | null | undefined): number {
 }
 
 /** Convertit un montant API en euros pour affichage. */
-function toDisplayEuros(value: number | null | undefined, isGiftCard = false): number {
+function toDisplayEuros(value: number | null | undefined): number {
   const v = value ?? 0
-  if (isGiftCard) return v / 100
   return AMOUNTS_IN_EUROS ? v : v / 100
 }
 
-/** Pour les line items : unit_price en euros (Odoo) ou centimes (bon cadeau). */
-export function lineItemAmountToEuros(value: number | null | undefined, isGiftCard: boolean): number {
+/** Pour les line items : tous les unit_price sont en euros. */
+export function lineItemAmountToEuros(value: number | null | undefined, _isGiftCard?: boolean): number {
   const v = value ?? 0
-  return isGiftCard ? v / 100 : (AMOUNTS_IN_EUROS ? v : v / 100)
+  return AMOUNTS_IN_EUROS ? v : v / 100
 }
 
-/** Convertit un montant API en centimes pour Stripe. */
-function toPaymentCents(value: number | null | undefined, isGiftCard = false): number {
+/** Convertit un montant API (en euros) en centimes pour Stripe. */
+function toPaymentCents(value: number | null | undefined): number {
   const v = value ?? 0
-  if (isGiftCard) return Math.round(v)
   return AMOUNTS_IN_EUROS ? Math.round(v * 100) : Math.round(v)
 }
 
@@ -86,7 +85,7 @@ export type CartAmountsInput = {
 }
 
 /**
- * Calcule le total articles en euros à partir des line items (Odoo=euros, bon cadeau=centimes).
+ * Calcule le total articles en euros à partir des line items.
  * Utilise toujours unit_price × quantity (TTC garanti). item.subtotal peut être HT
  * dans le contexte order (Medusa v2 tax-inclusive décompose en HT).
  */
@@ -95,8 +94,7 @@ function getItemsTotalEurosFromItems(cart: CartAmountsInput | null | undefined):
   if (!items?.length) return null
   let sum = 0
   for (const item of items) {
-    const isGiftCard = isGiftCardItem(item)
-    const lineTotal = lineItemAmountToEuros(item.unit_price, isGiftCard) * (item.quantity ?? 1)
+    const lineTotal = lineItemAmountToEuros(item.unit_price) * (item.quantity ?? 1)
     sum += lineTotal
   }
   return sum
@@ -118,8 +116,7 @@ function getItemsTotalCents(cart: CartAmountsInput | null | undefined): number {
   if (items?.length) {
     let sum = 0
     for (const item of items) {
-      const isGiftCard = isGiftCardItem(item)
-      const lineCents = toPaymentCents(item.unit_price, isGiftCard) * (item.quantity ?? 1)
+      const lineCents = toPaymentCents(item.unit_price) * (item.quantity ?? 1)
       sum += lineCents
     }
     return sum
@@ -151,7 +148,7 @@ export function getItemsTotalTvacEuros(
 
 /**
  * Sous-total articles pour affichage (toujours TVAC).
- * Utilise les line items quand disponibles (Odoo=euros, bon cadeau=centimes).
+ * Utilise les line items quand disponibles (tous en euros).
  */
 export function getItemsDisplayTotalEuros(cart: CartAmountsInput | null | undefined): number {
   if (!cart) return 0
@@ -175,7 +172,7 @@ export function getItemAdjustmentsEuros(cart: CartAmountsInput | null | undefine
     const isGC = isGiftCardItem(item)
     let itemAdjHt = 0
     for (const adj of item.adjustments || []) {
-      itemAdjHt += Math.abs(lineItemAmountToEuros(adj.amount, isGC))
+      itemAdjHt += Math.abs(lineItemAmountToEuros(adj.amount))
     }
     sum += adjustmentHtToTtc(itemAdjHt, isGC)
   }
@@ -196,7 +193,7 @@ function getItemAdjustmentsCents(cart: CartAmountsInput | null | undefined): num
     const isGC = isGiftCardItem(item)
     let itemAdjHtCents = 0
     for (const adj of item.adjustments || []) {
-      itemAdjHtCents += Math.abs(toPaymentCents(adj.amount ?? 0, isGC))
+      itemAdjHtCents += Math.abs(toPaymentCents(adj.amount ?? 0))
     }
     sum += adjustmentHtToTtc(itemAdjHtCents, isGC)
   }

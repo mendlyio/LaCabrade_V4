@@ -145,24 +145,12 @@ export async function addGiftCardToCart(
       gift_message: input.message?.trim() || "",
     }
 
-    // ── Montant fixe : SDK standard ──────────────────────────────────────────
-    if (input.variantId) {
-      await sdk.store.cart.createLineItem(
-        cart.id,
-        {
-          variant_id: input.variantId,
-          quantity: 1,
-          metadata,
-        },
-        {},
-        await getAuthHeaders()
-      )
-      revalidateTag("cart")
-      return { success: true }
-    }
+    // Tous les bons cadeaux passent par l'endpoint backend custom qui
+    // normalise le unit_price en euros (cohérent avec les produits Odoo).
+    const hasVariant = !!input.variantId
+    const hasCustom = !!input.customAmount
 
-    // ── Montant personnalisé : backend custom ────────────────────────────────
-    if (input.customAmount) {
+    if (hasVariant || hasCustom) {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       }
@@ -170,18 +158,21 @@ export async function addGiftCardToCart(
         headers["x-publishable-api-key"] = PUBLISHABLE_KEY
       }
 
+      const body: Record<string, unknown> = {
+        cart_id: cart.id,
+        recipient_email: input.recipientEmail,
+        recipient_name: input.recipientName,
+        message: input.message || "",
+      }
+      if (hasVariant) body.variant_id = input.variantId
+      if (hasCustom) body.custom_amount = input.customAmount
+
       const res = await fetch(
         `${BACKEND_URL}/store/custom/gift-card-add-to-cart`,
         {
           method: "POST",
           headers,
-          body: JSON.stringify({
-            cart_id: cart.id,
-            custom_amount: input.customAmount,
-            recipient_email: input.recipientEmail,
-            recipient_name: input.recipientName,
-            message: input.message || "",
-          }),
+          body: JSON.stringify(body),
         }
       )
 

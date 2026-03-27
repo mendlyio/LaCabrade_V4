@@ -25,10 +25,11 @@ function heading(text: string) {
 }
 
 /**
- * Reproduit la logique exacte de odoo/service.ts createOrder (ligne ~673)
+ * Reproduit la logique exacte de odoo/service.ts createOrder.
+ * Tous les prix (Odoo et bons cadeaux) sont en euros.
  */
-function odooPriceUnit(rawPrice: number, isGiftCard: boolean): number {
-  return isGiftCard ? rawPrice / 100 : rawPrice
+function odooPriceUnit(rawPrice: number): number {
+  return rawPrice
 }
 
 /**
@@ -43,7 +44,7 @@ function simulateOdooTotal(
   let total = 0
 
   for (const item of items) {
-    const priceUnit = odooPriceUnit(item.price, item.isGiftCard)
+    const priceUnit = odooPriceUnit(item.price)
     orderLines.push({ name: item.isGiftCard ? "Bon Cadeau" : "Produit", price_unit: priceUnit, qty: item.quantity })
     total += priceUnit * item.quantity
   }
@@ -90,12 +91,12 @@ assert("Ligne réduction", r2.orderLines[1].price_unit, -10)
 assert("Total Odoo", r2.total, 70)
 
 // ═══════════════════════════════════════════════════════
-// 3. Bon cadeau 50€ (unit_price = 5000 centimes)
+// 3. Bon cadeau 50€ (unit_price en euros)
 // ═══════════════════════════════════════════════════════
-heading("ODOO 3: Bon cadeau 50€ (price=5000 centimes)")
+heading("ODOO 3: Bon cadeau 50€ (price=50 euros)")
 
 const r3 = simulateOdooTotal(
-  [{ price: 5000, quantity: 1, isGiftCard: true }],
+  [{ price: 50, quantity: 1, isGiftCard: true }],
   0,
   0,
 )
@@ -110,7 +111,7 @@ heading("ODOO 4: Mix article 15€ + bon cadeau 25€ + livraison 6,90€")
 const r4 = simulateOdooTotal(
   [
     { price: 15, quantity: 1, isGiftCard: false },
-    { price: 2500, quantity: 1, isGiftCard: true },
+    { price: 25, quantity: 1, isGiftCard: true },
   ],
   6.9,
   0,
@@ -134,16 +135,16 @@ assert("price_unit (DOIT être 74, pas 0.74)", r5.orderLines[0].price_unit, 74)
 assert("Total Odoo", r5.total, 80.9)
 
 // ═══════════════════════════════════════════════════════
-// 6. Bon cadeau 100€ — DOIT être /100
+// 6. Bon cadeau 100€ (en euros)
 // ═══════════════════════════════════════════════════════
-heading("ODOO 6: Bon cadeau 100€ (price=10000 centimes)")
+heading("ODOO 6: Bon cadeau 100€ (price=100 euros)")
 
 const r6 = simulateOdooTotal(
-  [{ price: 10000, quantity: 1, isGiftCard: true }],
+  [{ price: 100, quantity: 1, isGiftCard: true }],
   0,
   0,
 )
-assert("price_unit (10000/100 = 100)", r6.orderLines[0].price_unit, 100)
+assert("price_unit (100 euros)", r6.orderLines[0].price_unit, 100)
 assert("Total Odoo", r6.total, 100)
 
 // ═══════════════════════════════════════════════════════

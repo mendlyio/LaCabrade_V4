@@ -42,11 +42,10 @@ const ItemsPreviewTemplate = ({ items }: ItemsTemplateProps) => {
           String(item.product_title || "").toLowerCase().includes("bon cadeau") ||
           (item.variant?.product as any)?.handle === "bon-cadeau"
 
-        // Odoo = euros, bon cadeau = centimes
-        const unitPrice = lineItemAmountToEuros(item.unit_price, isGiftCard)
+        const unitPrice = lineItemAmountToEuros(item.unit_price)
         const compareAtRaw =
           (item as any).compare_at_unit_price ?? (item.metadata as any)?.outlet_original_price
-        const comparePrice = lineItemAmountToEuros(compareAtRaw, isGiftCard)
+        const comparePrice = lineItemAmountToEuros(compareAtRaw)
         const hasDiscount = comparePrice && comparePrice > unitPrice
         const lineTotal = unitPrice * item.quantity
 

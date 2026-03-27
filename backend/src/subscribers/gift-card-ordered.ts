@@ -74,7 +74,7 @@ export default async function giftCardOrderedHandler({
         const recipientEmail = metadata.recipient_email
         const recipientName = metadata.recipient_name || "Cher(e) destinataire"
         const giftMessage = metadata.gift_message || ""
-        const amount = Number(item.unit_price) / 100
+        const amount = Number(item.unit_price)
 
         const code = generateGiftCardCode()
         console.log(`[GiftCard] Code généré: ${code} (${amount}€ pour ${recipientEmail})`)
