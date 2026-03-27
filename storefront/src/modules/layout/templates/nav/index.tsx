@@ -73,7 +73,7 @@ export default async function Nav() {
                   width={280}
                   height={125}
                   priority
-                  quality={85}
+                  quality={75}
                   sizes="(max-width: 1024px) 140px, 180px"
                   className="h-10 sm:h-12 lg:h-14 w-auto object-contain"
                 />

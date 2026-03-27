@@ -26,7 +26,7 @@ export default function Footer() {
                 alt="La Cabrade"
                 width={280}
                 height={125}
-                quality={85}
+                quality={75}
                 sizes="(max-width: 768px) 200px, 240px"
                 className="h-14 w-auto object-contain"
               />
