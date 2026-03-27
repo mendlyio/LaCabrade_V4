@@ -49,6 +49,7 @@ const ImageGallery = ({ images, productId }: ImageGalleryProps) => {
                 alt={`Miniature ${index + 1}`}
                 width={96}
                 height={96}
+                quality={65}
                 className="w-full h-full object-cover"
               />
             </button>
@@ -68,11 +69,13 @@ const ImageGallery = ({ images, productId }: ImageGalleryProps) => {
             src={images[selectedImage].url}
             alt={`Image produit ${selectedImage + 1}`}
             fill
+            quality={70}
             className={`object-cover transition-all duration-500 ${
               isZoomed ? 'scale-150' : 'scale-100 group-hover:scale-105'
             }`}
             sizes="(max-width: 768px) 100vw, 60vw"
             priority={selectedImage === 0}
+            fetchPriority={selectedImage === 0 ? "high" : "auto"}
           />
 
           {/* Wishlist en overlay TOP-RIGHT sur l'image */}

@@ -53,6 +53,7 @@ export default async function ProductPreview({
               src={product.thumbnail}
               alt={product.title || "Produit"}
               fill
+              quality={70}
               loading="eager"
               className="object-cover group-hover:scale-110 transition-transform duration-500"
               sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"

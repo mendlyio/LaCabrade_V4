@@ -68,9 +68,11 @@ export default function ImageGalleryModern({ images, productTitle }: ImageGaller
               src={images[selectedImage].url}
               alt={productTitle ? `${productTitle} - photo ${selectedImage + 1}` : `Photo produit ${selectedImage + 1}`}
               fill
+              quality={70}
               className="object-cover transition-transform duration-500 group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, 50vw"
-              priority
+              priority={selectedImage === 0}
+              fetchPriority={selectedImage === 0 ? "high" : "auto"}
             />
           </div>
 
@@ -135,6 +137,7 @@ export default function ImageGalleryModern({ images, productTitle }: ImageGaller
                   alt={productTitle ? `${productTitle} - miniature ${index + 1}` : `Miniature ${index + 1}`}
                   width={80}
                   height={80}
+                  quality={65}
                   className="w-full h-full object-cover"
                 />
               </button>
@@ -170,9 +173,11 @@ export default function ImageGalleryModern({ images, productTitle }: ImageGaller
               src={images[selectedImage].url}
               alt={productTitle ? `${productTitle} - photo ${selectedImage + 1}` : `Photo produit ${selectedImage + 1}`}
               fill
+              quality={70}
               className="object-contain"
               sizes="100vw"
               priority
+              fetchPriority="high"
             />
           </div>
 
@@ -218,6 +223,7 @@ export default function ImageGalleryModern({ images, productTitle }: ImageGaller
                     alt={productTitle ? `${productTitle} - miniature ${index + 1}` : `Miniature ${index + 1}`}
                     width={48}
                     height={48}
+                    quality={65}
                     className="w-full h-full object-cover"
                   />
                 </button>

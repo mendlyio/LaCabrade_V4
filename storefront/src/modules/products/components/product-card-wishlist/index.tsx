@@ -58,6 +58,7 @@ export default function ProductCardWishlist({
               src={product.thumbnail}
               alt={product.title || "Produit"}
               fill
+              quality={70}
               className={`object-cover transition-all duration-700 ease-out ${
                 hoverImage
                   ? "group-hover:opacity-0 group-hover:scale-105"
@@ -79,6 +80,7 @@ export default function ProductCardWishlist({
               src={hoverImage}
               alt={`${product.title} - vue alternative`}
               fill
+              quality={70}
               className="object-cover absolute inset-0 opacity-0 scale-[1.08] rotate-[-1deg] group-hover:opacity-100 group-hover:scale-[1.03] group-hover:rotate-[1deg] transition-all duration-700 ease-out"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />

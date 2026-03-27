@@ -14,6 +14,10 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
+    // AVIF en priorité (meilleure compression que WebP), puis WebP — réduit le poids vs WebP seul.
+    formats: ["image/avif", "image/webp"],
+    // Valeurs autorisées pour la prop `quality` sur <Image /> (Next.js 16+ exigera une liste explicite).
+    qualities: [75, 70, 65, 50],
     remotePatterns: [
       // Local dev
       { protocol: "http", hostname: "localhost" },

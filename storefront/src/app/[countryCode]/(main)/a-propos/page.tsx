@@ -108,6 +108,7 @@ export default function AProposPage() {
                   src="https://ik.imagekit.io/kodt9cn6f/Cabrade/team.webp"
                   alt="La Cabrade - magasin"
                   fill
+                  quality={70}
                   className="object-cover"
                   sizes="(min-width: 1024px) 50vw, 100vw"
                   priority
@@ -143,6 +144,7 @@ export default function AProposPage() {
                         src={member.image}
                         alt={member.name}
                         fill
+                        quality={70}
                         className="object-cover"
                         sizes="(min-width: 768px) 33vw, (min-width: 1024px) 25vw, 100vw"
                       />
