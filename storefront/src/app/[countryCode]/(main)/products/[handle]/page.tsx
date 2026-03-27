@@ -13,43 +13,59 @@ type Props = {
 // Prix / stock catalogue peuvent être légèrement en retard vs Medusa ; le panier reste temps réel côté client.
 export const revalidate = 300
 
+async function fetchWithRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 5000): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn()
+    } catch (err) {
+      if (i < retries - 1) {
+        console.log(`⏳ Backend not ready, retrying in ${delayMs / 1000}s... (${i + 1}/${retries})`)
+        await new Promise((r) => setTimeout(r, delayMs))
+      } else {
+        throw err
+      }
+    }
+  }
+  throw new Error("unreachable")
+}
+
 export async function generateStaticParams() {
-  // Skip static generation if backend is not available (Railway builds)
   try {
-    const countryCodes = await listRegions().then(
-      (regions) =>
-        regions
-          ?.map((r) => r.countries?.map((c) => c.iso_2))
-          .flat()
-          .filter(Boolean) as string[]
+    const countryCodes = await fetchWithRetry(() =>
+      listRegions().then(
+        (regions) =>
+          regions
+            ?.map((r) => r.countries?.map((c) => c.iso_2))
+            .flat()
+            .filter(Boolean) as string[]
+      )
     )
 
-    if (!countryCodes) {
+    if (!countryCodes?.length) {
+      console.log('⚠️  No regions found, skipping static generation')
       return []
     }
 
-    const products = await Promise.all(
-      countryCodes.map((countryCode) => {
-        return getProductsList({ countryCode })
-      })
-    ).then((responses) =>
-      responses.map(({ response }) => response.products).flat()
+    const products = await fetchWithRetry(() =>
+      Promise.all(
+        countryCodes.map((countryCode) => getProductsList({ countryCode }))
+      ).then((responses) =>
+        responses.map(({ response }) => response.products).flat()
+      )
     )
 
     const staticParams = countryCodes
-      ?.map((countryCode) =>
+      .map((countryCode) =>
         products
           .filter((p) => p.handle !== GIFT_CARD_PRODUCT_HANDLE)
-          .map((product) => ({
-            countryCode,
-            handle: product.handle,
-          }))
+          .map((product) => ({ countryCode, handle: product.handle }))
       )
       .flat()
 
+    console.log(`✅ generateStaticParams: ${staticParams.length} pages produit pré-générées`)
     return staticParams
   } catch (error) {
-    console.log('⚠️  Backend not available during build, skipping static generation')
+    console.log('⚠️  Backend unavailable after retries, skipping static generation')
     return []
   }
 }
