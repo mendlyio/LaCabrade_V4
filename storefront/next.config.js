@@ -18,6 +18,8 @@ const nextConfig = {
     formats: ["image/avif", "image/webp"],
     // Valeurs autorisées pour la prop `quality` sur <Image /> (Next.js 16+ exigera une liste explicite).
     qualities: [75, 70, 65, 50],
+    // Cache les images optimisées 30 jours côté serveur (défaut : 60 s) — réduit la charge backend.
+    minimumCacheTTL: 2592000,
     remotePatterns: [
       // Local dev
       { protocol: "http", hostname: "localhost" },

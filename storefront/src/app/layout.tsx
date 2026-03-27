@@ -1,12 +1,21 @@
 import { getBaseURL } from "@lib/util/env"
 import { Metadata } from "next"
+import dynamic from "next/dynamic"
+import { preconnect, prefetchDNS } from "react-dom"
 import "styles/globals.css"
 import { Providers } from "@lib/context/providers"
-import CookieBanner from "@modules/layout/components/cookie-banner"
 import { GoogleConsentMode } from "@modules/common/components/google-analytics/consent-mode"
-import NewsletterPopup from "@modules/layout/components/newsletter-popup"
 import OrganizationJsonLd from "@modules/common/components/json-ld/organization-jsonld"
 import HtmlLangUpdater from "@modules/common/components/html-lang-updater"
+
+const CookieBanner = dynamic(
+  () => import("@modules/layout/components/cookie-banner"),
+  { ssr: false }
+)
+const NewsletterPopup = dynamic(
+  () => import("@modules/layout/components/newsletter-popup"),
+  { ssr: false }
+)
 
 const BASE_URL = getBaseURL()
 
@@ -61,13 +70,20 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout(props: { children: React.ReactNode }) {
+  // Avertit le navigateur de pré-établir les connexions vers les CDN d'images
+  // avant même que le HTML soit parsé — réduit la latence du LCP image.
+  preconnect("https://ik.imagekit.io", { crossOrigin: "anonymous" })
+  preconnect("https://bucket-production-de72.up.railway.app", { crossOrigin: "anonymous" })
+  prefetchDNS("https://www.googletagmanager.com")
+  prefetchDNS("https://connect.facebook.net")
+
   return (
     <html lang="fr-BE" data-mode="light">
       <body>
         <OrganizationJsonLd />
+        <GoogleConsentMode />
         <Providers>
           <HtmlLangUpdater />
-          <GoogleConsentMode />
           <main className="relative">{props.children}</main>
           <CookieBanner />
           <NewsletterPopup />

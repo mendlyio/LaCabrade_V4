@@ -117,13 +117,13 @@ export default function NewsletterPopup() {
         {/* Mobile image */}
         <div className="sm:hidden flex justify-center flex-shrink-0 pt-5 pb-2">
           <div className="relative w-[200px] h-[200px] rounded-2xl overflow-hidden shadow-lg">
-            <Image src={IMG} alt="La Cabrade" fill className="object-contain" sizes="200px" priority />
+            <Image src={IMG} alt="La Cabrade" fill className="object-contain" sizes="200px" />
           </div>
         </div>
 
         {/* Desktop image */}
         <div className="hidden sm:flex flex-shrink-0 w-[220px] bg-[#faf6f2] items-center justify-center self-stretch">
-          <Image src={IMG} alt="La Cabrade" width={220} height={220} className="object-contain" priority />
+          <Image src={IMG} alt="La Cabrade" width={220} height={220} className="object-contain" />
         </div>
 
         {/* Formulaire */}
