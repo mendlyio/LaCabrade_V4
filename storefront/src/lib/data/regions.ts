@@ -1,14 +1,20 @@
 import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
 import { cache } from "react"
+import { unstable_cache } from "next/cache"
 import { HttpTypes } from "@medusajs/types"
 
-export const listRegions = cache(async function () {
-  return sdk.store.region
-    .list({}, { next: { tags: ["regions"] } })
-    .then(({ regions }) => regions)
-    .catch(medusaError)
-})
+const _cachedListRegions = unstable_cache(
+  async () =>
+    sdk.store.region
+      .list({}, { next: { tags: ["regions"] } })
+      .then(({ regions }) => regions)
+      .catch(medusaError),
+  ["list-regions"],
+  { revalidate: 3600, tags: ["regions"] }
+)
+
+export const listRegions = cache(_cachedListRegions)
 
 export const retrieveRegion = cache(async function (id: string) {
   return sdk.store.region

@@ -1,6 +1,7 @@
 import { sdk } from "@lib/config"
 import { HttpTypes } from "@medusajs/types"
 import { cache } from "react"
+import { unstable_cache } from "next/cache"
 import { getRegion } from "./regions"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { sortProducts } from "@lib/util/sort-products"
@@ -31,18 +32,40 @@ export const getProductsById = cache(async function ({
     .then(({ products }) => products)
 })
 
+// Cache 5 min entre visiteurs (cohérent avec revalidate = 300 de la page)
+// Invalidable via revalidateTag("products") lors d'un changement produit
+const _getCachedProductByHandle = unstable_cache(
+  async (handle: string, regionId: string) =>
+    sdk.store.product
+      .list(
+        {
+          handle,
+          region_id: regionId,
+          fields: `*variants.calculated_price,+variants.inventory_quantity,+variants.prices,*categories,+categories.handle,+categories.name,+categories.id,+categories.parent_category_id`,
+        },
+        { next: { tags: ["products"] } }
+      )
+      .then(({ products }) => products[0]),
+  ["product-by-handle"],
+  { revalidate: 300, tags: ["products"] }
+)
+
 export const getProductByHandle = cache(async function (
   handle: string,
   regionId: string,
   options?: { skipInventoryCheck?: boolean }
 ) {
-  const inv = options?.skipInventoryCheck ? "" : "+variants.inventory_quantity,"
+  // Cas courant : cache partagé entre visiteurs
+  if (!options?.skipInventoryCheck) {
+    return _getCachedProductByHandle(handle, regionId)
+  }
+  // Cas rare (skipInventoryCheck) : appel direct sans cache
   return sdk.store.product
     .list(
       {
         handle,
         region_id: regionId,
-        fields: `*variants.calculated_price,${inv}+variants.prices,*categories,+categories.handle,+categories.name,+categories.id,+categories.parent_category_id`,
+        fields: `*variants.calculated_price,+variants.prices,*categories,+categories.handle,+categories.name,+categories.id,+categories.parent_category_id`,
       },
       { next: { tags: ["products"] } }
     )
