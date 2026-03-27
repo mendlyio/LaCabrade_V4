@@ -11,11 +11,14 @@ const ScrollCarousel = ({ children, className = "" }: ScrollCarouselProps) => {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(true)
+  // Tracker l'ID du rAF pour éviter l'accumulation sur scroll rapide
+  const rafIdRef = useRef<number | null>(null)
 
   const checkScroll = () => {
-    // requestAnimationFrame diffère la lecture après le paint —
-    // évite un forced layout reflow quand le DOM vient d'être modifié
-    requestAnimationFrame(() => {
+    // Annuler le rAF précédent avant d'en créer un nouveau
+    if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current)
+    rafIdRef.current = requestAnimationFrame(() => {
+      rafIdRef.current = null
       if (scrollRef.current) {
         const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current
         setCanScrollLeft(scrollLeft > 0)
@@ -33,13 +36,14 @@ const ScrollCarousel = ({ children, className = "" }: ScrollCarouselProps) => {
       return () => {
         scrollElement.removeEventListener("scroll", checkScroll)
         window.removeEventListener("resize", checkScroll)
+        // Annuler tout rAF en attente au démontage
+        if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current)
       }
     }
   }, [])
 
   const scroll = (direction: "left" | "right") => {
     if (!scrollRef.current) return
-    // Lire clientWidth dans un rAF pour ne pas forcer le reflow
     requestAnimationFrame(() => {
       if (scrollRef.current) {
         const scrollAmount = scrollRef.current.clientWidth * 0.8

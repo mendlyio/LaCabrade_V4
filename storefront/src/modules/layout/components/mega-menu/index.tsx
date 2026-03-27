@@ -31,18 +31,24 @@ const MegaMenu = ({ category }: MegaMenuProps) => {
   // Calculer la position top une seule fois au montage + resize
   // (évite getBoundingClientRect sur chaque ouverture = forced reflow)
   useEffect(() => {
+    let rafId: number | null = null
     const updatePanelTop = () => {
       if (!containerRef.current) return
       const nav = containerRef.current.closest(".mega-menu-nav")
       if (nav) {
-        requestAnimationFrame(() => {
+        if (rafId !== null) cancelAnimationFrame(rafId)
+        rafId = requestAnimationFrame(() => {
+          rafId = null
           setPanelTop(nav.getBoundingClientRect().bottom)
         })
       }
     }
     updatePanelTop()
     window.addEventListener("resize", updatePanelTop)
-    return () => window.removeEventListener("resize", updatePanelTop)
+    return () => {
+      window.removeEventListener("resize", updatePanelTop)
+      if (rafId !== null) cancelAnimationFrame(rafId)
+    }
   }, [])
 
   // Fermer si clic en dehors
