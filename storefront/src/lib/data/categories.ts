@@ -1,7 +1,8 @@
 import { sdk } from "@lib/config"
 import { cache } from "react"
+import { unstable_cache } from "next/cache"
 
-export const listCategories = cache(async function () {
+const _fetchAllCategories = async () => {
   const allCategories: any[] = []
 
   const first = await sdk.store.category.list(
@@ -41,7 +42,17 @@ export const listCategories = cache(async function () {
   })
 
   return Array.from(deduped.values())
-})
+}
+
+// Cache partagé entre toutes les requêtes pendant 1h, invalidable via le tag "categories"
+const _cachedFetchAllCategories = unstable_cache(
+  _fetchAllCategories,
+  ["all-categories"],
+  { revalidate: 3600, tags: ["categories"] }
+)
+
+// cache() de React déduplique les appels dans le même rendu
+export const listCategories = cache(_cachedFetchAllCategories)
 
 export const getCategoriesList = cache(async function (
   offset: number = 0,

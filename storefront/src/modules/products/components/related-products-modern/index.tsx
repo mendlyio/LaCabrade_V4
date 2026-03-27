@@ -11,38 +11,42 @@ type RelatedProductsModernProps = {
   product: HttpTypes.StoreProduct
   countryCode: string
   region: HttpTypes.StoreRegion
+  categoryId?: string | null
 }
 
 export default async function RelatedProductsModern({
   product,
   countryCode,
   region,
+  categoryId: categoryIdProp,
 }: RelatedProductsModernProps) {
-  // Récupérer uniquement les produits de la catégorie LC-Equestrian
-  let categoryId: string | null = null
-  try {
-    const categories = await listCategories()
-    const lcCategory = categories?.find(
-      (c: any) => LC_EQUESTRIAN_HANDLES.includes((c.handle ?? "").toLowerCase())
-    )
-    if (lcCategory) {
-      categoryId = lcCategory.id
-    }
-  } catch (error) {
-    console.error("Erreur récupération catégorie LC Equestrian:", error)
-  }
+  // Si le categoryId est fourni par le parent, on évite l'appel listCategories
+  let categoryId: string | null = categoryIdProp ?? null
 
-  const queryParams: any = {
-    limit: 12,
-    fields:
-      "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images",
+  if (!categoryId) {
+    try {
+      const categories = await listCategories()
+      const lcCategory = categories?.find(
+        (c: any) => LC_EQUESTRIAN_HANDLES.includes((c.handle ?? "").toLowerCase())
+      )
+      if (lcCategory) {
+        categoryId = lcCategory.id
+      }
+    } catch (error) {
+      console.error("Erreur récupération catégorie LC Equestrian:", error)
+    }
   }
 
   if (!categoryId) {
     return null
   }
 
-  queryParams.category_id = [categoryId]
+  const queryParams: any = {
+    limit: 12,
+    fields:
+      "*variants.calculated_price,+variants.inventory_quantity,+variants.prices,+images",
+    category_id: [categoryId],
+  }
 
   const { response } = await getProductsList({
     queryParams,

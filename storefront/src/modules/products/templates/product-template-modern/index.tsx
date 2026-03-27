@@ -37,6 +37,12 @@ const ProductTemplateModern = async ({
   }
   const { map: categoryMap } = buildCategoryTree(allCategories)
 
+  const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
+  const lcEquestrianCategoryId =
+    allCategories.find((c) =>
+      LC_EQUESTRIAN_HANDLES.includes((c.handle ?? "").toLowerCase())
+    )?.id ?? null
+
   const buildCategoryBreadcrumb = () => {
     if (!product.categories?.length || categoryMap.size === 0) {
       return []
@@ -457,7 +463,7 @@ const ProductTemplateModern = async ({
       <div className="py-12 lg:py-16 bg-gray-50 border-t border-gray-100">
         <div className="content-container">
           <Suspense fallback={<SkeletonRelatedProducts />}>
-            <RelatedProductsModern product={product} countryCode={countryCode} region={region} />
+            <RelatedProductsModern product={product} countryCode={countryCode} region={region} categoryId={lcEquestrianCategoryId} />
           </Suspense>
         </div>
       </div>
