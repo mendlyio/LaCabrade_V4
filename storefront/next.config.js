@@ -7,6 +7,11 @@ checkEnvVariables()
  */
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    // Inline le CSS critique (au-dessus de la ligne de flottaison) et diffère le reste.
+    // Réduit directement le warning PageSpeed "unused CSS rules".
+    optimizeCss: true,
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
