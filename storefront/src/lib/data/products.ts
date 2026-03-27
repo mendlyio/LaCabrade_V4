@@ -47,7 +47,7 @@ const _getCachedProductByHandle = unstable_cache(
       )
       .then(({ products }) => products[0]),
   ["product-by-handle"],
-  { revalidate: 300, tags: ["products"] }
+  { revalidate: 3600, tags: ["products"] }
 )
 
 export const getProductByHandle = cache(async function (

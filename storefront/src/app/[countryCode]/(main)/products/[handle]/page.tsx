@@ -11,7 +11,8 @@ type Props = {
 
 // ISR : cache HTML/RSC et régénère au plus toutes les 300 s (moins de TTFB qu’un SSR à chaque hit).
 // Prix / stock catalogue peuvent être légèrement en retard vs Medusa ; le panier reste temps réel côté client.
-export const revalidate = 300
+// Prix / stock sont toujours temps réel via le panier côté client.
+export const revalidate = 3600
 
 async function fetchWithRetry<T>(fn: () => Promise<T>, retries = 3, delayMs = 5000): Promise<T> {
   for (let i = 0; i < retries; i++) {
