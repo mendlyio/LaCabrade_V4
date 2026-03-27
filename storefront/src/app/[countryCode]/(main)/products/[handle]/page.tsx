@@ -9,8 +9,9 @@ type Props = {
   params: { countryCode: string; handle: string }
 }
 
-// Force dynamic rendering to avoid build-time API calls
-export const dynamic = 'force-dynamic'
+// ISR : cache HTML/RSC et régénère au plus toutes les 300 s (moins de TTFB qu’un SSR à chaque hit).
+// Prix / stock catalogue peuvent être légèrement en retard vs Medusa ; le panier reste temps réel côté client.
+export const revalidate = 300
 
 export async function generateStaticParams() {
   // Skip static generation if backend is not available (Railway builds)

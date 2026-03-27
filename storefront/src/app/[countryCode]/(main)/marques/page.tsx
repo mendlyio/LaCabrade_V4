@@ -17,7 +17,8 @@ export const metadata: Metadata = {
   },
 }
 
-export const dynamic = "force-dynamic"
+// Liste des marques : mise en cache ISR (pas de searchParams sur cette page).
+export const revalidate = 300
 
 export default async function MarquesPage() {
   const brands = await listBrands()
