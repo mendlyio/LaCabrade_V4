@@ -15,7 +15,8 @@ import Trash from "@modules/common/icons/trash"
 import ErrorMessage from "../error-message"
 import { SubmitButton } from "../submit-button"
 
-const GC_CODE_PATTERN = /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
+// Codes LC- (nouveaux) ET codes importés XXXX-XXXX-XXXX-XXXX (ancien site)
+const GC_CODE_PATTERN = /^(LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}|[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4})$/
 
 type AppliedGiftCard = { code: string; balance: number }
 

@@ -13,7 +13,8 @@
 // ─────────────────────────────────────────────────────────────
 
 const CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-const GC_CODE_PATTERN = /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
+// Codes LC- (nouveaux) ET codes importés XXXX-XXXX-XXXX-XXXX (ancien site)
+const GC_CODE_PATTERN = /^(LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}|[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4})$/
 
 function generatePromoCode(prefix: string): string {
   let code = prefix + "-"
@@ -61,15 +62,23 @@ describe("Compatibilité codes newsletter × DiscountCode storefront", () => {
       { id: "p1", code: generatePromoCode("NL"), is_automatic: false, application_method: { type: "percentage", value: 10 } },
       { id: "p2", code: generatePromoCode("ANNIV"), is_automatic: false, application_method: { type: "percentage", value: 10 } },
       { id: "p3", code: "LC-AB12-CD34-EF56", is_automatic: false, application_method: { type: "fixed", value: 5000, currency_code: "eur" } },
+      { id: "p4", code: "8099-1DB1-E9FF-9254", is_automatic: false, application_method: { type: "fixed", value: 5000, currency_code: "eur" } },
     ]
 
     const gcPromotions = promotions.filter((p) => p.code && GC_CODE_PATTERN.test(p.code))
     const regularPromotions = promotions.filter((p) => !p.code || !GC_CODE_PATTERN.test(p.code))
 
-    expect(gcPromotions).toHaveLength(1) // seul le LC- est bon cadeau
+    expect(gcPromotions).toHaveLength(2) // LC- ET codes importés XXXX-XXXX-XXXX-XXXX sont des bons cadeaux
     expect(regularPromotions).toHaveLength(2) // NL- et ANNIV- sont des promos régulières
     expect(regularPromotions[0].code).toMatch(/^NL-/)
     expect(regularPromotions[1].code).toMatch(/^ANNIV-/)
+  })
+
+  it("les codes importés XXXX-XXXX-XXXX-XXXX sont reconnus comme bons cadeaux", () => {
+    const legacyCodes = ["8099-1DB1-E9FF-9254", "3735-7D37-03BF-7922", "94E3-E5C5-193C-3245"]
+    for (const code of legacyCodes) {
+      expect(GC_CODE_PATTERN.test(code)).toBe(true)
+    }
   })
 })
 

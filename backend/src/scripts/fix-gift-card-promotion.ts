@@ -9,7 +9,7 @@
 import { ExecArgs } from "@medusajs/framework/types"
 import { Modules } from "@medusajs/framework/utils"
 
-const GC_CODE_PATTERN = /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
+const GC_CODE_PATTERN = /^(LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}|[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4})$/
 
 export default async function fixGiftCardPromotion({ container }: ExecArgs) {
   const promotionModule = container.resolve(Modules.PROMOTION) as any

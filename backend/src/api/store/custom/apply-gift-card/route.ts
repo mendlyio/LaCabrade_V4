@@ -14,7 +14,8 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     }
 
     const normalizedCode = code.toUpperCase().trim()
-    const gcPattern = /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
+    // Accepte les nouveaux codes LC-XXXX-XXXX-XXXX ET les codes importés XXXX-XXXX-XXXX-XXXX
+    const gcPattern = /^(LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}|[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4})$/
     if (!gcPattern.test(normalizedCode)) {
       return res.status(400).json({ message: "Format de code invalide" })
     }

@@ -71,7 +71,7 @@ const Review = ({
   }, [searchParams])
 
   const hasGiftCardPromotion = (cart?.promotions || []).some(
-    (p: any) => p?.code && /^LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(p.code)
+    (p: any) => p?.code && /^(LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}|[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4})$/.test(p.code)
   )
   const paidByGiftcard =
     hasGiftCardPromotion && cart?.total !== undefined && cart?.total !== null && cart.total === 0
