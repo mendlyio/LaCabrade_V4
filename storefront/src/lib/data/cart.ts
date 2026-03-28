@@ -421,7 +421,37 @@ export async function initiatePaymentSession(
   const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
   if (publishableKey) headers["x-publishable-api-key"] = publishableKey
 
-  const amount = getPaymentAmountFromCart(cart as any)
+  // Re-validate gift cards before computing amount: removes disabled/depleted codes
+  let cartForAmount: HttpTypes.StoreCart = cart
+  try {
+    const validateRes = await fetch(
+      `${backendUrl}/store/custom/validate-cart-gift-cards`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ cart_id: cart.id }),
+      }
+    )
+    if (validateRes.ok) {
+      const { applied_gift_cards, removed } = await validateRes.json()
+      if (removed?.length > 0) {
+        // Patch the local cart object with cleaned metadata so amount is correct
+        cartForAmount = {
+          ...cart,
+          metadata: {
+            ...(cart.metadata ?? {}),
+            applied_gift_cards,
+          },
+        }
+        // Revalidate cart tag so the UI reflects the removal
+        revalidateTag("cart")
+      }
+    }
+  } catch {
+    // Non-blocking: fall back to cart as-is if validation fails
+  }
+
+  const amount = getPaymentAmountFromCart(cartForAmount as any)
   const stripeData =
     data.provider_id === "pp_stripe_stripe"
       ? {
