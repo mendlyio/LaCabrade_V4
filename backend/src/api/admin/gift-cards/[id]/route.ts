@@ -44,7 +44,7 @@ export const DELETE = async (req: MedusaRequest, res: MedusaResponse) => {
     if (gc.promotion_id) {
       try {
         await promotionModuleService.updatePromotions([
-          { id: gc.promotion_id, status: "disabled" },
+          { id: gc.promotion_id, status: "inactive" },
         ])
       } catch (e: any) {
         console.warn(

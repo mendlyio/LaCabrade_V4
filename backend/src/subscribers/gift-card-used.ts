@@ -128,7 +128,7 @@ export default async function giftCardUsedHandler({
         if (newStatus === "depleted" && gc.promotion_id) {
           try {
             await promotionModuleService.updatePromotions([
-              { id: gc.promotion_id, status: "disabled" },
+              { id: gc.promotion_id, status: "inactive" },
             ])
           } catch (e: any) {
             console.warn(
