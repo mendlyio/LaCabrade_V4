@@ -146,21 +146,27 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
 
           if (levels.length > 0) {
             const currentStock = levels[0].stocked_quantity || 0
-            
-            // Mettre à jour seulement si différent
-            if (currentStock !== odooStock) {
+            const reservedQty = levels[0].reserved_quantity || 0
+
+            // On veut que : available = odooStock
+            // Donc : stocked = odooStock + reserved
+            // Ainsi les réservations Medusa en cours (commandes non encore
+            // facturées dans Odoo) ne bloquent pas la disponibilité vitrine.
+            const targetStocked = odooStock + reservedQty
+
+            if (currentStock !== targetStocked) {
               await inventoryService.updateInventoryLevels({
                 inventory_item_id: inventoryItem.id,
                 location_id: levels[0].location_id,
-                stocked_quantity: odooStock,
+                stocked_quantity: targetStocked,
               })
               
+              const available = targetStocked - reservedQty
               console.log(
-                `✅ [STOCK SYNC] ${variant.sku}: ${currentStock} → ${odooStock}`
+                `✅ [STOCK SYNC] ${variant.sku}: stocked ${currentStock} → ${targetStocked} (Odoo=${odooStock}, réservé=${reservedQty}, dispo=${available})`
               )
               updated++
             } else {
-              // Stock identique, pas de mise à jour
               skipped++
             }
           } else {

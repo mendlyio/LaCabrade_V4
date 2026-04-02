@@ -70,20 +70,26 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     })
 
     if (levels.length > 0) {
-      // Mettre à jour le niveau de stock existant
+      const reservedQty = levels[0].reserved_quantity || 0
+      // available = qty_available_odoo → stocked = odooStock + reserved
+      const targetStocked = qty_available + reservedQty
+
       await inventoryService.updateInventoryLevels({
         inventory_item_id: inventoryItem.id,
         location_id: levels[0].location_id,
-        stocked_quantity: qty_available,
+        stocked_quantity: targetStocked,
       })
       
-      console.log(`✅ [ODOO WEBHOOK] Stock mis à jour dans Medusa: ${sku} = ${qty_available}`)
+      console.log(`✅ [ODOO WEBHOOK] Stock mis à jour: ${sku} stocked=${targetStocked} (Odoo=${qty_available}, réservé=${reservedQty})`)
       
       return res.json({
         success: true,
         message: "Stock mis à jour",
         sku,
-        quantity: qty_available,
+        odoo_quantity: qty_available,
+        stocked_quantity: targetStocked,
+        reserved_quantity: reservedQty,
+        available_quantity: qty_available,
       })
     } else {
       console.log(`⚠️  [ODOO WEBHOOK] Pas de niveau de stock trouvé pour ${sku}`)
