@@ -6,6 +6,11 @@ import { HttpTypes } from "@medusajs/types"
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import WishlistToggleButton from "@modules/common/components/wishlist-toggle-button"
+import {
+  ACTIVE_PROMO,
+  applyPromoDiscount,
+  isProductPromoEligible,
+} from "@lib/config/active-promo"
 
 const STORE_SCROLL_KEY = "store-scroll"
 
@@ -101,6 +106,12 @@ function ProductCardClient({
   const outletPriceFormatted = isOutlet ? formatPrice(outletPriceNumber) : null
   const outletOriginalFormatted = isOutlet ? formatPrice(outletOriginalNumber) : null
 
+  // Promo active (ex : Pâques) — affichage visuel prix barré
+  const categoryHandles = categories.map((c: any) => c.handle || "")
+  const isPromoEligible = isProductPromoEligible(categoryHandles, isOutlet)
+  const promoPriceNumber = isPromoEligible ? applyPromoDiscount(price ?? 0) : 0
+  const promoPriceFormatted = isPromoEligible ? formatPrice(promoPriceNumber) : null
+
   return (
     <LocalizedClientLink
       href={`/products/${product.handle}`}
@@ -153,7 +164,12 @@ function ProductCardClient({
 
           {/* Badges haut gauche */}
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10">
-            {hasDiscount && (
+            {isPromoEligible && (
+              <div className="bg-amber-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
+                -{ACTIVE_PROMO.discountPercent}% {ACTIVE_PROMO.label}
+              </div>
+            )}
+            {!isPromoEligible && hasDiscount && (
               <div className="bg-red-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
                 -{discountPct}%
               </div>
@@ -234,6 +250,16 @@ function ProductCardClient({
                   </span>
                   <span className="text-base sm:text-lg font-bold text-[#c4707f] leading-tight">
                     {outletPriceFormatted}
+                  </span>
+                </>
+              ) : isPromoEligible ? (
+                <>
+                  <span className="text-[11px] text-gray-400 line-through leading-none">
+                    {price != null ? formatPrice(price) : null}
+                  </span>
+                  <span className="text-base sm:text-lg font-bold text-amber-600 leading-tight">
+                    {hasPriceRange && <span className="text-[10px] font-normal mr-0.5">Dès</span>}
+                    {promoPriceFormatted}
                   </span>
                 </>
               ) : hasDiscount ? (

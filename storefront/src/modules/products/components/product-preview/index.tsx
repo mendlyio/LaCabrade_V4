@@ -7,6 +7,12 @@ import { getProductsById } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
 import WishlistToggleButton from "@modules/common/components/wishlist-toggle-button"
 import Image from "next/image"
+import { convertToLocale } from "@lib/util/money"
+import {
+  ACTIVE_PROMO,
+  applyPromoDiscount,
+  isProductPromoEligible,
+} from "@lib/config/active-promo"
 
 export default async function ProductPreview({
   product,
@@ -38,6 +44,18 @@ export default async function ProductPreview({
   const newUntil = product.metadata?.new_until ? new Date(product.metadata.new_until as string).getTime() : null
   const showNewBadge = isNew && (!newUntil || Date.now() < newUntil)
   const isPromo = product.metadata?.is_promo === true || product.metadata?.is_promo === "true"
+
+  // Promo active (ex : Pâques)
+  const categories = (product as any).categories || (pricedProduct as any).categories || []
+  const isOutletProduct = categories.some((c: any) => (c.handle || "").toLowerCase().startsWith("outlet"))
+  const categoryHandles = categories.map((c: any) => c.handle || "")
+  const isPromoEligible = isProductPromoEligible(categoryHandles, isOutletProduct)
+  const promoPrice = isPromoEligible
+    ? applyPromoDiscount(cheapestPrice?.calculated_price_number ?? 0)
+    : null
+  const promoPriceFormatted = promoPrice != null
+    ? convertToLocale({ amount: promoPrice, currency_code: cheapestPrice?.currency_code || "eur" })
+    : null
 
   return (
     <LocalizedClientLink 
@@ -80,7 +98,12 @@ export default async function ProductPreview({
                 New
               </div>
             )}
-            {isPromo && (
+            {isPromoEligible && (
+              <div className="bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg uppercase tracking-wide">
+                -{ACTIVE_PROMO.discountPercent}% {ACTIVE_PROMO.label}
+              </div>
+            )}
+            {!isPromoEligible && isPromo && (
               <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg uppercase tracking-wide">
                 Promo
               </div>
@@ -125,7 +148,21 @@ export default async function ProductPreview({
           {/* Prix */}
           <div className="flex items-center justify-between mt-auto">
             <div className="text-lg font-bold text-amber-600">
-              {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
+              {isPromoEligible && promoPriceFormatted ? (
+                <div className="flex flex-col leading-tight">
+                  <span className="text-xs font-normal text-gray-400 line-through">
+                    {cheapestPrice?.calculated_price}
+                  </span>
+                  <span className="text-base font-bold text-amber-600">
+                    {promoPriceFormatted}
+                  </span>
+                  <span className="text-[10px] font-semibold text-amber-500">
+                    -{ACTIVE_PROMO.discountPercent}% {ACTIVE_PROMO.label}
+                  </span>
+                </div>
+              ) : (
+                cheapestPrice && <PreviewPrice price={cheapestPrice} />
+              )}
             </div>
           </div>
         </div>

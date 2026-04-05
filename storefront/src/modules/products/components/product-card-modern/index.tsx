@@ -6,6 +6,11 @@ import { getProductsById } from "@lib/data/products"
 import WishlistToggleButton from "@modules/common/components/wishlist-toggle-button"
 import { convertToLocale } from "@lib/util/money"
 import Image from "next/image"
+import {
+  ACTIVE_PROMO,
+  applyPromoDiscount,
+  isProductPromoEligible,
+} from "@lib/config/active-promo"
 
 const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
 const OUTLET_DISCOUNT = 0.5 // -50%
@@ -61,6 +66,16 @@ export default async function ProductCardModern({
   const outletOriginalNumber = isOutlet ? (cheapestPrice?.calculated_price_number ?? 0) : 0
   const outletPriceNumber = isOutlet ? outletOriginalNumber * (1 - OUTLET_DISCOUNT) : 0
   const currencyCode = cheapestPrice?.currency_code || "eur"
+
+  // Promo active (ex : Pâques) — affichage visuel prix barré
+  const categoryHandles = categories.map((c: any) => c.handle || "")
+  const isPromoEligible = isProductPromoEligible(categoryHandles, isOutlet)
+  const promoPriceNumber = isPromoEligible
+    ? applyPromoDiscount(cheapestPrice?.calculated_price_number ?? 0)
+    : 0
+  const promoPriceFormatted = isPromoEligible
+    ? convertToLocale({ amount: promoPriceNumber, currency_code: currencyCode })
+    : null
   const outletPriceFormatted = isOutlet
     ? convertToLocale({ amount: outletPriceNumber, currency_code: currencyCode })
     : null
@@ -155,7 +170,12 @@ export default async function ProductCardModern({
                 -50%
               </div>
             )}
-            {!isOutlet && hasDiscount && (
+            {isPromoEligible && (
+              <div className="absolute top-1 left-1 bg-amber-500 text-white px-1.5 py-0.5 rounded-md text-[9px] font-bold">
+                -{ACTIVE_PROMO.discountPercent}%
+              </div>
+            )}
+            {!isOutlet && !isPromoEligible && hasDiscount && (
               <div className="absolute top-1 left-1 bg-red-500 text-white px-1.5 py-0.5 rounded-md text-[9px] font-bold">
                 -{discountPercentage}%
               </div>
@@ -196,6 +216,16 @@ export default async function ProductCardModern({
                     </span>
                     <span className="text-xs text-gray-400 line-through">
                       {outletOriginalFormatted}
+                    </span>
+                  </>
+                ) : isPromoEligible ? (
+                  <>
+                    <span className="text-sm font-bold text-amber-600">
+                      {hasPriceRange && <span className="text-[9px] font-normal mr-0.5">Dès</span>}
+                      {promoPriceFormatted}
+                    </span>
+                    <span className="text-xs text-gray-400 line-through">
+                      {cheapestPrice?.calculated_price}
                     </span>
                   </>
                 ) : hasDiscount ? (
@@ -310,7 +340,12 @@ export default async function ProductCardModern({
                 <span className="bg-white/20 px-1 rounded">-50%</span>
               </div>
             )}
-            {!isOutlet && hasDiscount && (
+            {isPromoEligible && (
+              <div className="bg-amber-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
+                -{ACTIVE_PROMO.discountPercent}% {ACTIVE_PROMO.label}
+              </div>
+            )}
+            {!isOutlet && !isPromoEligible && hasDiscount && (
               <div className="bg-red-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
                 -{discountPercentage}%
               </div>
@@ -403,6 +438,16 @@ export default async function ProductCardModern({
                   </span>
                   <span className="text-base sm:text-lg font-bold text-[#c4707f] leading-tight">
                     {outletPriceFormatted}
+                  </span>
+                </>
+              ) : isPromoEligible ? (
+                <>
+                  <span className="text-[11px] text-gray-400 line-through leading-none">
+                    {cheapestPrice?.calculated_price}
+                  </span>
+                  <span className="text-base sm:text-lg font-bold text-amber-600 leading-tight">
+                    {hasPriceRange && <span className="text-[10px] font-normal mr-0.5">Dès</span>}
+                    {promoPriceFormatted}
                   </span>
                 </>
               ) : hasDiscount ? (

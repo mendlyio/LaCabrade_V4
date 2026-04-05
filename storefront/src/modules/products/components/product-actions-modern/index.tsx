@@ -7,6 +7,11 @@ import { useParams } from "next/navigation"
 import { addToCart, addOutletItem } from "@lib/data/cart"
 import { convertToLocale } from "@lib/util/money"
 import { trackGA4AddToCart, trackMetaAddToCart } from "@lib/tracking"
+import {
+  ACTIVE_PROMO,
+  applyPromoDiscount,
+  isProductPromoEligible,
+} from "@lib/config/active-promo"
 
 type ProductActionsModernProps = {
   product: HttpTypes.StoreProduct
@@ -274,6 +279,11 @@ export default function ProductActionsModern({
     const outletAmount = isOutlet && !hasDiscount ? amount * 0.5 : null
     const outletOriginal = isOutlet && !hasDiscount ? amount : (isOutlet && hasDiscount ? original : null)
 
+    // Promo active (ex : Pâques)
+    const categoryHandles = ((product as any).categories || []).map((c: any) => c.handle || "")
+    const isPromoEligible = isProductPromoEligible(categoryHandles, isOutlet)
+    const promoAmount = isPromoEligible ? applyPromoDiscount(amount) : null
+
     return {
       amount,
       original,
@@ -282,12 +292,15 @@ export default function ProductActionsModern({
       discountPct,
       outletAmount,
       outletOriginal,
+      isPromoEligible,
+      promoAmount,
       formatted: convertToLocale({ amount, currency_code: currency }),
       formattedOriginal: original != null ? convertToLocale({ amount: original, currency_code: currency }) : null,
       formattedOutlet: outletAmount != null ? convertToLocale({ amount: outletAmount, currency_code: currency }) : null,
       formattedOutletOriginal: outletOriginal != null ? convertToLocale({ amount: outletOriginal, currency_code: currency }) : null,
+      formattedPromo: promoAmount != null ? convertToLocale({ amount: promoAmount, currency_code: currency }) : null,
     }
-  }, [selectedVariant, product.variants, isOutlet])
+  }, [selectedVariant, product.variants, isOutlet, product])
 
   return (
     <div className="space-y-6">
@@ -303,6 +316,23 @@ export default function ProductActionsModern({
                 <span className="text-xl text-gray-400 line-through">
                   {priceData.formattedOutletOriginal ?? priceData.formattedOriginal ?? priceData.formatted}
                 </span>
+              </div>
+              <p className="text-xs text-gray-500">
+                La remise est appliquée automatiquement dans votre panier.
+              </p>
+            </div>
+          ) : priceData.isPromoEligible ? (
+            <div className="space-y-1.5">
+              <div className="flex items-baseline gap-3">
+                <span className="text-3xl md:text-4xl font-bold text-amber-600">
+                  {priceData.formattedPromo}
+                </span>
+                <span className="text-xl text-gray-400 line-through">
+                  {priceData.formatted}
+                </span>
+              </div>
+              <div className="inline-flex items-center gap-2 bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-sm font-bold">
+                -{ACTIVE_PROMO.discountPercent}% {ACTIVE_PROMO.label}
               </div>
               <p className="text-xs text-gray-500">
                 La remise est appliquée automatiquement dans votre panier.
