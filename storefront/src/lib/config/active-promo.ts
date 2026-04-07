@@ -29,11 +29,11 @@ export type ActivePromoConfig = {
   excludedCategoryHandles: string[]
 }
 
-// ─── Pâques 2026 ────────────────────────────────────────────────────────────
-// Pour désactiver : active: false
+// ─── Pâques 2026 (terminée — réactiver pour une prochaine fois) ───────────────
+// Mettre active: true + ajuster dates / label si besoin.
 // ─────────────────────────────────────────────────────────────────────────────
 export const ACTIVE_PROMO: ActivePromoConfig = {
-  active: true,
+  active: false,
   code: "PAQUES_10",
   discountPercent: 10,
   label: "Pâques",

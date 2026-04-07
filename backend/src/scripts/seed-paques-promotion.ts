@@ -10,8 +10,8 @@
  * En prod :
  *   DATABASE_URL=... REDIS_URL="" npx medusa exec src/scripts/seed-paques-promotion.ts
  *
- * Pour supprimer après Pâques :
- *   npx medusa exec src/scripts/seed-paques-promotion.ts --delete
+ * Pour désactiver en base sans supprimer (recommandé en fin d’opération) :
+ *   npx medusa exec src/scripts/deactivate-paques-promotion.ts
  */
 
 import { ExecArgs } from "@medusajs/framework/types"
