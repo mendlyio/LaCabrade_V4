@@ -19,10 +19,10 @@ const BACKEND_URL =
 const PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
 
-// Ancienne image popup (réutilisable plus tard) :
-// const IMG = "https://ik.imagekit.io/kodt9cn6f/popup.webp"
+// Image Pâques (réutilisable plus tard) :
+// const IMG = "https://ik.imagekit.io/kodt9cn6f/Cabrade_Pa%CC%82ques.png"
 const IMG =
-  "https://ik.imagekit.io/kodt9cn6f/Cabrade_Pa%CC%82ques.png"
+  "https://ik.imagekit.io/kodt9cn6f/popup.webp?updatedAt=1773593272115"
 const STORAGE_KEY = "lc_newsletter_popup_dismissed"
 const DELAY_MS = 3000
 
