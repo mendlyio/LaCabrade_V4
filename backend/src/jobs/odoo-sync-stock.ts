@@ -183,6 +183,24 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
     console.log(
       `✅ [STOCK SYNC] Terminé: ${updated} mis à jour, ${skipped} inchangés, ${errors} erreurs`
     )
+
+    // Invalider le cache Next.js du storefront si des stocks ont changé
+    if (updated > 0) {
+      const storefrontUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.STOREFRONT_URL
+      const revalidateSecret = process.env.REVALIDATE_SECRET
+      if (storefrontUrl && revalidateSecret) {
+        try {
+          await fetch(`${storefrontUrl}/api/revalidate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ secret: revalidateSecret, tags: ["products"] }),
+          })
+          console.log(`🔄 [STOCK SYNC] Cache storefront invalidé (${updated} produits mis à jour)`)
+        } catch (revalidateErr: any) {
+          console.warn(`⚠️  [STOCK SYNC] Impossible d'invalider le cache storefront:`, revalidateErr.message)
+        }
+      }
+    }
   } catch (error: any) {
     console.error("❌ [STOCK SYNC] Erreur globale:", error)
   }
