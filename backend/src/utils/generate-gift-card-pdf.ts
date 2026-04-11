@@ -15,11 +15,21 @@ const MEDIUM_COLOR = rgb(0.4, 0.4, 0.4)
 const LIGHT_BG = rgb(0.98, 0.96, 0.95)
 const WHITE = rgb(1, 1, 1)
 
+function stripEmojis(str: string): string {
+  return str.replace(/[\u{1F300}-\u{1FFFF}]|[\u{2600}-\u{27BF}]|\u{FE0F}/gu, "").trim()
+}
+
 /**
  * Génère un PDF de bon cadeau La Cabrade.
  * Retourne un Buffer prêt pour l'envoi par email en pièce jointe.
  */
 export async function generateGiftCardPDF(data: GiftCardPDFData): Promise<Buffer> {
+  data = {
+    ...data,
+    recipientName: stripEmojis(data.recipientName),
+    message: stripEmojis(data.message),
+    senderName: data.senderName ? stripEmojis(data.senderName) : data.senderName,
+  }
   const pdfDoc = await PDFDocument.create()
   const page = pdfDoc.addPage([595, 420]) // Format paysage A5-ish
   const { width, height } = page.getSize()

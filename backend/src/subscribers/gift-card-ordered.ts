@@ -160,18 +160,18 @@ export default async function giftCardOrderedHandler({
             to: recipientEmail,
             channel: "email",
             template: EmailTemplates.GIFT_CARD_DELIVERY,
+            attachments: [
+              {
+                content: Buffer.from(pdfBuffer).toString("base64"),
+                filename: `bon-cadeau-lacabrade-${code}.pdf`,
+                content_type: "application/pdf",
+                disposition: "attachment",
+              },
+            ],
             data: {
               emailOptions: {
                 replyTo: "contact@sellerie-lacabrade.be",
                 subject: `Vous avez reçu un Bon Cadeau La Cabrade de ${amount}€ !`,
-                attachments: [
-                  {
-                    content: Buffer.from(pdfBuffer).toString("base64"),
-                    filename: `bon-cadeau-lacabrade-${code}.pdf`,
-                    content_type: "application/pdf",
-                    disposition: "attachment",
-                  },
-                ],
               },
               code,
               amount,
