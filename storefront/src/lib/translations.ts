@@ -141,6 +141,7 @@ export const translations = {
     "checkout.vat_format": "Format : code pays + numéro (ex: BE0123456789, FR12345678901, DE123456789)",
     "checkout.vat_too_short": "Numéro de TVA trop court",
     "checkout.vat_validation_error": "Erreur de validation. Réessayez.",
+    "checkout.vat_accepted_format": "Numéro enregistré (service de vérification temporairement indisponible)",
 
     // Bpost pickup
     "bpost.title": "Choisir un point relais Bpost",
@@ -391,6 +392,7 @@ export const translations = {
     "checkout.vat_format": "Formaat: landcode + nummer (bv: BE0123456789, FR12345678901, DE123456789)",
     "checkout.vat_too_short": "BTW-nummer te kort",
     "checkout.vat_validation_error": "Validatiefout. Probeer opnieuw.",
+    "checkout.vat_accepted_format": "Nummer opgeslagen (verificatiedienst tijdelijk niet beschikbaar)",
 
     // Bpost pickup
     "bpost.title": "Kies een Bpost afhaalpunt",

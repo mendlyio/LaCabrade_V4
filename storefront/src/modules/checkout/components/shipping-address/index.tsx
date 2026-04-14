@@ -162,7 +162,11 @@ const ShippingAddress = ({
 
       if (res.ok && result.valid) {
         setVatStatus("valid")
-        setVatMessage(result.company_name ? `✓ ${result.company_name}` : t("checkout.vat_validated" as any))
+        if (result.vies_unavailable) {
+          setVatMessage(t("checkout.vat_accepted_format" as any))
+        } else {
+          setVatMessage(result.company_name ? `✓ ${result.company_name}` : t("checkout.vat_validated" as any))
+        }
         await saveVatToCart(vatNumber)
       } else {
         setVatStatus("invalid")

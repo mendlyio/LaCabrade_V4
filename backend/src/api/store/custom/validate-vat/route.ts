@@ -53,61 +53,96 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     // Appeler l'API VIES (REST endpoint)
     const viesUrl = `https://ec.europa.eu/taxation_customs/vies/rest-api/ms/${countryCode}/vat/${vatNum}`
     
-    const viesResponse = await fetch(viesUrl, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "User-Agent": "LaCabrade-Storefront/1.0",
-      },
-      signal: AbortSignal.timeout(10000), // 10 secondes timeout
-    })
-
-    if (!viesResponse.ok) {
-      // Fallback: essayer l'ancien endpoint SOAP-like
-      const fallbackUrl = `https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number`
-      const fallbackRes = await fetch(fallbackUrl, {
-        method: "POST",
+    let viesResponse: Response | null = null
+    try {
+      viesResponse = await fetch(viesUrl, {
+        method: "GET",
         headers: {
-          "Content-Type": "application/json",
           "Accept": "application/json",
           "User-Agent": "LaCabrade-Storefront/1.0",
         },
-        body: JSON.stringify({
-          countryCode: countryCode,
-          vatNumber: vatNum,
-        }),
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(10000), // 10 secondes timeout
       })
-
-      if (!fallbackRes.ok) {
-        console.error("[ValidateVAT] VIES API error:", await fallbackRes.text())
-        return res.status(502).json({
-          valid: false,
-          message: "Le service VIES est temporairement indisponible. Réessayez dans quelques instants.",
-        })
-      }
-
-      const fallbackData = await fallbackRes.json()
-      
-      if (fallbackData.valid) {
-        console.log(`[ValidateVAT] ✅ VAT ${cleaned} valide — ${fallbackData.name || "N/A"}`)
-        return res.json({
-          valid: true,
-          vat_number: cleaned,
-          country_code: countryCode,
-          company_name: fallbackData.name && fallbackData.name !== "---" ? fallbackData.name.trim() : null,
-          company_address: fallbackData.address && fallbackData.address !== "---" ? fallbackData.address.trim() : null,
-        })
-      } else {
-        console.log(`[ValidateVAT] ❌ VAT ${cleaned} invalide`)
-        return res.json({
-          valid: false,
-          message: "Ce numéro de TVA n'est pas enregistré dans VIES",
-        })
-      }
+    } catch (fetchError: any) {
+      console.warn("[ValidateVAT] VIES primary endpoint unreachable:", fetchError.message)
     }
 
-    const viesData = await viesResponse.json()
+    // Essayer le fallback si le premier appel a échoué
+    if (!viesResponse || !viesResponse.ok) {
+      try {
+        const fallbackUrl = `https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number`
+        const fallbackRes = await fetch(fallbackUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "LaCabrade-Storefront/1.0",
+          },
+          body: JSON.stringify({
+            countryCode: countryCode,
+            vatNumber: vatNum,
+          }),
+          signal: AbortSignal.timeout(10000),
+        })
+
+        if (fallbackRes.ok) {
+          const fallbackData = await fallbackRes.json()
+          
+          if (fallbackData.valid) {
+            console.log(`[ValidateVAT] ✅ VAT ${cleaned} valide (fallback) — ${fallbackData.name || "N/A"}`)
+            return res.json({
+              valid: true,
+              vat_number: cleaned,
+              country_code: countryCode,
+              company_name: fallbackData.name && fallbackData.name !== "---" ? fallbackData.name.trim() : null,
+              company_address: fallbackData.address && fallbackData.address !== "---" ? fallbackData.address.trim() : null,
+            })
+          } else {
+            console.log(`[ValidateVAT] ❌ VAT ${cleaned} invalide (fallback)`)
+            return res.json({
+              valid: false,
+              message: "Ce numéro de TVA n'est pas enregistré dans VIES",
+            })
+          }
+        }
+      } catch (fallbackError: any) {
+        console.warn("[ValidateVAT] VIES fallback endpoint unreachable:", fallbackError.message)
+      }
+
+      // VIES totalement indisponible — accepter le numéro si le format est valide
+      console.warn(`[ValidateVAT] ⚠️ VIES indisponible, acceptation du numéro ${cleaned} sur format uniquement`)
+      return res.json({
+        valid: true,
+        vat_number: cleaned,
+        country_code: countryCode,
+        company_name: null,
+        company_address: null,
+        vies_unavailable: true,
+      })
+    }
+
+    let viesData: any
+    try {
+      viesData = await viesResponse.json()
+    } catch {
+      // VIES a renvoyé une réponse non-JSON (page HTML d'erreur) → considéré indisponible
+      console.warn(`[ValidateVAT] ⚠️ VIES réponse non-JSON pour ${cleaned}`)
+      return res.json({ valid: true, vat_number: cleaned, country_code: countryCode, company_name: null, company_address: null, vies_unavailable: true })
+    }
+
+    // Codes userError qui signifient que VIES lui-même est en erreur (≠ numéro invalide)
+    const viesServiceErrors = [
+      "SERVICE_UNAVAILABLE",
+      "MS_UNAVAILABLE",
+      "TIMEOUT",
+      "MS_MAX_CONCURRENT_REQ",
+      "MS_MAX_CONCURRENT_REQ_TIME",
+      "GLOBAL_MAX_CONCURRENT_REQ",
+      "GLOBAL_MAX_CONCURRENT_REQ_TIME",
+      "IP_BLOCKED",
+    ]
+
+    const userError: string | undefined = viesData.userError
 
     if (viesData.isValid || viesData.valid) {
       console.log(`[ValidateVAT] ✅ VAT ${cleaned} valide — ${viesData.name || viesData.traderName || "N/A"}`)
@@ -118,8 +153,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         company_name: (viesData.name || viesData.traderName || "").trim() || null,
         company_address: (viesData.address || viesData.traderAddress || "").trim() || null,
       })
+    } else if (userError && viesServiceErrors.includes(userError)) {
+      // VIES en erreur temporaire — accepter le numéro sur la base du format
+      console.warn(`[ValidateVAT] ⚠️ VIES erreur temporaire (${userError}) pour ${cleaned} — accepté sur format`)
+      return res.json({
+        valid: true,
+        vat_number: cleaned,
+        country_code: countryCode,
+        company_name: null,
+        company_address: null,
+        vies_unavailable: true,
+      })
     } else {
-      console.log(`[ValidateVAT] ❌ VAT ${cleaned} invalide`)
+      console.log(`[ValidateVAT] ❌ VAT ${cleaned} invalide (userError: ${userError || "INVALID"})`)
       return res.json({
         valid: false,
         message: "Ce numéro de TVA n'est pas enregistré dans le système VIES de l'UE",
@@ -127,18 +173,15 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
   } catch (error: any) {
     console.error("[ValidateVAT] Error:", error.message)
-
-    // Si c'est un timeout, message spécifique
-    if (error.name === "TimeoutError" || error.name === "AbortError") {
-      return res.status(504).json({
-        valid: false,
-        message: "Le service VIES ne répond pas. Réessayez dans quelques instants.",
-      })
-    }
-
-    return res.status(500).json({
-      valid: false,
-      message: "Erreur lors de la validation. Réessayez.",
+    // En cas d'erreur inattendue, accepter quand même le numéro si le format est correct
+    // pour ne pas bloquer le client lors d'une indisponibilité du service
+    return res.json({
+      valid: true,
+      vat_number: (req.body as any)?.vat_number?.replace(/[\s\-.]/g, "").toUpperCase() || "",
+      country_code: null,
+      company_name: null,
+      company_address: null,
+      vies_unavailable: true,
     })
   }
 }
