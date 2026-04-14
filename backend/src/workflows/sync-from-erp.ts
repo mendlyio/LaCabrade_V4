@@ -1028,7 +1028,6 @@ export const syncFromErpWorkflow = createWorkflow(
 
                         console.log(`💰 [UPDATE] Produit ${p.id}: ${p.variants.length} variantes Odoo, ${fresh.variants?.length || 0} variantes Medusa`)
 
-                        const previousVariantIds = (fresh.variants || []).map((v: any) => v.id)
                         const variantPrices = p.variants
                           .map((v: any) => {
                             const match = (fresh.variants || []).find((fv: any) => {
@@ -1061,6 +1060,12 @@ export const syncFromErpWorkflow = createWorkflow(
                           .filter(Boolean)
 
                         if (variantPrices.length) {
+                          // previousVariantIds = uniquement les variantes présentes dans variantPrices.
+                          // En passant TOUTES les variantes (y compris sans price_set), le workflow
+                          // Medusa ne crée pas les price_sets manquants. On limite donc à celles
+                          // qu'on gère réellement pour que la création fonctionne correctement.
+                          const previousVariantIds = variantPrices.map((vp: any) => vp.variant_id)
+
                           console.log(`💰 [UPDATE] Application pricing pour ${variantPrices.length} variantes`)
                           const pricingWf = upsertVariantPricesWorkflow(container)
                           await pricingWf.run({
