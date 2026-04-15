@@ -29,7 +29,9 @@ export default function HomeContent({
 
   return (
     <div className="relative z-0 w-full">
-      <h1 className="sr-only">La Cabrade - Sellerie Équestre &amp; LC Equestrian</h1>
+      <h1 className="sr-only">
+        Sellerie Belgique, sellerie équestre — La Cabrade &amp; LC Equestrian
+      </h1>
 
       {/* Hero Carrousel */}
       <HeroCarousel />

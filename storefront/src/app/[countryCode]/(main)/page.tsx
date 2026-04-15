@@ -10,9 +10,9 @@ import ProductCardModern from "@modules/products/components/product-card-modern"
 const HOME_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
 
 export const metadata: Metadata = {
-  title: "La Cabrade - Sellerie Équestre | LC•EQUESTRIAN",
+  title: "Sellerie Belgique | Sellerie équestre | La Cabrade · LC•EQUESTRIAN",
   description:
-    "Vivez l'équitation comme vous l'aimez, sans compromis. Des prix justes, du matériel fiable, et toute l'émotion d'une sellerie pensée pour les passionnés.",
+    "Sellerie Belgique — La Cabrade, sellerie équestre à Fléron près de Liège. Prix justes, matériel fiable, et toute l'émotion d'une sellerie pensée pour les passionnés.",
   alternates: {
     canonical: `${HOME_BASE_URL}/be`,
     languages: {

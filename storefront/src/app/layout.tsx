@@ -13,11 +13,11 @@ const BASE_URL = getBaseURL()
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "La Cabrade - Sellerie Équestre | LC•EQUESTRIAN",
+    default: "Sellerie Belgique | Sellerie équestre | La Cabrade · LC•EQUESTRIAN",
     template: "%s | La Cabrade",
   },
   description:
-    "Sellerie équestre La Cabrade : équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques. Livraison rapide en Belgique et Europe.",
+    "Sellerie Belgique et sellerie équestre : La Cabrade à Fléron. Équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques. Livraison rapide en Belgique et Europe.",
   icons: {
     icon: "https://ik.imagekit.io/kodt9cn6f/Cabrade/favicon.ico",
   },
@@ -25,16 +25,16 @@ export const metadata: Metadata = {
     type: "website",
     locale: "fr_BE",
     siteName: "La Cabrade",
-    title: "La Cabrade - Sellerie Équestre | LC•EQUESTRIAN",
+    title: "Sellerie Belgique | Sellerie équestre | La Cabrade · LC•EQUESTRIAN",
     description:
-      "Sellerie équestre La Cabrade : équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques.",
+      "Sellerie Belgique et sellerie équestre : La Cabrade à Fléron. Équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques.",
     url: BASE_URL,
   },
   twitter: {
     card: "summary_large_image",
-    title: "La Cabrade - Sellerie Équestre",
+    title: "Sellerie Belgique | Sellerie équestre | La Cabrade",
     description:
-      "Équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques.",
+      "Sellerie Belgique — équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques.",
   },
   alternates: {
     canonical: BASE_URL,
@@ -45,6 +45,7 @@ export const metadata: Metadata = {
     },
   },
   keywords: [
+    "sellerie belgique",
     "sellerie équestre",
     "zadelmakerij",
     "équipement cavalier",
