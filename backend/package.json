@@ -44,7 +44,9 @@
     "email:test": "tsx src/scripts/test-resend-email.ts",
     "email:check-amounts": "medusa exec src/scripts/test-email-amounts.ts",
     "email:check-amounts:local": "REDIS_URL= medusa exec src/scripts/test-email-amounts.ts",
-    "import:legacy-gift-cards": "medusa exec src/scripts/import-legacy-gift-cards.ts"
+    "import:legacy-gift-cards": "medusa exec src/scripts/import-legacy-gift-cards.ts",
+    "order:unstick-fulfillment": "medusa exec src/scripts/unstick-order-fulfillment.ts",
+    "order:unstick-fulfillment:local": "REDIS_URL= medusa exec src/scripts/unstick-order-fulfillment.ts"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.10.3",

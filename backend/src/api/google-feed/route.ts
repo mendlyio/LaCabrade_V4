@@ -67,10 +67,18 @@ function getGoogleCategory(collection: string, categories: string[]): string {
   return ''
 }
 
+/** Textile / chaussures / casques / gants — Google exige souvent color/size/gender/age_group pour la FR/BE. */
 function isApparelProduct(text: string): boolean {
-  return /(shirt|t-?shirt|polo|pull|sweat|veste|jacket|pantalon|legging|gants?|gloves?|botte|boots?|chaussures?|socks?|casque|helmet|bonnet|hoodie|bomber|ceinture|belt|longe|bridon|bridle|collant|chemise|blouson)/i.test(
+  return /(shirt|t-?shirt|polo|pull|sweat|veste|jacket|pantalon|legging|gants?|gloves?|botte|boots?|mini[-\s]?chaps?|chaps?|chaussures?|socks?|casque|helmet|bombe|bonnet|hoodie|bomber|ceinture|belt|longe|bridon|bridle|collant|chemise|blouson|polaire|softshell|parka|manteau|doudoune|couvre[-\s]?(reins|nuque|dos)|gilet)/i.test(
     text
   )
+}
+
+/** Catégories Google où les attributs « apparel » sont typiquement obligatoires. */
+function needsApparelAttributes(googleCategory: string, text: string): boolean {
+  const apparelCategories = new Set(['1604', '499713', '6439'])
+  if (googleCategory && apparelCategories.has(googleCategory)) return true
+  return isApparelProduct(text)
 }
 
 function inferGender(text: string): 'male' | 'female' | 'unisex' {
@@ -290,7 +298,8 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
 
         // ── Marque / ID / URL ──────────────────────────────────────────────
         const brand = product.metadata?.brand || product.metadata?.vendor || product.metadata?.marque || 'La Cabrade'
-        const offerId = (variant.sku || variant.id).substring(0, 50)
+        // ID stable (trim) — doit correspondre exactement à la colonne id de la source « inventaire » dans Merchant Center
+        const offerId = String(variant.sku || variant.id).trim().substring(0, 50)
         const productUrl = hasMultipleVariants
           ? `${STORE_URL}/products/${product.handle}?variant=${variant.id}`
           : `${STORE_URL}/products/${product.handle}`
@@ -313,10 +322,25 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         }
 
         const apparelContext = `${title} ${productType} ${collectionTitle} ${categoryNames.join(' ')}`
-        const isApparel = isApparelProduct(apparelContext) || !!size || !!color
+        const isApparel =
+          needsApparelAttributes(googleCategory, apparelContext) || !!size || !!color
         const gender = inferGender(apparelContext)
-        const ageGroup = 'adult'
-        const safeSize = size || (isApparel ? 'one size' : '')
+        const ageGroup = (() => {
+          const t = apparelContext.toLowerCase()
+          if (/(newborn|nouveau[-\s]?n[ée]|0[-\s]?3\s*mois)/.test(t)) return 'newborn'
+          if (/(infant|b[ée]b[ée]|3[-\s]?12\s*mois)/.test(t)) return 'infant'
+          if (/(toddler|tout[-\s]?petit|1[-\s]?5\s*ans)/.test(t)) return 'toddler'
+          if (/(kids?|\benfant\b|junior)/.test(t)) return 'kids'
+          return 'adult'
+        })()
+        const finalColor =
+          color ||
+          inferColorFromText(`${variant.title || ''} ${product.title || ''}`) ||
+          'black'
+        const finalSize =
+          size ||
+          inferSizeFromTitle(`${variant.title || ''} ${product.title || ''}`) ||
+          (isApparel ? 'one size' : '')
 
         // ── GTIN / MPN ─────────────────────────────────────────────────────
         const hasValidGtin = isValidGtin(variant.barcode)
@@ -334,6 +358,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       <g:additional_image_link>${escapeXml(url)}</g:additional_image_link>`).join('')}
       <g:price>${amount.toFixed(2)} EUR</g:price>
       <g:availability>${availability}</g:availability>
+      <g:quantity>${Math.max(0, Math.floor(qty))}</g:quantity>
       <g:condition>new</g:condition>
       <g:brand>${escapeXml(brand)}</g:brand>${hasValidGtin ? `
       <g:gtin>${escapeXml(variant.barcode.replace(/\D/g, ''))}</g:gtin>
@@ -341,10 +366,10 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       <g:mpn>${escapeXml(mpn)}</g:mpn>
       <g:identifier_exists>no</g:identifier_exists>`}${isApparel ? `
       <g:gender>${gender}</g:gender>
-      <g:age_group>${ageGroup}</g:age_group>${safeSize ? `
-      <g:size>${escapeXml(safeSize)}</g:size>` : ''}` : ''}${hasMultipleVariants ? `
-      <g:item_group_id>${escapeXml(product.id)}</g:item_group_id>` : ''}${color ? `
-      <g:color>${escapeXml(color)}</g:color>` : ''}${!isApparel && size ? `
+      <g:age_group>${ageGroup}</g:age_group>
+      <g:color>${escapeXml(finalColor)}</g:color>${finalSize ? `
+      <g:size>${escapeXml(finalSize)}</g:size>` : ''}` : ''}${hasMultipleVariants ? `
+      <g:item_group_id>${escapeXml(product.id)}</g:item_group_id>` : ''}${!isApparel && size ? `
       <g:size>${escapeXml(size)}</g:size>` : ''}${productType ? `
       <g:product_type>${escapeXml(productType)}</g:product_type>` : ''}${googleCategory ? `
       <g:google_product_category>${googleCategory}</g:google_product_category>` : ''}
