@@ -109,8 +109,8 @@ export default async function ProductCardModern({
     product.thumbnail ||
     null
 
-  // Images : carrousel au survol (toutes sauf la première)
-  const images = pricedProduct.images || []
+  // Images : carrousel au survol (toutes sauf la première, filtre les URLs vides)
+  const images = (pricedProduct.images || []).filter((img: any) => img?.url)
   const hoverImages = images.length > 1 ? images.slice(1, 5) : [] // max 4 images de survol
   const hoverCount = hoverImages.length
 
@@ -346,10 +346,10 @@ export default async function ProductCardModern({
               Cette approche évite le conflit de priorité CSS entre inline style et la classe Tailwind group-hover. */}
           {hoverImages.length > 0 && (
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-              {hoverImages.map((img, i) => (
+              {hoverImages.map((img: any, i: number) => (
                 <Image
-                  key={img.url || i}
-                  src={img.url}
+                  key={(img.url as string) || i}
+                  src={img.url as string}
                   alt={`${product.title} - vue ${i + 2}`}
                   fill
                   quality={imageQuality}
