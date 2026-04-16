@@ -118,6 +118,7 @@ export default function ProductActionsModern({
         body: JSON.stringify({
           email: notifyEmail,
           variantId: selectedVariant?.id || product.variants?.[0]?.id,
+          productId: product.id,
           productTitle: product.title,
         }),
       })

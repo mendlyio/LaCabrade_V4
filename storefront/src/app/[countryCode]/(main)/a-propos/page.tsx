@@ -57,7 +57,7 @@ export default function AProposPage() {
       name: "AMÉLIE D. – La suppléante 🤭",
       role: "Conseil & vente",
       description:
-        "Professeure de mathématiques en secondaire et cavalière depuis plus de 30 ans, Amélie D. met sa rigueur et son enthousiasme quelques jours par mois au service du magasin. Elle apporte son sens du détail et sa bonne humeur pour que tout soit parfaitement carré, à l'écurie comme en boutique.",
+        "Professeure de mathématiques en secondaire et cavalière depuis plus de 30 ans, Amélie met sa rigueur et son enthousiasme quelques jours par mois au service du magasin. Elle apporte son sens du détail et sa bonne humeur pour que tout soit parfaitement carré, à l'écurie comme en boutique.",
       accent: "from-violet-100 to-purple-100",
       image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/amelied.webp",
     },
@@ -93,13 +93,13 @@ export default function AProposPage() {
                     En juillet 2022, Mélissa a pris la tête de La Cabrade, insufflant une nouvelle dynamique tout en préservant les valeurs qui font notre force depuis des décennies : qualité, service et passion. Épaulée par son papa et entourée d&apos;une équipe engagée, Mélissa veille chaque jour à vous offrir un accueil chaleureux et des conseils personnalisés.
                   </p>
                   <p>
-                    Dans cette volonté d&apos;évolution et d&apos;innovation, nous développons également notre propre marque : LC EQUESTRIAN. Pensée par des cavaliers, pour des cavaliers, elle allie technicité, confort, qualité des matières et élégance. À travers LC EQUESTRIAN, nous souhaitons proposer des produits qui répondent réellement à vos besoins, tout en restant abordables.
+                    Dans cette volonté d&apos;évolution et d&apos;innovation, nous développons également notre propre marque : LC Equestrian. Pensée par des cavaliers, pour des cavaliers, elle allie technicité, confort, qualité des matières et élégance. À travers LC Equestrian, nous souhaitons proposer des produits qui répondent réellement à vos besoins, tout en restant abordables.
                   </p>
                   <p>
                     Notre ambition ? Continuer à faire évoluer notre sellerie, en magasin comme en ligne, tout en restant fidèles à notre identité familiale et à la confiance que vous nous accordez depuis tant d&apos;années.
                   </p>
                   <p>
-                    Merci de faire partie de notre histoire — et à très bientôt, en boutique ou sur notre site ! 🐴
+                    Merci de faire partie de notre histoire — et à très bientôt, en boutique ou en ligne ! 🐴
                   </p>
                 </div>
               </div>

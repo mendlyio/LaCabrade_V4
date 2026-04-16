@@ -18,6 +18,7 @@ import { Modules } from "@medusajs/framework/utils"
 import { ODOO_MODULE } from "../modules/odoo"
 import { OdooProduct, OdooCategory, Pagination } from "../modules/odoo/service"
 import OdooModuleService from "../modules/odoo/service"
+import { restoreSoftDeletedPricingForProduct } from "../utils/restore-soft-deleted-pricing-for-product"
 
 type SyncFromErpInput = Pagination & {
   dryRun?: boolean
@@ -885,7 +886,14 @@ export const syncFromErpWorkflow = createWorkflow(
               })
               lacabradeChannel = Array.isArray(createdChannels) ? createdChannels[0] : createdChannels
             }
-            
+
+            let pricingFixPool: import("pg").Pool | null = null
+            if (process.env.DATABASE_URL) {
+              const pg = await import("pg")
+              pricingFixPool = new pg.Pool({ connectionString: process.env.DATABASE_URL })
+            }
+
+            try {
             for (const p of productsToUpdate) {
                 try {
                     const productService = container.resolve(Modules.PRODUCT)
@@ -1075,6 +1083,16 @@ export const syncFromErpWorkflow = createWorkflow(
                             },
                           })
                           console.log(`✅ [UPDATE] Pricing appliqué pour ${p.id}`)
+                          if (pricingFixPool) {
+                            try {
+                              await restoreSoftDeletedPricingForProduct(pricingFixPool, p.id)
+                            } catch (restoreErr: any) {
+                              console.warn(
+                                `⚠️ [UPDATE] Réparation liens prix soft-delete ${p.id}:`,
+                                restoreErr?.message || restoreErr
+                              )
+                            }
+                          }
                         } else {
                           console.log(`ℹ️ [UPDATE] Aucun prix à appliquer pour ${p.id}`)
                         }
@@ -1246,8 +1264,11 @@ export const syncFromErpWorkflow = createWorkflow(
                     }
                 }
             }
-            
+
             return new StepResponse({ updated: updatedCount })
+            } finally {
+              await pricingFixPool?.end().catch(() => undefined)
+            }
         }
     )
     

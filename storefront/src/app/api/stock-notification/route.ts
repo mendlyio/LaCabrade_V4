@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, variantId, productTitle } = body
+    const { email, variantId, productId: providedProductId } = body
 
     if (!email || !variantId) {
       return NextResponse.json(
@@ -16,13 +16,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Extraire le product_id du variantId si nécessaire
-    // Dans Medusa v2, les IDs de variantes commencent souvent par "variant_"
-    const productId = variantId.split('_')[0] // Simplification, à adapter selon votre structure
+    const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || 'http://localhost:9000'
+    const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+
+    // Résoudre le product_id réel via l'API Medusa si non fourni
+    let productId = providedProductId
+    if (!productId) {
+      try {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (publishableKey) headers['x-publishable-api-key'] = publishableKey
+
+        const variantRes = await fetch(
+          `${backendUrl}/store/products?variants[]=${variantId}&fields=id,variants.id`,
+          { headers }
+        )
+        if (variantRes.ok) {
+          const variantData = await variantRes.json()
+          productId = variantData?.products?.[0]?.id
+        }
+      } catch {
+        // Fallback silencieux
+      }
+    }
+
+    if (!productId) {
+      return NextResponse.json(
+        { error: 'Impossible de déterminer le produit associé à cette variante' },
+        { status: 400 }
+      )
+    }
 
     // Appeler l'API backend
-    const backendUrl = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || 'http://localhost:9000'
-    
     const response = await fetch(`${backendUrl}/store/stock-alerts`, {
       method: 'POST',
       headers: {

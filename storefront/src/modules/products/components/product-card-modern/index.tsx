@@ -109,11 +109,43 @@ export default async function ProductCardModern({
     product.thumbnail ||
     null
 
-  // Images : 3ème image pour le hover
+  // Images : carrousel au survol (toutes sauf la première)
   const images = pricedProduct.images || []
-  const hoverImage = images.length > 2 ? images[2]?.url : null
+  const hoverImages = images.length > 1 ? images.slice(1, 5) : [] // max 4 images de survol
+  const hoverCount = hoverImages.length
 
   const variantCount = variants.length
+
+  // Détection option couleur et extraction des valeurs
+  const COLOR_OPTION_TITLES = ["couleur", "color", "colour", "coloris"]
+  const COLOR_MAP: Record<string, string> = {
+    // Français
+    noir: "#1a1a1a", blanc: "#f5f5f5", gris: "#9ca3af", "gris clair": "#d1d5db",
+    "gris foncé": "#4b5563", marine: "#1e3a5f", bleu: "#3b82f6", "bleu ciel": "#7dd3fc",
+    "bleu marine": "#1e3a5f", rouge: "#ef4444", rose: "#f472b6", "rose poudré": "#fda4af",
+    vert: "#22c55e", "vert kaki": "#84843a", marron: "#92400e", beige: "#d4b896",
+    bordeaux: "#7f1d1d", violet: "#7c3aed", lilas: "#c4b5fd", orange: "#f97316",
+    jaune: "#eab308", camel: "#c4903a", chocolat: "#4a2c17", anthracite: "#374151",
+    taupe: "#a49080", ivoire: "#f5f0dc", écru: "#f5f0dc", doré: "#d4af37",
+    argenté: "#c0c0c0", turquoise: "#06b6d4", corail: "#fb7185", sable: "#d4b896",
+    "rouge bordeaux": "#7f1d1d", lavande: "#c4b5fd", menthe: "#6ee7b7",
+    // English
+    black: "#1a1a1a", white: "#f5f5f5", gray: "#9ca3af", grey: "#9ca3af",
+    blue: "#3b82f6", navy: "#1e3a5f", red: "#ef4444", pink: "#f472b6",
+    green: "#22c55e", brown: "#92400e", purple: "#7c3aed", yellow: "#eab308",
+    orange: "#f97316", gold: "#d4af37", silver: "#c0c0c0", teal: "#0d9488",
+  }
+
+  const colorOption = (pricedProduct.options || []).find((opt: any) =>
+    COLOR_OPTION_TITLES.includes((opt.title || "").toLowerCase())
+  )
+  const colorValues: string[] = colorOption
+    ? variants
+        .map((v: any) => v.options?.find((o: any) => o.option_id === colorOption.id)?.value)
+        .filter(Boolean)
+        .filter((val: any, idx: number, arr: any[]) => arr.indexOf(val) === idx) as string[]
+    : []
+  const hasColorSwatches = colorValues.length > 1
 
   // Badge "Nouveau" automatique : produits créés il y a moins de 30 jours
   const isNew = (() => {
@@ -284,7 +316,7 @@ export default async function ProductCardModern({
               fill
               quality={imageQuality}
               className={`object-cover transition-all duration-700 ease-out ${
-                hoverImage
+                hoverCount > 0
                   ? "group-hover:opacity-0 group-hover:scale-105"
                   : "group-hover:scale-[1.06] group-hover:rotate-[1.5deg]"
               }`}
@@ -308,29 +340,30 @@ export default async function ProductCardModern({
             </div>
           )}
 
-          {/* 3ème image au hover : légère rotation + zoom */}
-          {hoverImage && (
+          {/* Carrousel hover : images 2 à N */}
+          {hoverImages.map((img, i) => (
             <Image
-              src={hoverImage}
-              alt={`${product.title} - vue alternative`}
+              key={img.url || i}
+              src={img.url}
+              alt={`${product.title} - vue ${i + 2}`}
               fill
               quality={imageQuality}
               loading="lazy"
-              className="object-cover absolute inset-0 opacity-0 scale-[1.08] rotate-[-1deg] group-hover:opacity-100 group-hover:scale-[1.03] group-hover:rotate-[1deg] transition-all duration-700 ease-out"
+              className="object-cover absolute inset-0 group-hover:[animation-play-state:running]"
+              style={{
+                opacity: 0,
+                animationName: `cardCycle${hoverCount}`,
+                animationDuration: `${hoverCount * 2}s`,
+                animationDelay: `${i * 2}s`,
+                animationTimingFunction: "ease-in-out",
+                animationIterationCount: "infinite",
+                animationFillMode: "both",
+                animationPlayState: "paused",
+              }}
               sizes={cardImageSizes}
             />
-          )}
+          ))}
 
-          {/* Overlay rupture */}
-          {!isInStock && (
-            <div className="absolute inset-0 bg-gray-900/30 backdrop-blur-[1px] flex items-center justify-center z-10">
-              <div className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full">
-                <span className="text-sm font-bold text-gray-800 uppercase tracking-wider">
-                  Épuisé
-                </span>
-              </div>
-            </div>
-          )}
 
           {/* Badges haut gauche */}
           <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10">
@@ -351,7 +384,7 @@ export default async function ProductCardModern({
               </div>
             )}
             {isNew && (
-              <div className="bg-emerald-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
+              <div className="bg-[#c4707f] text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
                 NEW
               </div>
             )}
@@ -387,12 +420,31 @@ export default async function ProductCardModern({
             <WishlistToggleButton productId={product.id!} size="md" />
           </div>
 
-          {/* Nombre de variantes */}
-          {variantCount > 1 && (
-            <div className="absolute bottom-2.5 left-2.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="bg-white/90 backdrop-blur-sm text-gray-700 px-2 py-1 rounded-lg text-[10px] font-medium shadow-sm">
-                {variantCount} variantes
-              </div>
+          {/* Indicateur variantes — toujours visible */}
+          {variantCount > 1 && !isLcEquestrian && (
+            <div className="absolute bottom-2.5 left-2.5 z-10">
+              {hasColorSwatches ? (
+                <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm px-1.5 py-1 rounded-lg shadow-sm">
+                  {colorValues.slice(0, 5).map((colorName) => {
+                    const hex = COLOR_MAP[colorName.toLowerCase()] || "#d1d5db"
+                    return (
+                      <span
+                        key={colorName}
+                        title={colorName}
+                        style={{ backgroundColor: hex }}
+                        className="w-3 h-3 rounded-full border border-white shadow-sm inline-block flex-shrink-0"
+                      />
+                    )
+                  })}
+                  {colorValues.length > 5 && (
+                    <span className="text-[9px] text-gray-500 ml-0.5">+{colorValues.length - 5}</span>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-white/90 backdrop-blur-sm text-gray-600 px-2 py-1 rounded-lg text-[10px] font-medium shadow-sm">
+                  Autres options
+                </div>
+              )}
             </div>
           )}
         </div>

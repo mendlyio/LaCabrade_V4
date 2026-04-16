@@ -3,6 +3,7 @@ import { MedusaError } from '@medusajs/framework/utils'
 import { InviteUserEmail, INVITE_USER, isInviteUserData } from './invite-user'
 import { OrderPlacedTemplate, ORDER_PLACED, isOrderPlacedTemplateData } from './order-placed'
 import { OrderShippedTemplate, ORDER_SHIPPED, isOrderShippedTemplateData } from './order-shipped'
+import { OrderStatusUpdatedTemplate, ORDER_STATUS_UPDATED, isOrderStatusUpdatedTemplateData } from './order-status-updated'
 import { WelcomeTemplate, WELCOME, isWelcomeTemplateData } from './welcome'
 import { StockAlertTemplate, STOCK_ALERT, isStockAlertTemplateData } from './stock-alert'
 import { GiftCardDeliveryTemplate, GIFT_CARD_DELIVERY, isGiftCardDeliveryData } from './gift-card-delivery'
@@ -15,6 +16,7 @@ export const EmailTemplates = {
   INVITE_USER,
   ORDER_PLACED,
   ORDER_SHIPPED,
+  ORDER_STATUS_UPDATED,
   WELCOME,
   STOCK_ALERT,
   GIFT_CARD_DELIVERY,
@@ -118,6 +120,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <NewsletterBugfixReminderTemplate {...data} />
 
+    case EmailTemplates.ORDER_STATUS_UPDATED:
+      if (!isOrderStatusUpdatedTemplateData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.ORDER_STATUS_UPDATED}"`
+        )
+      }
+      return <OrderStatusUpdatedTemplate {...data} />
+
     default:
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
@@ -126,4 +137,4 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
   }
 }
 
-export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, WelcomeTemplate, StockAlertTemplate, GiftCardDeliveryTemplate, PasswordResetTemplate, NewsletterWelcomeTemplate, NewsletterBirthdayTemplate, NewsletterBugfixReminderTemplate }
+export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, OrderStatusUpdatedTemplate, WelcomeTemplate, StockAlertTemplate, GiftCardDeliveryTemplate, PasswordResetTemplate, NewsletterWelcomeTemplate, NewsletterBirthdayTemplate, NewsletterBugfixReminderTemplate }

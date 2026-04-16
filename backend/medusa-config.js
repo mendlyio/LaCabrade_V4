@@ -81,7 +81,8 @@ const medusaConfig = {
       authCors: AUTH_CORS,
       storeCors: STORE_CORS,
       jwtSecret: JWT_SECRET,
-      cookieSecret: COOKIE_SECRET
+      cookieSecret: COOKIE_SECRET,
+      jwtExpiresIn: "30d"
     },
     build: {
       rollupOptions: {

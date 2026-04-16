@@ -95,7 +95,16 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
   const shippingDiscountTotal = Math.max(0, shippingCostRaw - shippingCost)
   const totalDiscount = itemDiscountTotal + shippingDiscountTotal
 
+  // Déduction bon cadeau depuis order.metadata.applied_gift_cards
+  const appliedGiftCards: Array<{ code: string; balance: number }> =
+    (order as any).metadata?.applied_gift_cards || []
+  const giftCardTotal = appliedGiftCards.reduce(
+    (sum, gc) => sum + Number(gc.balance || 0),
+    0
+  )
+
   // Total payé : display_total autoritatif (calculé depuis order.total dans le subscriber)
+  // Inclut déjà les déductions GC, promos, livraison
   const total = Number(
     (order as any).display_total
     ?? (order as any).summary?.current_order_total
@@ -264,6 +273,25 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
                 color: '#059669',
               }}>
                 -{formatPrice(totalDiscount)}
+              </Text>
+            </Column>
+          </Row>
+        )}
+        {giftCardTotal > 0 && (
+          <Row>
+            <Column>
+              <Text style={{ margin: '0 0 4px', fontSize: '14px', color: '#059669' }}>
+                Bon(s) cadeau
+              </Text>
+            </Column>
+            <Column style={{ textAlign: 'right' as const }}>
+              <Text style={{
+                margin: '0 0 4px',
+                fontSize: '14px',
+                fontWeight: '600' as const,
+                color: '#059669',
+              }}>
+                -{formatPrice(giftCardTotal)}
               </Text>
             </Column>
           </Row>

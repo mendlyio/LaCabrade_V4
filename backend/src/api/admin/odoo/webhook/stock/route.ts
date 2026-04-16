@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
+import { IEventBusModuleService } from "@medusajs/framework/types"
 
 /**
  * POST /admin/odoo/webhook/stock
@@ -81,6 +82,18 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       })
       
       console.log(`✅ [ODOO WEBHOOK] Stock mis à jour: ${sku} stocked=${targetStocked} (Odoo=${qty_available}, réservé=${reservedQty})`)
+
+      // Émettre l'événement pour déclencher les alertes de retour en stock
+      try {
+        const eventBus: IEventBusModuleService = req.scope.resolve(Modules.EVENT_BUS)
+        await eventBus.emit([{
+          name: 'product-variant.updated',
+          data: { variant_id: variant.id, inventory_item_id: inventoryItem.id },
+        }])
+        console.log(`📣 [ODOO WEBHOOK] Événement product-variant.updated émis pour variante ${variant.id}`)
+      } catch (eventError: any) {
+        console.warn(`⚠️ [ODOO WEBHOOK] Impossible d'émettre l'événement stock:`, eventError?.message)
+      }
       
       return res.json({
         success: true,
