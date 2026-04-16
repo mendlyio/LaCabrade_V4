@@ -110,10 +110,10 @@ export default async function ProductCardModern({
     product.thumbnail ||
     null
 
-  // Images : carrousel au survol — skip image 1 (index 0 = thumbnail) ET image 2 (index 1),
-  // commencer à la 3e (index 2). Filtre les URLs vides.
+  // Toutes les images valides. Le composant ProductCardImages calcule lui-même
+  // quelles images afficher (skip image 2, hover = image 3).
   const images = (pricedProduct.images || []).filter((img: any) => img?.url)
-  const hoverImages = images.length > 2 ? images.slice(2, 6) : [] // max 4 hover images, depuis image 3
+  const hoverImages = images.slice(0, 6) // on passe tout au composant, max 6
   const hoverCount = hoverImages.length
 
   const variantCount = variants.length

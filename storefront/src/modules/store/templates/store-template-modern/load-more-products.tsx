@@ -102,8 +102,8 @@ function ProductCardClient({
 
   const collection = product.collection?.title
   const images = (product.images || []).filter((img: any) => img?.url)
-  // Skip image 2 (index 1) — commencer à la 3e image (index 2)
-  const hoverImages = images.length > 2 ? images.slice(2, 6) : []
+  // On passe toutes les images au composant ProductCardImages qui gère le skip lui-même
+  const hoverImages = images.slice(0, 6)
   const thumbUrl = product.thumbnail || images[0]?.url || null
 
   // Indicateur variantes / pastilles couleur

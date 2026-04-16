@@ -43,15 +43,20 @@ export default function ProductCardImages({
   const touchStartX = useRef<number | null>(null)
   const touchStartY = useRef<number | null>(null)
 
-  // Images mobile : thumbnail + toutes les hoverImages dans l'ordre
-  const mobileImages: string[] = [
-    ...(thumbUrl ? [thumbUrl] : []),
-    ...hoverImages.map((i) => i.url),
-  ]
+  // Liste complète déduplicatée : [thumbnail, img1, img2, img3, ...]
+  // On skip ensuite l'index 1 (image 2) pour le survol desktop et le swipe mobile.
+  const allUrls: string[] = []
+  if (thumbUrl) allUrls.push(thumbUrl)
+  for (const img of hoverImages) {
+    if (img.url && !allUrls.includes(img.url)) allUrls.push(img.url)
+  }
+
+  // Mobile : toutes les images sauf l'index 1 (image 2 skippée)
+  const mobileImages = allUrls.filter((_, i) => i !== 1)
   const mobileSrc = mobileImages[Math.min(activeIdx, mobileImages.length - 1)] || ""
 
-  // Image de survol desktop : première des hoverImages
-  const desktopHoverSrc = hoverImages[0]?.url || null
+  // Desktop : image de survol = index 2 de la liste complète (3e image)
+  const desktopHoverSrc = allUrls[2] || null
   const hasHover = !!desktopHoverSrc
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -129,25 +134,25 @@ export default function ProductCardImages({
         )}
       </div>
 
-      {/* ── Ligne de progression — desktop ── */}
+      {/* ── Ligne de progression — desktop (haut de l'image) ── */}
       {hasHover && (
-        <div className="hidden md:block absolute bottom-0 left-0 right-0 h-[2px] bg-black/10 z-10">
+        <div className="hidden md:block absolute top-0 left-0 right-0 h-[3px] bg-black/10 z-20">
           <div
-            className={`h-full bg-white/80 transition-all ease-out ${
-              isHovered ? "w-full duration-700" : "w-0 duration-300"
+            className={`h-full bg-white/90 transition-all ease-out ${
+              isHovered ? "w-full duration-700" : "w-0 duration-200"
             }`}
           />
         </div>
       )}
 
-      {/* ── Points indicateurs — mobile uniquement ── */}
+      {/* ── Points indicateurs — mobile uniquement (haut de l'image) ── */}
       {mobileImages.length > 1 && (
-        <div className="flex md:hidden absolute bottom-2 left-1/2 -translate-x-1/2 gap-1 pointer-events-none z-10">
+        <div className="flex md:hidden absolute top-2 left-1/2 -translate-x-1/2 gap-1 pointer-events-none z-20">
           {mobileImages.map((_, i) => (
             <span
               key={i}
               className={`block rounded-full transition-all duration-200 ${
-                i === activeIdx ? "w-3 h-1.5 bg-white" : "w-1.5 h-1.5 bg-white/50"
+                i === activeIdx ? "w-3 h-1.5 bg-white shadow-sm" : "w-1.5 h-1.5 bg-white/60"
               }`}
             />
           ))}
