@@ -340,29 +340,35 @@ export default async function ProductCardModern({
             </div>
           )}
 
-          {/* Carrousel hover : images 2 à N */}
-          {hoverImages.map((img, i) => (
-            <Image
-              key={img.url || i}
-              src={img.url}
-              alt={`${product.title} - vue ${i + 2}`}
-              fill
-              quality={imageQuality}
-              loading="lazy"
-              className="object-cover absolute inset-0 group-hover:[animation-play-state:running]"
-              style={{
-                opacity: 0,
-                animationName: `cardCycle${hoverCount}`,
-                animationDuration: `${hoverCount * 2}s`,
-                animationDelay: `${i * 2}s`,
-                animationTimingFunction: "ease-in-out",
-                animationIterationCount: "infinite",
-                animationFillMode: "both",
-                animationPlayState: "paused",
-              }}
-              sizes={cardImageSizes}
-            />
-          ))}
+          {/* Carrousel hover : images 2 à N
+              Le wrapper passe de opacity-0 à opacity-100 au hover.
+              Les animations tournent toujours (running) ; c'est le wrapper qui contrôle la visibilité.
+              Cette approche évite le conflit de priorité CSS entre inline style et la classe Tailwind group-hover. */}
+          {hoverImages.length > 0 && (
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+              {hoverImages.map((img, i) => (
+                <Image
+                  key={img.url || i}
+                  src={img.url}
+                  alt={`${product.title} - vue ${i + 2}`}
+                  fill
+                  quality={imageQuality}
+                  loading="lazy"
+                  className="object-cover absolute inset-0"
+                  style={{
+                    animationName: `cardCycle${hoverCount}`,
+                    animationDuration: `${hoverCount * 2}s`,
+                    animationDelay: `${i * 2}s`,
+                    animationTimingFunction: "ease-in-out",
+                    animationIterationCount: "infinite",
+                    animationFillMode: "both",
+                    animationPlayState: "running",
+                  }}
+                  sizes={cardImageSizes}
+                />
+              ))}
+            </div>
+          )}
 
 
           {/* Badges haut gauche */}

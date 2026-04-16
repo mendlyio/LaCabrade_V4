@@ -232,6 +232,14 @@
     animation: popup-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
 
+  /* Carrousel hover cartes produit — 1 image supplémentaire */
+  @keyframes cardCycle1 {
+    0%    { opacity: 0; }
+    8%    { opacity: 1; }
+    92%   { opacity: 1; }
+    100%  { opacity: 0; }
+  }
+
   /* Carrousel hover cartes produit — 2 images supplémentaires */
   @keyframes cardCycle2 {
     0%    { opacity: 0; }
