@@ -102,7 +102,8 @@ function ProductCardClient({
 
   const collection = product.collection?.title
   const images = (product.images || []).filter((img: any) => img?.url)
-  const hoverImages = images.length > 1 ? images.slice(1, 5) : []
+  // Skip image 2 (index 1) — commencer à la 3e image (index 2)
+  const hoverImages = images.length > 2 ? images.slice(2, 6) : []
   const thumbUrl = product.thumbnail || images[0]?.url || null
 
   // Indicateur variantes / pastilles couleur
