@@ -20,6 +20,25 @@ type ProductActionsModernProps = {
   isOutlet?: boolean
 }
 
+// ── Mapping couleur → hex (partagé avec product-card-modern) ─────────────────
+const COLOR_OPTION_TITLES = ["couleur", "color", "colour", "coloris"]
+
+const COLOR_MAP: Record<string, string> = {
+  noir: "#1a1a1a", blanc: "#f5f5f5", gris: "#9ca3af", "gris clair": "#d1d5db",
+  "gris foncé": "#4b5563", marine: "#1e3a5f", bleu: "#3b82f6", "bleu ciel": "#7dd3fc",
+  "bleu marine": "#1e3a5f", rouge: "#ef4444", rose: "#f472b6", "rose poudré": "#fda4af",
+  vert: "#22c55e", "vert kaki": "#84843a", marron: "#92400e", beige: "#d4b896",
+  bordeaux: "#7f1d1d", violet: "#7c3aed", lilas: "#c4b5fd", orange: "#f97316",
+  jaune: "#eab308", camel: "#c4903a", chocolat: "#4a2c17", anthracite: "#374151",
+  taupe: "#a49080", ivoire: "#f5f0dc", écru: "#f5f0dc", doré: "#d4af37",
+  argenté: "#c0c0c0", turquoise: "#06b6d4", corail: "#fb7185", sable: "#d4b896",
+  "rouge bordeaux": "#7f1d1d", lavande: "#c4b5fd", menthe: "#6ee7b7",
+  black: "#1a1a1a", white: "#f5f5f5", gray: "#9ca3af", grey: "#9ca3af",
+  blue: "#3b82f6", navy: "#1e3a5f", red: "#ef4444", pink: "#f472b6",
+  green: "#22c55e", brown: "#92400e", purple: "#7c3aed", yellow: "#eab308",
+  gold: "#d4af37", silver: "#c0c0c0", teal: "#0d9488",
+}
+
 const optionsAsKeymap = (variantOptions: any): Record<string, string | undefined> => {
   if (!variantOptions || !Array.isArray(variantOptions) || variantOptions.length === 0) {
     return {}
@@ -367,43 +386,89 @@ export default function ProductActionsModern({
       {/* Options (Taille, Couleur, etc) */}
       {productOptions.length > 0 && (
         <div className="space-y-4">
-          {productOptions.map((option) => (
-            <div key={option.id}>
-              <label className="block text-sm font-semibold text-gray-900 mb-3">
-                {option.title}
-                {options[option.title] && (
-                  <span className="ml-2 font-normal text-amber-600">
-                    : {options[option.title]}
-                  </span>
+          {productOptions.map((option) => {
+            const isColorOption = COLOR_OPTION_TITLES.includes((option.title ?? "").toLowerCase())
+            return (
+              <div key={option.id}>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                  {option.title}
+                  {options[option.title] && (
+                    <span className="ml-2 font-normal text-amber-600">
+                      : {options[option.title]}
+                    </span>
+                  )}
+                </label>
+
+                {isColorOption ? (
+                  /* ── Pastilles couleur ── */
+                  <div className="flex flex-wrap gap-3">
+                    {option.values?.map((value) => {
+                      const isSelected = options[option.title] === value
+                      const isAvailable = isOptionValueAvailable(option.title, value as string)
+                      const hex = COLOR_MAP[(value as string).toLowerCase()] || null
+                      return (
+                        <button
+                          key={value}
+                          onClick={() => setOptionValue(option.title, value as string)}
+                          disabled={!isAvailable}
+                          title={value as string}
+                          aria-label={value as string}
+                          className={`
+                            relative w-9 h-9 rounded-full transition-all duration-200 flex-shrink-0
+                            ${!isAvailable ? "opacity-30 cursor-not-allowed" : "cursor-pointer hover:scale-110"}
+                            ${isSelected ? "ring-2 ring-offset-2 ring-amber-600 scale-110" : "ring-1 ring-gray-300"}
+                          `}
+                          style={hex ? { backgroundColor: hex } : {}}
+                        >
+                          {/* Fallback texte si pas de hex connu */}
+                          {!hex && (
+                            <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-gray-600 bg-gray-100 rounded-full leading-none px-0.5 text-center">
+                              {(value as string).slice(0, 4)}
+                            </span>
+                          )}
+                          {/* Barre diagonale si indisponible */}
+                          {!isAvailable && (
+                            <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <svg viewBox="0 0 36 36" className="w-full h-full text-gray-400/60">
+                                <line x1="6" y1="30" x2="30" y2="6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                              </svg>
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  /* ── Boutons texte classiques ── */
+                  <div className="flex flex-wrap gap-2">
+                    {option.values?.map((value) => {
+                      const isSelected = options[option.title] === value
+                      const isAvailable = isOptionValueAvailable(option.title, value as string)
+                      return (
+                        <button
+                          key={value}
+                          onClick={() => setOptionValue(option.title, value as string)}
+                          disabled={!isAvailable}
+                          className={`
+                            px-4 py-2 rounded-lg border-2 font-medium text-sm transition-all
+                            ${
+                              !isAvailable
+                                ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed line-through"
+                                : isSelected
+                                ? "border-amber-700 bg-amber-600 text-white shadow-sm"
+                                : "border-gray-300 bg-white text-gray-700 hover:border-amber-300 hover:bg-amber-50"
+                            }
+                          `}
+                        >
+                          {value}
+                        </button>
+                      )
+                    })}
+                  </div>
                 )}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {option.values?.map((value) => {
-                  const isSelected = options[option.title] === value
-                  const isAvailable = isOptionValueAvailable(option.title, value as string)
-                  return (
-                    <button
-                      key={value}
-                      onClick={() => setOptionValue(option.title, value as string)}
-                      disabled={!isAvailable}
-                      className={`
-                        px-4 py-2 rounded-lg border-2 font-medium text-sm transition-all
-                        ${
-                          !isAvailable
-                            ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : isSelected
-                            ? 'border-amber-700 bg-amber-600 text-white shadow-sm'
-                            : 'border-gray-300 bg-white text-gray-700 hover:border-amber-300 hover:bg-amber-50'
-                        }
-                      `}
-                    >
-                      {value}
-                    </button>
-                  )
-                })}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
