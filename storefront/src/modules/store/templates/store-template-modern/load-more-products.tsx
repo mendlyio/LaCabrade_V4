@@ -3,14 +3,27 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { usePathname, useSearchParams } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
-import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import WishlistToggleButton from "@modules/common/components/wishlist-toggle-button"
+import ProductCardImages from "@modules/products/components/product-card-images"
 import {
   ACTIVE_PROMO,
   applyPromoDiscount,
   isProductPromoEligible,
 } from "@lib/config/active-promo"
+
+const COLOR_OPTION_TITLES = ["couleur", "color", "colour", "coloris"]
+const COLOR_MAP: Record<string, string> = {
+  noir: "#1a1a1a", blanc: "#f5f5f5", gris: "#9ca3af", marine: "#1e3a5f",
+  bleu: "#3b82f6", rouge: "#ef4444", rose: "#f472b6", vert: "#22c55e",
+  marron: "#92400e", beige: "#d4b896", bordeaux: "#7f1d1d", violet: "#7c3aed",
+  orange: "#f97316", jaune: "#eab308", camel: "#c4903a", anthracite: "#374151",
+  turquoise: "#06b6d4", corail: "#fb7185", doré: "#d4af37", argenté: "#c0c0c0",
+  black: "#1a1a1a", white: "#f5f5f5", gray: "#9ca3af", grey: "#9ca3af",
+  blue: "#3b82f6", navy: "#1e3a5f", red: "#ef4444", pink: "#f472b6",
+  green: "#22c55e", brown: "#92400e", purple: "#7c3aed", yellow: "#eab308",
+  gold: "#d4af37", silver: "#c0c0c0", teal: "#0d9488",
+}
 
 const STORE_SCROLL_KEY = "store-scroll"
 
@@ -88,8 +101,22 @@ function ProductCardClient({
   })
 
   const collection = product.collection?.title
-  const images = product.images || []
-  const hoverImage = images.length > 2 ? images[2]?.url : null
+  const images = (product.images || []).filter((img: any) => img?.url)
+  const hoverImages = images.length > 1 ? images.slice(1, 5) : []
+  const thumbUrl = product.thumbnail || images[0]?.url || null
+
+  // Indicateur variantes / pastilles couleur
+  const colorOption = ((product as any).options || []).find((opt: any) =>
+    COLOR_OPTION_TITLES.includes((opt.title || "").toLowerCase())
+  )
+  const colorValues: string[] = colorOption
+    ? (product.variants || [])
+        .map((v: any) => v.options?.find((o: any) => o.option_id === colorOption.id)?.value)
+        .filter(Boolean)
+        .filter((val: any, idx: number, arr: any[]) => arr.indexOf(val) === idx)
+    : []
+  const hasColorSwatches = colorValues.length > 1
+  const variantCount = (product.variants || []).length
 
   // Détection catégories
   const categories = (product as any).categories || []
@@ -127,73 +154,39 @@ function ProductCardClient({
               : "bg-white border-gray-100 hover:border-gray-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
         } ${isNew ? "animate-fade-in" : ""}`}
       >
-        {/* Image */}
-        <div className="relative aspect-[4/5] overflow-hidden bg-gray-50">
-          {product.thumbnail ? (
-            <Image
-              src={product.thumbnail}
-              alt={product.title || "Produit"}
-              fill
-              quality={70}
-              className={`object-cover transition-all duration-700 ease-out ${
-                hoverImage
-                  ? "group-hover:opacity-0 group-hover:scale-105"
-                  : "group-hover:scale-[1.06] group-hover:rotate-[1.5deg]"
-              }`}
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-              <svg className="w-12 h-12 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-            </div>
-          )}
-
-          {/* 3ème image au hover */}
-          {hoverImage && (
-            <Image
-              src={hoverImage}
-              alt={`${product.title} - vue alternative`}
-              fill
-              quality={70}
-              className="object-cover absolute inset-0 opacity-0 scale-[1.08] rotate-[-1deg] group-hover:opacity-100 group-hover:scale-[1.03] group-hover:rotate-[1deg] transition-all duration-700 ease-out"
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            />
-          )}
+        {/* Image + badges */}
+        <div className="relative">
+          <ProductCardImages
+            thumbUrl={thumbUrl}
+            hoverImages={hoverImages}
+            title={product.title || "Produit"}
+            quality={70}
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          />
 
           {/* Badges haut gauche */}
-          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10">
+          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10 pointer-events-none">
+            {isOutlet && (
+              <div className="bg-[#c4707f] text-white px-2.5 py-1 rounded-lg text-[11px] font-bold tracking-wide shadow-sm flex items-center gap-1">
+                <span>SALE</span>
+                <span className="bg-white/20 px-1 rounded">-50%</span>
+              </div>
+            )}
             {isPromoEligible && (
               <div className="bg-amber-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
                 -{ACTIVE_PROMO.discountPercent}% {ACTIVE_PROMO.label}
               </div>
             )}
-            {!isPromoEligible && hasDiscount && (
+            {!isOutlet && !isPromoEligible && hasDiscount && (
               <div className="bg-red-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
                 -{discountPct}%
               </div>
             )}
-            {!isInStock && (
-              <div className="bg-gray-900/80 backdrop-blur-sm text-white px-2.5 py-1 rounded-lg text-[11px] font-medium">
-                Épuisé
-              </div>
-            )}
           </div>
 
-          {/* Badge OUTLET */}
-          {isOutlet && (
-            <div className="absolute top-2.5 left-2.5 z-20">
-              <div className="bg-[#c4707f] text-white px-2.5 py-1 rounded-lg text-[11px] font-bold tracking-wide shadow-sm flex items-center gap-1">
-                <span>SALE</span>
-                <span className="bg-white/20 px-1 rounded">-50%</span>
-              </div>
-            </div>
-          )}
-
-          {/* Badge LC Equestrian — coin inférieur droit */}
+          {/* Badge LC Equestrian */}
           {isLcEquestrian && (
-            <div className="absolute bottom-2.5 right-2.5 z-20">
+            <div className="absolute bottom-2.5 right-2.5 z-20 pointer-events-none">
               <div className="bg-amber-600 text-white px-2 py-1 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 border border-amber-400">
                 <span>★</span>
                 <span>LC Equestrian</span>
@@ -201,25 +194,33 @@ function ProductCardClient({
             </div>
           )}
 
-          {/* Collection + Wishlist — coin supérieur droit (collection masquée si LC Equestrian) */}
-          {!isOutlet && collection && !isLcEquestrian ? (
-            <div className="absolute top-2.5 right-2.5 z-10 flex flex-col items-end gap-1">
-              <div className="bg-white/80 backdrop-blur-md text-gray-600 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider shadow-sm">
-                {collection}
-              </div>
-              <WishlistToggleButton productId={product.id!} size="md" />
-            </div>
-          ) : (
-            <div className="absolute top-2.5 right-2.5 z-10">
-              <WishlistToggleButton productId={product.id!} size="md" />
-            </div>
-          )}
+          {/* Wishlist */}
+          <div className="absolute top-2.5 right-2.5 z-10">
+            <WishlistToggleButton productId={product.id!} size="md" />
+          </div>
 
-          {!isInStock && (
-            <div className="absolute inset-0 bg-gray-900/30 backdrop-blur-[1px] flex items-center justify-center z-10">
-              <div className="bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full">
-                <span className="text-sm font-bold text-gray-800 uppercase tracking-wider">Épuisé</span>
-              </div>
+          {/* Indicateur variantes */}
+          {variantCount > 1 && !isLcEquestrian && (
+            <div className="absolute bottom-2.5 left-2.5 z-10 pointer-events-none">
+              {hasColorSwatches ? (
+                <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm px-1.5 py-1 rounded-lg shadow-sm">
+                  {colorValues.slice(0, 5).map((colorName) => (
+                    <span
+                      key={colorName}
+                      title={colorName}
+                      style={{ backgroundColor: COLOR_MAP[colorName.toLowerCase()] || "#d1d5db" }}
+                      className="w-3 h-3 rounded-full border border-white shadow-sm inline-block flex-shrink-0"
+                    />
+                  ))}
+                  {colorValues.length > 5 && (
+                    <span className="text-[9px] text-gray-500 ml-0.5">+{colorValues.length - 5}</span>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-white/90 backdrop-blur-sm text-gray-600 px-2 py-1 rounded-lg text-[10px] font-medium shadow-sm">
+                  Autres options
+                </div>
+              )}
             </div>
           )}
         </div>
