@@ -6,6 +6,7 @@ import { getProductsById } from "@lib/data/products"
 import WishlistToggleButton from "@modules/common/components/wishlist-toggle-button"
 import { convertToLocale } from "@lib/util/money"
 import Image from "next/image"
+import ProductCardImages from "@modules/products/components/product-card-images"
 import {
   ACTIVE_PROMO,
   applyPromoDiscount,
@@ -306,73 +307,18 @@ export default async function ProductCardModern({
               : "bg-white border-gray-100 hover:border-gray-200 hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]"
         }`}
       >
-        {/* ── Image Container ── */}
-        <div className="relative aspect-[4/5] overflow-hidden bg-gray-50">
-          {/* Image principale */}
-          {thumbUrl ? (
-            <Image
-              src={thumbUrl}
-              alt={product.title || "Produit"}
-              fill
-              quality={imageQuality}
-              className={`object-cover transition-all duration-700 ease-out ${
-                hoverCount > 0
-                  ? "group-hover:opacity-0 group-hover:scale-105"
-                  : "group-hover:scale-[1.06] group-hover:rotate-[1.5deg]"
-              }`}
-              sizes={cardImageSizes}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-              <svg
-                className="w-12 h-12 text-gray-200"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                />
-              </svg>
-            </div>
-          )}
-
-          {/* Carrousel hover : images 2 à N
-              Le wrapper passe de opacity-0 à opacity-100 au hover.
-              Les animations tournent toujours (running) ; c'est le wrapper qui contrôle la visibilité.
-              Cette approche évite le conflit de priorité CSS entre inline style et la classe Tailwind group-hover. */}
-          {hoverImages.length > 0 && (
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-              {hoverImages.map((img: any, i: number) => (
-                <Image
-                  key={(img.url as string) || i}
-                  src={img.url as string}
-                  alt={`${product.title} - vue ${i + 2}`}
-                  fill
-                  quality={imageQuality}
-                  loading="lazy"
-                  className="object-cover absolute inset-0"
-                  style={{
-                    animationName: `cardCycle${hoverCount}`,
-                    animationDuration: `${hoverCount * 2}s`,
-                    animationDelay: `${i * 2}s`,
-                    animationTimingFunction: "ease-in-out",
-                    animationIterationCount: "infinite",
-                    animationFillMode: "both",
-                    animationPlayState: "running",
-                  }}
-                  sizes={cardImageSizes}
-                />
-              ))}
-            </div>
-          )}
-
+        {/* ── Image Container + Badges (wrapper relative pour que les badges absolute s'ancrent correctement) ── */}
+        <div className="relative">
+          <ProductCardImages
+            thumbUrl={thumbUrl}
+            hoverImages={hoverImages}
+            title={product.title || "Produit"}
+            quality={imageQuality}
+            sizes={cardImageSizes}
+          />
 
           {/* Badges haut gauche */}
-          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10">
+          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10 pointer-events-none">
             {isOutlet && (
               <div className="bg-[#c4707f] text-white px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-[11px] sm:text-xs font-bold tracking-wide shadow-sm flex items-center gap-1">
                 <span>SALE</span>
@@ -404,7 +350,7 @@ export default async function ProductCardModern({
 
           {/* Collection badge */}
           {collection && (
-            <div className="absolute bottom-2.5 left-2.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className="absolute bottom-2.5 left-2.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
               <div className="bg-white/80 backdrop-blur-md text-gray-600 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider shadow-sm">
                 {collection}
               </div>
@@ -413,7 +359,7 @@ export default async function ProductCardModern({
 
           {/* LC Equestrian badge — coin inférieur droit */}
           {isLcEquestrian && (
-            <div className="absolute bottom-2.5 right-2.5 z-20">
+            <div className="absolute bottom-2.5 right-2.5 z-20 pointer-events-none">
               <div className="bg-amber-600 text-white px-2 py-1 rounded-lg text-[10px] font-bold tracking-wide shadow-md flex items-center gap-1 border border-amber-400">
                 <span>★</span>
                 <span>LC Equestrian</span>
@@ -428,7 +374,7 @@ export default async function ProductCardModern({
 
           {/* Indicateur variantes — toujours visible */}
           {variantCount > 1 && !isLcEquestrian && (
-            <div className="absolute bottom-2.5 left-2.5 z-10">
+            <div className="absolute bottom-2.5 left-2.5 z-10 pointer-events-none">
               {hasColorSwatches ? (
                 <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm px-1.5 py-1 rounded-lg shadow-sm">
                   {colorValues.slice(0, 5).map((colorName) => {

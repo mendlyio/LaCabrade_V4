@@ -148,11 +148,12 @@ export default function ImageGalleryModern({ images, productTitle }: ImageGaller
 
       {/* Lightbox / Fullscreen */}
       {lightboxOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center">
-          {/* Close button */}
+        <div className="fixed inset-0 z-[150] bg-black/95 flex items-center justify-center">
+          {/* Close button — z-[160] pour passer au-dessus du nav z-[120] */}
           <button
             onClick={() => setLightboxOpen(false)}
-            className="absolute top-4 right-4 z-10 w-12 h-12 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-colors"
+            className="absolute top-4 right-4 z-[160] w-14 h-14 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-colors"
+            style={{ top: "max(16px, env(safe-area-inset-top, 16px))" }}
             aria-label="Fermer"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,7 +163,7 @@ export default function ImageGalleryModern({ images, productTitle }: ImageGaller
 
           {/* Counter */}
           {images.length > 1 && (
-            <div className="absolute top-5 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium">
+            <div className="absolute top-5 left-1/2 -translate-x-1/2 text-white/70 text-sm font-medium z-[155]">
               {selectedImage + 1} / {images.length}
             </div>
           )}
