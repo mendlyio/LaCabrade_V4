@@ -29,11 +29,16 @@ export async function sendContactEmail(
 
   try {
     // Appeler l'API route pour envoyer l'email
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    }
+    if (process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY) {
+      headers["x-publishable-api-key"] = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+    }
+
     const response = await fetch(`${process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL}/store/contact`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         first_name: firstName,
         last_name: lastName,
