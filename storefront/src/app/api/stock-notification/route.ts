@@ -47,11 +47,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Appeler l'API backend
+    const storeHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    if (publishableKey) storeHeaders['x-publishable-api-key'] = publishableKey
+
     const response = await fetch(`${backendUrl}/store/stock-alerts`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: storeHeaders,
       body: JSON.stringify({
         product_id: productId,
         variant_id: variantId,
