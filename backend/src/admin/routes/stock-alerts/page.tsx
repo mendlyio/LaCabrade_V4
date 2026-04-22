@@ -5,6 +5,8 @@ type StockAlert = {
   id: string
   product_id: string
   variant_id: string | null
+  product_name: string
+  variant_name: string | null
   customer_email: string
   customer_id: string | null
   notified: boolean
@@ -164,11 +166,11 @@ const StockAlertsPage = () => {
                   <td className="px-4 py-3 font-medium text-gray-900">
                     {alert.customer_email}
                   </td>
-                  <td className="px-4 py-3 text-gray-600 font-mono text-xs">
-                    {alert.product_id}
+                  <td className="px-4 py-3 text-gray-800 text-sm font-medium">
+                    {alert.product_name}
                   </td>
-                  <td className="px-4 py-3 text-gray-500 font-mono text-xs">
-                    {alert.variant_id || "—"}
+                  <td className="px-4 py-3 text-gray-500 text-sm">
+                    {alert.variant_name || "—"}
                   </td>
                   <td className="px-4 py-3 text-gray-500">
                     {formatDate(alert.created_at)}
