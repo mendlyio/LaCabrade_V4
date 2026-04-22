@@ -2,7 +2,7 @@ import { Modules } from '@medusajs/framework/utils'
 import { INotificationModuleService, IProductModuleService, IInventoryService } from '@medusajs/framework/types'
 import { SubscriberArgs, SubscriberConfig } from '@medusajs/medusa'
 import { EmailTemplates } from '../modules/email-notifications/templates'
-import StockAlertService from '../services/stock-alert'
+import { STOCK_ALERT_MODULE } from '../modules/stock-alert'
 
 /**
  * Subscriber qui écoute les mises à jour de stock
@@ -15,7 +15,7 @@ export default async function stockAlertNotificationHandler({
   const notificationModuleService: INotificationModuleService = container.resolve(Modules.NOTIFICATION)
   const productModuleService: IProductModuleService = container.resolve(Modules.PRODUCT)
   const inventoryModuleService: IInventoryService = container.resolve(Modules.INVENTORY)
-  const stockAlertService: StockAlertService = container.resolve('stockAlertService')
+  const stockAlertService = container.resolve(STOCK_ALERT_MODULE) as any
   
   try {
     const { variant_id, inventory_item_id } = data
@@ -73,7 +73,10 @@ export default async function stockAlertNotificationHandler({
     }
 
     // Récupérer les alertes pour ce produit/variante
-    const alerts = await stockAlertService.getAlertsByProduct(product.id, variant.id)
+    const alerts = await stockAlertService.listStockAlerts({
+      product_id: product.id,
+      notified: false,
+    })
 
     if (!alerts || alerts.length === 0) {
       console.log('[StockAlert] No alerts found for this product')
@@ -113,7 +116,9 @@ export default async function stockAlertNotificationHandler({
 
     // Marquer toutes les alertes comme notifiées
     const alertIds = alerts.map((alert: any) => alert.id)
-    await stockAlertService.markAsNotified(alertIds)
+    await Promise.all(
+      alertIds.map((id: string) => stockAlertService.updateStockAlerts({ id, notified: true }))
+    )
     
     console.log(`✅ Marked ${alertIds.length} alert(s) as notified`)
   } catch (error) {

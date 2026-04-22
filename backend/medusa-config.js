@@ -96,6 +96,10 @@ const medusaConfig = {
   },
   modules: [
     {
+      key: "stockAlert",
+      resolve: "./src/modules/stock-alert",
+    },
+    {
       key: Modules.FILE,
       resolve: '@medusajs/file',
       options: {

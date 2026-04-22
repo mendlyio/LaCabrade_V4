@@ -1,6 +1,6 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework"
 import { Modules } from "@medusajs/framework/utils"
-import StockAlertService from "../../../services/stock-alert"
+import { STOCK_ALERT_MODULE } from "../../../modules/stock-alert"
 
 /**
  * POST /store/stock-alerts
@@ -30,7 +30,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
 
   try {
-    const stockAlertService: StockAlertService = req.scope.resolve("stockAlertService")
+    const stockAlertService = req.scope.resolve(STOCK_ALERT_MODULE) as any
     const productModuleService = req.scope.resolve(Modules.PRODUCT)
 
     // Vérifier que le produit existe
@@ -54,12 +54,24 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       }
     }
 
-    // Créer l'alerte
-    const alert = await stockAlertService.createAlert({
+    // Vérifier si alerte déjà existante
+    const existing = await stockAlertService.listStockAlerts({
       product_id,
-      variant_id,
       customer_email: email,
-      customer_id,
+      notified: false,
+    })
+    if (existing && existing.length > 0) {
+      return res.status(409).json({ message: "Une alerte existe déjà pour ce produit et cet email" })
+    }
+
+    // Créer l'alerte
+    const alert = await stockAlertService.createStockAlerts({
+      id: `salert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      product_id,
+      variant_id: variant_id || null,
+      customer_email: email,
+      customer_id: customer_id || null,
+      notified: false,
     })
 
     return res.status(201).json({

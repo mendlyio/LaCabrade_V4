@@ -1,9 +1,9 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import StockAlertService from "../../../services/stock-alert"
+import { STOCK_ALERT_MODULE } from "../../../modules/stock-alert"
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   try {
-    const stockAlertService: StockAlertService = req.scope.resolve("stockAlertService")
+    const stockAlertService = req.scope.resolve(STOCK_ALERT_MODULE) as any
 
     const { q, notified, offset, limit } = req.query as {
       q?: string
@@ -15,40 +15,24 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     const take = Math.min(parseInt(limit || "100", 10), 200)
     const skip = parseInt(offset || "0", 10)
 
-    const manager = (stockAlertService as any).manager_
+    const filters: Record<string, any> = {}
+    if (notified === "true") filters.notified = true
+    if (notified === "false") filters.notified = false
 
-    let whereClause = "WHERE deleted_at IS NULL"
-    const params: any[] = []
-    let paramIdx = 1
+    const [alerts, count] = await stockAlertService.listAndCountStockAlerts(
+      filters,
+      { order: { created_at: "DESC" }, skip, take }
+    )
 
-    if (notified === "true") {
-      whereClause += ` AND notified = true`
-    } else if (notified === "false") {
-      whereClause += ` AND notified = false`
-    }
-
+    let results = alerts
     if (q) {
-      whereClause += ` AND customer_email ILIKE $${paramIdx}`
-      params.push(`%${q}%`)
-      paramIdx++
+      const search = q.toLowerCase()
+      results = alerts.filter((a: any) => a.customer_email?.toLowerCase().includes(search))
     }
-
-    const countResult = await manager.execute(
-      `SELECT COUNT(*) as count FROM stock_alerts ${whereClause}`,
-      params
-    )
-    const total = parseInt(countResult?.[0]?.count || "0", 10)
-
-    const limitParam = take
-    const offsetParam = skip
-    const alerts = await manager.execute(
-      `SELECT * FROM stock_alerts ${whereClause} ORDER BY created_at DESC LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`,
-      [...params, limitParam, offsetParam]
-    )
 
     return res.json({
-      alerts: alerts || [],
-      count: total,
+      alerts: results || [],
+      count: q ? results.length : count,
       offset: skip,
       limit: take,
     })
@@ -60,18 +44,14 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
 
 export const DELETE = async (req: MedusaRequest, res: MedusaResponse) => {
   try {
-    const stockAlertService: StockAlertService = req.scope.resolve("stockAlertService")
+    const stockAlertService = req.scope.resolve(STOCK_ALERT_MODULE) as any
     const { id } = req.query as { id?: string }
 
     if (!id) {
       return res.status(400).json({ message: "ID requis" })
     }
 
-    const manager = (stockAlertService as any).manager_
-    await manager.execute(
-      `UPDATE stock_alerts SET deleted_at = NOW() WHERE id = $1`,
-      [id]
-    )
+    await stockAlertService.deleteStockAlerts([id])
 
     return res.json({ success: true })
   } catch (err: any) {
