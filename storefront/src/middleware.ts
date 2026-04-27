@@ -1,5 +1,6 @@
 import { HttpTypes } from "@medusajs/types"
 import { NextRequest, NextResponse } from "next/server"
+import { LACABRADE_REDIRECTS } from "@lib/lacabrade-redirects"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
 const PUBLISHABLE_API_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
@@ -167,6 +168,20 @@ export async function middleware(request: NextRequest) {
     pathname === "/favicon.ico"
   ) {
     return NextResponse.next()
+  }
+
+  // Redirection des URLs venant de l'ancien domaine la-cabrade.be
+  const host = request.headers.get("host") || ""
+  const isOldDomain =
+    host === "la-cabrade.be" ||
+    host === "www.la-cabrade.be" ||
+    host.endsWith(".la-cabrade.be")
+  if (isOldDomain) {
+    const destination =
+      LACABRADE_REDIRECTS[pathname] ??
+      LACABRADE_REDIRECTS[pathname.replace(/\/?$/, "/")] ??
+      "https://www.sellerie-lacabrade.be/be"
+    return NextResponse.redirect(destination, { status: 301 })
   }
 
   const searchParams = request.nextUrl.searchParams
