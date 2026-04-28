@@ -82,20 +82,32 @@ export default function PurchaseTracker({ order }: PurchaseTrackerProps) {
 
     trackGA4Purchase(order.id, trackingCart, taxEuros, shippingEuros)
     trackGoogleAdsPurchase(order.id, purchaseValue, currency)
-    trackMetaPurchase(order.id, trackingCart, taxEuros, shippingEuros)
+
+    // eventId partagé Pixel <-> CAPI pour éviter la double-comptabilisation
+    const eventId = `purchase_${order.id}_${Date.now()}`
+    trackMetaPurchase(order.id, trackingCart, taxEuros, shippingEuros, eventId)
 
     // CAPI (server-side) - uniquement si consentement cookies
     if (hasConsent()) {
+      // Lire les cookies Meta de tracking depuis le navigateur
+      const getCookie = (name: string) => {
+        const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`))
+        return match ? decodeURIComponent(match[1]) : undefined
+      }
+
       fetch("/api/track-purchase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId: order.id,
+          eventId,
           value: purchaseValue,
           currency,
           items: trackingCart.items,
           tax: taxEuros,
           shipping: shippingEuros,
+          fbp: getCookie("_fbp"),
+          fbc: getCookie("_fbc"),
         }),
       }).catch(() => {})
     }
