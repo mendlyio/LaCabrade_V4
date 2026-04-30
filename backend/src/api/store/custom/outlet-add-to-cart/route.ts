@@ -2,8 +2,19 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
 import { Modules } from "@medusajs/framework/utils"
 import { ICartModuleService } from "@medusajs/framework/types"
 
-const OUTLET_DISCOUNT_PERCENT = 50
 const OUTLET_HANDLES = ["outlet", "outlet-727"]
+
+// ─── Remise outlet ────────────────────────────────────────────────────────────
+// Pendant les Portes Ouvertes 2026 (1–9 mai, heure belge = UTC+2) : -60%
+// Le reste de l'année : -50% (valeur par défaut)
+const PO_START = new Date("2026-04-30T22:00:00.000Z") // 1 mai 00:00 BEL
+const PO_END = new Date("2026-05-09T21:59:59.000Z")   // 9 mai 23:59 BEL
+
+function getOutletDiscountPercent(): number {
+  const now = new Date()
+  if (now >= PO_START && now <= PO_END) return 60
+  return 50
+}
 
 /** IDs des catégories outlet (racine + sous-catégories) */
 function getOutletCategoryIds(
@@ -117,7 +128,8 @@ export async function POST(
       return
     }
 
-    // 5. Calculer le prix réduit (-50%)
+    // 5. Calculer le prix réduit (% dynamique selon la période)
+    const OUTLET_DISCOUNT_PERCENT = getOutletDiscountPercent()
     const originalPrice = Number(lineItem.unit_price)
     const discountedPrice = Math.round(
       originalPrice * (1 - OUTLET_DISCOUNT_PERCENT / 100)

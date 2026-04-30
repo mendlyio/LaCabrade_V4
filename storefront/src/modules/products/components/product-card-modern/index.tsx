@@ -10,11 +10,11 @@ import ProductCardImages from "@modules/products/components/product-card-images"
 import {
   ACTIVE_PROMO,
   applyPromoDiscount,
-  isProductPromoEligible,
+  getProductPromoDiscount,
+  getOutletDiscountPercent,
 } from "@lib/config/active-promo"
 
 const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
-const OUTLET_DISCOUNT = 0.5 // -50%
 
 export default async function ProductCardModern({
   product,
@@ -63,16 +63,19 @@ export default async function ProductCardModern({
     (cat.handle || "").toLowerCase().startsWith("outlet")
   )
 
-  // Prix outlet : -50% appliqué visuellement (la promotion gère le checkout)
+  // Prix outlet : remise dynamique (60% pendant PO, 50% sinon)
+  const outletDiscountPct = getOutletDiscountPercent()
   const outletOriginalNumber = isOutlet ? (cheapestPrice?.calculated_price_number ?? 0) : 0
-  const outletPriceNumber = isOutlet ? outletOriginalNumber * (1 - OUTLET_DISCOUNT) : 0
+  const outletPriceNumber = isOutlet ? outletOriginalNumber * (1 - outletDiscountPct / 100) : 0
   const currencyCode = cheapestPrice?.currency_code || "eur"
 
-  // Promo active (ex : Pâques) — affichage visuel prix barré
+  // Promo active (multi-tier : -10% global, -20% cavalier/LC, outlet géré séparément)
   const categoryHandles = categories.map((c: any) => c.handle || "")
-  const isPromoEligible = isProductPromoEligible(categoryHandles, isOutlet)
+  const collectionHandle = pricedProduct.collection?.handle || null
+  const promoDiscountPercent = getProductPromoDiscount(categoryHandles, collectionHandle, isOutlet)
+  const isPromoEligible = promoDiscountPercent !== null
   const promoPriceNumber = isPromoEligible
-    ? applyPromoDiscount(cheapestPrice?.calculated_price_number ?? 0)
+    ? applyPromoDiscount(cheapestPrice?.calculated_price_number ?? 0, promoDiscountPercent!)
     : 0
   const promoPriceFormatted = isPromoEligible
     ? convertToLocale({ amount: promoPriceNumber, currency_code: currencyCode })
@@ -201,12 +204,12 @@ export default async function ProductCardModern({
             )}
             {isOutlet && (
               <div className="absolute top-1 left-1 bg-[#c4707f] text-white px-1.5 py-0.5 rounded-md text-[9px] font-bold">
-                -50%
+                -{outletDiscountPct}%
               </div>
             )}
             {isPromoEligible && (
               <div className="absolute top-1 left-1 bg-amber-500 text-white px-1.5 py-0.5 rounded-md text-[9px] font-bold">
-                -{ACTIVE_PROMO.discountPercent}%
+                -{promoDiscountPercent}%
               </div>
             )}
             {!isOutlet && !isPromoEligible && hasDiscount && (
@@ -323,12 +326,12 @@ export default async function ProductCardModern({
             {isOutlet && (
               <div className="bg-[#c4707f] text-white px-2.5 py-1 sm:px-3 sm:py-1 rounded-lg text-[11px] sm:text-xs font-bold tracking-wide shadow-sm flex items-center gap-1">
                 <span>SALE</span>
-                <span className="bg-white/20 px-1 rounded">-50%</span>
+                <span className="bg-white/20 px-1 rounded">-{outletDiscountPct}%</span>
               </div>
             )}
             {isPromoEligible && (
               <div className="bg-amber-500 text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg text-[10px] sm:text-[11px] font-bold tracking-wide shadow-sm">
-                -{ACTIVE_PROMO.discountPercent}% {ACTIVE_PROMO.label}
+                -{promoDiscountPercent}% {ACTIVE_PROMO.label}
               </div>
             )}
             {!isOutlet && !isPromoEligible && hasDiscount && (

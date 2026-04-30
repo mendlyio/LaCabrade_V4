@@ -30,7 +30,7 @@ export const translations = {
     "topbar.promo": "-10% pour les nouveaux clients avec le code BIENVENUE10 | Livraison gratuite dès 75€",
     "topbar.free_shipping": "Livraison gratuite à partir de 75€",
     "topbar.newsletter_promo": "Inscris-toi à notre newsletter et bénéficie de 10% sur ta prochaine commande",
-    "topbar.launch_offer": "Offre de lancement : 50 premières commandes reçoivent un cadeau",
+    "topbar.launch_offer": "PORTES-OUVERTES / 1-9 mai 2026 / -10% à -60%",
 
     // Footer
     "footer.store_description": "Sellerie - Magasin d'équitation à Fléron, près de Liège",
@@ -281,7 +281,7 @@ export const translations = {
     "topbar.promo": "-10% voor nieuwe klanten met code WELKOM10 | Gratis levering vanaf €75",
     "topbar.free_shipping": "Gratis levering vanaf €75",
     "topbar.newsletter_promo": "Schrijf je in voor onze nieuwsbrief en profiteer van 10% op je volgende bestelling",
-    "topbar.launch_offer": "Lanceringaanbieding: de eerste 50 bestellingen ontvangen een cadeau",
+    "topbar.launch_offer": "OPEN DEUREN / 1-9 mei 2026 / -10% tot -60%",
 
     // Footer
     "footer.store_description": "Zadelmakerij - Ruitersportwinkel in Fléron, bij Luik",

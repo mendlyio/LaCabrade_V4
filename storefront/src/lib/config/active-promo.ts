@@ -2,22 +2,29 @@
  * Configuration de la promotion active affichée sur tout le site.
  *
  * Pour désactiver rapidement (fin de promo) :
- *   → mettre  active: false
- *
- * Pour une prochaine promo :
- *   → adapter discountPercent, label, startDate, endDate, excludedCategoryHandles
+ *   → mettre  active: false  sur la config pointée par ACTIVE_PROMO
  *
  * La remise est uniquement VISUELLE côté storefront (prix barrés).
- * La remise au checkout est gérée par la promotion Medusa (PAQUES_10)
- * et le subscriber cart-paques-guard.ts côté backend.
+ * La remise au checkout est gérée par les promotions Medusa et les subscribers guard.
  */
+
+export type PromoTier = {
+  /** Pourcentage de remise pour ce tier */
+  discountPercent: number
+  /** Si true, ce tier s'applique aux articles outlet */
+  forOutlet?: boolean
+  /** Handles de catégories qui déclenchent ce tier */
+  categoryHandles?: string[]
+  /** Handles de collection qui déclenchent ce tier */
+  collectionHandles?: string[]
+}
 
 export type ActivePromoConfig = {
   /** Interrupteur principal — mettre false pour tout désactiver sans supprimer la config */
   active: boolean
-  /** Code de la promotion Medusa correspondante */
+  /** Code de la promotion Medusa principale correspondante */
   code: string
-  /** Pourcentage de remise (ex: 10 = -10%) */
+  /** Pourcentage de remise par défaut (catch-all, si pas de tier correspondant) */
   discountPercent: number
   /** Label affiché dans le badge */
   label: string
@@ -27,19 +34,21 @@ export type ActivePromoConfig = {
   endDate: Date
   /** Handles des catégories NON éligibles (sous-catégories comprises côté backend) */
   excludedCategoryHandles: string[]
+  /**
+   * Tiers optionnels évalués dans l'ordre (premier match gagne).
+   * Si aucun tier ne matche, on utilise discountPercent comme fallback.
+   */
+  tiers?: PromoTier[]
+  /** Remise outlet spécifique (en %) — écrase le -50% par défaut pendant la promo */
+  outletDiscountPercent?: number
 }
 
 // ─── Pâques 2026 (terminée — réactiver pour une prochaine fois) ───────────────
-// Mettre active: true + ajuster dates / label si besoin.
-// ─────────────────────────────────────────────────────────────────────────────
-export const ACTIVE_PROMO: ActivePromoConfig = {
+export const PAQUES_PROMO: ActivePromoConfig = {
   active: false,
   code: "PAQUES_10",
   discountPercent: 10,
   label: "Pâques",
-  // Heure belge (CEST = UTC+2 en avril) :
-  //   5 avril 00:00 BEL = 4 avril 22:00 UTC
-  //   6 avril 23:59 BEL = 6 avril 21:59 UTC
   startDate: new Date("2026-04-04T22:00:00.000Z"),
   endDate: new Date("2026-04-06T21:59:59.000Z"),
   excludedCategoryHandles: [
@@ -49,11 +58,98 @@ export const ACTIVE_PROMO: ActivePromoConfig = {
   ],
 }
 
+// ─── Portes Ouvertes 2026 (1–9 mai 2026) ──────────────────────────────────────
+// Heure belge (CEST = UTC+2 en mai) :
+//   1 mai 00:00 BEL = 30 avril 22:00 UTC
+//   9 mai 23:59 BEL = 9 mai 21:59 UTC
+// Pour désactiver après le 9 mai : mettre active: false
+export const PORTES_OUVERTES_PROMO: ActivePromoConfig = {
+  active: true,
+  code: "PO_GLOBAL_10",
+  discountPercent: 10,
+  label: "Portes Ouvertes",
+  startDate: new Date("2026-04-30T22:00:00.000Z"),
+  endDate: new Date("2026-05-09T21:59:59.000Z"),
+  excludedCategoryHandles: [
+    "tondeuses-et-peignes",
+    "soins-et-alimentation",
+  ],
+  tiers: [
+    // -20% sur la catégorie Cavalier
+    {
+      discountPercent: 20,
+      categoryHandles: ["cavalier"],
+    },
+    // -20% sur LC Equestrian (catégorie ou collection)
+    {
+      discountPercent: 20,
+      categoryHandles: ["lc-equestrian", "lc_equestrian", "la-cabrade"],
+      collectionHandles: ["lc-equestrian", "lc_equestrian"],
+    },
+  ],
+  // Remise outlet pendant les PO : -60% (vs -50% habituel)
+  outletDiscountPercent: 60,
+}
+
+// ─── Promotion active ──────────────────────────────────────────────────────────
+// Pointer ici pour changer de promo (ex: PAQUES_PROMO ou PORTES_OUVERTES_PROMO)
+export const ACTIVE_PROMO: ActivePromoConfig = PORTES_OUVERTES_PROMO
+
 /** La promo est-elle actuellement active ? */
 export function isPromoActive(): boolean {
   if (!ACTIVE_PROMO.active) return false
   const now = new Date()
   return now >= ACTIVE_PROMO.startDate && now <= ACTIVE_PROMO.endDate
+}
+
+/**
+ * Retourne le pourcentage de remise applicable à ce produit pour la promo active,
+ * ou null si le produit n'est pas éligible.
+ *
+ * @param categoryHandles Handles des catégories du produit
+ * @param collectionHandle Handle de la collection du produit (optionnel)
+ * @param isOutlet True si le produit est outlet (géré séparément via unit_price)
+ */
+export function getProductPromoDiscount(
+  categoryHandles: string[],
+  collectionHandle: string | null | undefined,
+  isOutlet = false
+): number | null {
+  if (!isPromoActive()) return null
+  if (isOutlet) return null
+
+  const lowerHandles = categoryHandles.map((h) => h.toLowerCase())
+
+  // Catégories exclues → pas de remise promo
+  if (
+    lowerHandles.some((h) =>
+      ACTIVE_PROMO.excludedCategoryHandles.includes(h)
+    )
+  )
+    return null
+
+  // Évaluer les tiers dans l'ordre (premier match gagne)
+  if (ACTIVE_PROMO.tiers?.length) {
+    for (const tier of ACTIVE_PROMO.tiers) {
+      if (tier.forOutlet && isOutlet) return tier.discountPercent
+      if (
+        tier.categoryHandles?.some((h) =>
+          lowerHandles.includes(h.toLowerCase())
+        )
+      )
+        return tier.discountPercent
+      if (
+        collectionHandle &&
+        tier.collectionHandles?.some(
+          (h) => h.toLowerCase() === collectionHandle.toLowerCase()
+        )
+      )
+        return tier.discountPercent
+    }
+  }
+
+  // Remise par défaut (catch-all)
+  return ACTIVE_PROMO.discountPercent
 }
 
 /**
@@ -65,20 +161,30 @@ export function isProductPromoEligible(
   categoryHandles: string[],
   isOutlet = false
 ): boolean {
-  if (isOutlet) return false
-  if (!isPromoActive()) return false
-  return !categoryHandles.some((h) =>
-    ACTIVE_PROMO.excludedCategoryHandles.includes((h || "").toLowerCase())
-  )
+  return getProductPromoDiscount(categoryHandles, null, isOutlet) !== null
 }
 
 /**
  * Calcule le prix promotionnel en euros.
  * @param priceEuros Prix original en euros
+ * @param discountPercent Pourcentage de remise (défaut: ACTIVE_PROMO.discountPercent)
  */
-export function applyPromoDiscount(priceEuros: number): number {
+export function applyPromoDiscount(
+  priceEuros: number,
+  discountPercent: number = ACTIVE_PROMO.discountPercent
+): number {
   return (
-    Math.round(priceEuros * (1 - ACTIVE_PROMO.discountPercent / 100) * 100) /
-    100
+    Math.round(priceEuros * (1 - discountPercent / 100) * 100) / 100
   )
+}
+
+/**
+ * Retourne le pourcentage de remise outlet en cours.
+ * Pendant la promo PO : 60%. Sinon : 50% (défaut outlet).
+ */
+export function getOutletDiscountPercent(): number {
+  if (isPromoActive() && ACTIVE_PROMO.outletDiscountPercent != null) {
+    return ACTIVE_PROMO.outletDiscountPercent
+  }
+  return 50
 }

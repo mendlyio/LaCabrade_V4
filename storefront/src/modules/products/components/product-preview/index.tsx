@@ -11,7 +11,7 @@ import { convertToLocale } from "@lib/util/money"
 import {
   ACTIVE_PROMO,
   applyPromoDiscount,
-  isProductPromoEligible,
+  getProductPromoDiscount,
 } from "@lib/config/active-promo"
 
 export default async function ProductPreview({
@@ -39,19 +39,15 @@ export default async function ProductPreview({
   // Vérifier si en stock (fallback: inventory_quantity null/undefined → supposer en stock)
   const { isInStock } = getProductStockInfo(pricedProduct.variants)
 
-  // Vérifier les metadata pour les pastilles NEW et PROMO
-  const isNew = product.metadata?.is_new === true || product.metadata?.is_new === "true"
-  const newUntil = product.metadata?.new_until ? new Date(product.metadata.new_until as string).getTime() : null
-  const showNewBadge = isNew && (!newUntil || Date.now() < newUntil)
-  const isPromo = product.metadata?.is_promo === true || product.metadata?.is_promo === "true"
-
-  // Promo active (ex : Pâques)
+  // Promo active (Portes Ouvertes 2026 — multi-tier)
   const categories = (product as any).categories || (pricedProduct as any).categories || []
   const isOutletProduct = categories.some((c: any) => (c.handle || "").toLowerCase().startsWith("outlet"))
   const categoryHandles = categories.map((c: any) => c.handle || "")
-  const isPromoEligible = isProductPromoEligible(categoryHandles, isOutletProduct)
+  const collectionHandle = (product as any).collection?.handle || (pricedProduct as any).collection?.handle || null
+  const promoDiscountPercent = getProductPromoDiscount(categoryHandles, collectionHandle, isOutletProduct)
+  const isPromoEligible = promoDiscountPercent !== null
   const promoPrice = isPromoEligible
-    ? applyPromoDiscount(cheapestPrice?.calculated_price_number ?? 0)
+    ? applyPromoDiscount(cheapestPrice?.calculated_price_number ?? 0, promoDiscountPercent!)
     : null
   const promoPriceFormatted = promoPrice != null
     ? convertToLocale({ amount: promoPrice, currency_code: cheapestPrice?.currency_code || "eur" })
@@ -91,21 +87,11 @@ export default async function ProductPreview({
             </div>
           )}
 
-          {/* Pastilles NEW et PROMO - Top Right */}
+          {/* Pastille PROMO - Top Right */}
           <div className="absolute top-3 right-3 flex flex-col gap-2">
-            {showNewBadge && (
-              <div className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg uppercase tracking-wide">
-                New
-              </div>
-            )}
             {isPromoEligible && (
               <div className="bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg uppercase tracking-wide">
-                -{ACTIVE_PROMO.discountPercent}% {ACTIVE_PROMO.label}
-              </div>
-            )}
-            {!isPromoEligible && isPromo && (
-              <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg uppercase tracking-wide">
-                Promo
+                -{promoDiscountPercent}% {ACTIVE_PROMO.label}
               </div>
             )}
           </div>
@@ -157,7 +143,7 @@ export default async function ProductPreview({
                     {promoPriceFormatted}
                   </span>
                   <span className="text-[10px] font-semibold text-amber-500">
-                    -{ACTIVE_PROMO.discountPercent}% {ACTIVE_PROMO.label}
+                    -{promoDiscountPercent}% {ACTIVE_PROMO.label}
                   </span>
                 </div>
               ) : (

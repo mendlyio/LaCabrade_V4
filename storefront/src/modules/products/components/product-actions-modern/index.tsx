@@ -10,7 +10,8 @@ import { trackGA4AddToCart, trackMetaAddToCart } from "@lib/tracking"
 import {
   ACTIVE_PROMO,
   applyPromoDiscount,
-  isProductPromoEligible,
+  getProductPromoDiscount,
+  getOutletDiscountPercent,
 } from "@lib/config/active-promo"
 
 type ProductActionsModernProps = {
@@ -295,14 +296,17 @@ export default function ProductActionsModern({
       : 0
 
     // Outlet : si la promotion est déjà appliquée par l'API, on utilise ces valeurs.
-    // Sinon (prix de base), on applique -50% nous-mêmes.
-    const outletAmount = isOutlet && !hasDiscount ? amount * 0.5 : null
+    // Sinon (prix de base), on applique la remise outlet dynamique (60% pendant PO, 50% sinon).
+    const outletDiscountFraction = getOutletDiscountPercent() / 100
+    const outletAmount = isOutlet && !hasDiscount ? amount * (1 - outletDiscountFraction) : null
     const outletOriginal = isOutlet && !hasDiscount ? amount : (isOutlet && hasDiscount ? original : null)
 
-    // Promo active (ex : Pâques)
+    // Promo active (multi-tier : -10% global, -20% cavalier/LC, outlet géré séparément)
     const categoryHandles = ((product as any).categories || []).map((c: any) => c.handle || "")
-    const isPromoEligible = isProductPromoEligible(categoryHandles, isOutlet)
-    const promoAmount = isPromoEligible ? applyPromoDiscount(amount) : null
+    const collectionHandle = (product as any).collection?.handle || null
+    const promoDiscountPercent = getProductPromoDiscount(categoryHandles, collectionHandle, isOutlet)
+    const isPromoEligible = promoDiscountPercent !== null
+    const promoAmount = isPromoEligible ? applyPromoDiscount(amount, promoDiscountPercent!) : null
 
     return {
       amount,
@@ -314,6 +318,7 @@ export default function ProductActionsModern({
       outletOriginal,
       isPromoEligible,
       promoAmount,
+      promoDiscountPercent,
       formatted: convertToLocale({ amount, currency_code: currency }),
       formattedOriginal: original != null ? convertToLocale({ amount: original, currency_code: currency }) : null,
       formattedOutlet: outletAmount != null ? convertToLocale({ amount: outletAmount, currency_code: currency }) : null,
@@ -352,7 +357,7 @@ export default function ProductActionsModern({
                 </span>
               </div>
               <div className="inline-flex items-center gap-2 bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-sm font-bold">
-                -{ACTIVE_PROMO.discountPercent}% {ACTIVE_PROMO.label}
+                -{priceData.promoDiscountPercent}% {ACTIVE_PROMO.label}
               </div>
               <p className="text-xs text-gray-500">
                 La remise est appliquée automatiquement dans votre panier.
