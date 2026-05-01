@@ -76,37 +76,36 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (handle === GIFT_CARD_PRODUCT_HANDLE) {
     return { title: { absolute: "Bon Cadeau | La Cabrade" } }
   }
-  const region = await getRegion(countryCode)
 
-  if (!region) {
-    notFound()
-  }
+  try {
+    const region = await getRegion(countryCode)
+    if (!region) return { title: { absolute: "La Cabrade" } }
 
-  const product = await getProductByHandle(handle, region.id)
+    const product = await getProductByHandle(handle, region.id)
+    if (!product) return { title: { absolute: "La Cabrade" } }
 
-  if (!product) {
-    notFound()
-  }
-
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
-  return {
-    title: { absolute: `${product.title} | La Cabrade` },
-    description: product.description || `Découvrez ${product.title} sur La Cabrade - Sellerie équestre de qualité`,
-    openGraph: {
-      type: "website",
-      title: `${product.title} | La Cabrade`,
-      description: product.description || `Découvrez ${product.title} sur La Cabrade`,
-      images: product.thumbnail ? [{ url: product.thumbnail }] : [],
-      url: `${baseUrl}/${countryCode}/products/${handle}`,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: `${product.title} | La Cabrade`,
-      description: product.description || `Découvrez ${product.title} sur La Cabrade`,
-    },
-    alternates: {
-      canonical: `${baseUrl}/${countryCode}/products/${handle}`,
-    },
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+    return {
+      title: { absolute: `${product.title} | La Cabrade` },
+      description: product.description || `Découvrez ${product.title} sur La Cabrade - Sellerie équestre de qualité`,
+      openGraph: {
+        type: "website",
+        title: `${product.title} | La Cabrade`,
+        description: product.description || `Découvrez ${product.title} sur La Cabrade`,
+        images: product.thumbnail ? [{ url: product.thumbnail }] : [],
+        url: `${baseUrl}/${countryCode}/products/${handle}`,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: `${product.title} | La Cabrade`,
+        description: product.description || `Découvrez ${product.title} sur La Cabrade`,
+      },
+      alternates: {
+        canonical: `${baseUrl}/${countryCode}/products/${handle}`,
+      },
+    }
+  } catch {
+    return { title: { absolute: "La Cabrade" } }
   }
 }
 
@@ -115,22 +114,32 @@ export default async function ProductPage({ params }: Props) {
     redirect(`/${params.countryCode}/bon-cadeau`)
   }
 
-  const region = await getRegion(params.countryCode)
+  try {
+    const region = await getRegion(params.countryCode)
+    if (!region) notFound()
 
-  if (!region) {
-    notFound()
+    const pricedProduct = await getProductByHandle(params.handle, region.id)
+    if (!pricedProduct) notFound()
+
+    return (
+      <ProductTemplateModern
+        product={pricedProduct}
+        region={region}
+        countryCode={params.countryCode}
+      />
+    )
+  } catch (err: unknown) {
+    // Erreur réseau pendant la génération statique (backend temporairement injoignable).
+    // On retourne notFound() — avec revalidate=3600 (ISR), la page sera régénérée
+    // à la première visite une fois le backend de nouveau disponible.
+    const isNetworkError =
+      err instanceof TypeError ||
+      (err as any)?.cause?.code === "UND_ERR_CONNECT_TIMEOUT" ||
+      (err as any)?.cause?.code === "ECONNREFUSED"
+    if (isNetworkError) {
+      console.warn(`[ProductPage] Backend injoignable pour ${params.handle}, page ignorée pendant le build.`)
+      notFound()
+    }
+    throw err
   }
-
-  const pricedProduct = await getProductByHandle(params.handle, region.id)
-  if (!pricedProduct) {
-    notFound()
-  }
-
-  return (
-    <ProductTemplateModern
-      product={pricedProduct}
-      region={region}
-      countryCode={params.countryCode}
-    />
-  )
 }
