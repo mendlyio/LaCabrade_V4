@@ -45,6 +45,7 @@ export default function PromoImageBanner({
         width={1920}
         height={600}
         quality={85}
+        unoptimized
         className="w-full h-auto object-cover"
         priority
         sizes="100vw"
