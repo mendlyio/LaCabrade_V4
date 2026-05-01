@@ -22,13 +22,37 @@ const PO_HIGH_CODES = new Set(["PO_CAVALIER_20", "PO_LC_20"])
 const PO_START = new Date("2026-04-30T22:00:00.000Z") // 1 mai 00:00 BEL
 const PO_END = new Date("2026-05-09T21:59:59.000Z")   // 9 mai 23:59 BEL
 
-// Catégories exclues de la promo globale -10%
-// ⚠️  Liste EXPLICITE (pas de récursion) : seules ces catégories exactes sont exclues.
-// sacs-et-housses-de-selle, tapis-de-selle-et-bonnets, equipement-de-la-selle
-// sont volontairement incluses dans la promo.
+// Catégories exclues — liste explicite, résolution exacte (pas de récursion).
 const EXCLUDED_CATEGORY_HANDLES = [
   "tondeuses-et-peignes",
+  // Compléments alimentaires + sous-catégories (avec/sans accents)
   "complements-alimentaires",
+  "compléments-alimentaires",
+  "systeme-renal",
+  "systeme-circulatoire",
+  "systeme-lymphatique",
+  "immunite",
+  "systeme-locomoteur",
+  "systeme-hepatique",
+  "système-hépatique",
+  "systeme-digestif",
+  "système-digestif",
+  "vitamines-et-mineraux",
+  "vitamines-et-minéraux",
+  "muscles-et-recuperation",
+  "muscles,-récupérations-et-performance",
+  "metabolisme",
+  "métabolisme",
+  "sabots",
+  "sabots-et-crins",
+  "sabots,-robe-et-crins",
+  "systeme-respiratoire",
+  "système-respiratoire",
+  "nervosite-et-comportement",
+  "nervosité-et-comportement",
+  "criniere",
+  "soins-robe-et-criniere",
+  // Selles (sans récursion — sacs-et-housses-de-selle reste éligible)
   "selles",
   "selles-sur-mesure",
 ]
