@@ -73,12 +73,10 @@ export const PORTES_OUVERTES_PROMO: ActivePromoConfig = {
   excludedCategoryHandles: [
     "tondeuses-et-peignes",
     "complements-alimentaires",
-    // Catégorie "Selles" et toutes ses sous-catégories
+    // Catégorie "Selles" et ses sous-catégories (d'après l'arbre DB)
     "selles",
-    "selles-sur-mesure",
-    "tapis-de-selle-et-bonnets",
-    "equipement-de-la-selle",
     "sacs-et-housses-de-selle",
+    "selles-sur-mesure",
   ],
   tiers: [
     // -20% sur la catégorie Cavalier
