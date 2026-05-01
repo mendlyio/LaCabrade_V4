@@ -25,7 +25,8 @@ const PO_END = new Date("2026-05-09T21:59:59.000Z")   // 9 mai 23:59 BEL
 // Catégories exclues de la promo globale -10%
 const EXCLUDED_CATEGORY_HANDLES = [
   "tondeuses-et-peignes",
-  "soins-et-alimentation",
+  "complements-alimentaires",
+  "selles",
 ]
 
 // Codes automatiques connus → ne constituent pas un conflit

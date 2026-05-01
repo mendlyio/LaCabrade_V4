@@ -22,7 +22,7 @@ const PUBLISHABLE_KEY =
 // Image Pâques (réutilisable plus tard) :
 // const IMG = "https://ik.imagekit.io/kodt9cn6f/Cabrade_Pa%CC%82ques.png"
 const IMG =
-  "https://ik.imagekit.io/kodt9cn6f/popup.webp?updatedAt=1773593272115"
+  "https://ik.imagekit.io/kodt9cn6f/POP%20UP%202.png"
 const STORAGE_KEY = "lc_newsletter_popup_dismissed"
 const DELAY_MS = 3000
 
@@ -120,13 +120,13 @@ export default function NewsletterPopup() {
         {/* Mobile image */}
         <div className="sm:hidden flex justify-center flex-shrink-0 pt-5 pb-2">
           <div className="relative w-[200px] h-[200px] rounded-2xl overflow-hidden shadow-lg">
-            <Image src={IMG} alt="La Cabrade" fill className="object-contain" sizes="200px" />
+            <Image src={IMG} alt="La Cabrade" fill unoptimized className="object-contain" sizes="200px" />
           </div>
         </div>
 
         {/* Desktop image */}
         <div className="hidden sm:flex flex-shrink-0 w-[220px] bg-[#faf6f2] items-center justify-center self-stretch">
-          <Image src={IMG} alt="La Cabrade" width={220} height={220} className="object-contain" />
+          <Image src={IMG} alt="La Cabrade" width={220} height={220} unoptimized className="object-contain" />
         </div>
 
         {/* Formulaire */}
