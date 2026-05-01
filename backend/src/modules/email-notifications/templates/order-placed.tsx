@@ -71,29 +71,39 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
   const shippingMethods = (order as any).shipping_methods || []
   const pickupLocation = (order as any).metadata?.pickup_location
 
+  const VAT_RATE = 0.21
+
   // Coût brut de livraison (avant ajustements/promos)
   const shippingCostRaw = shippingMethods.reduce(
     (sum: number, m: any) => sum + (Number(m.amount) || 0),
     0
   )
-  // Ajustements sur les méthodes de livraison (livraison gratuite via code promo = montant négatif)
-  const shippingAdjustmentTotal = shippingMethods.reduce((sum: number, m: any) => {
-    const adjs: any[] = m.adjustments || []
-    return sum + adjs.reduce((s: number, a: any) => s + Number(a.amount || 0), 0)
+  // Les ajustements sur la livraison sont stockés en valeur absolue positive :
+  //   - HT pour la Belgique (TVA 21 %) : adj × 1.21 = brut TTC
+  //   - TTC pour les pays sans TVA (Europe hors BE) : adj = brut TTC
+  // On choisit automatiquement la forme qui correspond au brut, car la promo
+  // FREE_SHIPPING_75 ramène toujours la livraison à 0.
+  const shippingCost = shippingMethods.reduce((sum: number, m: any) => {
+    const rawTtc = Number(m.amount) || 0
+    const adjSum = (m.adjustments || []).reduce(
+      (s: number, a: any) => s + Math.abs(Number(a.amount || 0)),
+      0
+    )
+    if (adjSum === 0) return sum + rawTtc
+    const adjTtc = adjSum * (1 + VAT_RATE)
+    const resolved = Math.abs(adjTtc - rawTtc) <= Math.abs(adjSum - rawTtc) ? adjTtc : adjSum
+    return sum + Math.max(0, rawTtc - resolved)
   }, 0)
-  // Coût effectif de livraison après promos (0 si livraison offerte)
-  const shippingCost = Math.max(0, shippingCostRaw + shippingAdjustmentTotal)
 
-  // Réductions sur les articles (depuis les adjustments Medusa — HT → TTC)
-  const VAT_RATE = 0.21
+  // Réductions sur les articles (depuis les adjustments Medusa — HT → TTC, arrondi unique)
   const itemDiscountHT = items.reduce((sum, item) => {
     const adjs: any[] = (item as any).adjustments || []
     return sum + adjs.reduce((s: number, a: any) => s + Math.abs(Number(a.amount || 0)), 0)
   }, 0)
   const itemDiscountTotal = Math.round(itemDiscountHT * (1 + VAT_RATE) * 100) / 100
   // Réduction livraison (différence entre brut et effectif)
-  const shippingDiscountTotal = Math.max(0, shippingCostRaw - shippingCost)
-  const totalDiscount = itemDiscountTotal + shippingDiscountTotal
+  const shippingDiscountTotal = Math.round(Math.max(0, shippingCostRaw - shippingCost) * 100) / 100
+  const totalDiscount = Math.round((itemDiscountTotal + shippingDiscountTotal) * 100) / 100
 
   // Déduction bon cadeau depuis order.metadata.applied_gift_cards
   const appliedGiftCards: Array<{ code: string; balance: number }> =

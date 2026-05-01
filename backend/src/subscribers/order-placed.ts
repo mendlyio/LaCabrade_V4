@@ -32,11 +32,25 @@ export default async function customOrderPlacedEmailHandler({
   try {
     const notificationModuleService: INotificationModuleService = container.resolve(Modules.NOTIFICATION)
 
-    // Livraison effective = somme des montants bruts + ajustements (promos livraison gratuite = ajustement négatif)
+    // Livraison effective = somme des montants bruts (TTC) MOINS les ajustements
+    // livraison convertis en TTC. Les ajustements promo sont stockés en valeur absolue
+    // (HT pour la Belgique 21 %, TTC pour les pays sans TVA appliquée côté vendeur).
+    // On détecte automatiquement l'unité en choisissant la conversion la plus proche
+    // du montant brut (car la promo `FREE_SHIPPING_75` réduit toujours à 0).
+    const VAT_RATE = 0.21
     const shippingTotal = (order.shipping_methods || []).reduce((acc: number, m: any) => {
-      const raw = Number(m.amount) || 0
-      const adj = (m.adjustments || []).reduce((s: number, a: any) => s + Number(a.amount || 0), 0)
-      return acc + Math.max(0, raw + adj)
+      const rawTtc = Number(m.amount) || 0
+      const adjSumRaw = (m.adjustments || []).reduce(
+        (s: number, a: any) => s + Math.abs(Number(a.amount) || 0),
+        0
+      )
+      if (adjSumRaw === 0) return acc + rawTtc
+      const adjAsTtc = adjSumRaw * (1 + VAT_RATE)
+      const adjAsIs = adjSumRaw
+      // La forme qui se rapproche le plus du brut TTC est la bonne.
+      const adjResolved =
+        Math.abs(adjAsTtc - rawTtc) <= Math.abs(adjAsIs - rawTtc) ? adjAsTtc : adjAsIs
+      return acc + Math.max(0, rawTtc - adjResolved)
     }, 0)
 
     const displayTotal = getOrderDisplayTotalEuros({

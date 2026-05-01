@@ -71,22 +71,28 @@ function getItemsTotalEuros(order: {
  * Retourne null si les adjustments ne sont pas disponibles.
  * N'inclut PAS les réductions livraison (elles sont sur les shipping methods, pas les items).
  *
- * Medusa v2 tax-inclusive: adjustments sont en HT → conversion TTC via × (1 + TVA).
+ * Medusa v2 tax-inclusive : adjustments stockés en HT pour les articles taxables (21 %),
+ * et en valeur équivalente TTC pour les bons cadeau (TVA 0 %). On accumule chaque
+ * groupe en pleine précision puis on applique UNE SEULE conversion TTC finale —
+ * cela garantit que le total affiché coïncide au centime près avec le montant
+ * chargé par Stripe (même algorithme d'arrondi côté storefront).
  */
 function getItemAdjustmentsEuros(order: OrderForDisplayTotal | null | undefined): number | null {
   const items = order?.items
   if (!items?.length) return null
   if (!items.some(item => Array.isArray(item.adjustments))) return null
-  let sum = 0
+  let regularHt = 0
+  let giftCardHt = 0
   for (const item of items) {
     const isGiftCard = isGiftCardItem(item)
-    let itemAdjHt = 0
     for (const adj of item.adjustments || []) {
-      itemAdjHt += Math.abs(lineItemAmountToEuros(adj.amount))
+      const amt = Math.abs(lineItemAmountToEuros(adj.amount))
+      if (isGiftCard) giftCardHt += amt
+      else regularHt += amt
     }
-    sum += adjustmentHtToTtc(itemAdjHt, isGiftCard)
   }
-  return Math.round(sum * 100) / 100
+  const total = adjustmentHtToTtc(regularHt, false) + adjustmentHtToTtc(giftCardHt, true)
+  return Math.round(total * 100) / 100
 }
 
 function isIntraCommunityExempt(order: {

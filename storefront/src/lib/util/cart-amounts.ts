@@ -24,12 +24,6 @@ export function lineItemAmountToEuros(value: number | null | undefined, _isGiftC
   return AMOUNTS_IN_EUROS ? v : v / 100
 }
 
-/** Convertit un montant API (en euros) en centimes pour Stripe. */
-function toPaymentCents(value: number | null | undefined): number {
-  const v = value ?? 0
-  return AMOUNTS_IN_EUROS ? Math.round(v * 100) : Math.round(v)
-}
-
 export function isGiftCardItem(item: {
   metadata?: Record<string, unknown> | null
   product_title?: string | null
@@ -109,22 +103,6 @@ function getItemsTotalEuros(cart: CartAmountsInput | null | undefined): number {
   return toDisplayEuros(itemTotal)
 }
 
-/** Total articles en centimes (paiement). Utilise unit_price × qty (TTC garanti). */
-function getItemsTotalCents(cart: CartAmountsInput | null | undefined): number {
-  if (!cart) return 0
-  const items = cart.items
-  if (items?.length) {
-    let sum = 0
-    for (const item of items) {
-      const lineCents = toPaymentCents(item.unit_price) * (item.quantity ?? 1)
-      sum += lineCents
-    }
-    return sum
-  }
-  const itemTotal = cart.item_total ?? (cart.subtotal ?? 0) + (cart.tax_total ?? 0)
-  return toPaymentCents(itemTotal)
-}
-
 /**
  * Vérifie si le client bénéficie de l'exonération TVA intracommunautaire.
  */
@@ -162,42 +140,27 @@ export function getItemsDisplayTotalEuros(cart: CartAmountsInput | null | undefi
  *
  * IMPORTANT: Medusa v2 tax-inclusive calcule les adjustments sur la base HT.
  * On convertit en TTC via × (1 + TVA) pour cohérence avec les prix affichés.
+ *
+ * Stratégie: on somme d'abord les montants HT en pleine précision (items classiques
+ * d'un côté, bons cadeau de l'autre car TVA 0 %), puis on convertit une seule fois
+ * en TTC avec un arrondi final. Évite la dérive d'arrondi par ligne.
  */
 export function getItemAdjustmentsEuros(cart: CartAmountsInput | null | undefined): number | null {
   const items = cart?.items
   if (!items?.length) return null
   if (!items.some(item => Array.isArray(item.adjustments))) return null
-  let sum = 0
+  let regularHt = 0
+  let giftCardHt = 0
   for (const item of items) {
     const isGC = isGiftCardItem(item)
-    let itemAdjHt = 0
     for (const adj of item.adjustments || []) {
-      itemAdjHt += Math.abs(lineItemAmountToEuros(adj.amount))
+      const amtEuros = Math.abs(lineItemAmountToEuros(adj.amount))
+      if (isGC) giftCardHt += amtEuros
+      else regularHt += amtEuros
     }
-    sum += adjustmentHtToTtc(itemAdjHt, isGC)
   }
-  return Math.round(sum * 100) / 100
-}
-
-/**
- * Calcule le total des réductions item par item (en centimes TTC) depuis les adjustments.
- * Retourne null si les adjustments ne sont pas disponibles.
- * Conversion HT → TTC identique à getItemAdjustmentsEuros.
- */
-function getItemAdjustmentsCents(cart: CartAmountsInput | null | undefined): number | null {
-  const items = cart?.items
-  if (!items?.length) return null
-  if (!items.some(item => Array.isArray(item.adjustments))) return null
-  let sum = 0
-  for (const item of items) {
-    const isGC = isGiftCardItem(item)
-    let itemAdjHtCents = 0
-    for (const adj of item.adjustments || []) {
-      itemAdjHtCents += Math.abs(toPaymentCents(adj.amount ?? 0))
-    }
-    sum += adjustmentHtToTtc(itemAdjHtCents, isGC)
-  }
-  return Math.round(sum)
+  const total = adjustmentHtToTtc(regularHt, false) + adjustmentHtToTtc(giftCardHt, true)
+  return Math.round(total * 100) / 100
 }
 
 /**
@@ -210,18 +173,6 @@ function getDiscountEuros(cart: CartAmountsInput | null | undefined): number {
   return isFreeShippingDiscount(cart?.shipping_total, cart?.discount_total)
     ? 0
     : toDisplayEuros(cart?.discount_total)
-}
-
-/**
- * Calcule la réduction en centimes à soustraire du total (pour Stripe).
- * Préfère les adjustments item (précis) ; fallback sur discount_total + heuristique.
- */
-function getDiscountCents(cart: CartAmountsInput | null | undefined): number {
-  const itemAdj = getItemAdjustmentsCents(cart)
-  if (itemAdj !== null) return itemAdj
-  return isFreeShippingDiscount(cart?.shipping_total, cart?.discount_total)
-    ? 0
-    : toPaymentCents(cart?.discount_total)
 }
 
 /** TVA belge standard 21 %. TVA = TTC × 0.21 / 1.21 */
@@ -328,26 +279,14 @@ export function getDisplayTotalTvacEuros(cart: CartAmountsInput | null | undefin
 /**
  * Calcule le montant à charger (Stripe) en centimes.
  * Stripe attend les minor units.
- * = (articles + livraison − réductions − bon cadeau) en centimes
- * Cas intracommunautaire : déduit la TVA avant le bon cadeau.
+ *
+ * IMPORTANT : le montant Stripe est strictement dérivé du total affiché au client
+ * (`getDisplayTotalTvacEuros`). Cela garantit qu'il n'y a JAMAIS d'écart entre ce
+ * que le client voit dans le checkout, dans le mail de confirmation et ce qui est
+ * effectivement prélevé. Tout nouvel arrondi ou règle fiscale doit donc passer
+ * par `getDisplayTotalTvacEuros` uniquement.
  */
 export function getPaymentAmountCents(cart: CartAmountsInput | null | undefined): number {
-  if (!cart) return 0
-  const exempt = isIntraCommunityExempt(cart)
-
-  const itemCents = getItemsTotalCents(cart)
-  const shippingCents = toPaymentCents(cart.shipping_total)
-  const discountCents = getDiscountCents(cart)
-
-  let totalBeforeGCCents = itemCents + shippingCents - discountCents
-
-  if (exempt) {
-    const totalTTC = totalBeforeGCCents / 100
-    const vatAmount = totalTTC * (VAT_RATE / (1 + VAT_RATE))
-    totalBeforeGCCents = Math.round((totalTTC - vatAmount) * 100)
-  }
-
-  const gcDeductionCents = Math.round(getGiftCardDeductionEuros(cart) * 100)
-
-  return Math.max(0, totalBeforeGCCents - gcDeductionCents)
+  const euros = getDisplayTotalTvacEuros(cart)
+  return Math.max(0, Math.round(euros * 100))
 }
