@@ -23,10 +23,14 @@ const PO_START = new Date("2026-04-30T22:00:00.000Z") // 1 mai 00:00 BEL
 const PO_END = new Date("2026-05-09T21:59:59.000Z")   // 9 mai 23:59 BEL
 
 // Catégories exclues de la promo globale -10%
+// ⚠️  Liste EXPLICITE (pas de récursion) : seules ces catégories exactes sont exclues.
+// sacs-et-housses-de-selle, tapis-de-selle-et-bonnets, equipement-de-la-selle
+// sont volontairement incluses dans la promo.
 const EXCLUDED_CATEGORY_HANDLES = [
   "tondeuses-et-peignes",
   "complements-alimentaires",
   "selles",
+  "selles-sur-mesure",
 ]
 
 // Codes automatiques connus → ne constituent pas un conflit
@@ -45,19 +49,6 @@ function isPortesOuvertesPeriod(): boolean {
   return now >= PO_START && now <= PO_END
 }
 
-/** Collecte tous les IDs d'une catégorie et ses descendants récursifs */
-function collectSubtreeIds(
-  rootId: string,
-  allCats: Array<{ id: string; parent_category_id?: string | null }>
-): string[] {
-  const ids: string[] = [rootId]
-  for (const cat of allCats) {
-    if (cat.parent_category_id === rootId) {
-      ids.push(...collectSubtreeIds(cat.id, allCats))
-    }
-  }
-  return ids
-}
 
 export default async function cartPortesOuvertesGuardHandler({
   event: { data },
@@ -174,27 +165,25 @@ export default async function cartPortesOuvertesGuardHandler({
           return
         }
 
-        // Récupérer toutes les catégories pour l'arbre des exclusions
+        // Récupérer toutes les catégories pour la résolution exacte des IDs
         const allCategories: Array<{
           id: string
           handle?: string | null
-          parent_category_id?: string | null
         }> = await productModule.listProductCategories(
           {},
-          { select: ["id", "handle", "parent_category_id"], take: 500 }
+          { select: ["id", "handle"], take: 500 }
         )
 
-        // IDs des catégories exclues (tondeuses, compléments + descendants)
+        // IDs des catégories exclues — résolution EXACTE (non récursive).
+        // La liste EXCLUDED_CATEGORY_HANDLES est explicite : on exclut uniquement
+        // les catégories dont le handle est listé, sans descendre dans leurs enfants.
+        // (sacs-et-housses-de-selle, tapis-de-selle-et-bonnets, etc. restent éligibles)
         const excludedCategoryIds = new Set<string>()
         for (const handle of EXCLUDED_CATEGORY_HANDLES) {
-          const root = allCategories.find(
+          const cat = allCategories.find(
             (c) => (c.handle ?? "").toLowerCase() === handle
           )
-          if (root) {
-            for (const id of collectSubtreeIds(root.id, allCategories)) {
-              excludedCategoryIds.add(id)
-            }
-          }
+          if (cat) excludedCategoryIds.add(cat.id)
         }
 
         // Charger les produits avec leurs catégories

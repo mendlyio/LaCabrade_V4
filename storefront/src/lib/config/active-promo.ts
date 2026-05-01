@@ -73,9 +73,7 @@ export const PORTES_OUVERTES_PROMO: ActivePromoConfig = {
   excludedCategoryHandles: [
     "tondeuses-et-peignes",
     "complements-alimentaires",
-    // Catégorie "Selles" et ses sous-catégories (d'après l'arbre DB)
     "selles",
-    "sacs-et-housses-de-selle",
     "selles-sur-mesure",
   ],
   tiers: [
