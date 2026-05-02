@@ -5,74 +5,63 @@ import type { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
 /**
  * Gestion des promotions automatiques Portes Ouvertes 2026 (1–9 mai 2026).
  *
- * Règles métier :
- * - Valable uniquement du 1er au 9 mai 2026 (heure belge, UTC+2)
- * - Non cumulable avec les codes promo manuels (NL-, ANNIV-, BIENVENU, newsletter, etc.)
- * - Catégories exclues de PO_GLOBAL_10 : tondeuses-et-peignes, soins-et-alimentation
- * - Articles outlet (outlet_discount: true) : tous les adjustments PO retirés
- *   (leur remise -60% est déjà appliquée sur unit_price par outlet-add-to-cart)
- * - Priorité : PO_CAVALIER_20 / PO_LC_20 > PO_GLOBAL_10
- *   (si un article a déjà -20%, on retire -10% pour éviter le cumul)
+ * Architecture :
+ *   - UNE seule promotion Medusa automatique : PO_GLOBAL_10 (-10% sur tout)
+ *   - Ce subscriber gère TOUTE la logique métier :
+ *       1. Hors période → retire PO_GLOBAL_10
+ *       2. Code promo manuel présent → retire PO_GLOBAL_10 (non-cumul)
+ *       3. Article outlet → retire PO_GLOBAL_10 (remise via unit_price)
+ *       4. Catégorie exclue → retire PO_GLOBAL_10
+ *       5. Cavalier ou LC Equestrian → crée un adjustment -20% (code PO_CAVALIER_20
+ *          ou PO_LC_20) et retire PO_GLOBAL_10
+ *       6. Nettoyage : retire tout adjustment PO_CAVALIER_20/PO_LC_20 sur des
+ *          articles qui ne sont plus éligibles au tier -20%
+ *
+ * Montant du -20% : 2× le montant de l'adjustment PO_GLOBAL_10 existant.
+ * Cette méthode est robuste car elle utilise le même calcul HT/TTC que Medusa.
  */
 
-const PO_GLOBAL_CODE = "PO_GLOBAL_10"
-const PO_HIGH_CODES = new Set(["PO_CAVALIER_20", "PO_LC_20"])
+// ─── Constantes ───────────────────────────────────────────────────────────────
+const PO_CODE = "PO_GLOBAL_10"
+const PO_CAVALIER_CODE = "PO_CAVALIER_20"
+const PO_LC_CODE = "PO_LC_20"
+const ALL_PO_CODES = new Set([PO_CODE, PO_CAVALIER_CODE, PO_LC_CODE])
 
-// Heure belge (CEST = UTC+2 en mai)
+// Période PO (heure belge CEST = UTC+2)
 const PO_START = new Date("2026-04-30T22:00:00.000Z") // 1 mai 00:00 BEL
 const PO_END = new Date("2026-05-09T21:59:59.000Z")   // 9 mai 23:59 BEL
 
-// Catégories exclues — liste explicite, résolution exacte (pas de récursion).
-const EXCLUDED_CATEGORY_HANDLES = [
-  "tondeuses-et-peignes",
-  // Compléments alimentaires + sous-catégories (avec/sans accents)
-  "complements-alimentaires",
-  "compléments-alimentaires",
-  "systeme-renal",
-  "systeme-circulatoire",
-  "systeme-lymphatique",
-  "immunite",
-  "systeme-locomoteur",
-  "systeme-hepatique",
-  "système-hépatique",
-  "systeme-digestif",
-  "système-digestif",
-  "vitamines-et-mineraux",
-  "vitamines-et-minéraux",
-  "muscles-et-recuperation",
-  "muscles,-récupérations-et-performance",
-  "metabolisme",
-  "métabolisme",
-  "sabots",
-  "sabots-et-crins",
-  "sabots,-robe-et-crins",
-  "systeme-respiratoire",
-  "système-respiratoire",
-  "nervosite-et-comportement",
-  "nervosité-et-comportement",
-  "criniere",
-  "soins-robe-et-criniere",
-  // Selles (sans récursion — sacs-et-housses-de-selle reste éligible)
-  "selles",
-  "selles-sur-mesure",
-]
+// Handles de catégories pour la détection des tiers (== active-promo.ts tiers)
+const CAVALIER_HANDLES = new Set(["cavalier"])
+const LC_HANDLES = new Set(["lc-equestrian", "lc_equestrian", "la-cabrade"])
 
-// Codes automatiques connus → ne constituent pas un conflit
-const KNOWN_AUTOMATIC_CODES = new Set([
-  PO_GLOBAL_CODE,
-  "PO_CAVALIER_20",
-  "PO_LC_20",
-  "OUTLET_50",
-  "FREE_SHIPPING_75",
-  "PAQUES_10",
+// Catégories exclues (résolution exacte — pas de récursion)
+const EXCLUDED_HANDLES = new Set([
+  "tondeuses-et-peignes",
+  "complements-alimentaires", "compléments-alimentaires",
+  "systeme-renal", "systeme-circulatoire", "systeme-lymphatique",
+  "immunite", "systeme-locomoteur", "systeme-hepatique", "système-hépatique",
+  "systeme-digestif", "système-digestif",
+  "vitamines-et-mineraux", "vitamines-et-minéraux",
+  "muscles-et-recuperation", "muscles,-récupérations-et-performance",
+  "metabolisme", "métabolisme",
+  "sabots", "sabots-et-crins", "sabots,-robe-et-crins",
+  "systeme-respiratoire", "système-respiratoire",
+  "nervosite-et-comportement", "nervosité-et-comportement",
+  "criniere", "soins-robe-et-criniere",
+  "selles", "selles-sur-mesure",
 ])
 
-/** Vérifie si on est dans la période Portes Ouvertes 2026 */
+// Codes automatiques connus (pas des codes manuels)
+const KNOWN_AUTO_CODES = new Set([
+  PO_CODE, PO_CAVALIER_CODE, PO_LC_CODE,
+  "OUTLET_50", "FREE_SHIPPING_75", "PAQUES_10",
+])
+
 function isPortesOuvertesPeriod(): boolean {
   const now = new Date()
   return now >= PO_START && now <= PO_END
 }
-
 
 export default async function cartPortesOuvertesGuardHandler({
   event: { data },
@@ -84,12 +73,10 @@ export default async function cartPortesOuvertesGuardHandler({
   let cartModuleService: ICartModuleService
   try {
     cartModuleService = container.resolve(Modules.CART) as ICartModuleService
-  } catch {
-    return
-  }
+  } catch { return }
 
   try {
-    // 1. Charger le panier avec ses articles
+    // 1. Charger le panier avec items (unit_price nécessaire pour créer les ajustements)
     const cart = await (cartModuleService as any).retrieveCart(cartId, {
       relations: ["items"],
     })
@@ -97,181 +84,160 @@ export default async function cartPortesOuvertesGuardHandler({
     const items = (cart.items || []) as Array<{
       id: string
       product_id?: string | null
+      unit_price?: number | null
+      quantity?: number | null
       metadata?: Record<string, unknown> | null
     }>
 
     if (items.length === 0) return
-
     const allItemIds = items.map((i) => i.id)
 
     // 2. Récupérer tous les adjustments du panier
-    const allAdjustments: Array<{
+    const allAdjs: Array<{
       id: string
       code?: string | null
       item_id?: string | null
+      amount?: number | null
     }> = await (cartModuleService as any).listLineItemAdjustments(
       { item_id: allItemIds },
       { take: 500 }
     )
 
-    // Y a-t-il des adjustments PO à traiter ?
-    const poAdjs = allAdjustments.filter(
-      (adj) => adj.code && (adj.code === PO_GLOBAL_CODE || PO_HIGH_CODES.has(adj.code))
-    )
-
-    // Hors période PO → retirer tous les adjustments PO restants et sortir
-    if (!isPortesOuvertesPeriod()) {
-      if (poAdjs.length > 0) {
-        await (cartModuleService as any).deleteLineItemAdjustments(
-          poAdjs.map((a) => a.id)
-        )
-        console.log(
-          `[PortesOuvertesGuard] Hors période : ${poAdjs.length} adjustment(s) PO retirés du panier ${cartId}`
-        )
-      }
-      return
-    }
-
-    // 3. Non-cumulation avec codes manuels (NL-, ANNIV-, BIENVENU, newsletter, etc.)
-    const hasConflictingPromo = allAdjustments.some(
-      (adj) => adj.code && !KNOWN_AUTOMATIC_CODES.has(adj.code)
-    )
-
-    if (hasConflictingPromo) {
-      if (poAdjs.length > 0) {
-        await (cartModuleService as any).deleteLineItemAdjustments(
-          poAdjs.map((a) => a.id)
-        )
-        console.log(
-          `[PortesOuvertesGuard] Code promo en conflit : ${poAdjs.length} adjustment(s) PO retirés du panier ${cartId}`
-        )
-      }
-      return
-    }
-
+    // Adjustments PO actifs (PO_GLOBAL_10 automatique + PO_CAVALIER_20/PO_LC_20 custom)
+    const poAdjs = allAdjs.filter((a) => a.code && ALL_PO_CODES.has(a.code))
     if (poAdjs.length === 0) return
 
-    // 4. Retirer TOUS les adjustments PO des articles outlet (unit_price déjà réduit -60%)
-    const outletItemIds = new Set(
-      items
-        .filter((i) => (i.metadata as any)?.outlet_discount === true)
-        .map((i) => i.id)
-    )
-
     const adjIdsToRemove: string[] = []
+    const adjsToCreate: Array<{ item_id: string; amount: number; code: string; description: string }> = []
 
+    // 3. Hors période → tout supprimer
+    if (!isPortesOuvertesPeriod()) {
+      await (cartModuleService as any).deleteLineItemAdjustments(poAdjs.map((a) => a.id))
+      console.log(`[PortesOuvertesGuard] Hors période — ${poAdjs.length} adjustment(s) PO retirés du panier ${cartId}`)
+      return
+    }
+
+    // 4. Code promo manuel → tout supprimer (non-cumul)
+    const hasManualCode = allAdjs.some((a) => a.code && !KNOWN_AUTO_CODES.has(a.code))
+    if (hasManualCode) {
+      await (cartModuleService as any).deleteLineItemAdjustments(poAdjs.map((a) => a.id))
+      console.log(`[PortesOuvertesGuard] Code manuel détecté — ${poAdjs.length} adjustment(s) PO retirés du panier ${cartId}`)
+      return
+    }
+
+    // 5. Indexer les adjustments PO par item
+    const poAdjsByItem = new Map<string, typeof poAdjs[0][]>()
     for (const adj of poAdjs) {
-      if (adj.item_id && outletItemIds.has(adj.item_id)) {
-        adjIdsToRemove.push(adj.id)
+      if (!adj.item_id) continue
+      const list = poAdjsByItem.get(adj.item_id) ?? []
+      list.push(adj)
+      poAdjsByItem.set(adj.item_id, list)
+    }
+
+    // 6. Items avec au moins un adjustment PO → charger leurs catégories
+    const productIds = [...new Set(
+      items
+        .filter((i) => poAdjsByItem.has(i.id) && i.product_id)
+        .map((i) => i.product_id!)
+    )]
+
+    // Map product_id → category handles
+    const productCategoryHandles = new Map<string, string[]>()
+    if (productIds.length > 0) {
+      let productModule: any
+      try { productModule = container.resolve(Modules.PRODUCT) } catch { return }
+
+      const products: Array<{
+        id: string
+        categories?: Array<{ id: string; handle?: string | null }>
+      }> = await productModule.listProducts(
+        { id: productIds },
+        { relations: ["categories"], select: ["id"] }
+      )
+      for (const p of products) {
+        productCategoryHandles.set(
+          p.id,
+          (p.categories || []).map((c) => (c.handle ?? "").toLowerCase())
+        )
       }
     }
 
-    // 5. Gérer les exclusions de catégories + priorité des tiers
-    // Collecter les product_id des articles avec adjustments PO restants
-    const remainingPoAdjs = poAdjs.filter((a) => !adjIdsToRemove.includes(a.id))
-    if (remainingPoAdjs.length > 0) {
-      const productIds = [
-        ...new Set(
-          items
-            .filter((i) =>
-              remainingPoAdjs.some((a) => a.item_id === i.id)
-            )
-            .map((i) => i.product_id)
-            .filter((id): id is string => Boolean(id))
-        ),
-      ]
+    // 7. Pour chaque item avec adjustments PO — appliquer les règles
+    for (const item of items) {
+      const itemAdjs = poAdjsByItem.get(item.id)
+      if (!itemAdjs?.length) continue
 
-      if (productIds.length > 0) {
-        let productModule: any
-        try {
-          productModule = container.resolve(Modules.PRODUCT)
-        } catch {
-          return
-        }
+      const isOutlet = (item.metadata as any)?.outlet_discount === true
+      const handles = item.product_id
+        ? (productCategoryHandles.get(item.product_id) ?? [])
+        : []
 
-        // Récupérer toutes les catégories pour la résolution exacte des IDs
-        const allCategories: Array<{
-          id: string
-          handle?: string | null
-        }> = await productModule.listProductCategories(
-          {},
-          { select: ["id", "handle"], take: 500 }
-        )
+      const isExcluded = handles.some((h) => EXCLUDED_HANDLES.has(h))
+      const isCavalier = handles.some((h) => CAVALIER_HANDLES.has(h))
+      const isLC = handles.some((h) => LC_HANDLES.has(h))
 
-        // IDs des catégories exclues — résolution EXACTE (non récursive).
-        // La liste EXCLUDED_CATEGORY_HANDLES est explicite : on exclut uniquement
-        // les catégories dont le handle est listé, sans descendre dans leurs enfants.
-        // (sacs-et-housses-de-selle, tapis-de-selle-et-bonnets, etc. restent éligibles)
-        const excludedCategoryIds = new Set<string>()
-        for (const handle of EXCLUDED_CATEGORY_HANDLES) {
-          const cat = allCategories.find(
-            (c) => (c.handle ?? "").toLowerCase() === handle
-          )
-          if (cat) excludedCategoryIds.add(cat.id)
-        }
+      // Trouver les adjustments existants par code
+      const globalAdj = itemAdjs.find((a) => a.code === PO_CODE)
+      const cavalierAdj = itemAdjs.find((a) => a.code === PO_CAVALIER_CODE)
+      const lcAdj = itemAdjs.find((a) => a.code === PO_LC_CODE)
 
-        // Charger les produits avec leurs catégories
-        const products: Array<{
-          id: string
-          categories?: Array<{ id: string }>
-        }> = await productModule.listProducts(
-          { id: productIds },
-          { relations: ["categories"], select: ["id"] }
-        )
-
-        const productCategoryMap = new Map(
-          products.map((p) => [
-            p.id,
-            (p.categories || []).map((c: any) => c.id),
-          ])
-        )
-
-        // Grouper les adjustments PO par item_id
-        const adjsByItemId = new Map<string, typeof remainingPoAdjs[0][]>()
-        for (const adj of remainingPoAdjs) {
-          if (!adj.item_id) continue
-          const list = adjsByItemId.get(adj.item_id) ?? []
-          list.push(adj)
-          adjsByItemId.set(adj.item_id, list)
-        }
-
-        for (const item of items) {
-          if (!item.product_id) continue
-          const itemAdjs = adjsByItemId.get(item.id)
-          if (!itemAdjs?.length) continue
-
-          const categoryIds = productCategoryMap.get(item.product_id) ?? []
-
-          // a) Catégorie exclue → retirer PO_GLOBAL_10 (et tout autre PO si applicable)
-          if (
-            excludedCategoryIds.size > 0 &&
-            categoryIds.some((catId) => excludedCategoryIds.has(catId))
-          ) {
-            for (const adj of itemAdjs) {
-              adjIdsToRemove.push(adj.id)
-            }
-            continue
-          }
-
-          // b) L'article a déjà un tier -20% → retirer PO_GLOBAL_10 (éviter cumul)
-          const hasHighTier = itemAdjs.some(
-            (a) => a.code && PO_HIGH_CODES.has(a.code)
-          )
-          if (hasHighTier) {
-            for (const adj of itemAdjs) {
-              if (adj.code === PO_GLOBAL_CODE) {
-                adjIdsToRemove.push(adj.id)
-              }
-            }
-          }
-        }
+      if (isOutlet || isExcluded) {
+        // Retirer TOUS les adjustments PO de cet article
+        for (const adj of itemAdjs) adjIdsToRemove.push(adj.id)
+        continue
       }
+
+      if (isCavalier) {
+        // Retirer PO_GLOBAL_10 et tout LC parasite
+        if (globalAdj) adjIdsToRemove.push(globalAdj.id)
+        if (lcAdj) adjIdsToRemove.push(lcAdj.id)
+        // Créer PO_CAVALIER_20 si absent
+        if (!cavalierAdj && globalAdj && globalAdj.amount != null) {
+          adjsToCreate.push({
+            item_id: item.id,
+            amount: Number(globalAdj.amount) * 2,
+            code: PO_CAVALIER_CODE,
+            description: "Portes Ouvertes 2026 − −20% Cavalier",
+          })
+        }
+        continue
+      }
+
+      if (isLC) {
+        // Retirer PO_GLOBAL_10 et tout cavalier parasite
+        if (globalAdj) adjIdsToRemove.push(globalAdj.id)
+        if (cavalierAdj) adjIdsToRemove.push(cavalierAdj.id)
+        // Créer PO_LC_20 si absent
+        if (!lcAdj && globalAdj && globalAdj.amount != null) {
+          adjsToCreate.push({
+            item_id: item.id,
+            amount: Number(globalAdj.amount) * 2,
+            code: PO_LC_CODE,
+            description: "Portes Ouvertes 2026 − −20% LC Equestrian",
+          })
+        }
+        continue
+      }
+
+      // Article éligible au -10% normal : retirer tout tier -20% parasite
+      if (cavalierAdj) adjIdsToRemove.push(cavalierAdj.id)
+      if (lcAdj) adjIdsToRemove.push(lcAdj.id)
+      // Garder PO_GLOBAL_10
     }
 
+    // 8. Appliquer les suppressions
     if (adjIdsToRemove.length > 0) {
       await (cartModuleService as any).deleteLineItemAdjustments(adjIdsToRemove)
+    }
+
+    // 9. Créer les nouveaux adjustments -20%
+    if (adjsToCreate.length > 0) {
+      await (cartModuleService as any).addLineItemAdjustments(adjsToCreate)
+    }
+
+    if (adjIdsToRemove.length > 0 || adjsToCreate.length > 0) {
       console.log(
-        `[PortesOuvertesGuard] ${adjIdsToRemove.length} adjustment(s) PO retirés (outlet/exclu/priorité) du panier ${cartId}`
+        `[PortesOuvertesGuard] Panier ${cartId} — retirés: ${adjIdsToRemove.length}, créés: ${adjsToCreate.length}`
       )
     }
   } catch (error) {
