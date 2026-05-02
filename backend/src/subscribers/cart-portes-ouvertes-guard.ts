@@ -27,6 +27,29 @@ const PO_CAVALIER_CODE = "PO_CAVALIER_20"
 const PO_LC_CODE = "PO_LC_20"
 const ALL_PO_CODES = new Set([PO_CODE, PO_CAVALIER_CODE, PO_LC_CODE])
 
+// TVA belge standard 21 % — Medusa V2 tax-inclusive : adjustment.amount est en HT.
+// On calcule donc l'amount en HT pour que cart-amounts.ts × (1 + VAT_RATE) tombe juste.
+const VAT_RATE = 0.21
+const TIER_DISCOUNT = 0.20 // -20% pour cavalier et LC Equestrian
+const GLOBAL_DISCOUNT = 0.10 // -10% global
+
+/**
+ * Calcule le montant HT d'un adjustment à partir du unit_price TTC.
+ * unit_price (EUR TTC) → HT = unit_price / (1 + VAT_RATE) → amount HT = HT × % × qty
+ */
+function computeAmountHT(unitPriceTTC: number, quantity: number, discountPct: number): number {
+  const ht = unitPriceTTC / (1 + VAT_RATE)
+  return ht * discountPct * quantity
+}
+
+function compute20PctAmountHT(unitPriceTTC: number, quantity: number): number {
+  return computeAmountHT(unitPriceTTC, quantity, TIER_DISCOUNT)
+}
+
+function compute10PctAmountHT(unitPriceTTC: number, quantity: number): number {
+  return computeAmountHT(unitPriceTTC, quantity, GLOBAL_DISCOUNT)
+}
+
 // Période PO (heure belge CEST = UTC+2)
 const PO_START = new Date("2026-04-30T22:00:00.000Z") // 1 mai 00:00 BEL
 const PO_END = new Date("2026-05-09T21:59:59.000Z")   // 9 mai 23:59 BEL
@@ -176,10 +199,13 @@ export default async function cartPortesOuvertesGuardHandler({
       const isCavalier = handles.some((h) => CAVALIER_HANDLES.has(h))
       const isLC = handles.some((h) => LC_HANDLES.has(h))
 
-      // Trouver les adjustments existants par code
-      const globalAdj = itemAdjs.find((a) => a.code === PO_CODE)
-      const cavalierAdj = itemAdjs.find((a) => a.code === PO_CAVALIER_CODE)
-      const lcAdj = itemAdjs.find((a) => a.code === PO_LC_CODE)
+      // Indexer par code
+      const globalAdjs = itemAdjs.filter((a) => a.code === PO_CODE)
+      const cavalierAdjs = itemAdjs.filter((a) => a.code === PO_CAVALIER_CODE)
+      const lcAdjs = itemAdjs.filter((a) => a.code === PO_LC_CODE)
+
+      const unitPrice = Number(item.unit_price ?? 0)
+      const qty = item.quantity ?? 1
 
       if (isOutlet || isExcluded) {
         // Retirer TOUS les adjustments PO de cet article
@@ -187,42 +213,68 @@ export default async function cartPortesOuvertesGuardHandler({
         continue
       }
 
-      if (isCavalier) {
-        // Retirer PO_GLOBAL_10 et tout LC parasite
-        if (globalAdj) adjIdsToRemove.push(globalAdj.id)
-        if (lcAdj) adjIdsToRemove.push(lcAdj.id)
-        // Créer PO_CAVALIER_20 si absent
-        if (!cavalierAdj && globalAdj && globalAdj.amount != null) {
+      if (isCavalier || isLC) {
+        const targetCode = isCavalier ? PO_CAVALIER_CODE : PO_LC_CODE
+        const targetDescription = isCavalier
+          ? "Portes Ouvertes 2026 − −20% Cavalier"
+          : "Portes Ouvertes 2026 − −20% LC Equestrian"
+        const expectedAmountHT = compute20PctAmountHT(unitPrice, qty)
+        const epsilon = 0.001
+
+        // Toujours retirer PO_GLOBAL_10 et le tier "wrong" (cavalier sur LC ou vice-versa)
+        for (const adj of globalAdjs) adjIdsToRemove.push(adj.id)
+        const wrongTierAdjs = isCavalier ? lcAdjs : cavalierAdjs
+        for (const adj of wrongTierAdjs) adjIdsToRemove.push(adj.id)
+
+        // Adjustments du bon code : on garde 1 seul, avec le bon montant
+        const correctTierAdjs = isCavalier ? cavalierAdjs : lcAdjs
+        let kept = false
+        for (const adj of correctTierAdjs) {
+          const currentAmount = Number(adj.amount ?? 0)
+          const amountIsCorrect = Math.abs(currentAmount - expectedAmountHT) < epsilon
+          if (!kept && amountIsCorrect) {
+            kept = true // OK on garde ce one
+          } else {
+            adjIdsToRemove.push(adj.id) // doublon ou mauvais montant
+          }
+        }
+        if (!kept) {
           adjsToCreate.push({
             item_id: item.id,
-            amount: Number(globalAdj.amount) * 2,
-            code: PO_CAVALIER_CODE,
-            description: "Portes Ouvertes 2026 − −20% Cavalier",
+            amount: expectedAmountHT,
+            code: targetCode,
+            description: targetDescription,
           })
         }
         continue
       }
 
-      if (isLC) {
-        // Retirer PO_GLOBAL_10 et tout cavalier parasite
-        if (globalAdj) adjIdsToRemove.push(globalAdj.id)
-        if (cavalierAdj) adjIdsToRemove.push(cavalierAdj.id)
-        // Créer PO_LC_20 si absent
-        if (!lcAdj && globalAdj && globalAdj.amount != null) {
-          adjsToCreate.push({
-            item_id: item.id,
-            amount: Number(globalAdj.amount) * 2,
-            code: PO_LC_CODE,
-            description: "Portes Ouvertes 2026 − −20% LC Equestrian",
-          })
-        }
-        continue
-      }
+      // Article éligible au -10% normal : retirer tout tier -20% parasite + garantir
+      // que PO_GLOBAL_10 a le bon montant HT (Medusa stocke parfois en TTC, ce qui
+      // cause une double-conversion × 1.21 dans cart-amounts.ts → -12% au lieu de -10%).
+      for (const adj of cavalierAdjs) adjIdsToRemove.push(adj.id)
+      for (const adj of lcAdjs) adjIdsToRemove.push(adj.id)
 
-      // Article éligible au -10% normal : retirer tout tier -20% parasite
-      if (cavalierAdj) adjIdsToRemove.push(cavalierAdj.id)
-      if (lcAdj) adjIdsToRemove.push(lcAdj.id)
-      // Garder PO_GLOBAL_10
+      const expectedGlobalHT = compute10PctAmountHT(unitPrice, qty)
+      const epsilonGlobal = 0.001
+      let globalKept = false
+      for (const adj of globalAdjs) {
+        const currentAmount = Number(adj.amount ?? 0)
+        const amountIsCorrect = Math.abs(currentAmount - expectedGlobalHT) < epsilonGlobal
+        if (!globalKept && amountIsCorrect) {
+          globalKept = true
+        } else {
+          adjIdsToRemove.push(adj.id)
+        }
+      }
+      if (!globalKept && unitPrice > 0) {
+        adjsToCreate.push({
+          item_id: item.id,
+          amount: expectedGlobalHT,
+          code: PO_CODE,
+          description: "Portes Ouvertes 2026 − −10%",
+        })
+      }
     }
 
     // 8. Appliquer les suppressions
