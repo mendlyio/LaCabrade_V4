@@ -86,6 +86,9 @@ function isPortesOuvertesPeriod(): boolean {
   return now >= PO_START && now <= PO_END
 }
 
+// Anti-boucle : empêche le subscriber de se re-déclencher sur ses propres modifications
+const processingCarts = new Set<string>()
+
 export default async function cartPortesOuvertesGuardHandler({
   event: { data },
   container,
@@ -93,10 +96,17 @@ export default async function cartPortesOuvertesGuardHandler({
   const cartId = data?.id
   if (!cartId) return
 
+  // Si ce panier est déjà en cours de traitement, ignorer l'événement
+  if (processingCarts.has(cartId)) return
+  processingCarts.add(cartId)
+
   let cartModuleService: ICartModuleService
   try {
     cartModuleService = container.resolve(Modules.CART) as ICartModuleService
-  } catch { return }
+  } catch {
+    processingCarts.delete(cartId)
+    return
+  }
 
   try {
     // 1. Charger le panier avec items (unit_price nécessaire pour créer les ajustements)
@@ -322,6 +332,8 @@ export default async function cartPortesOuvertesGuardHandler({
     }
   } catch (error) {
     console.error("[PortesOuvertesGuard] Erreur:", error)
+  } finally {
+    processingCarts.delete(cartId)
   }
 }
 

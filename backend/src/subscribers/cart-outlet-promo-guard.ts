@@ -12,12 +12,18 @@ import type { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
  * Les bons cadeau ne passent plus par le système de promotions
  * (ils sont gérés via cart.metadata.applied_gift_cards).
  */
+// Anti-boucle : empêche le subscriber de se re-déclencher sur ses propres suppressions
+const processingCarts = new Set<string>()
+
 export default async function cartOutletPromoGuardHandler({
   event: { data },
   container,
 }: SubscriberArgs<{ id: string }>) {
   const cartId = data?.id
   if (!cartId) return
+
+  if (processingCarts.has(cartId)) return
+  processingCarts.add(cartId)
 
   let cartModuleService: ICartModuleService
   try {
@@ -58,6 +64,8 @@ export default async function cartOutletPromoGuardHandler({
     )
   } catch (error) {
     console.error("[OutletPromoGuard] Erreur:", error)
+  } finally {
+    processingCarts.delete(cartId)
   }
 }
 
