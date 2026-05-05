@@ -21,8 +21,7 @@ const PUBLISHABLE_KEY =
 
 // Image Pâques (réutilisable plus tard) :
 // const IMG = "https://ik.imagekit.io/kodt9cn6f/Cabrade_Pa%CC%82ques.png"
-const IMG =
-  "https://ik.imagekit.io/kodt9cn6f/POP%20UP%202.png"
+const IMG = "https://ik.imagekit.io/kodt9cn6f/pop%20up.webp"
 const STORAGE_KEY = "lc_newsletter_popup_dismissed"
 const DELAY_MS = 3000
 
