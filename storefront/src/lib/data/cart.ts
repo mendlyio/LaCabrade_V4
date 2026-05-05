@@ -31,7 +31,7 @@ export async function retrieveCart() {
   return await sdk.store.cart
     .retrieve(
       cartId,
-      { fields: "+items.adjustments" },
+      { fields: "+items.adjustments,+items.compare_at_unit_price" },
       { next: { tags: ["cart"] }, ...(await getAuthHeadersSafe()) }
     )
     .then(({ cart }) => cart)

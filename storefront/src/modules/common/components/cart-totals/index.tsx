@@ -71,14 +71,34 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
 
   const exempt = isIntraCommunityExempt(cartInput)
 
-  const displayedSubtotal = getItemsDisplayTotalEuros(cartInput)
+  // Sous-total brut : pour les articles outlet on utilise compare_at_unit_price
+  // (le prix original avant remise -60%), pour les autres on utilise unit_price.
+  let grossSubtotal = 0
+  let outletDiscountTTC = 0
+  if (items?.length) {
+    for (const item of items) {
+      const compareAt: number | null =
+        (item as any).compare_at_unit_price ??
+        ((item as any).metadata as any)?.outlet_original_price ??
+        null
+      const unitPrice = item.unit_price ?? 0
+      const qty = item.quantity ?? 1
+      if (compareAt != null && compareAt > unitPrice) {
+        grossSubtotal += compareAt * qty
+        outletDiscountTTC += (compareAt - unitPrice) * qty
+      } else {
+        grossSubtotal += unitPrice * qty
+      }
+    }
+  }
+  const displayedSubtotal = grossSubtotal > 0 ? grossSubtotal : getItemsDisplayTotalEuros(cartInput)
 
-  // Regular discounts only (from item adjustments, no gift cards)
-  let regularDiscountEuros = 0
+  // Réductions : adjustments PO (HT → TTC) + remise outlet (déjà TTC dans unit_price)
+  let regularDiscountEuros = outletDiscountTTC
   if (items && items.some(item => Array.isArray(item.adjustments))) {
     const adjTotal = getItemAdjustmentsEuros(cartInput)
-    regularDiscountEuros = adjTotal ?? 0
-  } else {
+    regularDiscountEuros += adjTotal ?? 0
+  } else if (outletDiscountTTC === 0) {
     const isFreeShip = isFreeShippingDiscount(shipping_total, discount_total)
     regularDiscountEuros = isFreeShip ? 0 : (discount_total ?? 0)
   }

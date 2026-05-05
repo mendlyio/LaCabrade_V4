@@ -42,8 +42,27 @@ const CartDropdown = ({
 
   // Montants Odoo en euros. Affichage TVAC (TTC) uniforme.
   const cartInput = cartState as any
-  const itemsDisplayTotal = getItemsDisplayTotalEuros(cartInput)
-  const discountTotal = getItemAdjustmentsEuros(cartInput) ?? 0
+
+  // Sous-total brut : compare_at_unit_price pour les articles outlet
+  let grossSubtotal = 0
+  let outletDiscountTTC = 0
+  for (const item of cartState?.items ?? []) {
+    const compareAt: number | null =
+      (item as any).compare_at_unit_price ??
+      ((item as any).metadata as any)?.outlet_original_price ??
+      null
+    const unitPrice = item.unit_price ?? 0
+    const qty = item.quantity ?? 1
+    if (compareAt != null && compareAt > unitPrice) {
+      grossSubtotal += compareAt * qty
+      outletDiscountTTC += (compareAt - unitPrice) * qty
+    } else {
+      grossSubtotal += unitPrice * qty
+    }
+  }
+  const itemsDisplayTotal = grossSubtotal > 0 ? grossSubtotal : getItemsDisplayTotalEuros(cartInput)
+  const adjDiscountTotal = getItemAdjustmentsEuros(cartInput) ?? 0
+  const discountTotal = outletDiscountTTC + adjDiscountTotal
   const netTotal = Math.max(0, itemsDisplayTotal - discountTotal)
   const taxDisplayTotal = getDisplayTaxEuros(cartInput)
   const exempt = isIntraCommunityExempt(cartInput)
