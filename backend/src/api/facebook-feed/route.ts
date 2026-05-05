@@ -28,6 +28,54 @@ function stripHtml(str: string): string {
     .trim()
 }
 
+// ── Calcul prix promotionnel ──────────────────────────────────────────────────
+
+const PO_START = new Date("2026-04-30T22:00:00.000Z")
+const PO_END   = new Date("2026-05-09T21:59:59.000Z")
+// Format Meta sale_price_effective_date : "YYYY-MM-DDThh:mm+TZ/YYYY-MM-DDThh:mm+TZ"
+const PO_SALE_DATE_META = "2026-04-30T22:00+0000/2026-05-09T21:59+0000"
+
+const OUTLET_HANDLE_PREFIX = "outlet"
+const CAVALIER_HANDLES = new Set(["cavalier"])
+const LC_HANDLES = new Set(["lc-equestrian", "lc_equestrian", "la-cabrade"])
+const PO_EXCLUDED_HANDLES = new Set([
+  "tondeuses-et-peignes",
+  "complements-alimentaires", "compléments-alimentaires",
+  "systeme-renal", "systeme-circulatoire", "systeme-lymphatique",
+  "immunite", "systeme-locomoteur", "systeme-hepatique", "système-hépatique",
+  "systeme-digestif", "système-digestif",
+  "vitamines-et-mineraux", "vitamines-et-minéraux",
+  "muscles-et-recuperation", "muscles,-récupérations-et-performance",
+  "metabolisme", "métabolisme",
+  "sabots", "sabots-et-crins", "sabots,-robe-et-crins",
+  "systeme-respiratoire", "système-respiratoire",
+  "nervosite-et-comportement", "nervosité-et-comportement",
+  "criniere", "soins-robe-et-criniere",
+  "selles", "selles-sur-mesure",
+])
+
+function computeSalePrice(
+  basePrice: number,
+  categoryHandles: string[]
+): { salePrice: number | null; saleDate: string | null } {
+  const handles = categoryHandles.map((h) => h.toLowerCase())
+
+  // Outlet (-60%) — toujours actif
+  if (handles.some((h) => h.startsWith(OUTLET_HANDLE_PREFIX))) {
+    return { salePrice: Math.round(basePrice * 0.40 * 100) / 100, saleDate: null }
+  }
+
+  // PO — uniquement pendant la période 1–9 mai 2026
+  const now = new Date()
+  if (now < PO_START || now > PO_END) return { salePrice: null, saleDate: null }
+  if (handles.some((h) => PO_EXCLUDED_HANDLES.has(h))) return { salePrice: null, saleDate: null }
+
+  if (handles.some((h) => CAVALIER_HANDLES.has(h)) || handles.some((h) => LC_HANDLES.has(h))) {
+    return { salePrice: Math.round(basePrice * 0.80 * 100) / 100, saleDate: PO_SALE_DATE_META }
+  }
+  return { salePrice: Math.round(basePrice * 0.90 * 100) / 100, saleDate: PO_SALE_DATE_META }
+}
+
 function resolvePublicUrl(raw: string): string {
   if (!raw) return ''
   const value = raw.trim()
@@ -153,6 +201,7 @@ const CSV_HEADERS = [
   'identifier_exists',
   'product_type',
   'sale_price',
+  'sale_price_effective_date',
   'custom_label_0',
   'custom_label_1',
   'shipping',
@@ -370,9 +419,18 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         const identifierExists = hasValidGtin ? 'yes' : 'no'
 
         // Livraison encodée : country:region:service:price (Facebook format)
-        const shippingBE = `BE:::${amount >= 75 ? '0.00 EUR' : '5.95 EUR'}`
-        const shippingFR = `FR:::${amount >= 75 ? '0.00 EUR' : '8.95 EUR'}`
+        const { salePrice, saleDate } = computeSalePrice(
+          amount,
+          (product.categories ?? []).map((c: any) => c.handle ?? '')
+        )
+        const effectivePrice = salePrice ?? amount
+        const shippingBE = `BE:::${effectivePrice >= 75 ? '0.00 EUR' : '5.95 EUR'}`
+        const shippingFR = `FR:::${effectivePrice >= 75 ? '0.00 EUR' : '8.95 EUR'}`
         const shippingField = `${shippingBE},${shippingFR}`
+
+        // sale_price + sale_price_effective_date (optionnel)
+        const salePriceField = salePrice != null ? `${salePrice.toFixed(2)} EUR` : ''
+        const saleDateField  = saleDate ?? ''
 
         // custom_label_0 : fourchette de prix (utile pour les audiences)
         const priceLabel =
@@ -407,7 +465,8 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
           mpn,
           identifierExists,
           productType,
-          '',   // sale_price (vide = pas de promo)
+          salePriceField,
+          saleDateField,
           priceLabel,
           collectionLabel,
           shippingField,
