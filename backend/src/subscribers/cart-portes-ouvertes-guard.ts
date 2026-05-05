@@ -132,6 +132,7 @@ export default async function cartPortesOuvertesGuardHandler({
 
     const adjIdsToRemove: string[] = []
     const adjsToCreate: Array<{ item_id: string; amount: number; code: string; description: string }> = []
+    const adjsToUpdate: Array<{ id: string; amount?: number; code?: string; description?: string }> = []
 
     // 3. Hors période → tout supprimer
     if (!isPortesOuvertesPeriod()) {
@@ -221,30 +222,49 @@ export default async function cartPortesOuvertesGuardHandler({
         const expectedAmountHT = compute20PctAmountHT(unitPrice, qty)
         const epsilon = 0.001
 
-        // Toujours retirer PO_GLOBAL_10 et le tier "wrong" (cavalier sur LC ou vice-versa)
-        for (const adj of globalAdjs) adjIdsToRemove.push(adj.id)
+        // Supprimer les adjustments custom orphelins (sans promotion_id) peu importe leur code
         const wrongTierAdjs = isCavalier ? lcAdjs : cavalierAdjs
         for (const adj of wrongTierAdjs) adjIdsToRemove.push(adj.id)
 
-        // Adjustments du bon code : on garde 1 seul, avec le bon montant
+        // Stratégie : on MET À JOUR le PO_GLOBAL_10 existant (qui a un promotion_id)
+        // pour qu'il reflète le -20%. Ainsi il reste visible dans le discount_total.
+        // Les custom PO_LC_20/PO_CAVALIER_20 créés précédemment (sans promotion_id) sont nettoyés.
         const correctTierAdjs = isCavalier ? cavalierAdjs : lcAdjs
-        let kept = false
-        for (const adj of correctTierAdjs) {
-          const currentAmount = Number(adj.amount ?? 0)
-          const amountIsCorrect = Math.abs(currentAmount - expectedAmountHT) < epsilon
-          if (!kept && amountIsCorrect) {
-            kept = true // OK on garde ce one
-          } else {
-            adjIdsToRemove.push(adj.id) // doublon ou mauvais montant
+        for (const adj of correctTierAdjs) adjIdsToRemove.push(adj.id) // cleanup anciens customs
+
+        if (globalAdjs.length > 0) {
+          // Mettre à jour le premier PO_GLOBAL_10 (garder son promotion_id = visible API)
+          const adjToUpdate = globalAdjs[0]
+          const currentAmount = Number(adjToUpdate.amount ?? 0)
+          if (Math.abs(currentAmount - expectedAmountHT) > epsilon) {
+            adjsToUpdate.push({
+              id: adjToUpdate.id,
+              amount: expectedAmountHT,
+              code: targetCode,
+              description: targetDescription,
+            })
+          } else if (adjToUpdate.code !== targetCode) {
+            // Montant déjà correct, juste renommer le code
+            adjsToUpdate.push({ id: adjToUpdate.id, code: targetCode, description: targetDescription })
           }
-        }
-        if (!kept) {
-          adjsToCreate.push({
-            item_id: item.id,
-            amount: expectedAmountHT,
-            code: targetCode,
-            description: targetDescription,
-          })
+          // Supprimer les doublons PO_GLOBAL_10 s'il y en a plusieurs
+          for (let i = 1; i < globalAdjs.length; i++) {
+            adjIdsToRemove.push(globalAdjs[i].id)
+          }
+        } else {
+          // Pas de PO_GLOBAL_10 → créer un adjustment (sera sans promotion_id,
+          // mais au moins le montant est bon pour le paiement Stripe)
+          const existing = correctTierAdjs.find(
+            (a) => Math.abs(Number(a.amount ?? 0) - expectedAmountHT) < epsilon
+          )
+          if (!existing) {
+            adjsToCreate.push({
+              item_id: item.id,
+              amount: expectedAmountHT,
+              code: targetCode,
+              description: targetDescription,
+            })
+          }
         }
         continue
       }
@@ -282,14 +302,19 @@ export default async function cartPortesOuvertesGuardHandler({
       await (cartModuleService as any).deleteLineItemAdjustments(adjIdsToRemove)
     }
 
-    // 9. Créer les nouveaux adjustments -20%
+    // 9. Mettre à jour les adjustments (upgrade -10% → -20% avec promotion_id conservé)
+    if (adjsToUpdate.length > 0) {
+      await (cartModuleService as any).updateLineItemAdjustments(adjsToUpdate)
+    }
+
+    // 10. Créer les nouveaux adjustments (fallback si pas de PO_GLOBAL_10 existant)
     if (adjsToCreate.length > 0) {
       await (cartModuleService as any).addLineItemAdjustments(adjsToCreate)
     }
 
-    if (adjIdsToRemove.length > 0 || adjsToCreate.length > 0) {
+    if (adjIdsToRemove.length > 0 || adjsToCreate.length > 0 || adjsToUpdate.length > 0) {
       console.log(
-        `[PortesOuvertesGuard] Panier ${cartId} — retirés: ${adjIdsToRemove.length}, créés: ${adjsToCreate.length}`
+        `[PortesOuvertesGuard] Panier ${cartId} — retirés: ${adjIdsToRemove.length}, mis à jour: ${adjsToUpdate.length}, créés: ${adjsToCreate.length}`
       )
     }
   } catch (error) {

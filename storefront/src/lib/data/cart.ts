@@ -29,7 +29,11 @@ export async function retrieveCart() {
   }
 
   return await sdk.store.cart
-    .retrieve(cartId, {}, { next: { tags: ["cart"] }, ...(await getAuthHeadersSafe()) })
+    .retrieve(
+      cartId,
+      { fields: "+items.adjustments" },
+      { next: { tags: ["cart"] }, ...(await getAuthHeadersSafe()) }
+    )
     .then(({ cart }) => cart)
     .catch(() => {
       return null
