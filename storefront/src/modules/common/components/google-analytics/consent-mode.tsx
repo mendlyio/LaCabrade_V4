@@ -71,7 +71,7 @@ export const GoogleConsentMode = () => {
         </>
       )}
 
-      {/* 3. Meta Pixel */}
+      {/* 3. Meta Pixel — consent restauré depuis localStorage pour les visiteurs récurrents */}
       {hasMeta && (
         <Script id="meta-pixel" strategy="afterInteractive">
           {`
@@ -83,7 +83,9 @@ export const GoogleConsentMode = () => {
             t.src=v;s=b.getElementsByTagName(e)[0];
             s.parentNode.insertBefore(t,s)}(window, document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('consent', 'revoke');
+            var _fbqConsent = null;
+            try { _fbqConsent = localStorage.getItem('cookie_consent'); } catch(e) {}
+            fbq('consent', _fbqConsent === 'true' ? 'grant' : 'revoke');
             fbq('init', '${META_PIXEL_ID}');
             fbq('track', 'PageView');
           `}
