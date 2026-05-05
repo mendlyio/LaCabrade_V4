@@ -202,7 +202,8 @@ export default function ProductActionsModern({
       const currency = (selectedVariant as any)?.calculated_price?.currency_code ?? "EUR"
       if (amount != null) {
         const item = {
-          item_id: selectedVariant.id,
+          // SKU Odoo en priorité pour correspondre aux IDs catalogue Meta/Google
+          item_id: (selectedVariant as any).sku || selectedVariant.id,
           item_name: product.title ?? "Produit",
           price: amount,
           quantity,

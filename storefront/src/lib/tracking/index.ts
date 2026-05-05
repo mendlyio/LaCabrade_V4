@@ -351,6 +351,7 @@ export function lineItemToTrackingItem(
   item: {
     id?: string
     variant_id?: string
+    variant_sku?: string
     product_id?: string
     title?: string
     variant_title?: string
@@ -367,8 +368,12 @@ export function lineItemToTrackingItem(
   const price = unitPrice
   const name = productTitle || item.title || item.variant_title || "Produit"
 
+  // Utilise le SKU Odoo en priorité pour correspondre aux IDs du catalogue Meta/Google.
+  // Fallback sur variant_id (UUID Medusa) si pas de SKU.
+  const itemId = item.variant_sku || item.variant_id || item.product_id || item.id || ""
+
   return {
-    item_id: item.variant_id || item.product_id || item.id || "",
+    item_id: itemId,
     item_name: name,
     price,
     quantity: qty,

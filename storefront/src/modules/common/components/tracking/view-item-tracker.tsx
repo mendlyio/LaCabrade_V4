@@ -30,7 +30,8 @@ export default function ViewItemTracker({
     const category = (product as any).categories?.[0]?.name
 
     const item = {
-      item_id: v?.id ?? product.id,
+      // Utilise le SKU Odoo pour correspondre aux IDs du catalogue Meta/Google
+      item_id: (v as any)?.sku ?? v?.id ?? product.id,
       item_name: product.title ?? "Produit",
       price,
       quantity: 1,
