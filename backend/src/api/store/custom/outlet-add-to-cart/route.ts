@@ -131,9 +131,8 @@ export async function POST(
     // 5. Calculer le prix réduit (% dynamique selon la période)
     const OUTLET_DISCOUNT_PERCENT = getOutletDiscountPercent()
     const originalPrice = Number(lineItem.unit_price)
-    const discountedPrice = Math.round(
-      originalPrice * (1 - OUTLET_DISCOUNT_PERCENT / 100)
-    )
+    const discountedPrice =
+      Math.round(originalPrice * (1 - OUTLET_DISCOUNT_PERCENT / 100) * 100) / 100
 
     // 6. Mettre à jour le line item avec le prix réduit + prix barré
     await cartModuleService.updateLineItems(lineItem.id, {
