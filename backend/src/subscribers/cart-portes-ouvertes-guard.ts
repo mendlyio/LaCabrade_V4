@@ -191,7 +191,10 @@ export default async function cartPortesOuvertesGuardHandler({
       const itemAdjs = poAdjsByItem.get(item.id)
       if (!itemAdjs?.length) continue
 
-      const isOutlet = (item.metadata as any)?.outlet_discount === true
+      const isOutlet =
+        (item.metadata as any)?.outlet_discount === true ||
+        ((item as any).compare_at_unit_price != null &&
+          Number((item as any).compare_at_unit_price) > Number(item.unit_price ?? 0))
       const handles = item.product_id
         ? (productCategoryHandles.get(item.product_id) ?? [])
         : []

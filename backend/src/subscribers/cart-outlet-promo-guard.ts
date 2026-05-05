@@ -32,7 +32,11 @@ export default async function cartOutletPromoGuardHandler({
     })
 
     const outletItemIds = (cart.items || [])
-      .filter((item: any) => item.metadata?.outlet_discount === true)
+      .filter((item: any) =>
+        item.metadata?.outlet_discount === true ||
+        (item.compare_at_unit_price != null &&
+          Number(item.compare_at_unit_price) > Number(item.unit_price ?? 0))
+      )
       .map((item: any) => item.id)
 
     if (outletItemIds.length === 0) return

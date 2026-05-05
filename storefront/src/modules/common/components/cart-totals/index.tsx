@@ -94,10 +94,23 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
   const displayedSubtotal = grossSubtotal > 0 ? grossSubtotal : getItemsDisplayTotalEuros(cartInput)
 
   // Réductions : adjustments PO (HT → TTC) + remise outlet (déjà TTC dans unit_price)
+  // Les adjustments des articles outlet sont exclus : leur remise est dans compare_at_unit_price.
   let regularDiscountEuros = outletDiscountTTC
   if (items && items.some(item => Array.isArray(item.adjustments))) {
-    const adjTotal = getItemAdjustmentsEuros(cartInput)
-    regularDiscountEuros += adjTotal ?? 0
+    // Sommer les adjustments uniquement des articles NON outlet
+    let nonOutletAdjHt = 0
+    for (const item of items) {
+      const compareAt = (item as any).compare_at_unit_price ?? null
+      const unitPrice = item.unit_price ?? 0
+      const isOutletItem = compareAt != null && Number(compareAt) > Number(unitPrice)
+      if (isOutletItem) continue // ignorer les adjustments outlet (remise déjà dans grossSubtotal)
+      for (const adj of (item.adjustments ?? [])) {
+        nonOutletAdjHt += Math.abs(adj.amount ?? 0)
+      }
+    }
+    // Convertir HT → TTC (×1.21, les adjustments PO sont stockés en HT)
+    const adjTotalTTC = Math.round(nonOutletAdjHt * 1.21 * 100) / 100
+    regularDiscountEuros += adjTotalTTC
   } else if (outletDiscountTTC === 0) {
     const isFreeShip = isFreeShippingDiscount(shipping_total, discount_total)
     regularDiscountEuros = isFreeShip ? 0 : (discount_total ?? 0)

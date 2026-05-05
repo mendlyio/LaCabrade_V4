@@ -61,7 +61,16 @@ const CartDropdown = ({
     }
   }
   const itemsDisplayTotal = grossSubtotal > 0 ? grossSubtotal : getItemsDisplayTotalEuros(cartInput)
-  const adjDiscountTotal = getItemAdjustmentsEuros(cartInput) ?? 0
+  // Ajustements uniquement des articles NON outlet (la remise outlet est dans grossSubtotal)
+  let nonOutletAdjHt = 0
+  for (const item of cartState?.items ?? []) {
+    const cmpAt = (item as any).compare_at_unit_price ?? null
+    if (cmpAt != null && Number(cmpAt) > Number(item.unit_price ?? 0)) continue
+    for (const adj of (item as any).adjustments ?? []) {
+      nonOutletAdjHt += Math.abs(adj.amount ?? 0)
+    }
+  }
+  const adjDiscountTotal = Math.round(nonOutletAdjHt * 1.21 * 100) / 100
   const discountTotal = outletDiscountTTC + adjDiscountTotal
   const netTotal = Math.max(0, itemsDisplayTotal - discountTotal)
   const taxDisplayTotal = getDisplayTaxEuros(cartInput)
