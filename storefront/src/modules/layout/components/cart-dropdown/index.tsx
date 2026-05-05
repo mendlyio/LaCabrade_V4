@@ -8,6 +8,7 @@ import { Fragment, useEffect, useRef, useState } from "react"
 import {
   getDisplayTaxEuros,
   getItemsDisplayTotalEuros,
+  getItemAdjustmentsEuros,
   isIntraCommunityExempt,
 } from "@lib/util/cart-amounts"
 import { formatAmount } from "@lib/util/money"
@@ -42,6 +43,8 @@ const CartDropdown = ({
   // Montants Odoo en euros. Affichage TVAC (TTC) uniforme.
   const cartInput = cartState as any
   const itemsDisplayTotal = getItemsDisplayTotalEuros(cartInput)
+  const discountTotal = getItemAdjustmentsEuros(cartInput) ?? 0
+  const netTotal = Math.max(0, itemsDisplayTotal - discountTotal)
   const taxDisplayTotal = getDisplayTaxEuros(cartInput)
   const exempt = isIntraCommunityExempt(cartInput)
   const itemRef = useRef<number>(totalItems || 0)
@@ -209,14 +212,34 @@ const CartDropdown = ({
                         {exempt ? t("cart.excl_vat" as any) : t("cart.incl_vat" as any)}
                       </span>
                     </span>
-                    <span
-                      className="text-xl font-bold text-gray-900"
-                      data-testid="cart-subtotal"
-                      data-value={itemsDisplayTotal}
-                    >
-                      {formatAmount(itemsDisplayTotal, cartState.currency_code ?? "eur")}
-                    </span>
+                    <div className="text-right">
+                      {discountTotal > 0 && (
+                        <div className="text-xs text-gray-400 line-through leading-none mb-0.5">
+                          {formatAmount(itemsDisplayTotal, cartState.currency_code ?? "eur")}
+                        </div>
+                      )}
+                      <span
+                        className="text-xl font-bold text-gray-900"
+                        data-testid="cart-subtotal"
+                        data-value={netTotal}
+                      >
+                        {formatAmount(netTotal, cartState.currency_code ?? "eur")}
+                      </span>
+                    </div>
                   </div>
+                  {discountTotal > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-green-600 font-medium flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        Réduction PO
+                      </span>
+                      <span className="font-medium text-green-600">
+                        - {formatAmount(discountTotal, cartState.currency_code ?? "eur")}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">{t("cart.vat" as any)}</span>
                     <span className={`font-medium ${exempt ? "text-emerald-600" : "text-gray-900"}`} data-testid="cart-taxes" data-value={taxDisplayTotal}>
