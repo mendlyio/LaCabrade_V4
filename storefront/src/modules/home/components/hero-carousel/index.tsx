@@ -4,10 +4,29 @@ import { useState, useEffect } from "react"
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
+// Période Portes Ouvertes 2026 — même dates que active-promo.ts
+const PO_START = new Date("2026-04-30T22:00:00.000Z")
+const PO_END   = new Date("2026-05-09T21:59:59.000Z")
+
 const HeroCarousel = () => {
   const [currentSlide, setCurrentSlide] = useState(0)
 
-  const slides = [
+  const now = new Date()
+  const isPO = now >= PO_START && now <= PO_END
+
+  const allSlides = [
+    // Slide PO — affiché uniquement pendant les Portes Ouvertes 1–9 mai
+    ...(isPO ? [{
+      id: 0,
+      image: "https://ik.imagekit.io/kodt9cn6f/banner%20web.png",
+      alt: "Portes Ouvertes La Cabrade — 1 au 9 mai 2026 — -10% à -60%",
+      buttonText: "Profiter des offres",
+      buttonHref: "/store",
+      buttonStyle: "bg-amber-600 text-white hover:bg-amber-700",
+      unoptimized: true,
+      objectFit: "contain" as const,
+      overlay: false,
+    }] : []),
     {
       id: 1,
       image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/header-3.webp",
@@ -15,6 +34,9 @@ const HeroCarousel = () => {
       buttonText: "Voir tous les articles",
       buttonHref: "/store",
       buttonStyle: "bg-amber-600 text-white hover:bg-amber-700",
+      unoptimized: false,
+      objectFit: "cover" as const,
+      overlay: true,
     },
     {
       id: 2,
@@ -23,6 +45,9 @@ const HeroCarousel = () => {
       buttonText: "LC Equestrian",
       buttonHref: "/lc-equestrian",
       buttonStyle: "bg-white text-amber-700 hover:bg-amber-50 border-2 border-white",
+      unoptimized: false,
+      objectFit: "cover" as const,
+      overlay: true,
     },
     {
       id: 3,
@@ -31,8 +56,13 @@ const HeroCarousel = () => {
       buttonText: "Voir les promotions",
       buttonHref: "/categories/outlet",
       buttonStyle: "bg-[#c4707f] text-white hover:bg-[#b5616f]",
+      unoptimized: false,
+      objectFit: "cover" as const,
+      overlay: true,
     },
   ]
+
+  const slides = allSlides
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -61,12 +91,13 @@ const HeroCarousel = () => {
               fill
               quality={70}
               sizes="100vw"
-              className="object-cover object-center"
+              unoptimized={slide.unoptimized}
+              className={`${slide.objectFit === "contain" ? "object-contain" : "object-cover object-center"}`}
               priority={index === 0}
               fetchPriority={index === 0 ? "high" : "low"}
               loading={index === 0 ? "eager" : "lazy"}
             />
-            <div className="absolute inset-0 bg-black/40" />
+            {slide.overlay && <div className="absolute inset-0 bg-black/40" />}
           </div>
         ))}
       </div>

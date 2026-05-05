@@ -4,7 +4,6 @@ import Image from "next/image"
 import ScrollCarousel from "@modules/common/components/scroll-carousel"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import HeroCarousel from "@modules/home/components/hero-carousel"
-import PromoImageBanner from "@modules/common/components/promo-image-banner"
 import { useTranslate } from "@lib/context/language-context"
 import { HttpTypes } from "@medusajs/types"
 import { ReactNode } from "react"
@@ -36,16 +35,6 @@ export default function HomeContent({
 
       {/* Hero Carrousel */}
       <HeroCarousel />
-
-      {/* Banner Portes Ouvertes 2026 — désactiver en passant active={false} après le 9 mai */}
-      <PromoImageBanner
-        active={true}
-        startDate={new Date("2026-04-30T22:00:00.000Z")}
-        endDate={new Date("2026-05-09T21:59:59.000Z")}
-        src="https://ik.imagekit.io/kodt9cn6f/banner%20web.png"
-        alt="Portes Ouvertes La Cabrade — 1 au 9 mai 2026 — -10% à -60%"
-        href="/store"
-      />
 
       {/* Section LC Equestrian */}
       <section className="py-16 bg-white">
