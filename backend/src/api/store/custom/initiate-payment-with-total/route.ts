@@ -13,7 +13,7 @@ import { getCartPaymentAmountCents } from "../../../../utils/cart-amounts"
  *
  * Body: {
  *   cart_id: string                        (requis)
- *   payment_collection_id: string          (requis)
+ *   payment_collection_id?: string         (optionnel — résolu/créé automatiquement si absent)
  *   provider_id: string                    (requis)
  *   amount?: number                        (optionnel — indicatif frontend, cents)
  *   data?: Record<string, unknown>         (options Stripe : payment_method_types…)
@@ -52,9 +52,9 @@ export async function POST(
       context,
     } = body
 
-    if (!cart_id || !payment_collection_id || !provider_id) {
+    if (!cart_id || !provider_id) {
       res.status(400).json({
-        message: "cart_id, payment_collection_id et provider_id sont requis",
+        message: "cart_id et provider_id sont requis",
       })
       return
     }
@@ -73,6 +73,60 @@ export async function POST(
         "shipping_address",
       ],
     })
+
+    // 1b. Résoudre payment_collection_id : utiliser celui fourni, sinon
+    //     le récupérer depuis la relation cart, ou le créer via le workflow.
+    let resolvedPaymentCollectionId = payment_collection_id
+    if (!resolvedPaymentCollectionId) {
+      // Récupérer le panier avec sa relation payment_collection
+      try {
+        const cartWithPC = await cartModuleService.retrieveCart(cart_id, {
+          relations: ["payment_collection"],
+        })
+        resolvedPaymentCollectionId = (cartWithPC as any).payment_collection?.id
+      } catch {
+        // La relation peut ne pas être chargée par le cart module selon la version
+      }
+
+      // Si toujours pas trouvé, créer via le workflow standard Medusa
+      if (!resolvedPaymentCollectionId) {
+        try {
+          const result = await workflowEngine.run(
+            "create-payment-collection-for-cart",
+            {
+              input: { cart_id },
+              transactionId: `create-pc-${cart_id}-${Date.now()}`,
+            }
+          )
+          resolvedPaymentCollectionId =
+            result?.result?.id ||
+            result?.result?.payment_collection?.id ||
+            (result as any)?.id
+
+          // Re-chercher après le workflow si l'ID n'est pas dans le résultat direct
+          if (!resolvedPaymentCollectionId) {
+            const cartAfterPC = await cartModuleService.retrieveCart(cart_id, {
+              relations: ["payment_collection"],
+            })
+            resolvedPaymentCollectionId = (cartAfterPC as any).payment_collection?.id
+          }
+        } catch (pcError: any) {
+          console.error(
+            "[initiate-payment-with-total] Impossible de créer la payment collection:",
+            pcError?.message
+          )
+        }
+      }
+    }
+
+    if (!resolvedPaymentCollectionId) {
+      res.status(400).json({
+        message:
+          "Impossible de résoudre ou créer la payment collection pour ce panier. " +
+          "Veuillez rafraîchir la page et réessayer.",
+      })
+      return
+    }
 
     // 2. Calculer le montant autoritatif avec la logique partagée storefront/backend.
     const authoritativeCents = getCartPaymentAmountCents(cart as any)
@@ -98,36 +152,47 @@ export async function POST(
       return
     }
 
+    // Stripe impose un minimum de 50 centimes pour EUR.
+    // On vérifie ici pour donner un message clair au lieu d'un 500 Stripe.
+    if (provider_id === "pp_stripe_stripe" && authoritativeCents < 50) {
+      res.status(400).json({
+        message:
+          `Le montant (${(authoritativeCents / 100).toFixed(2)} €) est inférieur au minimum Stripe de 0,50 €. ` +
+          "Ajoutez un article ou retirez le bon cadeau qui réduit le montant en dessous du seuil.",
+      })
+      return
+    }
+
     // 4. Mettre à jour la payment collection avec le montant autoritatif.
     //    Le provider Stripe multiplie par 100 pour obtenir les centimes ;
     //    on stocke donc en euros côté payment collection.
     const amountEuros = authoritativeCents / 100
     await paymentModuleService.updatePaymentCollections(
-      { id: payment_collection_id },
+      { id: resolvedPaymentCollectionId },
       { amount: amountEuros }
     )
 
     // 5. Créer/mettre à jour les sessions de paiement.
     await workflowEngine.run("create-payment-sessions", {
       input: {
-        payment_collection_id,
+        payment_collection_id: resolvedPaymentCollectionId,
         provider_id,
         data,
         customer_id,
         context,
       },
-      transactionId: `init-payment-${payment_collection_id}-${Date.now()}`,
+      transactionId: `init-payment-${resolvedPaymentCollectionId}-${Date.now()}`,
     })
 
     // 6. Récupérer la payment collection avec les sessions pour la réponse.
     const [paymentCollection] = await paymentModuleService.listPaymentCollections(
-      { id: payment_collection_id },
+      { id: resolvedPaymentCollectionId },
       { relations: ["payment_sessions"] }
     )
 
     res.status(200).json({
       payment_collection:
-        paymentCollection || { id: payment_collection_id, amount: amountEuros },
+        paymentCollection || { id: resolvedPaymentCollectionId, amount: amountEuros },
       authoritative_amount_cents: authoritativeCents,
     })
   } catch (error: any) {
