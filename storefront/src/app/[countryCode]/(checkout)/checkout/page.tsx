@@ -5,7 +5,7 @@ import Wrapper from "@modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
 import CheckoutTracker from "@modules/common/components/tracking/checkout-tracker"
-import { enrichLineItems, placeOrder, retrieveCart } from "@lib/data/cart"
+import { enrichLineItems, placeOrder, retrieveCart, updateCart } from "@lib/data/cart"
 import { retrieveOrderByCartId } from "@lib/data/orders"
 import { HttpTypes } from "@medusajs/types"
 import { getCustomer } from "@lib/data/customer"
@@ -85,6 +85,33 @@ const fetchCart = async (
       cart.items = enrichedItems as HttpTypes.StoreCartLineItem[]
     } catch {
       // keep raw items
+    }
+  }
+
+  // Correction des paniers existants dont le prix outlet a été remis au prix
+  // plein par Medusa avant le déploiement du fix (subscriber cart-outlet-promo-guard).
+  // On déclenche un updateCart silencieux pour forcer le subscriber à restaurer
+  // les prix. Sans cette opération, un client revenant directement au paiement
+  // sans modifier son panier paierait le prix plein de l'article outlet.
+  const hasResetOutletPrice = cart?.items?.some((item: any) => {
+    const md = item.metadata as any
+    if (!md?.outlet_discount || !md?.outlet_original_price) return false
+    return Math.abs(Number(item.unit_price) - Number(md.outlet_original_price)) < 0.01
+  })
+  if (hasResetOutletPrice) {
+    try {
+      await updateCart({ metadata: { _outlet_price_check: Date.now() } })
+      cart = await retrieveCart()
+      if (cart?.items?.length) {
+        try {
+          const enrichedItems = await enrichLineItems(cart.items, cart.region_id!)
+          cart.items = enrichedItems as HttpTypes.StoreCartLineItem[]
+        } catch {
+          // keep raw items
+        }
+      }
+    } catch {
+      // Non-bloquant : le subscriber corrigera au prochain updateCart
     }
   }
 
