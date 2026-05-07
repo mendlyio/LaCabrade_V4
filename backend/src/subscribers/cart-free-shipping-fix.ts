@@ -6,12 +6,14 @@ const FREE_SHIPPING_THRESHOLD = 75 // 75 € minimum pour la livraison gratuite
 const FREE_SHIPPING_PROMO_CODE = "FREE_SHIPPING_75"
 
 /**
- * Calcule le sous-total du panier en euros.
- * Tous les unit_price (produits Odoo ET bons cadeaux) sont en euros.
+ * Calcule le sous-total du panier en euros TTC.
+ * Tous les unit_price (produits Odoo ET bons cadeaux) sont en euros TTC.
+ * On utilise toujours unit_price × quantity : item.subtotal peut être en HT
+ * dans certains contextes Medusa v2 (tax-inclusive), ce qui sous-estimerait
+ * le total et retirerait FREE_SHIPPING_75 à tort.
  */
 function getCartSubtotalEuros(items: Array<{
   unit_price?: number | null
-  subtotal?: number | null
   quantity?: number | null
 }> | null | undefined): number {
   if (!items?.length) return 0
@@ -19,10 +21,7 @@ function getCartSubtotalEuros(items: Array<{
   for (const item of items) {
     const unitPrice = Number(item.unit_price ?? 0)
     const qty = item.quantity ?? 1
-    const lineTotal = item.subtotal != null
-      ? Number(item.subtotal)
-      : unitPrice * qty
-    sum += lineTotal
+    sum += unitPrice * qty
   }
   return sum
 }

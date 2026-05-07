@@ -65,6 +65,7 @@ export type CartAmountsInput = {
   total?: number | null
   items?: Array<{
     unit_price?: number | null
+    compare_at_unit_price?: number | null
     subtotal?: number | null
     quantity?: number | null
     adjustments?: Array<{ amount?: number | null; code?: string | null }> | null
@@ -145,6 +146,17 @@ export function getItemsDisplayTotalEuros(cart: CartAmountsInput | null | undefi
  * d'un côté, bons cadeau de l'autre car TVA 0 %), puis on convertit une seule fois
  * en TTC avec un arrondi final. Évite la dérive d'arrondi par ligne.
  */
+/**
+ * Détecte un article outlet : remise déjà dans unit_price → ses adjustments
+ * ne doivent pas être déduits une seconde fois dans le calcul du total payé.
+ */
+function isOutletItem(item: NonNullable<CartAmountsInput["items"]>[number]): boolean {
+  if ((item.metadata as any)?.outlet_discount === true) return true
+  const compareAt = item.compare_at_unit_price ?? 0
+  const unitPrice = item.unit_price ?? 0
+  return compareAt > 0 && compareAt > unitPrice + 0.01
+}
+
 export function getItemAdjustmentsEuros(cart: CartAmountsInput | null | undefined): number | null {
   const items = cart?.items
   if (!items?.length) return null
@@ -152,6 +164,7 @@ export function getItemAdjustmentsEuros(cart: CartAmountsInput | null | undefine
   let regularHt = 0
   let giftCardHt = 0
   for (const item of items) {
+    if (isOutletItem(item)) continue // remise déjà dans unit_price, ne pas doubler
     const isGC = isGiftCardItem(item)
     for (const adj of item.adjustments || []) {
       const amtEuros = Math.abs(lineItemAmountToEuros(adj.amount))

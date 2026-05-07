@@ -23,6 +23,7 @@ export type CartForAmount = {
   shipping_address?: { country_code?: string | null } | null
   items?: Array<{
     unit_price?: number | string | null
+    compare_at_unit_price?: number | string | null
     quantity?: number | null
     metadata?: Record<string, unknown> | null
     product_title?: string | null
@@ -48,6 +49,20 @@ function isGiftCardItem(item: NonNullable<CartForAmount["items"]>[number]): bool
     String(item.product_title || item.title || "").toLowerCase().includes("bon cadeau") ||
     String(item.variant_sku || "").startsWith("GC-")
   )
+}
+
+/**
+ * Détecte un article outlet : prix barré supérieur au prix actuel,
+ * ou metadata.outlet_discount explicite.
+ * Ces articles ont déjà leur remise dans unit_price → leurs adjustments
+ * ne doivent PAS être déduits une seconde fois.
+ */
+function isOutletItem(item: NonNullable<CartForAmount["items"]>[number]): boolean {
+  const md = item.metadata as any
+  if (md?.outlet_discount === true) return true
+  const compareAt = num(item.compare_at_unit_price)
+  const unitPrice = num(item.unit_price)
+  return compareAt > 0 && compareAt > unitPrice + 0.01
 }
 
 function adjustmentHtToTtc(htAmount: number, isGiftCard: boolean): number {
@@ -81,6 +96,10 @@ function getItemsTotalEuros(cart: CartForAmount): number {
  * fiscal (items taxables vs bons cadeau), convertir en TTC, arrondir à la fin.
  * Identique à `getItemAdjustmentsEuros` côté storefront pour garantir le même
  * arrondi au centime près.
+ *
+ * Les articles outlet sont exclus : leur remise est déjà dans unit_price.
+ * Inclure leurs adjustments causerait une double déduction avec le prix
+ * réduit, créant un écart entre l'affichage client et le montant Stripe.
  */
 function getItemAdjustmentsEuros(cart: CartForAmount): number {
   const items = cart.items ?? []
@@ -88,6 +107,7 @@ function getItemAdjustmentsEuros(cart: CartForAmount): number {
   let regularHt = 0
   let giftCardHt = 0
   for (const item of items) {
+    if (isOutletItem(item)) continue // remise déjà dans unit_price
     const isGC = isGiftCardItem(item)
     for (const adj of item.adjustments ?? []) {
       const amt = Math.abs(num(adj.amount))
