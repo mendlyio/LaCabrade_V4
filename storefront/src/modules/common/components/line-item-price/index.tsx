@@ -19,10 +19,17 @@ const LineItemPrice = ({ item, style = "default" }: LineItemPriceProps) => {
     getPricesForVariant(item.variant, item.unit_price, compareAt) ?? {}
 
   const isGiftCard = isGiftCardItem(item as any)
-  const adjustmentsHtSum = (item.adjustments || []).reduce(
-    (acc, adjustment) => acc + lineItemAmountToEuros(adjustment.amount, isGiftCard),
-    0
-  )
+  // Les articles outlet ont déjà leur remise dans unit_price (= calculated_price_number).
+  // Inclure leurs adjustments causerait une double-déduction sur le prix affiché.
+  const isOutlet =
+    !!(item.metadata as any)?.outlet_discount ||
+    (original_price_number > calculated_price_number + 0.01)
+  const adjustmentsHtSum = isOutlet
+    ? 0
+    : (item.adjustments || []).reduce(
+        (acc, adjustment) => acc + lineItemAmountToEuros(adjustment.amount, isGiftCard),
+        0
+      )
   const adjustmentsSum = Math.round(adjustmentHtToTtc(adjustmentsHtSum, isGiftCard) * 100) / 100
 
   const originalPrice = original_price_number * item.quantity

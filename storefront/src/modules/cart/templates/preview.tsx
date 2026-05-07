@@ -46,14 +46,20 @@ const ItemsPreviewTemplate = ({ items }: ItemsTemplateProps) => {
         const compareAtRaw =
           (item as any).compare_at_unit_price ?? (item.metadata as any)?.outlet_original_price
         const comparePrice = lineItemAmountToEuros(compareAtRaw)
-        const hasDiscount = comparePrice && comparePrice > unitPrice
+        const hasDiscount = comparePrice && comparePrice > unitPrice + 0.01
         const lineTotal = unitPrice * item.quantity
 
+        // Articles outlet : remise déjà dans unit_price → ne pas déduire les adjustments
+        const isOutletItem =
+          !!(item.metadata as any)?.outlet_discount ||
+          (hasDiscount === true)
         // Adjustments Medusa v2 sont en HT ; convertir en TTC
-        const adjustmentsHtSum = (item.adjustments || []).reduce(
-          (acc, adj) => acc + lineItemAmountToEuros(adj.amount, isGiftCard),
-          0
-        )
+        const adjustmentsHtSum = isOutletItem
+          ? 0
+          : (item.adjustments || []).reduce(
+              (acc, adj) => acc + lineItemAmountToEuros(adj.amount, isGiftCard),
+              0
+            )
         const adjustmentsSum = Math.round(adjustmentHtToTtc(adjustmentsHtSum, isGiftCard) * 100) / 100
         const finalTotal = lineTotal - adjustmentsSum
 
