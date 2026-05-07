@@ -116,9 +116,15 @@ const ItemsPreviewTemplate = ({ items }: ItemsTemplateProps) => {
 
             {/* Prix */}
             <div className="flex flex-col items-end justify-center flex-shrink-0">
+              {/* Prix barré : outlet → compare_at × qty ; promo normale → unit_price × qty */}
               {hasDiscount && (
                 <span className="text-[10px] text-gray-400 line-through">
                   {convertToLocale({ amount: comparePrice * item.quantity, currency_code })}
+                </span>
+              )}
+              {!hasDiscount && adjustmentsSum > 0 && (
+                <span className="text-[10px] text-gray-400 line-through">
+                  {convertToLocale({ amount: lineTotal, currency_code })}
                 </span>
               )}
               <span
