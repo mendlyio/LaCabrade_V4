@@ -29,6 +29,18 @@ function isGiftCardItem(item: {
   )
 }
 
+/**
+ * Détecte un article outlet : remise déjà dans unit_price → ses adjustments
+ * ne doivent pas être déduits une seconde fois.
+ */
+function isOutletItem(item: {
+  unit_price?: number | null
+  metadata?: Record<string, unknown> | null
+}): boolean {
+  if ((item.metadata as any)?.outlet_discount === true) return true
+  return false
+}
+
 function lineItemAmountToEuros(value: number | null | undefined): number {
   const v = value ?? 0
   return AMOUNTS_IN_EUROS ? v : v / 100
@@ -84,6 +96,7 @@ function getItemAdjustmentsEuros(order: OrderForDisplayTotal | null | undefined)
   let regularHt = 0
   let giftCardHt = 0
   for (const item of items) {
+    if (isOutletItem(item)) continue // remise déjà dans unit_price, ne pas doubler
     const isGiftCard = isGiftCardItem(item)
     for (const adj of item.adjustments || []) {
       const amt = Math.abs(lineItemAmountToEuros(adj.amount))

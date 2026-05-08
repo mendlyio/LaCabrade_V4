@@ -55,8 +55,21 @@ function isGiftCardItem(item: any): boolean {
   )
 }
 
+function isOutletItem(item: any): boolean {
+  if (item.metadata?.outlet_discount === true) return true
+  const compareAt = Number(item.compare_at_unit_price ?? item.metadata?.outlet_original_price ?? 0)
+  const unitPrice = Number(item.unit_price ?? 0)
+  return compareAt > 0 && compareAt > unitPrice + 0.01
+}
+
 function getItemUnitPriceEuros(item: any): number {
   return Number(item.unit_price) || 0
+}
+
+function getItemOriginalPriceEuros(item: any): number | null {
+  const compareAt = Number(item.compare_at_unit_price ?? item.metadata?.outlet_original_price ?? 0)
+  const unitPrice = getItemUnitPriceEuros(item)
+  return compareAt > unitPrice + 0.01 ? compareAt : null
 }
 
 export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
@@ -95,15 +108,28 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
     return sum + Math.max(0, rawTtc - resolved)
   }, 0)
 
-  // Réductions sur les articles (depuis les adjustments Medusa — HT → TTC, arrondi unique)
+  // Réduction outlet : (compare_at - unit_price) × qty pour chaque article outlet.
+  // La remise est dans unit_price (pas dans les adjustments) → on la calcule séparément.
+  const outletDiscountTotal = items.reduce((sum, item) => {
+    if (!isOutletItem(item)) return sum
+    const originalPrice = getItemOriginalPriceEuros(item as any)
+    if (!originalPrice) return sum
+    const unitPrice = getItemUnitPriceEuros(item as any)
+    return sum + (originalPrice - unitPrice) * (item.quantity || 1)
+  }, 0)
+
+  // Réductions sur les articles via adjustments Medusa (HT → TTC) — exclut les articles outlet
   const itemDiscountHT = items.reduce((sum, item) => {
+    if (isOutletItem(item)) return sum // remise déjà comptée dans outletDiscountTotal
     const adjs: any[] = (item as any).adjustments || []
     return sum + adjs.reduce((s: number, a: any) => s + Math.abs(Number(a.amount || 0)), 0)
   }, 0)
   const itemDiscountTotal = Math.round(itemDiscountHT * (1 + VAT_RATE) * 100) / 100
   // Réduction livraison (différence entre brut et effectif)
   const shippingDiscountTotal = Math.round(Math.max(0, shippingCostRaw - shippingCost) * 100) / 100
-  const totalDiscount = Math.round((itemDiscountTotal + shippingDiscountTotal) * 100) / 100
+  const totalDiscount = Math.round(
+    (outletDiscountTotal + itemDiscountTotal + shippingDiscountTotal) * 100
+  ) / 100
 
   // Déduction bon cadeau depuis order.metadata.applied_gift_cards
   const appliedGiftCards: Array<{ code: string; balance: number }> =
@@ -197,8 +223,25 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
 
       <Section>
         {items.map((item) => {
-          const unitPrice = getItemUnitPriceEuros(item)
-          const lineTotal = unitPrice * (item.quantity || 1)
+          const unitPrice = getItemUnitPriceEuros(item as any)
+          const originalPrice = getItemOriginalPriceEuros(item as any)
+          const isOutlet = isOutletItem(item as any)
+
+          // Réduction par unité via adjustments (pour les articles non-outlet)
+          const adjHtSum = isOutlet
+            ? 0
+            : ((item as any).adjustments || []).reduce(
+                (s: number, a: any) => s + Math.abs(Number(a.amount || 0)),
+                0
+              )
+          const adjTtcPerUnit = adjHtSum > 0
+            ? Math.round((adjHtSum * (1 + VAT_RATE)) * 100) / 100 / (item.quantity || 1)
+            : 0
+          const effectiveUnitPrice = unitPrice - adjTtcPerUnit
+          const lineTotal = effectiveUnitPrice * (item.quantity || 1)
+          const hasDiscount = isOutlet ? !!originalPrice : adjTtcPerUnit > 0
+          const displayOriginalUnitPrice = isOutlet ? originalPrice : unitPrice
+
           const showVariant =
             item.variant_title &&
             item.variant_title !== item.product_title &&
@@ -234,11 +277,28 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
                   </Text>
                 )}
                 <Text style={{ margin: '4px 0 0', fontSize: '12px', color: '#9CA3AF' }}>
-                  {formatPrice(unitPrice)} × {item.quantity}
+                  {hasDiscount && displayOriginalUnitPrice ? (
+                    <>
+                      <span style={{ textDecoration: 'line-through', marginRight: '4px' }}>
+                        {formatPrice(displayOriginalUnitPrice)}
+                      </span>
+                      <span style={{ color: '#B45309', fontWeight: '600' }}>
+                        {formatPrice(effectiveUnitPrice)}
+                      </span>
+                    </>
+                  ) : (
+                    formatPrice(unitPrice)
+                  )}{' '}
+                  × {item.quantity}
                 </Text>
               </Column>
               <Column style={{ width: '80px', verticalAlign: 'top' as const, padding: '12px 0 12px 8px', textAlign: 'right' as const }}>
-                <Text style={{ margin: '0', fontWeight: '600' as const, fontSize: '14px', color: '#1F2937' }}>
+                {hasDiscount && (
+                  <Text style={{ margin: '0 0 2px', fontSize: '12px', color: '#9CA3AF', textDecoration: 'line-through' }}>
+                    {formatPrice((displayOriginalUnitPrice ?? unitPrice) * (item.quantity || 1))}
+                  </Text>
+                )}
+                <Text style={{ margin: '0', fontWeight: '600' as const, fontSize: '14px', color: hasDiscount ? '#B45309' : '#1F2937' }}>
                   {formatPrice(lineTotal)}
                 </Text>
               </Column>
