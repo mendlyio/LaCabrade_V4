@@ -64,7 +64,7 @@ export const PAQUES_PROMO: ActivePromoConfig = {
 //   9 mai 23:59 BEL = 9 mai 21:59 UTC
 // Pour désactiver après le 9 mai : mettre active: false
 export const PORTES_OUVERTES_PROMO: ActivePromoConfig = {
-  active: true,
+  active: false,
   code: "PO_GLOBAL_10",
   discountPercent: 10,
   label: "Portes Ouvertes",

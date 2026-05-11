@@ -4,12 +4,14 @@ import { useState, useEffect, useCallback } from "react"
 import LanguageSelector from "@modules/layout/components/language-selector"
 import { HttpTypes } from "@medusajs/types"
 import { useTranslate } from "@lib/context/language-context"
+import { isPromoActive } from "@lib/config/active-promo"
 
-const PROMO_KEYS = [
-  "topbar.free_shipping",
-  "topbar.newsletter_promo",
-  "topbar.launch_offer",
-] as const
+/** Messages du carrousel : le slide « Portes Ouvertes » n’apparaît que pendant la période promo. */
+function getTopbarRotationKeys(): readonly string[] {
+  const keys = ["topbar.free_shipping", "topbar.newsletter_promo"]
+  if (isPromoActive()) keys.push("topbar.launch_offer")
+  return keys
+}
 
 type TopBarProps = {
   regions: HttpTypes.StoreRegion[]
@@ -20,10 +22,19 @@ const TopBar = ({ regions }: TopBarProps) => {
   const [currentBanner, setCurrentBanner] = useState(0)
   const [isSliding, setIsSliding] = useState(false)
 
+  const promoKeys = getTopbarRotationKeys()
+
+  useEffect(() => {
+    setCurrentBanner((prev) => prev % promoKeys.length)
+  }, [promoKeys.length])
+
   const goToNext = useCallback(() => {
     setIsSliding(true)
     setTimeout(() => {
-      setCurrentBanner((prev) => (prev + 1) % PROMO_KEYS.length)
+      setCurrentBanner((prev) => {
+        const keys = getTopbarRotationKeys()
+        return (prev + 1) % keys.length
+      })
       setIsSliding(false)
     }, 400)
   }, [])
@@ -46,7 +57,7 @@ const TopBar = ({ regions }: TopBarProps) => {
                   : "opacity-100 translate-x-0"
               }`}
             >
-              {t(PROMO_KEYS[currentBanner] as any)}
+              {t(promoKeys[currentBanner] as any)}
             </p>
           </div>
 
