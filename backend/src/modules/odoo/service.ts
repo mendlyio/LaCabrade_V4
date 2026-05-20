@@ -297,21 +297,30 @@ export default class OdooModuleService {
     this.options = options
 
     this.client = new JSONRPCClient((jsonRPCRequest) => {
+      // Timeout strict pour éviter qu'une requête Odoo bloquante ne fasse
+      // traîner les jobs (et déclenche un SIGTERM Railway sur healthcheck timeout).
+      const timeoutMs = Number(process.env.ODOO_HTTP_TIMEOUT_MS || 30_000)
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), timeoutMs)
+
       return fetch(`${options.url}/jsonrpc`, {
         method: "POST",
         headers: {
           "content-type": "application/json",
         },
         body: JSON.stringify(jsonRPCRequest),
-      }).then((response) => {
-        if (response.status === 200) {
-          return response
-            .json()
-            .then((jsonRPCResponse) => this.client.receive(jsonRPCResponse))
-        } else if (jsonRPCRequest.id !== undefined) {
-          return Promise.reject(new Error(response.statusText))
-        }
+        signal: controller.signal,
       })
+        .then((response) => {
+          if (response.status === 200) {
+            return response
+              .json()
+              .then((jsonRPCResponse) => this.client.receive(jsonRPCResponse))
+          } else if (jsonRPCRequest.id !== undefined) {
+            return Promise.reject(new Error(response.statusText))
+          }
+        })
+        .finally(() => clearTimeout(timer))
     })
   }
 
@@ -535,6 +544,112 @@ export default class OdooModuleService {
       console.error(`Erreur getStockBySku pour ${sku}:`, error)
       throw error
     }
+  }
+
+  /**
+   * Version batchée de getStockBySku : récupère le stock pour N SKUs en
+   * UN SEUL appel RPC Odoo (au lieu de 1 appel par SKU).
+   *
+   * - Sépare automatiquement les SKUs natifs (default_code) des SKUs générés
+   *   au format "ODOO-{id}".
+   * - Inclut les produits archivés (active_test: false) pour ne pas oublier
+   *   les variantes archivées encore vendues côté Medusa.
+   * - Retourne une Map<sku, qty>. Les SKUs absents d'Odoo ne sont pas dans la Map.
+   */
+  async getStocksBySkus(skus: string[]): Promise<Map<string, number>> {
+    const result = new Map<string, number>()
+    if (!skus.length) return result
+
+    if (!this.uid) {
+      await this.login()
+    }
+
+    // 1) Séparer SKUs générés "ODOO-{id}" et SKUs natifs
+    const odooIds: number[] = []
+    const idToSku = new Map<number, string>()
+    const nativeSkus: string[] = []
+    for (const sku of skus) {
+      if (!sku) continue
+      if (sku.startsWith("ODOO-")) {
+        const id = parseInt(sku.replace("ODOO-", ""))
+        if (!isNaN(id)) {
+          odooIds.push(id)
+          idToSku.set(id, sku)
+        }
+      } else {
+        nativeSkus.push(sku)
+      }
+    }
+
+    // 2) Lookup des SKUs natifs via un unique search_read
+    if (nativeSkus.length) {
+      try {
+        const rows: Array<{ id: number; default_code: string; qty_available: number }> =
+          await this.client.request("call", {
+            service: "object",
+            method: "execute_kw",
+            args: [
+              this.options.dbName,
+              this.uid!,
+              this.options.apiKey,
+              "product.product",
+              "search_read",
+              [[["default_code", "in", nativeSkus]]],
+              {
+                fields: ["id", "default_code", "qty_available"],
+                context: { active_test: false }, // inclut les variantes archivées
+              },
+            ],
+          })
+
+        for (const row of rows || []) {
+          if (row.default_code) {
+            result.set(row.default_code, row.qty_available || 0)
+          }
+        }
+      } catch (error: any) {
+        console.error(
+          `[ODOO] getStocksBySkus: erreur lecture native SKUs (${nativeSkus.length}):`,
+          error?.message || error
+        )
+        throw error
+      }
+    }
+
+    // 3) Lookup des SKUs générés via leurs IDs (read direct)
+    if (odooIds.length) {
+      try {
+        const rows: Array<{ id: number; qty_available: number }> =
+          await this.client.request("call", {
+            service: "object",
+            method: "execute_kw",
+            args: [
+              this.options.dbName,
+              this.uid!,
+              this.options.apiKey,
+              "product.product",
+              "read",
+              [odooIds],
+              { fields: ["id", "qty_available"] },
+            ],
+          })
+
+        for (const row of rows || []) {
+          const sku = idToSku.get(row.id)
+          if (sku) {
+            result.set(sku, row.qty_available || 0)
+          }
+        }
+      } catch (error: any) {
+        console.error(
+          `[ODOO] getStocksBySkus: erreur lecture IDs Odoo (${odooIds.length}):`,
+          error?.message || error
+        )
+        throw error
+      }
+    }
+
+    return result
   }
 
   /**
