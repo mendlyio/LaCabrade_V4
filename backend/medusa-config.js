@@ -35,28 +35,44 @@ const {
 
 loadEnv(process.env.NODE_ENV, process.cwd());
 
-// Fonction pour nettoyer l'URL Redis sur Railway si elle contient un mot de passe inutile
-const getSanitizedRedisUrl = (url) => {
+// Préparation de l'URL Redis :
+//  - Si on est sur le réseau privé Railway (.railway.internal), on ajoute
+//    automatiquement ?family=0 pour autoriser le DNS dual-stack (IPv6 requis
+//    par le DNS privé Railway).
+//  - L'ancien "sanitizer" qui retirait l'auth a été désactivé : il ne sert
+//    plus depuis que Railway a généralisé l'auth Redis.
+const getRedisUrl = (url) => {
   if (!url) return undefined;
-  // Sur Railway, si on a l'erreur AUTH failed alors que l'URL a un mot de passe,
-  // c'est souvent que le Redis interne est en mode no-auth.
-  if (url.includes('railway') && url.includes('@')) {
-    try {
-      // On parse l'URL pour retirer l'authentification
-      // Exemple: redis://default:pass@host:port -> redis://host:port
-      const urlObj = new URL(url);
-      const sanitized = `${urlObj.protocol}//${urlObj.host}`;
-      console.log(`[Redis] Using sanitized URL (removed auth): ${sanitized}`);
-      return sanitized;
-    } catch (e) {
-      return url;
+  try {
+    const u = new URL(url);
+    if (u.hostname.endsWith(".railway.internal") && !u.searchParams.has("family")) {
+      u.searchParams.set("family", "0");
+      const finalUrl = u.toString();
+      console.log(`[Redis] Connecting via private network: ${u.protocol}//${u.host}${u.pathname}${u.search}`);
+      return finalUrl;
     }
+  } catch (e) {
+    // URL invalide, on laisse Medusa lever l'erreur
   }
   return url;
 };
 
-// Utiliser l'URL nettoyée pour éviter l'erreur AUTH failed
-const redisUrlToUse = getSanitizedRedisUrl(REDIS_URL);
+const redisUrlToUse = getRedisUrl(REDIS_URL);
+
+// SSL Postgres :
+//  - Le proxy public Railway (*.proxy.rlwy.net) ne fait passer que du TLS.
+//  - Le réseau privé Railway (postgres.railway.internal) NE fait PAS de TLS
+//    (la connexion est déjà interne, chiffrer brise la connexion).
+const databaseUrlNeedsSsl = (() => {
+  if (!DATABASE_URL) return false;
+  try {
+    const host = new URL(DATABASE_URL).hostname;
+    if (host.endsWith(".railway.internal")) return false; // privé = pas de SSL
+    return host.includes("rlwy.net") || host.includes("railway"); // proxy public
+  } catch {
+    return false;
+  }
+})();
 
 const medusaConfig = {
   projectConfig: {
@@ -64,8 +80,13 @@ const medusaConfig = {
     databaseLogging: false,
     databaseDriverOptions: {
       connection: {
-        // Activer SSL pour Railway (même en dev local)
-        ssl: DATABASE_URL.includes('railway') ? { rejectUnauthorized: false } : false,
+        // SSL uniquement nécessaire quand on passe par le proxy public Railway.
+        // Sur le réseau privé (.railway.internal), Postgres n'écoute pas en TLS.
+        ssl: databaseUrlNeedsSsl ? { rejectUnauthorized: false } : false,
+        // Keepalive TCP : évite que les NAT/proxy coupent silencieusement les
+        // connexions idle (cause des "Connection ended unexpectedly").
+        keepAlive: true,
+        keepAliveInitialDelayMillis: 10000,
       },
       pool: {
         min: 2,
