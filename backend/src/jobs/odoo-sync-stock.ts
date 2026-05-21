@@ -176,29 +176,25 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
         continue
       }
 
-      // Indexer par SKU (en gardant le plus récent en cas de doublon, sans
-      // supprimer ici — le nettoyage de doublons doit se faire via un script
-      // dédié, pas dans un cron de sync stock).
-      const itemBySku = new Map<string, any>()
+      // Indexer par SKU. ATTENTION : il peut exister plusieurs inventory_items
+      // pour un même SKU (doublons issus d'imports répétés). On garde TOUS les
+      // items afin de mettre à jour TOUS leurs niveaux de stock (sinon les
+      // doublons restent désynchronisés indéfiniment).
+      const itemsBySku = new Map<string, any[]>()
       for (const item of inventoryItems) {
         if (!item?.sku) continue
-        const existing = itemBySku.get(item.sku)
-        if (!existing) {
-          itemBySku.set(item.sku, item)
-        } else {
-          const existingAt = new Date(existing.created_at || 0).getTime()
-          const candidateAt = new Date(item.created_at || 0).getTime()
-          if (candidateAt > existingAt) itemBySku.set(item.sku, item)
-        }
+        const arr = itemsBySku.get(item.sku) || []
+        arr.push(item)
+        itemsBySku.set(item.sku, arr)
       }
 
-      // 2c) Récupérer les niveaux de stock pour tous les inventory items du batch en un appel
-      const itemIds = Array.from(itemBySku.values()).map((it) => it.id)
+      // 2c) Récupérer les niveaux de stock pour TOUS les inventory items du batch
+      const allItemIds = Array.from(itemsBySku.values()).flat().map((it) => it.id)
       let levels: any[] = []
-      if (itemIds.length) {
+      if (allItemIds.length) {
         try {
           levels = await inventoryService.listInventoryLevels({
-            inventory_item_id: itemIds,
+            inventory_item_id: allItemIds,
           })
         } catch (e: any) {
           console.error(`❌ [STOCK SYNC] listInventoryLevels batch: ${e?.message || e}`)
@@ -207,56 +203,65 @@ export default async function syncStockFromOdooJob(container: MedusaContainer) {
           continue
         }
       }
-      // Garder un seul level par inventory_item_id (le premier suffit, c'est
-      // l'unique location dans la plupart des configs).
-      const levelByItemId = new Map<string, any>()
+      // Indexer les levels par inventory_item_id (un item peut avoir
+      // plusieurs levels si plusieurs locations, on les met tous à jour).
+      const levelsByItemId = new Map<string, any[]>()
       for (const lvl of levels) {
-        if (!levelByItemId.has(lvl.inventory_item_id)) {
-          levelByItemId.set(lvl.inventory_item_id, lvl)
-        }
+        const arr = levelsByItemId.get(lvl.inventory_item_id) || []
+        arr.push(lvl)
+        levelsByItemId.set(lvl.inventory_item_id, arr)
       }
 
-      // 2d) Pour chaque variante du batch, comparer & mettre à jour si besoin
+      // 2d) Pour chaque variante du batch, comparer & mettre à jour tous les
+      // niveaux liés (incluant les doublons d'inventory_items).
+      // Dédup au niveau SKU pour ne pas traiter 5× le même SKU dans le batch.
+      const processedSkus = new Set<string>()
       for (const v of slice) {
+        if (processedSkus.has(v.sku)) continue
+        processedSkus.add(v.sku)
+
         const odooStock = stockMap.get(v.sku)
         if (odooStock === undefined) {
           missingInOdoo++
           continue
         }
 
-        const item = itemBySku.get(v.sku)
-        if (!item) {
+        const items = itemsBySku.get(v.sku)
+        if (!items || items.length === 0) {
           missingInventory++
           continue
         }
 
-        const level = levelByItemId.get(item.id)
-        if (!level) {
-          missingInventory++
-          continue
+        let touchedAny = false
+        let allUnchanged = true
+        for (const item of items) {
+          const itemLevels = levelsByItemId.get(item.id) || []
+          if (itemLevels.length === 0) continue
+
+          for (const level of itemLevels) {
+            const currentStocked = level.stocked_quantity || 0
+            const reserved = level.reserved_quantity || 0
+            const targetStocked = odooStock + reserved
+
+            if (currentStocked === targetStocked) continue
+            allUnchanged = false
+
+            try {
+              await inventoryService.updateInventoryLevels({
+                inventory_item_id: item.id,
+                location_id: level.location_id,
+                stocked_quantity: targetStocked,
+              })
+              touchedAny = true
+            } catch (e: any) {
+              errors++
+              console.error(`❌ [STOCK SYNC] update ${v.sku} (item ${item.id}): ${e?.message || e}`)
+            }
+          }
         }
 
-        const currentStocked = level.stocked_quantity || 0
-        const reserved = level.reserved_quantity || 0
-        // available = stocked - reserved, on veut available = odooStock
-        const targetStocked = odooStock + reserved
-
-        if (currentStocked === targetStocked) {
-          unchanged++
-          continue
-        }
-
-        try {
-          await inventoryService.updateInventoryLevels({
-            inventory_item_id: item.id,
-            location_id: level.location_id,
-            stocked_quantity: targetStocked,
-          })
-          updated++
-        } catch (e: any) {
-          errors++
-          console.error(`❌ [STOCK SYNC] update ${v.sku}: ${e?.message || e}`)
-        }
+        if (touchedAny) updated++
+        else if (allUnchanged) unchanged++
       }
 
       console.log(

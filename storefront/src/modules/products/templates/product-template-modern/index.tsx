@@ -117,12 +117,27 @@ const ProductTemplateModern = async ({
   const showNewBadge = isNew && (!newUntil || Date.now() < newUntil)
   const isPromo = product.metadata?.is_promo === true || product.metadata?.is_promo === "true"
 
-  // Estimation de livraison
+  // Estimation de livraison — en jours ouvrables (lun-ven), week-ends ignorés.
+  // Si commande passée après 14h, on décale le point de départ d'un jour ouvrable
+  // (préparation possible le lendemain ouvré).
+  const addBusinessDays = (from: Date, days: number) => {
+    const d = new Date(from)
+    let remaining = days
+    while (remaining > 0) {
+      d.setDate(d.getDate() + 1)
+      const dow = d.getDay()
+      if (dow !== 0 && dow !== 6) remaining--
+    }
+    return d
+  }
   const today = new Date()
-  const deliveryMin = new Date(today)
-  deliveryMin.setDate(today.getDate() + (today.getDay() >= 5 ? 4 : 2))
-  const deliveryMax = new Date(today)
-  deliveryMax.setDate(today.getDate() + (today.getDay() >= 5 ? 6 : 4))
+  // Point de départ pour la préparation : aujourd'hui si jour ouvré avant 14h,
+  // sinon prochain jour ouvré.
+  const isWeekend = today.getDay() === 0 || today.getDay() === 6
+  const afterCutoff = today.getHours() >= 14
+  const prepStart = isWeekend || afterCutoff ? addBusinessDays(today, 1) : today
+  const deliveryMin = addBusinessDays(prepStart, 2)
+  const deliveryMax = addBusinessDays(prepStart, 4)
   const formatDate = (d: Date) =>
     d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })
 
