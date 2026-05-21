@@ -19,6 +19,7 @@ import { ODOO_MODULE } from "../modules/odoo"
 import { OdooProduct, OdooCategory, Pagination } from "../modules/odoo/service"
 import OdooModuleService from "../modules/odoo/service"
 import { restoreSoftDeletedPricingForProduct } from "../utils/restore-soft-deleted-pricing-for-product"
+import { ensurePriceSetsForProduct } from "../utils/ensure-price-sets-for-product"
 
 type SyncFromErpInput = Pagination & {
   dryRun?: boolean
@@ -1090,6 +1091,33 @@ export const syncFromErpWorkflow = createWorkflow(
                               console.warn(
                                 `⚠️ [UPDATE] Réparation liens prix soft-delete ${p.id}:`,
                                 restoreErr?.message || restoreErr
+                              )
+                            }
+
+                            // Cause racine identifiée : upsertVariantPricesWorkflow
+                            // ne crée parfois pas le price_set d'une variante
+                            // nouvellement ajoutée à un produit existant (Odoo
+                            // ajoute une taille/couleur après l'import initial).
+                            // Filet de sécurité : on crée le price_set manquant
+                            // immédiatement, à partir des prix Odoo qu'on vient
+                            // de transmettre au workflow.
+                            try {
+                              const priceBySku = new Map<string, { amount: number; currency: string }>()
+                              for (const vw of (p.variants || [])) {
+                                const firstPrice = Array.isArray(vw.prices) ? vw.prices[0] : null
+                                const amount = Number(firstPrice?.amount)
+                                if (vw.sku && Number.isFinite(amount) && amount > 0) {
+                                  priceBySku.set(vw.sku, {
+                                    amount,
+                                    currency: (firstPrice?.currency_code || "eur").toLowerCase(),
+                                  })
+                                }
+                              }
+                              await ensurePriceSetsForProduct(pricingFixPool, p.id, priceBySku)
+                            } catch (ensureErr: any) {
+                              console.warn(
+                                `⚠️ [UPDATE] Création price_sets manquants ${p.id}:`,
+                                ensureErr?.message || ensureErr
                               )
                             }
                           }
