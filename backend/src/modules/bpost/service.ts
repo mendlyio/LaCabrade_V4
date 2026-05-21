@@ -65,14 +65,19 @@ type BpostOptions = {
 
 export default class BpostModuleService {
   private options: BpostOptions
+  // publicKey d'origine (immuable) — utilisée pour signer /keys
+  private readonly originalPublicKey?: string
+  // Token temporaire courant utilisé pour signer les autres endpoints
+  private currentToken?: string
   private static tokenCache: { token: string; expires?: string } | null = null
 
   constructor({}, options: BpostOptions) {
     this.options = options
+    this.originalPublicKey = options.publicKey
   }
 
   private ensureKeys() {
-    if (!this.options.publicKey || !this.options.privateKey) {
+    if (!this.originalPublicKey || !this.options.privateKey) {
       throw new Error("Clés Bpost manquantes (BPOST_PUBLIC_KEY, BPOST_PRIVATE_KEY)")
     }
   }
@@ -81,13 +86,20 @@ export default class BpostModuleService {
     return crypto.createHmac("sha256", this.options.privateKey as string).update(data).digest("base64")
   }
 
-  private authUsername(jsonBody: string): string {
-    // Utiliser toujours la publicKey pour l'authentification HMAC
-    return this.options.publicKey as string
+  /**
+   * Choisit le username HMAC selon l'endpoint :
+   *  - /keys : toujours la publicKey originale (sinon impossible de rafraîchir le token)
+   *  - autres endpoints : token courant si disponible, sinon publicKey originale
+   */
+  private authUsername(endpoint: string): string {
+    if (endpoint.includes("/keys")) {
+      return this.originalPublicKey as string
+    }
+    return (this.currentToken || this.originalPublicKey) as string
   }
 
-  private buildHeaders(jsonBody: string): Record<string, string> {
-    const username = this.authUsername(jsonBody)
+  private buildHeaders(jsonBody: string, endpoint: string): Record<string, string> {
+    const username = this.authUsername(endpoint)
     const password = this.hmacBase64(username + jsonBody)
 
     const appId =
@@ -113,7 +125,7 @@ export default class BpostModuleService {
     const baseUrl = resolvedBase
     const url = `${baseUrl.replace(/\/$/, "")}${endpoint.startsWith("/") ? endpoint : "/" + endpoint}`
     const body = data ? JSON.stringify(data) : ""
-    const baseHeaders = this.buildHeaders(body)
+    const baseHeaders = this.buildHeaders(body, endpoint)
 
     console.log(`[Bpost] ${method} ${url}`)
 
@@ -217,22 +229,34 @@ export default class BpostModuleService {
    */
   private async ensureToken(): Promise<string> {
     const now = Date.now()
+    // Marge de sécurité : Bpost renvoie "Expire" sous forme de date sans heure
+    // (ex: "2026-05-21"). On considère le token expiré 30 min avant minuit
+    // de cette date pour éviter de tomber pile sur un token expiré.
+    const SAFETY_MARGIN_MS = 30 * 60 * 1000
     if (BpostModuleService.tokenCache?.token && BpostModuleService.tokenCache?.expires) {
-      const exp = new Date(BpostModuleService.tokenCache.expires).getTime()
-      if (exp > now) {
-        // injecte le token en tant que publicKey pour les appels suivants
-        this.options.publicKey = BpostModuleService.tokenCache.token
+      const rawExpire = BpostModuleService.tokenCache.expires
+      // Si la date n'a pas d'heure, on prend la fin de cette journée (23:59:59 UTC)
+      const expiresDate = /T|\s\d{2}:/.test(rawExpire)
+        ? new Date(rawExpire)
+        : new Date(`${rawExpire}T23:59:59Z`)
+      const exp = expiresDate.getTime()
+      if (Number.isFinite(exp) && exp - SAFETY_MARGIN_MS > now) {
+        this.currentToken = BpostModuleService.tokenCache.token
         return BpostModuleService.tokenCache.token
       }
     }
 
+    // Forcer un rafraîchissement : on s'assure que les en-têtes /keys
+    // utiliseront bien la publicKey d'origine (cf. authUsername).
+    this.currentToken = undefined
+
     // Envoyer l'URL du STOREFRONT (shop public), pas du backend
-    const shopUrl = 
-      process.env.BPOST_SHOP_URL || 
-      process.env.STOREFRONT_URL || 
+    const shopUrl =
+      process.env.BPOST_SHOP_URL ||
+      process.env.STOREFRONT_URL ||
       process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL?.replace('backend', 'storefront') ||
       "https://storefront-production-03a4.up.railway.app"
-    
+
     const pluginVersion = this.options.pluginVersion || "3.2.1"
     const platformVersion = this.options.platformVersion || "medusa-2.0"
 
@@ -256,7 +280,7 @@ export default class BpostModuleService {
       throw new Error("Bpost: impossible d'obtenir un token (/keys)")
     }
     BpostModuleService.tokenCache = { token, expires: expire }
-    this.options.publicKey = token // utilisé par buildHeaders
+    this.currentToken = token
     return token
   }
 
