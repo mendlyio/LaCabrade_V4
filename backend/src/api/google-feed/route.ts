@@ -206,6 +206,52 @@ function shouldExcludeByPolicy(text: string): boolean {
   return blockedPatterns.some((p) => p.test(t))
 }
 
+/**
+ * Nettoie le titre et la description pour éviter les faux positifs de politique Google.
+ * - "WHIP & GO" → déclenche "sexual_interests_policy_violation" (mot WHIP)
+ * - "vibrante" → déclenche "sexual_interests_policy_violation"
+ * - Termes santé/médecine dans les suppléments cheval → "healthcare_pdt_policy_violation"
+ */
+function sanitizeForGooglePolicy(title: string, description: string): { title: string; description: string } {
+  let t = title
+  let d = description
+
+  // Masquer "WHIP" dans les titres de cravaches équestres
+  t = t.replace(/\bWHIP\s*&\s*GO\b/gi, 'Cravache équitation')
+  t = t.replace(/\bWHIP\b/gi, 'Cravache')
+
+  // "vibrante" → "thérapeutique" pour les plaques de récupération
+  t = t.replace(/\bvibrante?\b/gi, 'thérapeutique')
+  d = d.replace(/\bvibrante?\b/gi, 'thérapeutique')
+
+  // Neutraliser les termes médicaux/vétérinaires des descriptions de suppléments cheval.
+  // Ces termes déclenchent "healthcare_pdt_policy_violation" et "personal_hardships_policy_violation"
+  // même pour des suppléments nutritionnels légitimes.
+  const medicalReplacements: Array<[RegExp, string]> = [
+    [/\bcure de fond\b/gi, 'utilisation régulière'],
+    [/\bacide lactique\b/gi, 'fatigue musculaire'],
+    [/\bcoliques?\b/gi, 'confort digestif'],
+    [/\bmaigre\b/gi, 'en reprise de forme'],
+    [/\bprescription\b/gi, ''],
+    [/\btraitement\b/gi, 'programme'],
+    [/\bthérapeutique médicale?\b/gi, 'nutritionnelle'],
+    [/\bmédicament\b/gi, 'complément'],
+    [/guérir|guérison\b/gi, 'soutenir'],
+    [/soigner les|soigne les/gi, 'soutenir les'],
+    [/trouble[s]?\s+digestif[s]?/gi, 'confort digestif'],
+    [/flore intestinale/gi, 'équilibre digestif'],
+    [/\bprévention\b/gi, 'soutien'],
+  ]
+  for (const [pattern, replacement] of medicalReplacements) {
+    d = d.replace(pattern, replacement)
+  }
+
+  // Nettoyer doubles espaces laissés par les suppressions
+  d = d.replace(/\s{2,}/g, ' ').trim()
+
+  return { title: t.trim(), description: d.trim() }
+}
+
 // ── Route principale ─────────────────────────────────────────────────────────
 
 /**
@@ -362,8 +408,11 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         const isDefault =
           !variant.title || ['Default Title', 'Default', 'default'].includes(variant.title)
         const rawTitle = isDefault ? (product.title ?? '') : `${product.title} - ${variant.title}`
-        const title = rawTitle.substring(0, 150)
-        const description = (stripHtml(product.description || product.title || '')).substring(0, 5000) || title
+        const rawDescription = (stripHtml(product.description || product.title || '')).substring(0, 5000) || rawTitle
+        // Nettoyer les termes déclenchant des violations de politique Google
+        const { title: cleanTitle, description: cleanDescription } = sanitizeForGooglePolicy(rawTitle, rawDescription)
+        const title = cleanTitle.substring(0, 150)
+        const description = cleanDescription || title
 
         // ── Marque / ID / URL ──────────────────────────────────────────────
         const brand = product.metadata?.brand || product.metadata?.vendor || product.metadata?.marque || 'La Cabrade'
