@@ -138,7 +138,7 @@ function getGoogleCategory(collection: string, categories: string[]): string {
 
 /** Textile / chaussures / casques / gants — Google exige souvent color/size/gender/age_group pour la FR/BE. */
 function isApparelProduct(text: string): boolean {
-  return /(shirt|t-?shirt|polo|pull|sweat|veste|jacket|pantalon|legging|gants?|gloves?|botte|boots?|mini[-\s]?chaps?|chaps?|chaussures?|socks?|casque|helmet|bombe|bonnet|hoodie|bomber|ceinture|belt|longe|bridon|bridle|collant|chemise|blouson|polaire|softshell|parka|manteau|doudoune|couvre[-\s]?(reins|nuque|dos)|gilet)/i.test(
+  return /(shirt|t-?shirt|polo|pull|sweat|veste|jacket|pantalon|legging|gants?|gloves?|botte|boots?|mini[-\s]?chaps?|chaps?|chaussures?|chaussettes?|socks?|casque|helmet|bombe|bonnet|hoodie|bomber|ceinture|belt|longe|bridon|bridle|collant|chemise|blouson|polaire|softshell|parka|manteau|doudoune|couvre[-\s]?(reins|nuque|dos)|gilet|plastron|brassard|gu[eê]tre|chasuble|surpiqûre|surpiqure|chambrière|chambriere|protège[-\s]?dos|protege[-\s]?dos|veste[-\s]?airbag|gilet[-\s]?airbag)/i.test(
     text
   )
 }
@@ -369,9 +369,11 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         const brand = product.metadata?.brand || product.metadata?.vendor || product.metadata?.marque || 'La Cabrade'
         // ID stable (trim) — doit correspondre exactement à la colonne id de la source « inventaire » dans Merchant Center
         const offerId = String(variant.sku || variant.id).trim().substring(0, 50)
+        // Toujours utiliser /be/ — le feed cible BE/FR et les URLs sans countryCode
+        // provoquent des redirections qui causent les auto-corrections Google (price_updated, availability_updated).
         const productUrl = hasMultipleVariants
-          ? `${STORE_URL}/products/${product.handle}?variant=${variant.id}`
-          : `${STORE_URL}/products/${product.handle}`
+          ? `${STORE_URL}/be/products/${product.handle}?variant=${variant.id}`
+          : `${STORE_URL}/be/products/${product.handle}`
 
         // ── Options couleur / taille ───────────────────────────────────────
         let color = ''

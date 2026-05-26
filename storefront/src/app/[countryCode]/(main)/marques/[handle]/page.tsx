@@ -35,20 +35,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
-    const description = `Découvrez les ${brand.count} produits de la marque ${brand.name} sur La Cabrade, sellerie équestre de qualité.`
+    // Descriptions SEO ciblées par marque — améliorent le CTR sur les requêtes marque
+    const brandDescriptions: Record<string, string> = {
+      "samshield": `Casques et bombes ${brand.name} — protection équestre premium homologuée. Découvrez les ${brand.count} modèles disponibles chez La Cabrade, sellerie en Belgique.`,
+      "equislay": `${brand.name} — chaussettes et accessoires équestres tendance. ${brand.count} produits disponibles chez La Cabrade. Livraison rapide Belgique et France.`,
+      "parlanti": `Bottes d'équitation ${brand.name} — sur mesure et prêt-à-porter. ${brand.count} modèles chez La Cabrade, spécialiste sellerie Belgique.`,
+      "equipe": `Selles ${brand.name} — dressage, CSO, mixte. ${brand.count} produits dont selles sur mesure disponibles chez La Cabrade, sellerie à Retinne (Liège).`,
+      "childeric": `Selles et équipements ${brand.name}. ${brand.count} produits disponibles chez La Cabrade, votre sellerie équestre en Belgique.`,
+      "cavallo": `Équipements équestres ${brand.name} — pantalons, brosses, accessoires. ${brand.count} produits chez La Cabrade, Belgique.`,
+    }
+    const slug = params.handle.toLowerCase()
+    const description = brandDescriptions[slug]
+      || `${brand.name} — ${brand.count} produit${brand.count > 1 ? "s" : ""} équestres disponibles chez La Cabrade, sellerie en Belgique. Livraison rapide, retours faciles.`
 
     return {
-      title: `${brand.name} | Marques | La Cabrade`,
+      title: `${brand.name} — Équipement équestre | La Cabrade`,
       description,
       openGraph: {
         type: "website",
-        title: `${brand.name} | La Cabrade`,
+        title: `${brand.name} — Équipement équestre | La Cabrade`,
         description,
         url: `${baseUrl}/${params.countryCode}/marques/${params.handle}`,
       },
       twitter: {
         card: "summary_large_image",
-        title: `${brand.name} | La Cabrade`,
+        title: `${brand.name} — Équipement équestre | La Cabrade`,
         description,
       },
       alternates: {

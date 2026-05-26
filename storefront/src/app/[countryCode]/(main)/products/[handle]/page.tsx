@@ -73,6 +73,27 @@ export async function generateStaticParams() {
   }
 }
 
+function buildProductMetaDescription(product: any): string {
+  // Nettoyer le HTML de la description Odoo et limiter à 155 caractères
+  const raw = product.description || ""
+  const clean = raw
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+  if (clean.length >= 80) {
+    return clean.length > 155 ? clean.substring(0, 152) + "…" : clean
+  }
+  // Fallback riche en mots clés avec le titre et la marque si dispo
+  const brand = product.metadata?.brand || product.metadata?.marque || ""
+  const brandStr = brand ? ` ${brand}.` : "."
+  return `${product.title}${brandStr} Disponible chez La Cabrade, sellerie équestre en Belgique. Livraison rapide, retrait en magasin possible.`
+    .substring(0, 155)
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { handle, countryCode } = params
   if (handle === GIFT_CARD_PRODUCT_HANDLE) {
@@ -87,20 +108,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     if (!product) return { title: { absolute: "La Cabrade" } }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
+    const description = buildProductMetaDescription(product)
     return {
       title: { absolute: `${product.title} | La Cabrade` },
-      description: product.description || `Découvrez ${product.title} sur La Cabrade - Sellerie équestre de qualité`,
+      description,
       openGraph: {
         type: "website",
         title: `${product.title} | La Cabrade`,
-        description: product.description || `Découvrez ${product.title} sur La Cabrade`,
+        description,
         images: product.thumbnail ? [{ url: product.thumbnail }] : [],
         url: `${baseUrl}/${countryCode}/products/${handle}`,
       },
       twitter: {
         card: "summary_large_image",
         title: `${product.title} | La Cabrade`,
-        description: product.description || `Découvrez ${product.title} sur La Cabrade`,
+        description,
       },
       alternates: {
         canonical: `${baseUrl}/${countryCode}/products/${handle}`,

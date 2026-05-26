@@ -4,12 +4,12 @@ import StoreTemplateModern from "@modules/store/templates/store-template-modern"
 const STORE_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
 
 export const metadata: Metadata = {
-  title: "Boutique - La Cabrade",
-  description: "Découvrez notre gamme complète de produits équestres de qualité. Selles, briderie, équipement cavalier et cheval. Livraison rapide en Belgique.",
+  title: "Sellerie équestre en ligne — Équipement cheval & cavalier | La Cabrade",
+  description: "Plus de 4 000 articles équestres : selles, briderie, casques, bottes, vêtements cavalier et soins cheval. Livraison rapide en Belgique et France. Sellerie La Cabrade, Retinne (Liège).",
   openGraph: {
     type: "website",
-    title: "Boutique - La Cabrade",
-    description: "Découvrez notre gamme complète de produits équestres de qualité.",
+    title: "Sellerie équestre en ligne — Équipement cheval & cavalier | La Cabrade",
+    description: "Plus de 4 000 articles équestres : selles, briderie, casques, bottes, vêtements cavalier et soins cheval. Livraison rapide en Belgique et France.",
   },
   alternates: {
     canonical: `${STORE_BASE_URL}/be/store`,
