@@ -11,6 +11,7 @@ import { PasswordResetTemplate, PASSWORD_RESET, isPasswordResetTemplateData } fr
 import { NewsletterWelcomeTemplate, NEWSLETTER_WELCOME, isNewsletterWelcomeData } from './newsletter-welcome'
 import { NewsletterBirthdayTemplate, NEWSLETTER_BIRTHDAY, isNewsletterBirthdayData } from './newsletter-birthday'
 import { NewsletterBugfixReminderTemplate, NEWSLETTER_BUGFIX_REMINDER, isNewsletterBugfixReminderData } from './newsletter-bugfix-reminder'
+import { CartAbandonedTemplate, CART_ABANDONED, isCartAbandonedData } from './cart-abandoned'
 
 export const EmailTemplates = {
   INVITE_USER,
@@ -24,6 +25,7 @@ export const EmailTemplates = {
   NEWSLETTER_WELCOME,
   NEWSLETTER_BIRTHDAY,
   NEWSLETTER_BUGFIX_REMINDER,
+  CART_ABANDONED,
 } as const
 
 export type EmailTemplateType = keyof typeof EmailTemplates
@@ -120,6 +122,15 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
       }
       return <NewsletterBugfixReminderTemplate {...data} />
 
+    case EmailTemplates.CART_ABANDONED:
+      if (!isCartAbandonedData(data)) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Invalid data for template "${EmailTemplates.CART_ABANDONED}"`
+        )
+      }
+      return <CartAbandonedTemplate {...data} />
+
     case EmailTemplates.ORDER_STATUS_UPDATED:
       if (!isOrderStatusUpdatedTemplateData(data)) {
         throw new MedusaError(
@@ -137,4 +148,4 @@ export function generateEmailTemplate(templateKey: string, data: unknown): React
   }
 }
 
-export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, OrderStatusUpdatedTemplate, WelcomeTemplate, StockAlertTemplate, GiftCardDeliveryTemplate, PasswordResetTemplate, NewsletterWelcomeTemplate, NewsletterBirthdayTemplate, NewsletterBugfixReminderTemplate }
+export { InviteUserEmail, OrderPlacedTemplate, OrderShippedTemplate, OrderStatusUpdatedTemplate, WelcomeTemplate, StockAlertTemplate, GiftCardDeliveryTemplate, PasswordResetTemplate, NewsletterWelcomeTemplate, NewsletterBirthdayTemplate, NewsletterBugfixReminderTemplate, CartAbandonedTemplate }
