@@ -40,28 +40,40 @@ export default async function RelatedProductsModern({
   categoryId: categoryIdProp,
 }: RelatedProductsModernProps) {
   let categoryId: string | null = categoryIdProp ?? null
+  let categoryName: string | null = null
+
+  const allCategories = await listCategories().catch(() => [] as any[])
 
   if (!categoryId) {
-    try {
-      const categories = await listCategories()
-      const lcCategory = categories?.find(
-        (c: any) => LC_EQUESTRIAN_HANDLES.includes((c.handle ?? "").toLowerCase())
-      )
-      if (lcCategory) {
-        categoryId = lcCategory.id
-      }
-    } catch (error) {
-      console.error("Erreur récupération catégorie LC Equestrian:", error)
+    const lcCategory = allCategories?.find(
+      (c: any) => LC_EQUESTRIAN_HANDLES.includes((c.handle ?? "").toLowerCase())
+    )
+    if (lcCategory) {
+      categoryId = lcCategory.id
     }
+  }
+
+  if (categoryId) {
+    categoryName = allCategories?.find((c: any) => c.id === categoryId)?.name ?? null
   }
 
   if (!categoryId) {
     return null
   }
 
-  const products = await getCachedRelatedProducts(categoryId, countryCode)
+  let products = await getCachedRelatedProducts(categoryId, countryCode)
+  let relatedProducts = products.filter((p) => p.id !== product.id)
 
-  const relatedProducts = products.filter((p) => p.id !== product.id)
+  // Si moins de 4 produits dans la catégorie courante, remonter au parent
+  if (relatedProducts.length < 4) {
+    const currentCat = allCategories?.find((c: any) => c.id === categoryId)
+    const parentId = currentCat?.parent_category_id || currentCat?.parent_category?.id
+    if (parentId) {
+      const parentProducts = await getCachedRelatedProducts(parentId, countryCode)
+      relatedProducts = parentProducts.filter((p) => p.id !== product.id)
+      categoryName = allCategories?.find((c: any) => c.id === parentId)?.name ?? categoryName
+    }
+  }
 
   if (relatedProducts.length === 0) {
     return null
@@ -71,10 +83,10 @@ export default async function RelatedProductsModern({
     <div>
       <div className="text-center mb-10">
         <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-          Articles similaires
+          {categoryName ? `Autres produits — ${categoryName}` : "Articles similaires"}
         </h2>
         <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
-          Découvrez notre sélection de produits complémentaires
+          Découvrez notre sélection de produits dans la même catégorie
         </p>
       </div>
 
@@ -97,10 +109,10 @@ export default async function RelatedProductsModern({
       {relatedProducts.length > 4 && (
         <div className="mt-10 text-center">
           <LocalizedClientLink
-            href="/lc-equestrian"
+            href={categoryId ? `/categories/${allCategories?.find((c: any) => c.id === categoryId)?.handle ?? ""}` : "/store"}
             className="inline-flex items-center gap-2 px-6 md:px-8 py-3 md:py-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 text-sm md:text-base"
           >
-            <span>Voir plus de produits</span>
+            <span>Voir tous les produits{categoryName ? ` ${categoryName}` : ""}</span>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>

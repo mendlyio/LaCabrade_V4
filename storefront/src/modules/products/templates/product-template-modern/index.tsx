@@ -474,11 +474,25 @@ const ProductTemplateModern = async ({
         </div>
       </div>
 
-      {/* Related Products */}
+      {/* Related Products — catégorie la plus profonde du produit en priorité */}
       <div className="py-12 lg:py-16 bg-gray-50 border-t border-gray-100">
         <div className="content-container">
           <Suspense fallback={<SkeletonRelatedProducts />}>
-            <RelatedProductsModern product={product} countryCode={countryCode} region={region} categoryId={lcEquestrianCategoryId} />
+            <RelatedProductsModern
+              product={product}
+              countryCode={countryCode}
+              region={region}
+              categoryId={
+                // Utiliser la catégorie la plus profonde du produit courant (arborescence la plus longue)
+                (product.categories?.length
+                  ? [...product.categories].sort((a, b) => {
+                      const depthA = categoryBreadcrumb.filter(c => c.id === a.id).length ? categoryBreadcrumb.length : 0
+                      const depthB = categoryBreadcrumb.filter(c => c.id === b.id).length ? categoryBreadcrumb.length : 0
+                      return depthB - depthA
+                    })[0]?.id
+                  : null) ?? lcEquestrianCategoryId
+              }
+            />
           </Suspense>
         </div>
       </div>
