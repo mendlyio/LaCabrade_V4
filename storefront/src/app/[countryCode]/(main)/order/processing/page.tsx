@@ -3,8 +3,9 @@
 import { useSearchParams, useParams, useRouter } from "next/navigation"
 import { useEffect, useState, useRef } from "react"
 
-const MAX_POLL_SECONDS = 90
-const POLL_INTERVAL_MS = 3000
+const MAX_POLL_SECONDS = 60
+const POLL_INTERVAL_MS = 1200
+const INITIAL_POLL_DELAY_MS = 400
 
 export default function OrderProcessingPage() {
   const searchParams = useSearchParams()
@@ -57,7 +58,7 @@ export default function OrderProcessingPage() {
       setTimeout(poll, POLL_INTERVAL_MS)
     }
 
-    const timer = setTimeout(poll, 1500)
+    const timer = setTimeout(poll, INITIAL_POLL_DELAY_MS)
     return () => {
       polling.current = false
       clearTimeout(timer)
