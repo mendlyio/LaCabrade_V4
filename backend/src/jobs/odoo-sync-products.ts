@@ -141,10 +141,12 @@ export default async function odooSyncProductsJob(
   }
 }
 
-// Configuration du job : toutes les 2 heures
+// Configuration du job : toutes les 30 minutes.
+// Le check est très léger (1 appel Odoo qui lit juste id+write_date) et la
+// resync n'a lieu que pour les produits réellement modifiés depuis la dernière
+// sync. La grande majorité des runs détecte 0 produit à sync (cas normal).
 export const config = {
   name: "odoo-sync-products",
-  schedule: "0 */2 * * *", // Toutes les 2 heures à la minute 0
-  // Alternative: "0 0,2,4,6,8,10,12,14,16,18,20,22 * * *" pour être plus explicite
+  schedule: "*/30 * * * *",
 }
 
