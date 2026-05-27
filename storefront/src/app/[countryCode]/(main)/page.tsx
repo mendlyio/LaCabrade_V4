@@ -10,9 +10,9 @@ import ProductCardModern from "@modules/products/components/product-card-modern"
 const HOME_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
 
 export const metadata: Metadata = {
-  title: "Sellerie Belgique | Sellerie équestre | La Cabrade · LC•EQUESTRIAN",
+  title: "Sellerie Liège en ligne — La Cabrade | Équipement Cavalier & Cheval",
   description:
-    "Sellerie Belgique — La Cabrade, sellerie équestre à Fléron près de Liège. Prix justes, matériel fiable, et toute l'émotion d'une sellerie pensée pour les passionnés.",
+    "Sellerie équestre en ligne à Liège — La Cabrade à Fléron. Plus de 4 000 articles : selles, briderie, casques, bottes, vêtements cavalier. Sellerie en ligne Belgique, livraison rapide.",
   alternates: {
     canonical: `${HOME_BASE_URL}/be`,
     languages: {

@@ -7,7 +7,7 @@ const organizationSchema = {
   url: BASE_URL,
   logo: "https://ik.imagekit.io/kodt9cn6f/Logo-cabrade.webp",
   description:
-    "Sellerie Belgique et sellerie équestre — La Cabrade à Fléron : équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques.",
+    "Sellerie Liège et sellerie en ligne Belgique — La Cabrade à Fléron (Liège) : équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques.",
   address: {
     "@type": "PostalAddress",
     streetAddress: "Rue de la Clef, 96",
@@ -46,7 +46,7 @@ const websiteSchema = {
 const localBusinessSchema = {
   "@context": "https://schema.org",
   "@type": "Store",
-  name: "La Cabrade — Sellerie Belgique & sellerie équestre",
+  name: "La Cabrade — Sellerie Liège & Sellerie en ligne Belgique",
   image: "https://ik.imagekit.io/kodt9cn6f/Logo-cabrade.webp",
   url: BASE_URL,
   telephone: "+3243586099",

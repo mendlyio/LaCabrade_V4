@@ -13,11 +13,11 @@ const BASE_URL = getBaseURL()
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "Sellerie Belgique | Sellerie équestre | La Cabrade · LC•EQUESTRIAN",
+    default: "Sellerie Liège | Sellerie en ligne Belgique | La Cabrade · LC•EQUESTRIAN",
     template: "%s | La Cabrade",
   },
   description:
-    "Sellerie Belgique et sellerie équestre : La Cabrade à Fléron. Équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques. Livraison rapide en Belgique et Europe.",
+    "Sellerie Liège et sellerie en ligne Belgique : La Cabrade à Fléron (Liège). Équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques. Livraison rapide Belgique & Europe.",
   icons: {
     icon: "https://ik.imagekit.io/kodt9cn6f/Cabrade/favicon.ico",
   },
@@ -25,16 +25,16 @@ export const metadata: Metadata = {
     type: "website",
     locale: "fr_BE",
     siteName: "La Cabrade",
-    title: "Sellerie Belgique | Sellerie équestre | La Cabrade · LC•EQUESTRIAN",
+    title: "Sellerie Liège | Sellerie en ligne Belgique | La Cabrade · LC•EQUESTRIAN",
     description:
-      "Sellerie Belgique et sellerie équestre : La Cabrade à Fléron. Équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques.",
+      "Sellerie Liège et sellerie en ligne Belgique : La Cabrade à Fléron. Équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques.",
     url: BASE_URL,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Sellerie Belgique | Sellerie équestre | La Cabrade",
+    title: "Sellerie Liège | Sellerie en ligne Belgique | La Cabrade",
     description:
-      "Sellerie Belgique — équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques.",
+      "Sellerie Liège & sellerie en ligne Belgique — équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques.",
   },
   alternates: {
     canonical: BASE_URL,
@@ -45,6 +45,8 @@ export const metadata: Metadata = {
     },
   },
   keywords: [
+    "sellerie liège",
+    "sellerie en ligne belgique",
     "sellerie belgique",
     "sellerie équestre",
     "zadelmakerij",
@@ -53,6 +55,7 @@ export const metadata: Metadata = {
     "La Cabrade",
     "LC Equestrian",
     "Fléron",
+    "Liège",
     "Belgique",
     "België",
   ],
