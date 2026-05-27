@@ -1260,10 +1260,18 @@ export default class OdooModuleService {
   }
 
   /**
-   * Récupère uniquement les IDs et dates de modification des produits
-   * Utile pour détecter les produits modifiés dans Odoo
+   * Récupère pour chaque product.template son write_date AINSI QUE le write_date
+   * le plus récent de ses variantes (product.product).
+   *
+   * Important : modifier UNIQUEMENT une variante (ex: image_variant_512, prix
+   * variant, default_code) ne touche pas le write_date du template. Sans cet
+   * agrégat la sync rate ces modifications.
+   *
+   * Renvoie effective_write_date = max(template.write_date, max(variants.write_date)).
    */
-  async fetchProductsWithDates(productIds: number[]): Promise<Array<{ id: number; write_date: string }>> {
+  async fetchProductsWithDates(
+    productIds: number[]
+  ): Promise<Array<{ id: number; write_date: string }>> {
     if (!this.uid) {
       await this.login()
     }
@@ -1272,23 +1280,69 @@ export default class OdooModuleService {
       return []
     }
 
-    const products: Array<{ id: number; write_date: string }> = await this.client.request("call", {
-      service: "object",
-      method: "execute_kw",
-      args: [
-        this.options.dbName,
-        this.uid!,
-        this.options.apiKey,
-        "product.template",
-        "read",
-        [productIds],
-        {
-          fields: ["id", "write_date"], // Seulement ID et date de modification
-        },
-      ],
-    })
+    const templates: Array<{ id: number; write_date: string; product_variant_ids: number[] }> =
+      await this.client.request("call", {
+        service: "object",
+        method: "execute_kw",
+        args: [
+          this.options.dbName,
+          this.uid!,
+          this.options.apiKey,
+          "product.template",
+          "read",
+          [productIds],
+          {
+            fields: ["id", "write_date", "product_variant_ids"],
+          },
+        ],
+      })
 
-    return products
+    const allVariantIds = [
+      ...new Set(
+        templates.flatMap((t) => Array.isArray(t.product_variant_ids) ? t.product_variant_ids : [])
+      ),
+    ]
+
+    let variantDateByTmplId = new Map<number, string>()
+    if (allVariantIds.length) {
+      try {
+        const variants: Array<{ id: number; write_date: string; product_tmpl_id: [number, string] }> =
+          await this.client.request("call", {
+            service: "object",
+            method: "execute_kw",
+            args: [
+              this.options.dbName,
+              this.uid!,
+              this.options.apiKey,
+              "product.product",
+              "read",
+              [allVariantIds],
+              {
+                fields: ["id", "write_date", "product_tmpl_id"],
+              },
+            ],
+          })
+
+        for (const v of variants) {
+          const tmplId = Array.isArray(v.product_tmpl_id) ? v.product_tmpl_id[0] : undefined
+          if (!tmplId) continue
+          const prev = variantDateByTmplId.get(tmplId)
+          if (!prev || v.write_date > prev) {
+            variantDateByTmplId.set(tmplId, v.write_date)
+          }
+        }
+      } catch (e: any) {
+        console.warn(
+          `[ODOO] fetchProductsWithDates: lecture des variantes échouée (${e?.message}), on retombe sur les write_date des templates uniquement`
+        )
+      }
+    }
+
+    return templates.map((t) => {
+      const variantMax = variantDateByTmplId.get(t.id)
+      const effective = variantMax && variantMax > t.write_date ? variantMax : t.write_date
+      return { id: t.id, write_date: effective }
+    })
   }
 
   async fetchProductsPaged(
