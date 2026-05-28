@@ -90,6 +90,14 @@ export default class BpostFulfillmentProviderService extends AbstractFulfillment
     try {
       const bpost = this.container.resolve("bpost") as any
 
+      // Seuil : commandes > 250 € → pas d'étiquette automatique (génération manuelle en backoffice)
+      const MANUAL_THRESHOLD_CENTS = 25000
+      const orderTotal = order?.total ?? 0
+      if (orderTotal > MANUAL_THRESHOLD_CENTS) {
+        console.log(`[Bpost] Commande ${order?.id} — montant ${orderTotal / 100} € > 250 €, étiquette non générée automatiquement.`)
+        return { data: { auto_label_skipped: true, reason: "order_above_250_eur" } }
+      }
+
       const pickupFromMetadata = (order?.metadata as any)?.bpost_pickup_point
       const pickupPointId = data?.pickup_point_id || pickupFromMetadata?.Id || pickupFromMetadata?.id
 

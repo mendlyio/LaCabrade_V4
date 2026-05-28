@@ -108,6 +108,9 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
     !!metaLabelUrl ||
     !!generated?.labelUrl
 
+  // Commande > 250 € : étiquette non générée automatiquement
+  const wasAutoSkipped = bpostFulfillments.some((f: any) => f.data?.auto_label_skipped === true)
+
   const hasAnyBpost = hasBpostShipping || bpostFulfillments.length > 0 || !!metaLabelUrl || !!metaShipmentId
 
   if (!hasAnyBpost) return null
@@ -205,6 +208,11 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
             Étiquette générée
           </Badge>
         )}
+        {!hasExistingLabel && wasAutoSkipped && (
+          <Badge color="orange" size="small">
+            Génération manuelle requise (&gt;250 €)
+          </Badge>
+        )}
       </div>
 
       {/* ── SECTION : Infos livraison (toujours visible) ── */}
@@ -290,10 +298,17 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
         {/* ── SECTION : Pas encore d'étiquette ── */}
         {!hasExistingLabel && hasBpostShipping && !generated && (
           <div className="flex flex-col gap-3">
-            <Text className="text-ui-fg-subtle text-sm">
-              Cliquez sur le bouton ci-dessous pour créer l&apos;expédition Bpost, télécharger l&apos;étiquette et envoyer
-              automatiquement le numéro de suivi au client par email.
-            </Text>
+            {wasAutoSkipped ? (
+              <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-800">
+                <span className="font-semibold">Commande &gt; 250 €</span> — l&apos;étiquette n&apos;a pas été générée automatiquement.
+                Vérifiez la commande, puis cliquez ci-dessous pour créer l&apos;étiquette manuellement.
+              </div>
+            ) : (
+              <Text className="text-ui-fg-subtle text-sm">
+                Cliquez sur le bouton ci-dessous pour créer l&apos;expédition Bpost, télécharger l&apos;étiquette et envoyer
+                automatiquement le numéro de suivi au client par email.
+              </Text>
+            )}
             <Button
               variant="primary"
               size="base"
