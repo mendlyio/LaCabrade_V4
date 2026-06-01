@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
 import { listCategories } from "@lib/data/categories"
-import { listBrands } from "@lib/data/brands"
+import { listBrandsByCategory } from "@lib/data/brands"
 import { buildCategoryTree } from "@lib/util/category-tree"
 import FiltersModern from "@modules/store/components/filters-modern"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
@@ -33,20 +33,43 @@ export default async function CategoryTemplateModern({
 
   if (!category || !countryCode) notFound()
 
-  // Récupérer toutes les catégories et collections pour les filtres
+  // Récupérer toutes les catégories pour les filtres et l'arborescence
   let allCategories: HttpTypes.StoreProductCategory[] = []
-  let brands: any[] = []
   try {
-    ;[allCategories, brands] = await Promise.all([
-      listCategories(),
-      listBrands(),
-    ])
+    allCategories = await listCategories()
   } catch (error) {
-    console.error("Erreur lors du chargement des données filtres:", error)
+    console.error("Erreur lors du chargement des catégories:", error)
   }
   const { map: categoryMap } = buildCategoryTree(allCategories || [])
   const categoryNode = categoryMap.get(category.id) || category
   const categoryChildren = categoryNode.category_children || []
+
+  // IDs de la catégorie courante + tous ses descendants
+  const collectCategoryIds = (rootId: string): string[] => {
+    const ids: string[] = []
+    const stack = [rootId]
+    const visited = new Set<string>()
+    while (stack.length) {
+      const id = stack.pop()
+      if (!id || visited.has(id)) continue
+      visited.add(id)
+      ids.push(id)
+      const node = categoryMap.get(id)
+      node?.category_children?.forEach((child: any) => {
+        if (child?.id && !visited.has(child.id)) stack.push(child.id)
+      })
+    }
+    return ids
+  }
+  const categoryIds = collectCategoryIds(category.id)
+
+  // Marques présentes UNIQUEMENT dans cette catégorie (et ses sous-catégories)
+  let brands: any[] = []
+  try {
+    brands = await listBrandsByCategory(categoryIds)
+  } catch (error) {
+    console.error("Erreur lors du chargement des marques de la catégorie:", error)
+  }
 
   // Compter le nombre de filtres actifs
   const activeFilters = Object.keys(searchParams).filter(
@@ -198,8 +221,44 @@ export default async function CategoryTemplateModern({
         </div>
       </div>
 
+      {/* Bloc SEO : contenu indexable + maillage interne vers les marques */}
+      <div className="content-container pb-12">
+        <section className="rounded-2xl border border-gray-200 bg-white p-6 md:p-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-3">
+            {category.name} — Sellerie en ligne La Cabrade (Liège, Belgique)
+          </h2>
+          <p className="text-sm md:text-base text-gray-600 leading-relaxed">
+            Découvrez notre sélection <strong>{category.name.toLowerCase()}</strong> chez La Cabrade,
+            votre sellerie équestre en ligne basée à Fléron, près de Liège. Nous proposons un large
+            choix d&apos;équipement pour le cheval et le cavalier, sélectionné auprès des plus grandes
+            marques, avec livraison rapide en Belgique, en France et partout en Europe. Nos experts
+            passionnés d&apos;équitation vous conseillent en magasin comme en ligne.
+          </p>
+
+          {brands.length > 0 && (
+            <div className="mt-5">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                Marques disponibles dans cette catégorie
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {brands.map((brand: any) => (
+                  <LocalizedClientLink
+                    key={brand.slug}
+                    href={`/marques/${brand.slug}`}
+                    className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+                  >
+                    {brand.name}
+                    <span className="text-gray-400">({brand.count})</span>
+                  </LocalizedClientLink>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+
       {/* Trust Badges */}
-      <div className="bg-gradient-to-r bg-gray-50 py-8 mt-16 border-t border-gray-200">
+      <div className="bg-gradient-to-r bg-gray-50 py-8 mt-4 border-t border-gray-200">
         <div className="content-container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="text-center">

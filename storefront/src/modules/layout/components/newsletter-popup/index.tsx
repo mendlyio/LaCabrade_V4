@@ -98,8 +98,8 @@ export default function NewsletterPopup() {
       onClick={(e) => { if (e.target === e.currentTarget) dismiss() }}
     >
       <div
-        className="relative w-full max-w-[420px] sm:max-w-[560px] bg-white rounded-2xl
-                   shadow-2xl animate-popup-in flex flex-col sm:flex-row
+        className="relative w-full max-w-[400px] bg-white rounded-2xl
+                   shadow-2xl animate-popup-in flex flex-col
                    overflow-hidden max-h-[calc(100dvh-2rem)]"
         onClick={(e) => e.stopPropagation()}
       >
@@ -108,35 +108,36 @@ export default function NewsletterPopup() {
           onClick={dismiss}
           aria-label={t("popup.close" as any)}
           className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center
-                     rounded-full bg-white/80 backdrop-blur hover:bg-white text-gray-400
-                     hover:text-gray-700 shadow-sm transition-all"
+                     rounded-full bg-white/80 backdrop-blur hover:bg-white text-gray-500
+                     hover:text-gray-800 shadow-sm transition-all"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
             <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
           </svg>
         </button>
 
-        {/* Mobile image */}
-        <div className="sm:hidden flex justify-center flex-shrink-0 pt-5 pb-2">
-          <div className="relative w-[200px] h-[200px] rounded-2xl overflow-hidden shadow-lg">
-            <Image src={IMG} alt="La Cabrade" fill unoptimized className="object-contain" sizes="200px" />
-          </div>
-        </div>
-
-        {/* Desktop image */}
-        <div className="hidden sm:flex flex-shrink-0 w-[220px] bg-[#faf6f2] items-center justify-center self-stretch">
-          <Image src={IMG} alt="La Cabrade" width={220} height={220} unoptimized className="object-contain" />
+        {/* Bannière image — identique sur tous les écrans */}
+        <div className="relative w-full flex-shrink-0 bg-[#faf6f2] flex items-center justify-center h-[150px] sm:h-[170px]">
+          <Image
+            src={IMG}
+            alt="La Cabrade"
+            fill
+            unoptimized
+            priority
+            className="object-contain p-3"
+            sizes="400px"
+          />
         </div>
 
         {/* Formulaire */}
         <div className="flex flex-col px-5 py-4 sm:px-6 sm:py-5 flex-1 min-w-0 overflow-y-auto">
-          <p className="text-[10px] font-bold tracking-widest text-[#9e354a] uppercase mb-1 text-center sm:text-left">
+          <p className="text-[10px] font-bold tracking-widest text-[#9e354a] uppercase mb-1 text-center">
             La Cabrade
           </p>
-          <h2 className="text-lg font-bold text-gray-900 leading-tight mb-1 text-center sm:text-left">
+          <h2 className="text-lg font-bold text-gray-900 leading-tight mb-1 text-center">
             {t("popup.title" as any)}
           </h2>
-          <p className="text-gray-500 text-xs mb-4 leading-relaxed text-center sm:text-left">
+          <p className="text-gray-500 text-xs mb-4 leading-relaxed text-center">
             {t("popup.subtitle" as any).split("10%")[0]}
             <span className="text-[#9e354a] font-bold">10&nbsp;%</span>
             {t("popup.subtitle" as any).split("10%")[1] ?? ""}
@@ -196,7 +197,7 @@ export default function NewsletterPopup() {
                   value={birthday}
                   onChange={(e) => { setBirthday(e.target.value); setErrors((p) => ({ ...p, birthday: undefined })) }}
                   disabled={status === "loading"}
-                  className={inputClass(!!errors.birthday).replace("w-full", "w-auto")}
+                  className={inputClass(!!errors.birthday)}
                   style={{ colorScheme: "light" }}
                 />
               </Field>

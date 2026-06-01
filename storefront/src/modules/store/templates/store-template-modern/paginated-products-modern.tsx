@@ -73,13 +73,15 @@ export default async function PaginatedProductsModern({
   const hasSearchQuery = !!(searchParams.q?.trim() && searchParams.q.trim().length >= 2)
   const limit = hasClientSideFilters || hasCategoryFilter || needsClientSideSort || hasSearchQuery ? 100 : 12
 
-  // Récupérer les catégories et collections pour convertir les handles en IDs
+  // Récupérer les catégories (et collections uniquement si un filtre collection est actif)
   let categories: any[] = []
   let collections: any[] = []
   try {
     ;[categories, collections] = await Promise.all([
       listCategories(),
-      getCollectionsList(0, 100).then((r) => r.collections || []),
+      searchParams.collection
+        ? getCollectionsList(0, 100).then((r) => r.collections || [])
+        : Promise.resolve([]),
     ])
   } catch (error) {
     console.error("Erreur lors du chargement des données filtres:", error)
@@ -185,27 +187,36 @@ export default async function PaginatedProductsModern({
   let result
   try {
     if (hasBrandFilter || hasCategoryFilter || needsClientSideSort || hasSearchQuery) {
-      // Fetch ALL products in batches and filter by brand server-side
+      // Fetch ALL products puis filtrage côté serveur/client
       const batchSize = 100
       let allProducts: any[] = []
-      let batchOffset = 0
-      let totalProducts = 0
 
-      do {
-        const batchResult = await getProductsList({
-          pageParam: 1,
-          queryParams: {
-            ...queryParams,
-            limit: batchSize,
-            offset: batchOffset,
-          },
-          countryCode,
+      // 1er lot : permet de connaître le nombre total de produits
+      const firstBatch = await getProductsList({
+        pageParam: 1,
+        queryParams: { ...queryParams, limit: batchSize, offset: 0 },
+        countryCode,
+      })
+      allProducts = firstBatch.response.products || []
+      const totalProducts = firstBatch.response.count || 0
+
+      // Lots restants récupérés EN PARALLÈLE (et non séquentiellement)
+      if (totalProducts > batchSize) {
+        const requests: Promise<any>[] = []
+        for (let off = batchSize; off < totalProducts; off += batchSize) {
+          requests.push(
+            getProductsList({
+              pageParam: 1,
+              queryParams: { ...queryParams, limit: batchSize, offset: off },
+              countryCode,
+            })
+          )
+        }
+        const batches = await Promise.all(requests)
+        batches.forEach((b) => {
+          allProducts = allProducts.concat(b.response.products || [])
         })
-        const batchProducts = batchResult.response.products || []
-        totalProducts = batchResult.response.count || 0
-        allProducts = [...allProducts, ...batchProducts]
-        batchOffset += batchSize
-      } while (batchOffset < totalProducts)
+      }
 
       // Filtrer par marque côté serveur (si filtre marque actif)
       let finalProducts = allProducts
