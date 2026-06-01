@@ -404,18 +404,33 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
           }
         }
 
+        // ── Marque (réelle, hors fallback) ─────────────────────────────────
+        // Marque effective utilisée dans le feed (fallback La Cabrade si absente)
+        const brand = product.metadata?.brand || product.metadata?.vendor || product.metadata?.marque || 'La Cabrade'
+        // Marque "réelle" issue des métadonnées produit, sans le fallback générique :
+        // sert uniquement à préfixer le titre pour le matching Google « marque + produit ».
+        const realBrand = (product.metadata?.brand || product.metadata?.vendor || product.metadata?.marque || '')
+          .toString()
+          .trim()
+
         // ── Titre / Description ────────────────────────────────────────────
         const isDefault =
           !variant.title || ['Default Title', 'Default', 'default'].includes(variant.title)
-        const rawTitle = isDefault ? (product.title ?? '') : `${product.title} - ${variant.title}`
+        const baseTitle = isDefault ? (product.title ?? '') : `${product.title} - ${variant.title}`
+        // Préfixer la marque si elle existe et n'est pas déjà présente dans le titre.
+        // Améliore nettement le classement sur les fiches gratuites et la recherche Google
+        // pour les requêtes « marque + produit » (ex. "Samshield casque").
+        const titleHasBrand =
+          !!realBrand && baseTitle.toLowerCase().includes(realBrand.toLowerCase())
+        const rawTitle =
+          realBrand && !titleHasBrand ? `${realBrand} ${baseTitle}` : baseTitle
         const rawDescription = (stripHtml(product.description || product.title || '')).substring(0, 5000) || rawTitle
         // Nettoyer les termes déclenchant des violations de politique Google
         const { title: cleanTitle, description: cleanDescription } = sanitizeForGooglePolicy(rawTitle, rawDescription)
         const title = cleanTitle.substring(0, 150)
         const description = cleanDescription || title
 
-        // ── Marque / ID / URL ──────────────────────────────────────────────
-        const brand = product.metadata?.brand || product.metadata?.vendor || product.metadata?.marque || 'La Cabrade'
+        // ── ID / URL ───────────────────────────────────────────────────────
         // ID stable (trim) — doit correspondre exactement à la colonne id de la source « inventaire » dans Merchant Center
         const offerId = String(variant.sku || variant.id).trim().substring(0, 50)
         // Toujours utiliser /be/ — le feed cible BE/FR et les URLs sans countryCode
