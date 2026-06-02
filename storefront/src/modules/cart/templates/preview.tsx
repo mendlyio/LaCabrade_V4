@@ -1,7 +1,10 @@
 "use client"
 
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { lineItemAmountToEuros, adjustmentHtToTtc } from "@lib/util/cart-amounts"
 import { convertToLocale } from "@lib/util/money"
+import { deleteLineItem } from "@lib/data/cart"
 import repeat from "@lib/util/repeat"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -12,6 +15,26 @@ type ItemsTemplateProps = {
 }
 
 const ItemsPreviewTemplate = ({ items }: ItemsTemplateProps) => {
+  const router = useRouter()
+  const [removingId, setRemovingId] = useState<string | null>(null)
+
+  const handleRemove = async (item: HttpTypes.StoreCartLineItem) => {
+    if (removingId) return
+    setRemovingId(item.id)
+    try {
+      // Dernier article : retour au panier (évite un checkout vide)
+      const isLast = (items?.length ?? 0) <= 1
+      await deleteLineItem(item.id)
+      if (isLast) {
+        router.push("/cart")
+      } else {
+        router.refresh()
+      }
+    } catch {
+      setRemovingId(null)
+    }
+  }
+
   if (!items) {
     return (
       <div className="space-y-3">
@@ -46,7 +69,8 @@ const ItemsPreviewTemplate = ({ items }: ItemsTemplateProps) => {
         const compareAtRaw =
           (item as any).compare_at_unit_price ?? (item.metadata as any)?.outlet_original_price
         const comparePrice = lineItemAmountToEuros(compareAtRaw)
-        const hasDiscount = comparePrice && comparePrice > unitPrice + 0.01
+        // !! pour éviter que `0` (number) ne soit rendu tel quel par React
+        const hasDiscount = !!comparePrice && comparePrice > unitPrice + 0.01
         const lineTotal = unitPrice * item.quantity
 
         // Articles outlet : remise déjà dans unit_price → ne pas déduire les adjustments
@@ -135,6 +159,30 @@ const ItemsPreviewTemplate = ({ items }: ItemsTemplateProps) => {
               >
                 {convertToLocale({ amount: finalTotal, currency_code })}
               </span>
+            </div>
+
+            {/* Supprimer l'article */}
+            <div className="flex items-center flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => handleRemove(item)}
+                disabled={removingId === item.id}
+                aria-label="Supprimer l'article"
+                title="Supprimer l'article"
+                data-testid="cart-item-remove-button"
+                className="w-7 h-7 flex items-center justify-center rounded-full text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-wait"
+              >
+                {removingId === item.id ? (
+                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
         )
