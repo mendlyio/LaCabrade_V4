@@ -102,8 +102,12 @@ export async function POST(
       channel: "email",
       template: "contact-form",
       data: {
-        subject: `[Contact] ${subjectLabel} - ${first_name} ${last_name}`,
         html: emailContent,
+        preview: `Nouveau message de ${first_name} ${last_name}`,
+        emailOptions: {
+          subject: `[Contact] ${subjectLabel} - ${first_name} ${last_name}`,
+          replyTo: email,
+        },
       },
     })
 
@@ -164,8 +168,11 @@ export async function POST(
       channel: "email",
       template: "contact-confirmation",
       data: {
-        subject: `Confirmation de réception - ${subjectLabel}`,
         html: confirmationEmail,
+        preview: `Nous avons bien reçu votre message`,
+        emailOptions: {
+          subject: `Confirmation de réception - ${subjectLabel}`,
+        },
       },
     })
 
