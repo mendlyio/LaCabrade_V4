@@ -1,7 +1,11 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
 import { Modules } from "@medusajs/framework/utils"
 import type { ICartModuleService } from "@medusajs/framework/types"
-import { getCartPaymentAmountCents } from "../../../../utils/cart-amounts"
+import {
+  getCartPaymentAmountCents,
+  getInsurableGoodsEuros,
+  getInsuranceTier,
+} from "../../../../utils/cart-amounts"
 
 /**
  * POST /store/custom/initiate-payment-with-total
@@ -64,15 +68,50 @@ export async function POST(
     const workflowEngine = req.scope.resolve(Modules.WORKFLOW_ENGINE) as any
 
     // 1. Recharger le panier complet depuis la base → source de vérité.
-    const cart = await cartModuleService.retrieveCart(cart_id, {
-      relations: [
-        "items",
-        "items.adjustments",
-        "shipping_methods",
-        "shipping_methods.adjustments",
-        "shipping_address",
-      ],
+    const cartRelations = [
+      "items",
+      "items.adjustments",
+      "shipping_methods",
+      "shipping_methods.adjustments",
+      "shipping_address",
+    ]
+    let cart = await cartModuleService.retrieveCart(cart_id, {
+      relations: cartRelations,
     })
+
+    // 1a. Recalcul du palier d'assurance d'après la valeur ACTUELLE des articles.
+    //     Évite un montant figé si le panier a changé après avoir coché l'assurance
+    //     (ex. ajout d'un article faisant franchir un palier). Au-delà de 5 000 €
+    //     (palier indisponible), on conserve le dernier montant valide.
+    const insurance = (cart.metadata as any)?.insurance as
+      | { enabled?: boolean; amount?: number; tier?: string }
+      | undefined
+    if (insurance?.enabled) {
+      const goods = getInsurableGoodsEuros(cart as any)
+      const tier = getInsuranceTier(goods)
+      const freshAmount = tier.available ? tier.amount : Number(insurance.amount || 0)
+      const freshTier = tier.available ? tier.label : insurance.tier
+      if (Number(insurance.amount || 0) !== freshAmount) {
+        await cartModuleService.updateCarts([
+          {
+            id: cart_id,
+            metadata: {
+              ...(cart.metadata as Record<string, unknown>),
+              insurance: {
+                ...insurance,
+                amount: freshAmount,
+                tier: freshTier,
+                goods_value: goods,
+              },
+            },
+          },
+        ])
+        // Recharger pour que le calcul du montant utilise la valeur fraîche.
+        cart = await cartModuleService.retrieveCart(cart_id, {
+          relations: cartRelations,
+        })
+      }
+    }
 
     // 1b. Résoudre payment_collection_id : utiliser celui fourni, sinon
     //     le récupérer depuis la relation cart, ou le créer via le workflow.

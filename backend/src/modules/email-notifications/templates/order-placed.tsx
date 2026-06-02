@@ -139,6 +139,13 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
     0
   )
 
+  // Assurance colis (frais distinct hors TVA) depuis order.metadata.insurance
+  const insuranceMeta = (order as any).metadata?.insurance as
+    | { enabled?: boolean; amount?: number; tier?: string }
+    | undefined
+  const insuranceTotal =
+    insuranceMeta?.enabled ? Number(insuranceMeta.amount || 0) : 0
+
   // Total payé : display_total autoritatif (calculé depuis order.total dans le subscriber)
   // Inclut déjà les déductions GC, promos, livraison
   const total = Number(
@@ -362,6 +369,24 @@ export const OrderPlacedTemplate: React.FC<OrderPlacedTemplateProps> & {
                 color: '#059669',
               }}>
                 -{formatPrice(giftCardTotal)}
+              </Text>
+            </Column>
+          </Row>
+        )}
+        {insuranceTotal > 0 && (
+          <Row>
+            <Column>
+              <Text style={{ margin: '0 0 4px', fontSize: '14px', color: '#6B7280' }}>
+                🛡️ Assurance colis{insuranceMeta?.tier ? ` (${insuranceMeta.tier})` : ''}
+              </Text>
+            </Column>
+            <Column style={{ textAlign: 'right' as const }}>
+              <Text style={{
+                margin: '0 0 4px',
+                fontSize: '14px',
+                color: '#1F2937',
+              }}>
+                {formatPrice(insuranceTotal)}
               </Text>
             </Column>
           </Row>
