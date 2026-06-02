@@ -65,6 +65,8 @@ const Shipping: React.FC<ShippingProps> = ({
   const [pendingMethodId, setPendingMethodId] = useState<string | null>(null)
   const [insuranceLoading, setInsuranceLoading] = useState(false)
   const [insuranceError, setInsuranceError] = useState<string | null>(null)
+  /** Sélection optimiste assurance : reflète immédiatement le clic */
+  const [pendingInsurance, setPendingInsurance] = useState<boolean | null>(null)
   const deliveryOptionsRef = useRef<HTMLDivElement>(null)
 
   const searchParams = useSearchParams()
@@ -142,7 +144,9 @@ const Shipping: React.FC<ShippingProps> = ({
   }
 
   // ── Assurance colis (Bpost uniquement) ───────────────────────────────────
-  const insuranceActive = getInsuranceEuros(cart as any) > 0
+  const insuranceActiveFromCart = getInsuranceEuros(cart as any) > 0
+  /** Valeur affichée : optimiste si en cours, sinon l'état réel du panier */
+  const insuranceActive = pendingInsurance ?? insuranceActiveFromCart
   const insurableGoods = getInsurableGoodsEuros(cart as any)
   const insuranceTier = getInsuranceTier(insurableGoods)
   const displayedIsBpost =
@@ -150,6 +154,8 @@ const Shipping: React.FC<ShippingProps> = ({
     (isBpostHomeOption(displayedMethod) || isBpostPickupOption(displayedMethod))
 
   const toggleInsurance = async (next: boolean) => {
+    // Affichage immédiat : on reflète le clic tout de suite
+    setPendingInsurance(next)
     setInsuranceLoading(true)
     setInsuranceError(null)
     try {
@@ -158,14 +164,23 @@ const Shipping: React.FC<ShippingProps> = ({
         setInsuranceError(
           result?.message || "Impossible de mettre à jour l'assurance."
         )
+        setPendingInsurance(null) // échec : revenir à l'état réel
       }
       router.refresh()
     } catch (err: any) {
       setInsuranceError(err?.message ?? "Erreur lors de la mise à jour de l'assurance.")
+      setPendingInsurance(null)
     } finally {
       setInsuranceLoading(false)
     }
   }
+
+  // Effacer l'état optimiste une fois que le panier reflète notre choix
+  useEffect(() => {
+    if (pendingInsurance !== null && insuranceActiveFromCart === pendingInsurance) {
+      setPendingInsurance(null)
+    }
+  }, [pendingInsurance, insuranceActiveFromCart])
 
   // Effacer pendingMethodId une fois que le cart reflète notre sélection
   useEffect(() => {

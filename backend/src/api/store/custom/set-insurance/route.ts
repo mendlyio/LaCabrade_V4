@@ -35,10 +35,13 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
 
     const baseMetadata = { ...((cart.metadata as Record<string, unknown>) || {}) }
 
-    // Désactivation : retirer l'assurance des metadata
+    // Désactivation : forcer insurance à null.
+    // NB: on ne se contente pas de `delete` car Medusa v2 peut fusionner les
+    // métadonnées (la clé persisterait) → on écrase explicitement avec null.
     if (!enabled) {
-      delete baseMetadata.insurance
-      await cartModuleService.updateCarts([{ id: cartId, metadata: baseMetadata }])
+      await cartModuleService.updateCarts([
+        { id: cartId, metadata: { ...baseMetadata, insurance: null } },
+      ])
       return res.json({ success: true, enabled: false, insurance: null })
     }
 
