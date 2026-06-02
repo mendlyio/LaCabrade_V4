@@ -162,6 +162,16 @@ export type OrderForDisplayTotal = {
   shipping_address?: { country_code?: string | null } | null
 }
 
+/** Montant d'assurance colis (euros) depuis order.metadata.insurance. */
+function getInsuranceEuros(order: OrderForDisplayTotal | null | undefined): number {
+  const insurance = (order?.metadata as any)?.insurance as
+    | { amount?: number | string; enabled?: boolean }
+    | undefined
+  if (!insurance) return 0
+  const amount = Number(insurance.amount ?? 0)
+  return Number.isFinite(amount) && amount > 0 ? amount : 0
+}
+
 /**
  * Retourne la déduction bon cadeau en euros depuis order.metadata.applied_gift_cards.
  * Plafonnée au total avant GC pour ne jamais produire un total négatif.
@@ -195,13 +205,16 @@ export function getOrderDisplayTotalEuros(order: OrderForDisplayTotal | null | u
 
   const totalBeforeGC = Math.max(0, itemTotalEuros + shippingEuros - discountEuros)
 
+  // Assurance colis : frais distinct hors base TVA, ajouté après le bon cadeau.
+  const insuranceEuros = getInsuranceEuros(order)
+
   if (exempt) {
     const vatAmount = Math.round(totalBeforeGC * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
     const totalHT = Math.round((totalBeforeGC - vatAmount) * 100) / 100
     const gcDeduction = getAppliedGiftCardsDeduction(order, totalHT)
-    return Math.max(0, totalHT - gcDeduction)
+    return Math.max(0, totalHT - gcDeduction) + insuranceEuros
   }
 
   const gcDeduction = getAppliedGiftCardsDeduction(order, totalBeforeGC)
-  return Math.max(0, totalBeforeGC - gcDeduction)
+  return Math.max(0, totalBeforeGC - gcDeduction) + insuranceEuros
 }

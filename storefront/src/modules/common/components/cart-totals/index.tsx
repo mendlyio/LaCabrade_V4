@@ -6,6 +6,7 @@ import {
   getItemsDisplayTotalEuros,
   getItemAdjustmentsEuros,
   getGiftCardDeductionEuros,
+  getInsuranceEuros,
   isFreeShippingDiscount,
   isIntraCommunityExempt,
 } from "@lib/util/cart-amounts"
@@ -124,6 +125,9 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
   // Gift card deduction from metadata (TTC, after TVA line)
   const gcDeduction = getGiftCardDeductionEuros(cartInput)
 
+  // Assurance colis (frais distinct hors TVA)
+  const insuranceEuros = getInsuranceEuros(cartInput)
+
   // Final total = what the customer pays
   const displayedTotal = getDisplayTotalTvacEuros(cartInput)
 
@@ -182,6 +186,17 @@ const CartTotals: React.FC<CartTotalsProps> = ({ totals }) => {
             {formatAmount(displayedTaxTotal, currency_code)}
           </span>
         </div>
+
+        {insuranceEuros > 0 && (
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 flex items-center gap-1">
+              🛡️ Assurance colis
+            </span>
+            <span className="font-medium text-gray-900" data-testid="cart-insurance" data-value={insuranceEuros}>
+              {formatAmount(insuranceEuros, currency_code)}
+            </span>
+          </div>
+        )}
 
         {gcDeduction > 0 && (
           <>

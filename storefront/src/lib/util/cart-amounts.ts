@@ -218,6 +218,44 @@ export function isFreeShippingDiscount(
 }
 
 /**
+ * Barème d'assurance colis (Bpost), basé sur la valeur assurable (articles TTC
+ * hors bons cadeau). Service exonéré de TVA → frais distinct hors base TVA.
+ * ≤ 1 000 € → 2 € · ≤ 2 500 € → 5 € · ≤ 5 000 € → 8 € · > 5 000 € → indisponible
+ */
+export function getInsuranceTier(goodsEuros: number): {
+  amount: number
+  label: string
+  available: boolean
+} {
+  if (goodsEuros <= 1000) return { amount: 2, label: "jusqu'à 1 000 €", available: true }
+  if (goodsEuros <= 2500) return { amount: 5, label: "jusqu'à 2 500 €", available: true }
+  if (goodsEuros <= 5000) return { amount: 8, label: "jusqu'à 5 000 €", available: true }
+  return { amount: 0, label: "au-delà de 5 000 €", available: false }
+}
+
+/** Valeur assurable = articles TTC hors bons cadeau (en euros). */
+export function getInsurableGoodsEuros(cart: CartAmountsInput | null | undefined): number {
+  const items = cart?.items
+  if (!items?.length) return 0
+  let sum = 0
+  for (const item of items) {
+    if (isGiftCardItem(item)) continue
+    sum += lineItemAmountToEuros(item.unit_price) * (item.quantity ?? 1)
+  }
+  return Math.round(sum * 100) / 100
+}
+
+/** Montant d'assurance colis retenu (euros) depuis cart.metadata.insurance. */
+export function getInsuranceEuros(cart: CartAmountsInput | null | undefined): number {
+  const insurance = (cart?.metadata as any)?.insurance as
+    | { amount?: number; enabled?: boolean }
+    | undefined
+  if (!insurance) return 0
+  const amount = Number(insurance.amount ?? 0)
+  return Number.isFinite(amount) && amount > 0 ? amount : 0
+}
+
+/**
  * Retourne la somme des soldes des bons cadeau appliqués (en euros TTC)
  * depuis cart.metadata.applied_gift_cards.
  */
@@ -281,12 +319,15 @@ export function getDisplayTotalTvacEuros(cart: CartAmountsInput | null | undefin
   const totalTTCBeforeGC = getTotalBeforeGiftCardEuros(cart)
   const gcDeduction = getGiftCardDeductionEuros(cart)
 
+  // Assurance colis : frais distinct hors base TVA, ajouté après le bon cadeau.
+  const insuranceEuros = getInsuranceEuros(cart)
+
   if (exempt) {
     const vatAmount = Math.round(totalTTCBeforeGC * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
     const totalHT = Math.round((totalTTCBeforeGC - vatAmount) * 100) / 100
-    return Math.max(0, totalHT - gcDeduction)
+    return Math.max(0, totalHT - gcDeduction) + insuranceEuros
   }
-  return Math.max(0, totalTTCBeforeGC - gcDeduction)
+  return Math.max(0, totalTTCBeforeGC - gcDeduction) + insuranceEuros
 }
 
 /**

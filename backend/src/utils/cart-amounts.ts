@@ -155,6 +155,46 @@ function getAppliedGiftCardsEuros(cart: CartForAmount): number {
 }
 
 /**
+ * Barème d'assurance colis (Bpost). Basé sur la valeur assurable des articles
+ * (TTC, hors bons cadeau). L'assurance est un service exonéré de TVA → ajoutée
+ * comme frais distinct, hors base TVA.
+ *
+ * ≤ 1 000 € → 2 € · ≤ 2 500 € → 5 € · ≤ 5 000 € → 8 € · > 5 000 € → indisponible
+ */
+export function getInsuranceTier(goodsEuros: number): {
+  amount: number
+  label: string
+  available: boolean
+} {
+  if (goodsEuros <= 1000) return { amount: 2, label: "jusqu'à 1 000 €", available: true }
+  if (goodsEuros <= 2500) return { amount: 5, label: "jusqu'à 2 500 €", available: true }
+  if (goodsEuros <= 5000) return { amount: 8, label: "jusqu'à 5 000 €", available: true }
+  return { amount: 0, label: "au-delà de 5 000 €", available: false }
+}
+
+/** Valeur assurable = articles TTC hors bons cadeau (sert au calcul du palier). */
+export function getInsurableGoodsEuros(cart: CartForAmount): number {
+  const items = cart.items ?? []
+  let sum = 0
+  for (const item of items) {
+    if (isGiftCardItem(item)) continue
+    sum += num(item.unit_price) * (item.quantity ?? 1)
+  }
+  return Math.round(sum * 100) / 100
+}
+
+/** Montant d'assurance colis retenu (euros), stocké dans cart.metadata.insurance. */
+export function getInsuranceEuros(cart: CartForAmount | null | undefined): number {
+  if (!cart) return 0
+  const insurance = (cart.metadata as any)?.insurance as
+    | { amount?: number | string; enabled?: boolean }
+    | undefined
+  if (!insurance) return 0
+  const amount = num(insurance.amount)
+  return amount > 0 ? amount : 0
+}
+
+/**
  * Total TTC à payer (en euros), identique à `getDisplayTotalTvacEuros` côté
  * storefront. Source unique de vérité pour l'affichage et le paiement.
  */
@@ -177,7 +217,12 @@ export function getCartDisplayTotalEuros(cart: CartForAmount | null | undefined)
   const gcApplied = getAppliedGiftCardsEuros(cart)
   const gcDeduction = Math.min(gcApplied, totalBeforeGCFinal)
 
-  return Math.max(0, totalBeforeGCFinal - gcDeduction)
+  // L'assurance colis est un frais distinct, hors base TVA, ajouté après
+  // la déduction bon cadeau (elle ne peut pas être couverte par un bon cadeau
+  // ni réduite par une promo — c'est un service optionnel).
+  const insuranceEuros = getInsuranceEuros(cart)
+
+  return Math.max(0, totalBeforeGCFinal - gcDeduction) + insuranceEuros
 }
 
 /**

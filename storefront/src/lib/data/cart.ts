@@ -374,6 +374,36 @@ export async function clearShippingMetadata({
   revalidateTag("cart")
 }
 
+/**
+ * Active/désactive l'assurance colis (Bpost). Le montant (palier) est calculé
+ * et validé côté serveur. Retourne la réponse de la route pour gérer le cas
+ * "au-delà de 5 000 €" (code: above_max).
+ */
+export async function setInsurance({
+  cartId,
+  enabled,
+}: {
+  cartId: string
+  enabled: boolean
+}): Promise<{ success: boolean; enabled?: boolean; code?: string; message?: string }> {
+  const backendUrl =
+    process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
+  const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  if (publishableKey) headers["x-publishable-api-key"] = publishableKey
+
+  const res = await fetch(`${backendUrl}/store/custom/set-insurance`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ cart_id: cartId, enabled }),
+  })
+
+  const data = await res.json().catch(() => ({ success: false }))
+  revalidateTag("cart")
+  return data
+}
+
 export async function setPickupLocation({
   cartId,
   pickupLocation,

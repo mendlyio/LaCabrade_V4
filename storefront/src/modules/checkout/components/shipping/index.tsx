@@ -9,10 +9,16 @@ import PickupPoints from "@modules/checkout/components/pickup-points"
 import StorePickup from "@modules/checkout/components/store-pickup"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
-import { setShippingMethod, clearShippingMetadata } from "@lib/data/cart"
+import { setShippingMethod, clearShippingMetadata, setInsurance } from "@lib/data/cart"
 import { cartToTrackingCart, trackGA4AddShippingInfo } from "@lib/tracking"
 import { formatAmount } from "@lib/util/money"
+import {
+  getInsurableGoodsEuros,
+  getInsuranceTier,
+  getInsuranceEuros,
+} from "@lib/util/cart-amounts"
 import { HttpTypes } from "@medusajs/types"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 /**
  * Détecte si une option de livraison correspond au retrait en magasin.
@@ -57,6 +63,8 @@ const Shipping: React.FC<ShippingProps> = ({
   const [error, setError] = useState<string | null>(null)
   /** Sélection optimiste : affichée immédiatement au clic, avant la réponse API */
   const [pendingMethodId, setPendingMethodId] = useState<string | null>(null)
+  const [insuranceLoading, setInsuranceLoading] = useState(false)
+  const [insuranceError, setInsuranceError] = useState<string | null>(null)
   const deliveryOptionsRef = useRef<HTMLDivElement>(null)
 
   const searchParams = useSearchParams()
@@ -115,6 +123,14 @@ const Shipping: React.FC<ShippingProps> = ({
 
       await setShippingMethod({ cartId: cart.id, shippingMethodId: id })
 
+      // L'assurance n'existe que pour Bpost : la retirer si on change pour
+      // une option non-Bpost (retrait magasin) alors qu'elle était active.
+      const newIsBpost =
+        isBpostHomeOption(newOption) || isBpostPickupOption(newOption)
+      if (!newIsBpost && getInsuranceEuros(cart as any) > 0) {
+        await setInsurance({ cartId: cart.id, enabled: false }).catch(() => undefined)
+      }
+
       router.refresh()
       // Ne pas effacer pendingMethodId ici : on le garde jusqu'à ce que le cart soit rafraîchi
     } catch (err: any) {
@@ -122,6 +138,32 @@ const Shipping: React.FC<ShippingProps> = ({
       setPendingMethodId(null)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // ── Assurance colis (Bpost uniquement) ───────────────────────────────────
+  const insuranceActive = getInsuranceEuros(cart as any) > 0
+  const insurableGoods = getInsurableGoodsEuros(cart as any)
+  const insuranceTier = getInsuranceTier(insurableGoods)
+  const displayedIsBpost =
+    !!displayedMethod &&
+    (isBpostHomeOption(displayedMethod) || isBpostPickupOption(displayedMethod))
+
+  const toggleInsurance = async (next: boolean) => {
+    setInsuranceLoading(true)
+    setInsuranceError(null)
+    try {
+      const result = await setInsurance({ cartId: cart.id, enabled: next })
+      if (!result?.success) {
+        setInsuranceError(
+          result?.message || "Impossible de mettre à jour l'assurance."
+        )
+      }
+      router.refresh()
+    } catch (err: any) {
+      setInsuranceError(err?.message ?? "Erreur lors de la mise à jour de l'assurance.")
+    } finally {
+      setInsuranceLoading(false)
     }
   }
 
@@ -310,6 +352,66 @@ const Shipping: React.FC<ShippingProps> = ({
           {/* Retrait en magasin : sélection du point de retrait */}
           {displayedMethod && isStorePickupOption(displayedMethod) && (
             <StorePickup key={displayedMethod.id} cart={cart} />
+          )}
+
+          {/* Assurance colis — Bpost uniquement */}
+          {displayedIsBpost && (
+            <div className="mt-4">
+              {insuranceTier.available ? (
+                <label
+                  className={clx(
+                    "flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all",
+                    {
+                      "border-amber-500 bg-amber-50": insuranceActive,
+                      "border-gray-200 hover:border-gray-300": !insuranceActive,
+                      "cursor-wait opacity-80": insuranceLoading,
+                    }
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    checked={insuranceActive}
+                    disabled={insuranceLoading}
+                    onChange={(e) => toggleInsurance(e.target.checked)}
+                    className="mt-0.5 w-5 h-5 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+                        🛡️ Assurer mon colis
+                      </span>
+                      <span className="text-sm font-bold text-amber-700">
+                        + {formatAmount(insuranceTier.amount, cart?.currency_code ?? "eur")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                      Protégez votre envoi contre la perte ou le vol par Bpost
+                      (couverture {insuranceTier.label}). Sans assurance, la perte
+                      du colis reste à votre charge.
+                    </p>
+                    {insuranceLoading && (
+                      <p className="text-xs text-amber-600 mt-1">Mise à jour…</p>
+                    )}
+                  </div>
+                </label>
+              ) : (
+                <div className="p-4 border-2 border-amber-200 bg-amber-50 rounded-xl">
+                  <p className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+                    🛡️ Assurance colis
+                  </p>
+                  <p className="text-xs text-gray-700 mt-1 leading-relaxed">
+                    La valeur de votre panier dépasse 5 000 €.{" "}
+                    <LocalizedClientLink href="/contact" className="text-amber-700 font-semibold underline underline-offset-2">
+                      Contactez-nous
+                    </LocalizedClientLink>{" "}
+                    pour assurer ce colis avant l&apos;expédition.
+                  </p>
+                </div>
+              )}
+              {insuranceError && (
+                <p className="text-xs text-red-500 mt-2">{insuranceError}</p>
+              )}
+            </div>
           )}
 
           <ErrorMessage

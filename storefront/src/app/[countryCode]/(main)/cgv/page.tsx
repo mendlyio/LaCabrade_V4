@@ -103,6 +103,26 @@ export default function CGVPage() {
               </p>
             </section>
 
+            {/* Article 5 bis - Transfert des risques et assurance colis */}
+            <section>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Article 5 bis - Transfert des risques et assurance colis</h2>
+              <p className="mb-3">
+                Les risques de perte, de vol ou de détérioration du colis sont transférés au Client dès la remise des produits au transporteur (Bpost). Sauf souscription de l'assurance colis optionnelle (voir ci-dessous), <strong>le Vendeur ne saurait être tenu responsable de la perte, du vol ou de la détérioration du colis survenus pendant le transport, et aucun remboursement ni renvoi ne pourra être exigé à ce titre.</strong>
+              </p>
+              <p className="mb-3">
+                Pour les envois Bpost (livraison à domicile ou en point relais), le Client a la possibilité de souscrire, lors de la commande, une <strong>assurance colis optionnelle</strong> couvrant la perte, le vol ou la détérioration pendant le transport. Le tarif de cette assurance, ajouté au montant de la commande, est le suivant :
+              </p>
+              <ul className="list-disc pl-6 space-y-1 mb-3">
+                <li>2 € pour une valeur de colis jusqu'à 1 000 €</li>
+                <li>5 € pour une valeur de colis jusqu'à 2 500 €</li>
+                <li>8 € pour une valeur de colis jusqu'à 5 000 €</li>
+                <li>Au-delà de 5 000 €, merci de nous contacter avant l'expédition</li>
+              </ul>
+              <p>
+                En l'absence de souscription de cette assurance, <strong>la perte ou le vol du colis pendant le transport reste à la charge exclusive du Client</strong>. La souscription de l'assurance est nécessaire pour bénéficier d'un remboursement ou d'un renvoi en cas de colis perdu ou volé, sur présentation des justificatifs requis.
+              </p>
+            </section>
+
             {/* Article 6 - Droit de rétractation */}
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Article 6 - Droit de rétractation</h2>
