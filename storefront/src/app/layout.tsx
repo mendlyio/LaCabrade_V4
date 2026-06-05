@@ -36,14 +36,9 @@ export const metadata: Metadata = {
     description:
       "Sellerie Liège & sellerie en ligne Belgique — équipement cavalier et cheval, cuirs artisanaux, LC Equestrian et grandes marques.",
   },
-  alternates: {
-    canonical: BASE_URL,
-    languages: {
-      "fr-BE": `${BASE_URL}/be`,
-      "nl-BE": `${BASE_URL}/be`,
-      "x-default": `${BASE_URL}/be`,
-    },
-  },
+  // Pas de canonical global ici : l'apex (BASE_URL) redirige (307) et ne doit pas
+  // servir de canonical. Chaque page définit son propre canonical auto-référencé
+  // (accueil, catégories, produits, store…), ce qui évite la cannibalisation.
   keywords: [
     "sellerie liège",
     "sellerie en ligne belgique",

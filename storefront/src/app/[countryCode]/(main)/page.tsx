@@ -9,18 +9,31 @@ import ProductCardModern from "@modules/products/components/product-card-modern"
 
 const HOME_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://localhost:8000"
 
-export const metadata: Metadata = {
-  title: "Sellerie Liège en ligne — La Cabrade | Équipement Cavalier & Cheval",
-  description:
-    "Sellerie équestre en ligne à Liège — La Cabrade à Fléron. Plus de 4 000 articles : selles, briderie, casques, bottes, vêtements cavalier. Sellerie en ligne Belgique, livraison rapide.",
-  alternates: {
-    canonical: `${HOME_BASE_URL}/be`,
-    languages: {
-      "fr-BE": `${HOME_BASE_URL}/be`,
-      "nl-BE": `${HOME_BASE_URL}/be`,
-      "x-default": `${HOME_BASE_URL}/be`,
+/**
+ * Métadonnées de la page d'accueil — canonical AUTO-RÉFÉRENCÉ par pays.
+ * Évite la cannibalisation : chaque version (/be, /fr) se déclare comme sa
+ * propre canonical et les hreflang relient les variantes régionales. Google
+ * consolide ainsi l'autorité (y compris l'apex qui redirige vers /be ou /fr).
+ */
+export async function generateMetadata({
+  params: { countryCode },
+}: {
+  params: { countryCode: string }
+}): Promise<Metadata> {
+  const cc = (countryCode || "be").toLowerCase()
+  return {
+    title: "Sellerie Liège en ligne — La Cabrade | Équipement Cavalier & Cheval",
+    description:
+      "Sellerie équestre en ligne à Liège — La Cabrade à Fléron. Plus de 4 000 articles : selles, briderie, casques, bottes, vêtements cavalier. Sellerie en ligne Belgique, livraison rapide.",
+    alternates: {
+      canonical: `${HOME_BASE_URL}/${cc}`,
+      languages: {
+        "fr-BE": `${HOME_BASE_URL}/be`,
+        "fr-FR": `${HOME_BASE_URL}/fr`,
+        "x-default": `${HOME_BASE_URL}/be`,
+      },
     },
-  },
+  }
 }
 
 export const revalidate = 60
