@@ -16,8 +16,23 @@ type StatsData = {
   daily: Array<{ date: string; revenue: number; orders: number }>
   top_customers: Array<{ email: string; orders: number; spent: number }>
   top_products: Array<{ title: string; qty: number; revenue: number }>
+  country_split: Array<{ country: string; orders: number }>
+  top_brands: Array<{ brand: string; revenue: number; qty: number }>
+  repeat: { rate: number; repeat_customers: number; total_customers: number }
+  monthly: Array<{ month: string; revenue: number; orders: number }>
   totals: { all_orders: number; all_revenue: number }
 }
+
+const COUNTRY_NAME: Record<string, string> = {
+  BE: "🇧🇪 Belgique",
+  FR: "🇫🇷 France",
+  LU: "🇱🇺 Luxembourg",
+  ES: "🇪🇸 Espagne",
+  AL: "Allemagne",
+  DE: "🇩🇪 Allemagne",
+  NL: "🇳🇱 Pays-Bas",
+}
+const MONTH_NAME = ["jan", "fév", "mar", "avr", "mai", "juin", "juil", "août", "sep", "oct", "nov", "déc"]
 
 const euro = (n: number) =>
   new Intl.NumberFormat("fr-BE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n || 0)
@@ -157,6 +172,82 @@ const OrderStatsWidget = () => {
           </div>
         </div>
 
+        {/* Comparatif mensuel (6 mois) */}
+        <div className="mb-5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Comparatif mensuel — 6 derniers mois
+          </p>
+          <div className="flex items-end gap-2 h-28">
+            {(() => {
+              const maxM = Math.max(1, ...data.monthly.map((m) => m.revenue))
+              return data.monthly.map((m) => {
+                const h = Math.max(4, Math.round((m.revenue / maxM) * 80))
+                const [, mm] = m.month.split("-")
+                return (
+                  <div key={m.month} className="flex-1 flex flex-col items-center justify-end">
+                    <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                      {euro(m.revenue)}
+                    </span>
+                    <div
+                      className="w-full rounded-t bg-gradient-to-t from-[#9e354a] to-[#c95d73]"
+                      style={{ height: `${h}px` }}
+                      title={`${m.orders} commandes`}
+                    />
+                    <span className="text-[10px] text-gray-400 mt-1">{MONTH_NAME[Number(mm) - 1]}</span>
+                  </div>
+                )
+              })
+            })()}
+          </div>
+        </div>
+
+        {/* Répartition pays + Taux de réachat */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Répartition par pays (livraison)
+            </p>
+            <div className="space-y-1.5">
+              {(() => {
+                const total = data.country_split.reduce((s, c) => s + c.orders, 0) || 1
+                return data.country_split.slice(0, 5).map((c) => {
+                  const pct = Math.round((c.orders / total) * 100)
+                  return (
+                    <div key={c.country} className="flex items-center gap-2 text-sm">
+                      <span className="w-28 truncate text-gray-700 dark:text-gray-300">
+                        {COUNTRY_NAME[c.country] || c.country}
+                      </span>
+                      <div className="flex-1 h-3 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                        <div className="h-full bg-[#9e354a]" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="w-16 text-right text-xs text-gray-500">
+                        {c.orders} ({pct}%)
+                      </span>
+                    </div>
+                  )
+                })
+              })()}
+            </div>
+          </div>
+
+          <div className="flex flex-col">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Fidélité client
+            </p>
+            <div className="flex-1 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 text-white p-4 flex items-center justify-between">
+              <div>
+                <p className="text-3xl font-bold">{data.repeat.rate}%</p>
+                <p className="text-xs text-white/90 mt-1">taux de réachat</p>
+              </div>
+              <div className="text-right text-xs text-white/90 leading-relaxed">
+                <p className="font-semibold text-base">{data.repeat.repeat_customers}</p>
+                <p>clients fidèles</p>
+                <p className="mt-1">sur {data.repeat.total_customers} au total</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Top produits + Top clients */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div>
@@ -215,6 +306,37 @@ const OrderStatsWidget = () => {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        {/* CA par marque */}
+        <div className="mt-5">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Chiffre d'affaires par marque (90 j)
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {data.top_brands.length === 0 && (
+              <p className="text-xs text-gray-400">Aucune vente sur la période.</p>
+            )}
+            {(() => {
+              const maxB = Math.max(1, ...data.top_brands.map((b) => b.revenue))
+              return data.top_brands.map((b, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 text-sm bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2"
+                >
+                  <span className="flex-1 truncate text-gray-800 dark:text-gray-200" title={b.brand}>
+                    {b.brand}
+                  </span>
+                  <div className="w-20 h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden hidden sm:block">
+                    <div className="h-full bg-[#9e354a]" style={{ width: `${Math.round((b.revenue / maxB) * 100)}%` }} />
+                  </div>
+                  <span className="text-xs font-bold text-[#9e354a] dark:text-[#d98aa0] flex-shrink-0 w-16 text-right">
+                    {euro(b.revenue)}
+                  </span>
+                </div>
+              ))
+            })()}
           </div>
         </div>
       </div>

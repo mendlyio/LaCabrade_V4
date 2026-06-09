@@ -119,6 +119,73 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       revenue: Math.round((Number(r.revenue) || 0) * 100) / 100,
     }))
 
+    // Répartition par pays (adresse de livraison)
+    const countryRes = await knex.raw(`
+      SELECT oa.country_code AS country, COUNT(*) AS n
+      FROM "order" o
+      JOIN order_address oa ON oa.id = o.shipping_address_id
+      WHERE o.deleted_at IS NULL AND o.is_draft_order = false
+      GROUP BY oa.country_code
+      ORDER BY n DESC
+    `)
+    const country_split = (countryRes.rows || []).map((r: any) => ({
+      country: (r.country || "?").toUpperCase(),
+      orders: Number(r.n) || 0,
+    }))
+
+    // CA par marque (90 j) — marque depuis product.metadata, fallback collection
+    const brandRes = await knex.raw(`
+      SELECT COALESCE(p.metadata->>'brand', li.product_collection, 'Autre') AS brand,
+             SUM(li.unit_price * oi.quantity) AS revenue,
+             SUM(oi.quantity) AS qty
+      FROM "order" o
+      JOIN order_item oi ON oi.order_id = o.id AND oi.version = o.version
+      JOIN order_line_item li ON li.id = oi.item_id
+      LEFT JOIN product p ON p.id = li.product_id
+      WHERE o.deleted_at IS NULL AND o.is_draft_order = false
+        AND li.is_giftcard = false
+        AND o.created_at >= now() - interval '90 days'
+      GROUP BY 1
+      ORDER BY revenue DESC
+      LIMIT 8
+    `)
+    const top_brands = (brandRes.rows || []).map((r: any) => ({
+      brand: r.brand || "Autre",
+      revenue: Math.round((Number(r.revenue) || 0) * 100) / 100,
+      qty: Number(r.qty) || 0,
+    }))
+
+    // Taux de réachat (clients ayant commandé > 1 fois, all-time)
+    const ordersByEmail = new Map<string, number>()
+    for (const o of orders) {
+      const e = (o.email || "").toLowerCase()
+      if (!e) continue
+      ordersByEmail.set(e, (ordersByEmail.get(e) || 0) + 1)
+    }
+    const total_customers = ordersByEmail.size
+    const repeat_customers = [...ordersByEmail.values()].filter((n) => n > 1).length
+    const repeat_rate = total_customers ? Math.round((repeat_customers / total_customers) * 100) : 0
+
+    // Comparatif mensuel (6 derniers mois)
+    const monthly: Array<{ month: string; revenue: number; orders: number }> = []
+    const firstOfMonth = new Date()
+    firstOfMonth.setDate(1)
+    firstOfMonth.setHours(0, 0, 0, 0)
+    for (let i = 5; i >= 0; i--) {
+      const start = new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth() - i, 1)
+      const end = new Date(firstOfMonth.getFullYear(), firstOfMonth.getMonth() - i + 1, 1)
+      let rev = 0, n = 0
+      for (const o of orders) {
+        const t = new Date(o.created_at).getTime()
+        if (t >= start.getTime() && t < end.getTime()) { rev += o.revenue; n++ }
+      }
+      monthly.push({
+        month: start.toISOString().slice(0, 7),
+        revenue: Math.round(rev * 100) / 100,
+        orders: n,
+      })
+    }
+
     const all_revenue = Math.round(orders.reduce((s, o) => s + o.revenue, 0) * 100) / 100
 
     return res.json({
@@ -126,6 +193,10 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       daily,
       top_customers,
       top_products,
+      country_split,
+      top_brands,
+      repeat: { rate: repeat_rate, repeat_customers, total_customers },
+      monthly,
       totals: { all_orders: orders.length, all_revenue },
       generated_at: new Date().toISOString(),
     })
