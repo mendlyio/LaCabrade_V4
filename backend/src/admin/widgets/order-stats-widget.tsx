@@ -39,6 +39,7 @@ type StatsData = {
     items: number
     updated_at: string
     relaunched: boolean
+    products: Array<{ title: string; qty: number }>
   }>
   totals: { all_orders: number; all_revenue: number }
 }
@@ -245,9 +246,18 @@ const OrderStatsWidget = () => {
                     key={i}
                     className="group relative flex items-center gap-3 px-3 py-2 text-sm hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors cursor-default"
                   >
-                    <span className="flex-1 truncate text-gray-800 dark:text-gray-200">
-                      {cart.name || cart.email}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-gray-800 dark:text-gray-200">
+                        {cart.name || cart.email}
+                      </p>
+                      {cart.products.length > 0 && (
+                        <p className="truncate text-[11px] text-gray-400">
+                          🛒 {cart.products
+                            .map((p) => `${p.title}${p.qty > 1 ? ` ×${p.qty}` : ""}`)
+                            .join(", ")}
+                        </p>
+                      )}
+                    </div>
                     <span className="text-xs text-gray-400 flex-shrink-0">
                       {cart.items} art.
                     </span>
@@ -291,6 +301,19 @@ const OrderStatsWidget = () => {
                           <span>📍</span>
                           {[cart.city, cart.country].filter(Boolean).join(", ")}
                         </p>
+                      )}
+                      {cart.products.length > 0 && (
+                        <div className="mt-1.5 pt-1.5 border-t border-white/20">
+                          <p className="text-white/60 mb-0.5">Articles dans le panier :</p>
+                          <ul className="space-y-0.5">
+                            {cart.products.map((p, j) => (
+                              <li key={j} className="text-white/90">
+                                • {p.title}
+                                {p.qty > 1 ? ` ×${p.qty}` : ""}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
                       <p className="mt-1.5 pt-1.5 border-t border-white/20 text-white/70">
                         {cart.items} article(s) · {euro2(cart.value)}

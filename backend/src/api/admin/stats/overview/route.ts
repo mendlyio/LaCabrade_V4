@@ -235,7 +235,11 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         ((c.metadata->>'abandon_email_sent_at') IS NOT NULL) AS relaunched,
         a.first_name, a.last_name, a.phone, a.city, a.country_code,
         COALESCE(SUM(li.unit_price * li.quantity), 0) AS value,
-        COUNT(li.id) AS items
+        COUNT(li.id) AS items,
+        json_agg(
+          json_build_object('title', li.title, 'qty', li.quantity)
+          ORDER BY li.created_at
+        ) AS products
       FROM cart c
       JOIN cart_line_item li ON li.cart_id = c.id AND li.deleted_at IS NULL
       LEFT JOIN cart_address a ON a.id = COALESCE(c.shipping_address_id, c.billing_address_id)
@@ -248,6 +252,11 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     `)
     const abandoned_list = (abListRes.rows || []).map((r: any) => {
       const name = `${r.first_name || ""} ${r.last_name || ""}`.trim()
+      const products = Array.isArray(r.products)
+        ? r.products
+            .filter((p: any) => p && p.title)
+            .map((p: any) => ({ title: String(p.title), qty: Number(p.qty) || 1 }))
+        : []
       return {
         email: r.email,
         name: name || null,
@@ -258,6 +267,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         items: Number(r.items) || 0,
         updated_at: r.updated_at,
         relaunched: r.relaunched === true || r.relaunched === "t",
+        products,
       }
     })
 
