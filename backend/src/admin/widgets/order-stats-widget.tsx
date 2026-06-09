@@ -29,6 +29,17 @@ type StatsData = {
     recovery_rate: number
     pending_relaunch: number
   }
+  abandoned_list: Array<{
+    email: string
+    name: string | null
+    phone: string | null
+    city: string | null
+    country: string | null
+    value: number
+    items: number
+    updated_at: string
+    relaunched: boolean
+  }>
   totals: { all_orders: number; all_revenue: number }
 }
 
@@ -221,6 +232,75 @@ const OrderStatsWidget = () => {
               <p className="text-[11px] text-white/80 mt-0.5">des paniers relancés</p>
             </div>
           </div>
+
+          {/* Liste des paniers abandonnés récents — survol = coordonnées client */}
+          {data.abandoned_list.length > 0 && (
+            <div className="mt-3">
+              <p className="text-[11px] text-gray-400 mb-1.5">
+                Paniers abandonnés récents (survolez une ligne pour voir les coordonnées) :
+              </p>
+              <div className="rounded-lg border border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800 overflow-visible">
+                {data.abandoned_list.map((cart, i) => (
+                  <div
+                    key={i}
+                    className="group relative flex items-center gap-3 px-3 py-2 text-sm hover:bg-orange-50 dark:hover:bg-orange-900/10 transition-colors cursor-default"
+                  >
+                    <span className="flex-1 truncate text-gray-800 dark:text-gray-200">
+                      {cart.name || cart.email}
+                    </span>
+                    <span className="text-xs text-gray-400 flex-shrink-0">
+                      {cart.items} art.
+                    </span>
+                    <span className="text-xs font-bold text-gray-900 dark:text-gray-100 flex-shrink-0 w-20 text-right">
+                      {euro2(cart.value)}
+                    </span>
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                        cart.relaunched
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                          : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                      }`}
+                    >
+                      {cart.relaunched ? "Relancé" : "Non relancé"}
+                    </span>
+                    <span className="text-[10px] text-gray-400 flex-shrink-0 w-16 text-right">
+                      {new Date(cart.updated_at).toLocaleDateString("fr-BE", { day: "2-digit", month: "2-digit" })}
+                    </span>
+
+                    {/* Popover coordonnées au survol */}
+                    <div className="absolute left-3 top-full mt-1 z-20 hidden group-hover:block bg-gray-900 text-white text-xs rounded-lg shadow-xl p-3 min-w-[240px]">
+                      <p className="font-semibold mb-1 text-white">
+                        {cart.name || "Client"}
+                      </p>
+                      <p className="flex items-center gap-1.5 text-white/90">
+                        <span>✉</span>
+                        <a href={`mailto:${cart.email}`} className="underline hover:text-white">
+                          {cart.email}
+                        </a>
+                      </p>
+                      {cart.phone && (
+                        <p className="flex items-center gap-1.5 text-white/90 mt-0.5">
+                          <span>📞</span>
+                          <a href={`tel:${cart.phone}`} className="underline hover:text-white">
+                            {cart.phone}
+                          </a>
+                        </p>
+                      )}
+                      {(cart.city || cart.country) && (
+                        <p className="flex items-center gap-1.5 text-white/90 mt-0.5">
+                          <span>📍</span>
+                          {[cart.city, cart.country].filter(Boolean).join(", ")}
+                        </p>
+                      )}
+                      <p className="mt-1.5 pt-1.5 border-t border-white/20 text-white/70">
+                        {cart.items} article(s) · {euro2(cart.value)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Comparatif mensuel (6 mois) */}

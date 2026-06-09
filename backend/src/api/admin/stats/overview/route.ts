@@ -199,6 +199,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       FROM cart c
       JOIN cart_line_item li ON li.cart_id = c.id AND li.deleted_at IS NULL
       WHERE c.email IS NOT NULL AND c.deleted_at IS NULL
+        AND c.email NOT ILIKE '%@mendly.io%'
       GROUP BY c.id
       HAVING COUNT(li.id) > 0
     `)
@@ -228,6 +229,38 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       pending_relaunch: pending,
     }
 
+    // Liste des paniers abandonnés (récents) avec coordonnées client pour relance manuelle
+    const abListRes = await knex.raw(`
+      SELECT c.id, c.email, c.updated_at,
+        ((c.metadata->>'abandon_email_sent_at') IS NOT NULL) AS relaunched,
+        a.first_name, a.last_name, a.phone, a.city, a.country_code,
+        COALESCE(SUM(li.unit_price * li.quantity), 0) AS value,
+        COUNT(li.id) AS items
+      FROM cart c
+      JOIN cart_line_item li ON li.cart_id = c.id AND li.deleted_at IS NULL
+      LEFT JOIN cart_address a ON a.id = COALESCE(c.shipping_address_id, c.billing_address_id)
+      WHERE c.email IS NOT NULL AND c.deleted_at IS NULL AND c.completed_at IS NULL
+        AND c.email NOT ILIKE '%@mendly.io%'
+        AND c.updated_at < now() - interval '90 minutes'
+      GROUP BY c.id, a.first_name, a.last_name, a.phone, a.city, a.country_code
+      ORDER BY c.updated_at DESC
+      LIMIT 15
+    `)
+    const abandoned_list = (abListRes.rows || []).map((r: any) => {
+      const name = `${r.first_name || ""} ${r.last_name || ""}`.trim()
+      return {
+        email: r.email,
+        name: name || null,
+        phone: r.phone || null,
+        city: r.city || null,
+        country: (r.country_code || "").toUpperCase() || null,
+        value: Math.round((Number(r.value) || 0) * 100) / 100,
+        items: Number(r.items) || 0,
+        updated_at: r.updated_at,
+        relaunched: r.relaunched === true || r.relaunched === "t",
+      }
+    })
+
     const all_revenue = Math.round(orders.reduce((s, o) => s + o.revenue, 0) * 100) / 100
 
     return res.json({
@@ -240,6 +273,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       repeat: { rate: repeat_rate, repeat_customers, total_customers },
       monthly,
       carts,
+      abandoned_list,
       totals: { all_orders: orders.length, all_revenue },
       generated_at: new Date().toISOString(),
     })
