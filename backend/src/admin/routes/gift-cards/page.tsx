@@ -48,6 +48,9 @@ const GiftCardsPage = () => {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [disabling, setDisabling] = useState<string | null>(null)
+  const [resending, setResending] = useState<string | null>(null)
+  const [downloading, setDownloading] = useState<string | null>(null)
+  const [notice, setNotice] = useState<{ id: string; msg: string; ok: boolean } | null>(null)
   const [count, setCount] = useState(0)
 
   const fetchGiftCards = useCallback(async () => {
@@ -88,6 +91,56 @@ const GiftCardsPage = () => {
       console.error("Error disabling gift card:", e)
     } finally {
       setDisabling(null)
+    }
+  }
+
+  const showNotice = (id: string, msg: string, ok: boolean) => {
+    setNotice({ id, msg, ok })
+    setTimeout(() => setNotice((n) => (n && n.id === id ? null : n)), 6000)
+  }
+
+  // Renvoyer l'email du bon cadeau (avec PDF en pièce jointe)
+  const handleResend = async (gc: GiftCardRow) => {
+    setResending(gc.id)
+    try {
+      const res = await fetch(`/admin/gift-cards/${gc.id}/resend-email`, {
+        method: "POST",
+        credentials: "include",
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        showNotice(gc.id, `Email renvoyé à ${gc.recipient_email}`, true)
+      } else {
+        showNotice(gc.id, data?.message || "Erreur lors de l'envoi", false)
+      }
+    } catch (e) {
+      showNotice(gc.id, "Erreur réseau lors de l'envoi", false)
+    } finally {
+      setResending(null)
+    }
+  }
+
+  // Télécharger le PDF du bon cadeau
+  const handleDownloadPdf = async (gc: GiftCardRow) => {
+    setDownloading(gc.id)
+    try {
+      const res = await fetch(`/admin/gift-cards/${gc.id}/pdf`, {
+        credentials: "include",
+      })
+      if (!res.ok) throw new Error("Téléchargement impossible")
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `bon-cadeau-lacabrade-${gc.code}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      showNotice(gc.id, "Erreur lors du téléchargement du PDF", false)
+    } finally {
+      setDownloading(null)
     }
   }
 
@@ -215,15 +268,44 @@ const GiftCardsPage = () => {
                       <td className="px-4 py-3 text-gray-500 text-xs">
                         {formatDate(gc.created_at)}
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        {gc.status === "active" && (
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2 flex-wrap">
                           <button
-                            onClick={() => handleDisable(gc)}
-                            disabled={disabling === gc.id}
-                            className="text-xs px-3 py-1.5 rounded border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                            onClick={() => handleResend(gc)}
+                            disabled={resending === gc.id}
+                            title={`Renvoyer l'email à ${gc.recipient_email}`}
+                            className="text-xs px-3 py-1.5 rounded border border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-colors disabled:opacity-50"
                           >
-                            {disabling === gc.id ? "..." : "Désactiver"}
+                            {resending === gc.id ? "Envoi..." : "✉ Renvoyer l'email"}
                           </button>
+                          <button
+                            onClick={() => handleDownloadPdf(gc)}
+                            disabled={downloading === gc.id}
+                            title="Télécharger le PDF du bon cadeau"
+                            className="text-xs px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                          >
+                            {downloading === gc.id ? "..." : "⬇ PDF"}
+                          </button>
+                          {gc.status === "active" && (
+                            <button
+                              onClick={() => handleDisable(gc)}
+                              disabled={disabling === gc.id}
+                              className="text-xs px-3 py-1.5 rounded border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                            >
+                              {disabling === gc.id ? "..." : "Désactiver"}
+                            </button>
+                          )}
+                        </div>
+                        {notice && notice.id === gc.id && (
+                          <p
+                            className={`mt-1.5 text-right text-xs ${
+                              notice.ok
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-red-600 dark:text-red-400"
+                            }`}
+                          >
+                            {notice.msg}
+                          </p>
                         )}
                       </td>
                     </tr>
