@@ -24,9 +24,24 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     const q = ((req.query.q as string) || "").trim()
     const limit = Math.min(parseInt((req.query.limit as string) || "8", 10) || 8, 20)
 
+    const debug = req.query.debug === "1"
     const index = getProductIndex()
     if (!index) {
-      return res.json({ available: false, products: [], categories: [], brands: [] })
+      return res.json({
+        available: false,
+        products: [],
+        categories: [],
+        brands: [],
+        ...(debug
+          ? {
+              _debug: {
+                client: false,
+                host_set: !!process.env.MEILISEARCH_HOST,
+                key_set: !!process.env.MEILISEARCH_API_KEY,
+              },
+            }
+          : {}),
+      })
     }
     if (!q || q.length < 2) {
       return res.json({ available: true, products: [], categories: [], brands: [], count: 0 })
@@ -96,6 +111,12 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     })
   } catch (error: any) {
     console.error("[store/search] Erreur:", error?.message)
-    return res.json({ available: false, products: [], categories: [], brands: [] })
+    return res.json({
+      available: false,
+      products: [],
+      categories: [],
+      brands: [],
+      ...(req.query.debug === "1" ? { _debug: { client: true, error: error?.message } } : {}),
+    })
   }
 }

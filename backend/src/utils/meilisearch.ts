@@ -30,11 +30,16 @@ export const MEILI_SYNONYMS: Record<string, string[]> = {
 
 let cachedClient: MeiliSearch | null | undefined
 
+/** Nettoie une valeur d'env : retire espaces et guillemets entourants éventuels. */
+function cleanEnv(v?: string): string {
+  return (v || "").trim().replace(/^['"]+/, "").replace(/['"]+$/, "").trim()
+}
+
 /** Retourne le client Meilisearch, ou null si non configuré. */
 export function getMeiliClient(): MeiliSearch | null {
   if (cachedClient !== undefined) return cachedClient
-  const host = process.env.MEILISEARCH_HOST
-  const apiKey = process.env.MEILISEARCH_API_KEY
+  const host = cleanEnv(process.env.MEILISEARCH_HOST)
+  const apiKey = cleanEnv(process.env.MEILISEARCH_API_KEY)
   if (!host || !apiKey) {
     cachedClient = null
     return null
