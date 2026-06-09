@@ -106,6 +106,28 @@ function slugify(str: string): string {
   return norm(str).replace(/\s+/g, "-")
 }
 
+/** Suggestions de catégories (fuzzy) — partagé Meilisearch & repli proxy. */
+async function fetchCategorySuggestions(
+  qTokens: string[],
+  headers: Record<string, string>
+): Promise<Array<{ name: string; handle: string }>> {
+  try {
+    const catUrl = new URL("/store/product-categories", BACKEND_URL)
+    catUrl.searchParams.set("limit", "200")
+    catUrl.searchParams.set("fields", "id,name,handle")
+    const catRes = await fetch(catUrl.toString(), { headers, next: { revalidate: 3600 } })
+    if (!catRes.ok) return []
+    const catData = await catRes.json()
+    return (catData.product_categories || [])
+      .map((c: any) => ({ name: c.name as string, handle: c.handle as string, n: norm(c.name || "") }))
+      .filter((c: any) => c.handle && qTokens.some((t) => fuzzyIncludes(c.n, t)))
+      .slice(0, 4)
+      .map((c: any) => ({ name: c.name, handle: c.handle }))
+  } catch {
+    return []
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl
@@ -119,6 +141,35 @@ export async function GET(request: NextRequest) {
 
     const headers: Record<string, string> = { "Content-Type": "application/json" }
     if (PUBLISHABLE_KEY) headers["x-publishable-api-key"] = PUBLISHABLE_KEY
+
+    // ── Moteur principal : Meilisearch (instantané, synonymes/fautes natifs) ──
+    // Repli automatique sur le moteur proxy ci-dessous si indisponible/vide.
+    try {
+      const msUrl = new URL("/store/search", BACKEND_URL)
+      msUrl.searchParams.set("q", q)
+      msUrl.searchParams.set("limit", String(limit))
+      const msRes = await fetch(msUrl.toString(), { headers, next: { revalidate: 15 } })
+      if (msRes.ok) {
+        const ms = await msRes.json()
+        if (ms?.available && Array.isArray(ms.products) && ms.products.length > 0) {
+          const qTokensCat = norm(q).split(" ").filter(Boolean).map(singular)
+          let categories = Array.isArray(ms.categories) ? ms.categories : []
+          if (categories.length === 0) {
+            categories = await fetchCategorySuggestions(qTokensCat, headers)
+          }
+          return NextResponse.json({
+            products: ms.products,
+            categories,
+            brands: Array.isArray(ms.brands) ? ms.brands : [],
+            count: ms.products.length,
+            query: q,
+            source: "meilisearch",
+          })
+        }
+      }
+    } catch {
+      /* Meilisearch indisponible → repli proxy ci-dessous */
+    }
 
     // 1. Résoudre la région
     let regionId: string | null = null

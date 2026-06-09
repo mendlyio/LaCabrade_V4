@@ -72,6 +72,7 @@
     "googleapis": "^171.4.0",
     "json-rpc-2.0": "^1.7.0",
     "medusajs-launch-utils": "0.0.18",
+    "meilisearch": "^0.41.0",
     "minio": "^8.0.3",
     "next": "^15.5.12",
     "patch-package": "^8.0.1",
