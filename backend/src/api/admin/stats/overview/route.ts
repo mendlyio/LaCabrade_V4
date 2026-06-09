@@ -186,6 +186,48 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       })
     }
 
+    // Paniers abandonnés & relance (aligné avec le job send-cart-abandonment-emails)
+    // Abandonné = panier avec email + articles, non complété, inactif > 1h30.
+    // Relancé = metadata.abandon_email_sent_at présent.
+    // Récupéré = relancé ET complété (le client est revenu commander).
+    const cartRes = await knex.raw(`
+      SELECT c.id,
+        (c.completed_at IS NOT NULL) AS completed,
+        c.updated_at,
+        ((c.metadata->>'abandon_email_sent_at') IS NOT NULL) AS relaunched,
+        COALESCE(SUM(li.unit_price * li.quantity), 0) AS value
+      FROM cart c
+      JOIN cart_line_item li ON li.cart_id = c.id AND li.deleted_at IS NULL
+      WHERE c.email IS NOT NULL AND c.deleted_at IS NULL
+      GROUP BY c.id
+      HAVING COUNT(li.id) > 0
+    `)
+    const ABANDON_DELAY = 90 * 60 * 1000 // 1h30
+    const ABANDON_MAXAGE = 48 * 3600 * 1000 // 48h
+    let ab_count = 0, ab_value = 0, relaunched_n = 0, recovered_n = 0, recovered_value = 0, pending = 0
+    for (const r of cartRes.rows || []) {
+      const completed = r.completed === true || r.completed === "t"
+      const wasRelaunched = r.relaunched === true || r.relaunched === "t"
+      const val = Number(r.value) || 0
+      const age = now - new Date(r.updated_at).getTime()
+      if (wasRelaunched) relaunched_n++
+      if (wasRelaunched && completed) { recovered_n++; recovered_value += val }
+      if (!completed && age > ABANDON_DELAY) {
+        ab_count++
+        ab_value += val
+        if (age < ABANDON_MAXAGE && !wasRelaunched) pending++
+      }
+    }
+    const carts = {
+      abandoned: ab_count,
+      abandoned_value: Math.round(ab_value * 100) / 100,
+      relaunched: relaunched_n,
+      recovered: recovered_n,
+      recovered_value: Math.round(recovered_value * 100) / 100,
+      recovery_rate: relaunched_n ? Math.round((recovered_n / relaunched_n) * 100) : 0,
+      pending_relaunch: pending,
+    }
+
     const all_revenue = Math.round(orders.reduce((s, o) => s + o.revenue, 0) * 100) / 100
 
     return res.json({
@@ -197,6 +239,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       top_brands,
       repeat: { rate: repeat_rate, repeat_customers, total_customers },
       monthly,
+      carts,
       totals: { all_orders: orders.length, all_revenue },
       generated_at: new Date().toISOString(),
     })

@@ -20,6 +20,15 @@ type StatsData = {
   top_brands: Array<{ brand: string; revenue: number; qty: number }>
   repeat: { rate: number; repeat_customers: number; total_customers: number }
   monthly: Array<{ month: string; revenue: number; orders: number }>
+  carts: {
+    abandoned: number
+    abandoned_value: number
+    relaunched: number
+    recovered: number
+    recovered_value: number
+    recovery_rate: number
+    pending_relaunch: number
+  }
   totals: { all_orders: number; all_revenue: number }
 }
 
@@ -169,6 +178,48 @@ const OrderStatsWidget = () => {
           <div className="flex justify-between text-[10px] text-gray-400 mt-1">
             <span>{data.daily[0]?.date.slice(5)}</span>
             <span>{data.daily[data.daily.length - 1]?.date.slice(5)}</span>
+          </div>
+        </div>
+
+        {/* Paniers abandonnés & relance */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Paniers abandonnés &amp; relance automatique
+            </p>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+              ● Relance par email active (toutes les heures)
+            </span>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 p-3">
+              <p className="text-[11px] text-orange-700 dark:text-orange-300 uppercase tracking-wide">Paniers abandonnés</p>
+              <p className="text-2xl font-bold text-orange-700 dark:text-orange-300 mt-0.5">{data.carts.abandoned}</p>
+              <p className="text-[11px] text-orange-600/80 dark:text-orange-400/80 mt-0.5">
+                valeur cumulée {euro(data.carts.abandoned_value)}
+              </p>
+            </div>
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-3">
+              <p className="text-[11px] text-gray-500 uppercase tracking-wide">Emails de relance</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-0.5">{data.carts.relaunched}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                {data.carts.pending_relaunch > 0
+                  ? `${data.carts.pending_relaunch} en attente`
+                  : "à jour"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 p-3">
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">Paniers récupérés</p>
+              <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 mt-0.5">{data.carts.recovered}</p>
+              <p className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">
+                {euro(data.carts.recovered_value)} récupérés
+              </p>
+            </div>
+            <div className="rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 text-white p-3">
+              <p className="text-[11px] text-white/85 uppercase tracking-wide">Taux de récupération</p>
+              <p className="text-2xl font-bold mt-0.5">{data.carts.recovery_rate}%</p>
+              <p className="text-[11px] text-white/80 mt-0.5">des paniers relancés</p>
+            </div>
           </div>
         </div>
 
