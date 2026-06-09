@@ -77,10 +77,18 @@ function Trend({ current, prev }: { current: number; prev: number }) {
 
 const OrderStatsWidget = () => {
   const [data, setData] = useState<StatsData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [period, setPeriod] = useState<Period>("30d")
+  // Replié par défaut ; on mémorise le choix de l'utilisateur
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true
+    return localStorage.getItem("lc_stats_collapsed") !== "0"
+  })
 
+  // Chargement différé : on ne récupère les stats qu'au premier dépliage
   useEffect(() => {
+    if (collapsed || data || loading) return
+    setLoading(true)
     ;(async () => {
       try {
         const res = await fetch("/admin/stats/overview", { credentials: "include" })
@@ -91,46 +99,80 @@ const OrderStatsWidget = () => {
         setLoading(false)
       }
     })()
-  }, [])
+  }, [collapsed, data, loading])
 
-  if (loading) {
-    return (
-      <div className="mb-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 text-sm text-gray-400">
-        Chargement des statistiques…
-      </div>
-    )
+  const toggle = () => {
+    setCollapsed((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem("lc_stats_collapsed", next ? "1" : "0")
+      } catch {
+        /* noop */
+      }
+      return next
+    })
   }
-  if (!data) return null
-
-  const p = data.periods[period]
-  const maxDaily = Math.max(1, ...data.daily.map((d) => d.revenue))
 
   return (
     <div className="mb-4 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
-      {/* Header + sélecteur de période */}
-      <div className="bg-gradient-to-r from-[#9e354a] to-[#7a2838] px-5 py-4 flex items-center justify-between flex-wrap gap-3">
+      {/* Header cliquable (replier / déplier) */}
+      <button
+        type="button"
+        onClick={toggle}
+        className="w-full bg-gradient-to-r from-[#9e354a] to-[#7a2838] px-5 py-4 flex items-center justify-between gap-3 text-left"
+      >
         <div className="flex items-center gap-2 text-white">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
           </svg>
           <h2 className="text-base font-bold">Tableau de bord — Ventes</h2>
+          {collapsed && (
+            <span className="text-xs text-white/70 font-normal hidden sm:inline">
+              — cliquez pour afficher
+            </span>
+          )}
         </div>
-        <div className="flex gap-1 bg-white/15 rounded-lg p-0.5">
-          {(["7d", "30d", "90d"] as Period[]).map((pp) => (
-            <button
-              key={pp}
-              onClick={() => setPeriod(pp)}
-              className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
-                period === pp ? "bg-white text-[#9e354a]" : "text-white/90 hover:bg-white/10"
-              }`}
+        <div className="flex items-center gap-3">
+          {!collapsed && (
+            <div
+              className="flex gap-1 bg-white/15 rounded-lg p-0.5"
+              onClick={(e) => e.stopPropagation()}
             >
-              {PERIOD_LABEL[pp]}
-            </button>
-          ))}
+              {(["7d", "30d", "90d"] as Period[]).map((pp) => (
+                <button
+                  key={pp}
+                  onClick={() => setPeriod(pp)}
+                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-colors ${
+                    period === pp ? "bg-white text-[#9e354a]" : "text-white/90 hover:bg-white/10"
+                  }`}
+                >
+                  {PERIOD_LABEL[pp]}
+                </button>
+              ))}
+            </div>
+          )}
+          <svg
+            className={`w-5 h-5 text-white transition-transform ${collapsed ? "" : "rotate-180"}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
         </div>
-      </div>
+      </button>
 
-      <div className="bg-white dark:bg-gray-900 p-5">
+      {!collapsed && (
+        <div className="bg-white dark:bg-gray-900 p-5">
+          {loading && <p className="text-sm text-gray-400">Chargement des statistiques…</p>}
+          {!loading && !data && (
+            <p className="text-sm text-gray-400">Impossible de charger les statistiques.</p>
+          )}
+          {!loading && data && (() => {
+            const p = data.periods[period]
+            const maxDaily = Math.max(1, ...data.daily.map((d) => d.revenue))
+            return (
+              <>
         {/* KPI cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
           <div className="rounded-lg bg-gradient-to-br from-[#9e354a] to-[#7a2838] text-white p-4">
@@ -493,7 +535,11 @@ const OrderStatsWidget = () => {
             })()}
           </div>
         </div>
-      </div>
+              </>
+            )
+          })()}
+        </div>
+      )}
     </div>
   )
 }
