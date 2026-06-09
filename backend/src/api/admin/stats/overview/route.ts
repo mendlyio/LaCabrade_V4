@@ -271,6 +271,44 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       }
     })
 
+    // Recherches clients (table search_log, créée à la volée par /store/search-log)
+    let searches: {
+      top: Array<{ query: string; count: number; avg_results: number }>
+      zero_results: Array<{ query: string; count: number }>
+    } = { top: [], zero_results: [] }
+    try {
+      const topRes = await knex.raw(`
+        SELECT MAX(query) AS sample, COUNT(*) AS n, AVG(COALESCE(results_count, 0)) AS avg_results
+        FROM search_log
+        WHERE created_at >= now() - interval '90 days' AND normalized_query <> ''
+        GROUP BY normalized_query
+        ORDER BY n DESC
+        LIMIT 12
+      `)
+      const zeroRes = await knex.raw(`
+        SELECT MAX(query) AS sample, COUNT(*) AS n
+        FROM search_log
+        WHERE created_at >= now() - interval '90 days'
+          AND results_count = 0 AND normalized_query <> ''
+        GROUP BY normalized_query
+        ORDER BY n DESC
+        LIMIT 12
+      `)
+      searches = {
+        top: (topRes.rows || []).map((r: any) => ({
+          query: r.sample,
+          count: Number(r.n) || 0,
+          avg_results: Math.round(Number(r.avg_results) || 0),
+        })),
+        zero_results: (zeroRes.rows || []).map((r: any) => ({
+          query: r.sample,
+          count: Number(r.n) || 0,
+        })),
+      }
+    } catch {
+      // table pas encore créée (aucune recherche loggée) → on renvoie vide
+    }
+
     const all_revenue = Math.round(orders.reduce((s, o) => s + o.revenue, 0) * 100) / 100
 
     return res.json({
@@ -284,6 +322,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       monthly,
       carts,
       abandoned_list,
+      searches,
       totals: { all_orders: orders.length, all_revenue },
       generated_at: new Date().toISOString(),
     })

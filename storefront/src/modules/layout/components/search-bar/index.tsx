@@ -45,6 +45,29 @@ type ProductSuggestion = {
   currency: string
 }
 
+type CategorySuggestion = { name: string; handle: string }
+type BrandSuggestion = { name: string; slug: string }
+
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
+const PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
+
+/** Enregistre une recherche intentionnelle (best-effort, non bloquant). */
+function logSearch(query: string, resultsCount: number | null, country: string) {
+  try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" }
+    if (PUBLISHABLE_KEY) headers["x-publishable-api-key"] = PUBLISHABLE_KEY
+    void fetch(`${BACKEND_URL}/store/search-log`, {
+      method: "POST",
+      headers,
+      keepalive: true,
+      body: JSON.stringify({ query, results_count: resultsCount, country }),
+    }).catch(() => {})
+  } catch {
+    /* noop */
+  }
+}
+
 function formatPrice(amount: number, currency: string) {
   return new Intl.NumberFormat("fr-FR", {
     style: "currency",
@@ -98,6 +121,8 @@ const SearchBar = () => {
   const [query, setQuery] = useState("")
   const [isOpen, setIsOpen] = useState(false)
   const [products, setProducts] = useState<ProductSuggestion[]>([])
+  const [categories, setCategories] = useState<CategorySuggestion[]>([])
+  const [brands, setBrands] = useState<BrandSuggestion[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [recentSearches, setRecentSearches] = useState<string[]>([])
   const [selectedIndex, setSelectedIndex] = useState(-1)
@@ -142,12 +167,18 @@ const SearchBar = () => {
     const trimmed = searchQuery.trim()
     if (!trimmed) return
     saveRecentSearch(trimmed)
+    // Log de la recherche (résultats connus si la requête correspond au champ)
+    const cc = typeof countryCode === "string" ? countryCode : "fr"
+    const count = trimmed.toLowerCase() === query.trim().toLowerCase() ? products.length : null
+    logSearch(trimmed, count, cc)
     const basePath = countryCode ? `/${countryCode}/store` : "/store"
     router.push(`${basePath}?q=${encodeURIComponent(trimmed)}`)
     setIsOpen(false)
     setQuery("")
     setProducts([])
-  }, [countryCode, router, saveRecentSearch])
+    setCategories([])
+    setBrands([])
+  }, [countryCode, router, saveRecentSearch, query, products.length])
 
   // Recherche dynamique via API route
   useEffect(() => {
@@ -156,6 +187,8 @@ const SearchBar = () => {
 
     if (!query.trim() || query.trim().length < 2) {
       setProducts([])
+      setCategories([])
+      setBrands([])
       setIsLoading(false)
       return
     }
@@ -173,9 +206,15 @@ const SearchBar = () => {
         if (res.ok) {
           const data = await res.json()
           setProducts(data.products || [])
+          setCategories(data.categories || [])
+          setBrands(data.brands || [])
         }
       } catch (e: any) {
-        if (e.name !== "AbortError") setProducts([])
+        if (e.name !== "AbortError") {
+          setProducts([])
+          setCategories([])
+          setBrands([])
+        }
       } finally {
         setIsLoading(false)
       }
@@ -233,9 +272,21 @@ const SearchBar = () => {
   const showDropdown = isOpen
   const hasQuery = query.trim().length >= 2
   const showProducts = hasQuery && products.length > 0
-  const showNoResult = hasQuery && !isLoading && products.length === 0
+  const showSuggestions = hasQuery && (categories.length > 0 || brands.length > 0)
+  const showNoResult =
+    hasQuery && !isLoading && products.length === 0 && categories.length === 0 && brands.length === 0
   const showRecent = !hasQuery && recentSearches.length > 0
   const showPopular = !hasQuery && recentSearches.length === 0
+
+  const goTo = (path: string) => {
+    const cc = typeof countryCode === "string" ? countryCode : ""
+    router.push(`${cc ? `/${cc}` : ""}${path}`)
+    setIsOpen(false)
+    setQuery("")
+    setProducts([])
+    setCategories([])
+    setBrands([])
+  }
 
   return (
     <div ref={searchRef} className="relative w-full">
@@ -288,6 +339,51 @@ const SearchBar = () => {
       {/* Dropdown */}
       {showDropdown && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 max-h-[520px] overflow-y-auto">
+
+          {/* Suggestions catégories & marques */}
+          {showSuggestions && (
+            <div className="p-3 border-b border-gray-100">
+              {categories.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest px-2 mb-1.5">
+                    Catégories
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 px-2">
+                    {categories.map((c) => (
+                      <button
+                        key={c.handle}
+                        onClick={() => goTo(`/categories/${c.handle}`)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-medium transition-colors"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {brands.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest px-2 mb-1.5">
+                    Marques
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 px-2">
+                    {brands.map((b) => (
+                      <button
+                        key={b.slug}
+                        onClick={() => goTo(`/marques/${b.slug}`)}
+                        className="inline-flex items-center px-3 py-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium transition-colors"
+                      >
+                        {b.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Suggestions dynamiques de produits */}
           {showProducts && (
