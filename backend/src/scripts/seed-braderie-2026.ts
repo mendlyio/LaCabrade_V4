@@ -29,16 +29,12 @@ const PROMO_CODES = ["BRADERIE_15", "BRADERIE_LC_25"]
 const CAVALIER_CLOTHING_HANDLES = [
   "concours",
   "pantalons",
-  "sweats-et-pull",
   "sweats-et-pulls",
-  "sweats-pulls",
-  "tshirts-et-polos",
   "t-shirts-et-polos",
-  "tshirts-polos",
   "vestes",
 ]
 
-const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
+const LC_EQUESTRIAN_HANDLES = ["lc-equestrian"]
 
 function collectSubtreeIds(
   rootId: string,

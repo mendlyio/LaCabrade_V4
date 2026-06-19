@@ -79,16 +79,12 @@ const BRADERIE_END = new Date("2026-06-21T07:00:00.000Z")
 const BRADERIE_CAVALIER_HANDLES = new Set([
   "concours",
   "pantalons",
-  "sweats-et-pull",
   "sweats-et-pulls",
-  "sweats-pulls",
-  "tshirts-et-polos",
   "t-shirts-et-polos",
-  "tshirts-polos",
   "vestes",
 ])
-const BRADERIE_LC_HANDLES = new Set(["lc-equestrian", "lc_equestrian", "la-cabrade"])
-const BRADERIE_LC_COLLECTION_HANDLES = new Set(["lc-equestrian", "lc_equestrian"])
+const BRADERIE_LC_HANDLES = new Set(["lc-equestrian"])
+const BRADERIE_LC_COLLECTION_HANDLES = new Set(["lc-equestrian"])
 
 const FREE_SHIPPING_THRESHOLD = 75
 const FREE_SHIPPING_PROMO_CODE = "FREE_SHIPPING_75"

@@ -140,19 +140,13 @@ export const BRADERIE_PROMO: ActivePromoConfig = {
     // Vêtements Cavalier ciblés
     "concours",
     "pantalons",
-    "sweats-et-pull",
     "sweats-et-pulls",
-    "sweats-pulls",
-    "tshirts-et-polos",
     "t-shirts-et-polos",
-    "tshirts-polos",
     "vestes",
-    // LC Equestrian / La Cabrade
+    // LC Equestrian
     "lc-equestrian",
-    "lc_equestrian",
-    "la-cabrade",
   ],
-  includedCollectionHandles: ["lc-equestrian", "lc_equestrian"],
+  includedCollectionHandles: ["lc-equestrian"],
 }
 
 // ─── Promotion active ──────────────────────────────────────────────────────────
