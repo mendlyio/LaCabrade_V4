@@ -49,7 +49,6 @@ const KNOWN_AUTO_CODES = new Set([
   "BRADERIE_15", "BRADERIE_LC_25",
   "OUTLET_50", "FREE_SHIPPING_75", "PAQUES_10",
 ])
-const VAT_RATE = 0.21
 const PO_START = new Date("2026-04-30T22:00:00.000Z")
 const PO_END   = new Date("2026-05-09T21:59:59.000Z")
 const CAVALIER_HANDLES = new Set(["cavalier"])
@@ -99,8 +98,16 @@ function isBraderiePeriod(): boolean {
   return now >= BRADERIE_START && now <= BRADERIE_END
 }
 
-function computeAmountHT(unitPriceTTC: number, qty: number, pct: number): number {
-  return (unitPriceTTC / (1 + VAT_RATE)) * pct * qty
+/**
+ * Montant d'une remise de line item adjustment.
+ *
+ * ⚠️  Pour les articles tax-inclusive (cas de cette boutique), Medusa soustrait
+ * le montant de l'adjustment DIRECTEMENT du prix TTC (item_total = original_total
+ * − Σ amounts). Le montant doit donc être exprimé en TTC : prix_TTC × % × qty.
+ * (Vérifié en prod : un -15% natif Medusa sur 54,90€ = 8,235 = 54,90 × 0,15.)
+ */
+function computeDiscountAmount(unitPriceTTC: number, qty: number, pct: number): number {
+  return unitPriceTTC * pct * qty
 }
 
 function collectSubtreeIds(
@@ -307,7 +314,7 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
                 const targetDesc = isCavalier
                   ? "Portes Ouvertes 2026 − −20% Cavalier"
                   : "Portes Ouvertes 2026 − −20% LC Equestrian"
-                const expectedHT = computeAmountHT(unitPrice, qty, 0.20)
+                const expectedHT = computeDiscountAmount(unitPrice, qty, 0.20)
                 const eps = 0.001
 
                 const wrongAdjs = isCavalier ? lcAdjs : cavalierAdjs
@@ -344,7 +351,7 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
               for (const a of cavalierAdjs) adjIdsToRemove.push(a.id)
               for (const a of lcAdjs) adjIdsToRemove.push(a.id)
 
-              const expectedGlobalHT = computeAmountHT(unitPrice, qty, 0.10)
+              const expectedGlobalHT = computeDiscountAmount(unitPrice, qty, 0.10)
               let globalKept = false
               for (const adj of globalAdjs) {
                 const current = Number(adj.amount ?? 0)
@@ -521,7 +528,7 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
               const targetDesc = eligibility.lc && lcTierActive
                 ? "Braderie 2026 -25% LC dès 3 articles"
                 : "Braderie 2026 -15%"
-              const expectedHT = computeAmountHT(unitPrice, qty, targetPercent)
+              const expectedHT = computeDiscountAmount(unitPrice, qty, targetPercent)
               const eps = 0.001
 
               const firstAdj = itemAdjs[0]

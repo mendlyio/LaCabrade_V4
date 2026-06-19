@@ -1,9 +1,27 @@
 /**
  * Crée la promotion automatique Braderie 2026.
  *
- * Règles :
- * - BRADERIE_15 : -15% sur les sous-catégories vêtements Cavalier ciblées + LC Equestrian
- * - BRADERIE_LC_25 : appliquée par le hook panier quand le panier contient 3+ articles LC
+ * ─── Architecture (identique au pattern Portes Ouvertes éprouvé) ─────────────
+ *
+ * BRADERIE_15 est une promotion automatique -15% SANS règle de ciblage : elle
+ * s'applique donc à TOUS les articles du panier (comme PO_GLOBAL_10).
+ *
+ * Le filtrage de l'éligibilité et la logique métier sont entièrement gérés EN
+ * CODE par le hook synchrone backend/src/workflows/restore-outlet-prices-hook.ts
+ * (bloc C — Braderie), qui :
+ *   - retire BRADERIE_15 des articles NON éligibles (hors vêtements Cavalier
+ *     ciblés et hors LC Equestrian), des articles outlet et des bons cadeau ;
+ *   - garde -15% sur les vêtements Cavalier ciblés (concours, pantalons,
+ *     sweats-et-pulls, t-shirts-et-polos, vestes + toutes leurs sous-catégories
+ *     dame/enfant) et sur les articles LC Equestrian ;
+ *   - transforme LC en BRADERIE_LC_25 (-25%) dès que le panier contient
+ *     3 articles LC ou plus.
+ *
+ * ⚠️  Pourquoi pas de target_rules sur product_category_id ?
+ * Le moteur de promotions Medusa ne matchait PAS de façon fiable les articles
+ * via target_rules `product_category_id` (0 ajustement créé en prod). Le pattern
+ * « promo globale sans règle + filtrage par le hook » est lui prouvé en prod
+ * (PO_GLOBAL_10). On reproduit donc ce pattern.
  *
  * Usage :
  *   npx medusa exec src/scripts/seed-braderie-2026.ts
@@ -17,83 +35,30 @@ import {
   ApplicationMethodType,
   ContainerRegistrationKeys,
   Modules,
-  PromotionRuleOperator,
   PromotionType,
 } from "@medusajs/framework/utils"
 
+// Heure belge (CEST = UTC+2 en juin) :
+//   19 juin 00:00 BEL = 18 juin 22:00 UTC
+//   21 juin 09:00 BEL = 21 juin 07:00 UTC
 const STARTS_AT = new Date("2026-06-18T22:00:00.000Z")
 const ENDS_AT = new Date("2026-06-21T07:00:00.000Z")
 const CAMPAIGN_IDENTIFIER = "BRADERIE_2026"
 const PROMO_CODES = ["BRADERIE_15", "BRADERIE_LC_25"]
 
-const CAVALIER_CLOTHING_HANDLES = [
-  "concours",
-  "pantalons",
-  "sweats-et-pulls",
-  "t-shirts-et-polos",
-  "vestes",
-]
-
-const LC_EQUESTRIAN_HANDLES = ["lc-equestrian"]
-
-function collectSubtreeIds(
-  rootId: string,
-  allCats: Array<{ id: string; parent_category_id?: string | null }>
-): string[] {
-  const ids: string[] = [rootId]
-  for (const cat of allCats) {
-    if (cat.parent_category_id === rootId) {
-      ids.push(...collectSubtreeIds(cat.id, allCats))
-    }
-  }
-  return ids
-}
-
 export default async function seedBraderie2026({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const promotionModule = container.resolve(Modules.PROMOTION) as any
-  const productModule = container.resolve(Modules.PRODUCT) as any
 
   logger.info("🏷️  Configuration Braderie 2026...")
   logger.info(`   Valable : ${STARTS_AT.toISOString()} → ${ENDS_AT.toISOString()} (UTC)`)
   logger.info("   Soit : 19 juin 00:00 → 21 juin 09:00 (heure belge)")
 
-  const allCategories: Array<{
-    id: string
-    handle?: string | null
-    parent_category_id?: string | null
-  }> = await productModule.listProductCategories(
-    {},
-    { select: ["id", "handle", "parent_category_id"], take: 500 }
-  )
-
-  const eligibleCategoryIds = new Set<string>()
-  const selectedHandles = [...CAVALIER_CLOTHING_HANDLES, ...LC_EQUESTRIAN_HANDLES]
-
-  for (const handle of selectedHandles) {
-    const category = allCategories.find(
-      (c) => (c.handle ?? "").toLowerCase() === handle
-    )
-    if (!category) {
-      logger.warn(`⚠️  Catégorie introuvable : ${handle}`)
-      continue
-    }
-    collectSubtreeIds(category.id, allCategories).forEach((id) =>
-      eligibleCategoryIds.add(id)
-    )
-  }
-
-  const targetCategoryIds = [...eligibleCategoryIds]
-  logger.info(`   Catégories ciblées : ${targetCategoryIds.length}`)
-
-  if (targetCategoryIds.length === 0) {
-    throw new Error("Aucune catégorie Braderie trouvée, promotion non créée.")
-  }
-
+  // ─── Supprimer les promotions Braderie existantes (idempotent) ──────────────
   for (const code of PROMO_CODES) {
     const existing = await promotionModule.listPromotions({ code: [code] })
     if (existing.length > 0) {
-      logger.info(`⚠️  Promotion ${code} déjà présente — suppression.`)
+      logger.info(`⚠️  Promotion ${code} déjà présente — suppression et recréation.`)
       await promotionModule.deletePromotions(existing.map((p: any) => p.id))
     }
   }
@@ -109,6 +74,7 @@ export default async function seedBraderie2026({ container }: ExecArgs) {
     // Pas critique si listCampaigns n'est pas disponible
   }
 
+  // ─── Création de la promotion globale -15% (filtrage géré par le hook) ───────
   await promotionModule.createPromotions([
     {
       code: "BRADERIE_15",
@@ -130,18 +96,15 @@ export default async function seedBraderie2026({ container }: ExecArgs) {
         value: 15,
         max_quantity: 100,
         apply_to_quantity: 1,
-        target_rules: [
-          {
-            attribute: "product_category_id",
-            operator: PromotionRuleOperator.IN,
-            values: targetCategoryIds,
-          },
-        ],
+        // PAS de target_rules : -15% sur tous les articles, le hook filtre.
       },
       rules: [],
     } as any,
   ])
 
-  logger.info("✅ Promotion BRADERIE_15 créée.")
-  logger.info("💡 Le hook panier transforme LC en BRADERIE_LC_25 dès 3 articles LC.")
+  logger.info("✅ Promotion BRADERIE_15 créée (-15% global, filtrage par le hook).")
+  logger.info("💡 Le hook panier :")
+  logger.info("   - retire BRADERIE_15 des articles non éligibles / outlet / bons cadeau")
+  logger.info("   - garde -15% sur vêtements Cavalier ciblés + LC Equestrian")
+  logger.info("   - transforme LC en BRADERIE_LC_25 (-25%) dès 3 articles LC")
 }

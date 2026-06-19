@@ -137,13 +137,31 @@ export const BRADERIE_PROMO: ActivePromoConfig = {
   endDate: new Date("2026-06-21T07:00:00.000Z"),
   excludedCategoryHandles: [],
   includedCategoryHandles: [
-    // Vêtements Cavalier ciblés
+    // Vêtements Cavalier ciblés — les produits sont rangés dans les SOUS-catégories,
+    // donc on liste parents + enfants réels (handles en base, comparés en lowercase).
+    // Concours
     "concours",
+    "accessoires-de-concours",
+    "pantalons-de-concours",
+    "polos-de-concours",
+    "vestes-de-concours",
+    // Pantalons
     "pantalons",
+    "pantalons-dame",
+    "pantalons-enfant",
+    // Sweats et pulls
     "sweats-et-pulls",
+    "sweats-et-pulls-dame",
+    "sweats-et-pulls-enfant",
+    // T-shirts et polos
     "t-shirts-et-polos",
+    "t-shirts-et-polos-dame",
+    "t-shirts-et-polos-enfant",
+    // Vestes
     "vestes",
-    // LC Equestrian
+    "vestes-dame",
+    "vestes-enfant",
+    // LC Equestrian (handle réel : LC-Equestrian → comparé en lowercase)
     "lc-equestrian",
   ],
   includedCollectionHandles: ["lc-equestrian"],
