@@ -12,10 +12,16 @@ const NewsletterPopup = dynamic(
   { ssr: false }
 )
 
+const BraderiePopup = dynamic(
+  () => import("@modules/layout/components/braderie-popup"),
+  { ssr: false }
+)
+
 export default function ClientOnlyOverlays() {
   return (
     <>
       <CookieBanner />
+      <BraderiePopup />
       <NewsletterPopup />
     </>
   )

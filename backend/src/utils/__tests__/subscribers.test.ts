@@ -200,6 +200,7 @@ heading("PortesOuvertesGuard — Codes connus (pas de conflit)")
 
 const KNOWN_AUTO_CODES = new Set([
   "PO_GLOBAL_10", "PO_CAVALIER_20", "PO_LC_20",
+  "BRADERIE_15", "BRADERIE_LC_25",
   "OUTLET_50", "FREE_SHIPPING_75", "PAQUES_10",
 ])
 
@@ -210,9 +211,34 @@ function hasConflictingManualPromo(adjustments: Array<{ code?: string | null }>)
 assert("Code manuel NL-XXX → conflit", hasConflictingManualPromo([{ code: "NL-ABCDEF" }]), true)
 assert("Code manuel ANNIV10 → conflit", hasConflictingManualPromo([{ code: "ANNIV10" }]), true)
 assert("PO_GLOBAL_10 auto → pas de conflit", hasConflictingManualPromo([{ code: "PO_GLOBAL_10" }]), false)
+assert("BRADERIE_15 auto → pas de conflit", hasConflictingManualPromo([{ code: "BRADERIE_15" }]), false)
 assert("FREE_SHIPPING_75 auto → pas de conflit", hasConflictingManualPromo([{ code: "FREE_SHIPPING_75" }]), false)
 assert("Mix PO+NL → conflit (NL est manuel)", hasConflictingManualPromo([{ code: "PO_GLOBAL_10" }, { code: "NL-TEST" }]), true)
 assert("Pas d'adjustments → pas de conflit", hasConflictingManualPromo([]), false)
+
+heading("Braderie — Calcul LC et seuil 3 articles")
+
+function isLcTierActive(items: Array<{ isLc: boolean; quantity?: number | null }>): boolean {
+  const lcQuantity = items.reduce(
+    (sum, item) => sum + (item.isLc ? item.quantity ?? 1 : 0),
+    0
+  )
+  return lcQuantity >= 3
+}
+
+assertClose("Braderie -15% sur 39.90€ q=1", computeAmountHT(39.90, 1, 0.15), 4.95, 0.01)
+assertClose("Braderie LC -25% sur 39.90€ q=1", computeAmountHT(39.90, 1, 0.25), 8.24, 0.01)
+assert("1 article LC → reste -15%", isLcTierActive([{ isLc: true, quantity: 1 }]), false)
+assert("2 articles LC + 1 non-LC → reste -15%", isLcTierActive([
+  { isLc: true, quantity: 2 },
+  { isLc: false, quantity: 1 },
+]), false)
+assert("3 articles LC → passe à -25%", isLcTierActive([{ isLc: true, quantity: 3 }]), true)
+assert("3 lignes LC séparées → passe à -25%", isLcTierActive([
+  { isLc: true, quantity: 1 },
+  { isLc: true, quantity: 1 },
+  { isLc: true, quantity: 1 },
+]), true)
 
 // ─── Logique GiftCardShippingFix ─────────────────────────────────────────────
 

@@ -34,6 +34,10 @@ export type ActivePromoConfig = {
   endDate: Date
   /** Handles des catégories NON éligibles (sous-catégories comprises côté backend) */
   excludedCategoryHandles: string[]
+  /** Si défini, seuls ces handles de catégories déclenchent la remise par défaut */
+  includedCategoryHandles?: string[]
+  /** Si défini, seuls ces handles de collections déclenchent la remise par défaut */
+  includedCollectionHandles?: string[]
   /**
    * Tiers optionnels évalués dans l'ordre (premier match gagne).
    * Si aucun tier ne matche, on utilise discountPercent comme fallback.
@@ -120,9 +124,40 @@ export const PORTES_OUVERTES_PROMO: ActivePromoConfig = {
   outletDiscountPercent: 60,
 }
 
+// ─── Braderie 2026 (19–21 juin matin) ─────────────────────────────────────────
+// Heure belge (CEST = UTC+2 en juin) :
+//   19 juin 00:00 BEL = 18 juin 22:00 UTC
+//   21 juin 09:00 BEL = 21 juin 07:00 UTC
+export const BRADERIE_PROMO: ActivePromoConfig = {
+  active: true,
+  code: "BRADERIE_15",
+  discountPercent: 15,
+  label: "Braderie",
+  startDate: new Date("2026-06-18T22:00:00.000Z"),
+  endDate: new Date("2026-06-21T07:00:00.000Z"),
+  excludedCategoryHandles: [],
+  includedCategoryHandles: [
+    // Vêtements Cavalier ciblés
+    "concours",
+    "pantalons",
+    "sweats-et-pull",
+    "sweats-et-pulls",
+    "sweats-pulls",
+    "tshirts-et-polos",
+    "t-shirts-et-polos",
+    "tshirts-polos",
+    "vestes",
+    // LC Equestrian / La Cabrade
+    "lc-equestrian",
+    "lc_equestrian",
+    "la-cabrade",
+  ],
+  includedCollectionHandles: ["lc-equestrian", "lc_equestrian"],
+}
+
 // ─── Promotion active ──────────────────────────────────────────────────────────
-// Pointer ici pour changer de promo (ex: PAQUES_PROMO ou PORTES_OUVERTES_PROMO)
-export const ACTIVE_PROMO: ActivePromoConfig = PORTES_OUVERTES_PROMO
+// Pointer ici pour changer de promo (ex: PAQUES_PROMO, PORTES_OUVERTES_PROMO ou BRADERIE_PROMO)
+export const ACTIVE_PROMO: ActivePromoConfig = BRADERIE_PROMO
 
 /** La promo est-elle actuellement active ? */
 export function isPromoActive(): boolean {
@@ -148,6 +183,7 @@ export function getProductPromoDiscount(
   if (isOutlet) return null
 
   const lowerHandles = categoryHandles.map((h) => h.toLowerCase())
+  const lowerCollectionHandle = collectionHandle?.toLowerCase()
 
   // Catégories exclues → pas de remise promo
   if (
@@ -156,6 +192,19 @@ export function getProductPromoDiscount(
     )
   )
     return null
+
+  if (ACTIVE_PROMO.includedCategoryHandles?.length || ACTIVE_PROMO.includedCollectionHandles?.length) {
+    const matchesIncludedCategory = ACTIVE_PROMO.includedCategoryHandles?.some((h) =>
+      lowerHandles.includes(h.toLowerCase())
+    )
+    const matchesIncludedCollection =
+      lowerCollectionHandle &&
+      ACTIVE_PROMO.includedCollectionHandles?.some(
+        (h) => h.toLowerCase() === lowerCollectionHandle
+      )
+
+    if (!matchesIncludedCategory && !matchesIncludedCollection) return null
+  }
 
   // Évaluer les tiers dans l'ordre (premier match gagne)
   if (ACTIVE_PROMO.tiers?.length) {

@@ -25,8 +25,9 @@
  *   A. Outlet : supprime les adjustments + restaure unit_price si reseté
  *   B. Portes Ouvertes : retire PO des articles outlet/exclus, upgrade
  *      PO_GLOBAL_10 → -20% pour Cavalier/LC Equestrian
- *   C. Livraison gratuite : retire FREE_SHIPPING_75 si sous-total < 75€
- *   D. Bon cadeau : supprime les méthodes de livraison physiques si panier
+ *   C. Braderie : -15% sur sélections Cavalier/LC, puis -25% sur LC dès 3 articles LC
+ *   D. Livraison gratuite : retire FREE_SHIPPING_75 si sous-total < 75€
+ *   E. Bon cadeau : supprime les méthodes de livraison physiques si panier
  *      100% bons cadeau
  *
  * Les subscribers asynchrones restent en place comme filet de sécurité
@@ -45,6 +46,7 @@ const PO_LC_CODE = "PO_LC_20"
 const ALL_PO_CODES = new Set([PO_CODE, PO_CAVALIER_CODE, PO_LC_CODE])
 const KNOWN_AUTO_CODES = new Set([
   PO_CODE, PO_CAVALIER_CODE, PO_LC_CODE,
+  "BRADERIE_15", "BRADERIE_LC_25",
   "OUTLET_50", "FREE_SHIPPING_75", "PAQUES_10",
 ])
 const VAT_RATE = 0.21
@@ -68,6 +70,26 @@ const EXCLUDED_HANDLES = new Set([
   "selles", "selles-sur-mesure",
 ])
 
+// ─── Constantes Braderie ────────────────────────────────────────────────────
+const BRADERIE_CODE = "BRADERIE_15"
+const BRADERIE_LC_25_CODE = "BRADERIE_LC_25"
+const ALL_BRADERIE_CODES = new Set([BRADERIE_CODE, BRADERIE_LC_25_CODE])
+const BRADERIE_START = new Date("2026-06-18T22:00:00.000Z")
+const BRADERIE_END = new Date("2026-06-21T07:00:00.000Z")
+const BRADERIE_CAVALIER_HANDLES = new Set([
+  "concours",
+  "pantalons",
+  "sweats-et-pull",
+  "sweats-et-pulls",
+  "sweats-pulls",
+  "tshirts-et-polos",
+  "t-shirts-et-polos",
+  "tshirts-polos",
+  "vestes",
+])
+const BRADERIE_LC_HANDLES = new Set(["lc-equestrian", "lc_equestrian", "la-cabrade"])
+const BRADERIE_LC_COLLECTION_HANDLES = new Set(["lc-equestrian", "lc_equestrian"])
+
 const FREE_SHIPPING_THRESHOLD = 75
 const FREE_SHIPPING_PROMO_CODE = "FREE_SHIPPING_75"
 
@@ -76,8 +98,26 @@ function isPortesOuvertesPeriod(): boolean {
   return now >= PO_START && now <= PO_END
 }
 
+function isBraderiePeriod(): boolean {
+  const now = new Date()
+  return now >= BRADERIE_START && now <= BRADERIE_END
+}
+
 function computeAmountHT(unitPriceTTC: number, qty: number, pct: number): number {
   return (unitPriceTTC / (1 + VAT_RATE)) * pct * qty
+}
+
+function collectSubtreeIds(
+  rootId: string,
+  allCats: Array<{ id: string; parent_category_id?: string | null }>
+): string[] {
+  const ids: string[] = [rootId]
+  for (const cat of allCats) {
+    if (cat.parent_category_id === rootId) {
+      ids.push(...collectSubtreeIds(cat.id, allCats))
+    }
+  }
+  return ids
 }
 
 function isGiftCardItem(item: any): boolean {
@@ -346,7 +386,186 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
         }
       }
 
-      // ── C. LIVRAISON GRATUITE ────────────────────────────────────────────
+      // ── C. BRADERIE ──────────────────────────────────────────────────────
+
+      const braderieAdjs = allAdjs.filter(
+        (a: any) => a.code && ALL_BRADERIE_CODES.has(a.code)
+      )
+
+      if (braderieAdjs.length > 0) {
+        const adjIdsToRemove: string[] = []
+        const adjsToCreate: any[] = []
+        const adjsToUpdate: any[] = []
+
+        if (!isBraderiePeriod()) {
+          await (cartModuleService as any).deleteLineItemAdjustments(
+            braderieAdjs.map((a: any) => a.id)
+          )
+          console.log(
+            `[CartHook] Panier ${cartId} — Braderie hors période: supprimé ${braderieAdjs.length} adjustment(s)`
+          )
+        } else {
+          const hasManualCode = allAdjs.some(
+            (a: any) => a.code && !KNOWN_AUTO_CODES.has(a.code)
+          )
+
+          if (hasManualCode) {
+            await (cartModuleService as any).deleteLineItemAdjustments(
+              braderieAdjs.map((a: any) => a.id)
+            )
+            console.log(
+              `[CartHook] Panier ${cartId} — Braderie: code manuel détecté, supprimé ${braderieAdjs.length} adjustment(s)`
+            )
+          } else {
+            const braderieAdjsByItem = new Map<string, any[]>()
+            for (const adj of braderieAdjs) {
+              if (!adj.item_id) continue
+              const list = braderieAdjsByItem.get(adj.item_id) ?? []
+              list.push(adj)
+              braderieAdjsByItem.set(adj.item_id, list)
+            }
+
+            const productIds = [
+              ...new Set(
+                items
+                  .filter((i: any) => braderieAdjsByItem.has(i.id) && i.product_id)
+                  .map((i: any) => i.product_id)
+              ),
+            ] as string[]
+
+            const allCategories: Array<{
+              id: string
+              handle?: string | null
+              parent_category_id?: string | null
+            }> = await productModule
+              .listProductCategories(
+                {},
+                { select: ["id", "handle", "parent_category_id"], take: 500 }
+              )
+              .catch(() => [])
+
+            const braderieCategoryIds = new Set<string>()
+            const braderieLcCategoryIds = new Set<string>()
+            for (const category of allCategories) {
+              const handle = (category.handle ?? "").toLowerCase()
+              if (BRADERIE_CAVALIER_HANDLES.has(handle)) {
+                collectSubtreeIds(category.id, allCategories).forEach((id) =>
+                  braderieCategoryIds.add(id)
+                )
+              }
+              if (BRADERIE_LC_HANDLES.has(handle)) {
+                collectSubtreeIds(category.id, allCategories).forEach((id) => {
+                  braderieCategoryIds.add(id)
+                  braderieLcCategoryIds.add(id)
+                })
+              }
+            }
+
+            const productEligibility = new Map<
+              string,
+              { eligible: boolean; lc: boolean }
+            >()
+            if (productIds.length > 0) {
+              const products: any[] = await productModule
+                .listProducts(
+                  { id: productIds },
+                  { relations: ["categories", "collection"], select: ["id"] }
+                )
+                .catch(() => [])
+
+              for (const product of products) {
+                const categoryIds = (product.categories ?? []).map((c: any) => c.id)
+                const collectionHandle = (product.collection?.handle ?? "").toLowerCase()
+                const isLcByCollection = BRADERIE_LC_COLLECTION_HANDLES.has(collectionHandle)
+                const isLcByCategory = categoryIds.some((id: string) =>
+                  braderieLcCategoryIds.has(id)
+                )
+                const isEligibleByCategory = categoryIds.some((id: string) =>
+                  braderieCategoryIds.has(id)
+                )
+
+                productEligibility.set(product.id, {
+                  eligible: isEligibleByCategory || isLcByCollection,
+                  lc: isLcByCategory || isLcByCollection,
+                })
+              }
+            }
+
+            const lcQuantity = items.reduce((sum: number, item: any) => {
+              if (!item.product_id) return sum
+              if (!productEligibility.get(item.product_id)?.lc) return sum
+              return sum + (item.quantity ?? 1)
+            }, 0)
+            const lcTierActive = lcQuantity >= 3
+
+            for (const item of items) {
+              const itemAdjs = braderieAdjsByItem.get(item.id)
+              if (!itemAdjs?.length) continue
+
+              const isOutlet =
+                item.metadata?.outlet_discount === true ||
+                (item.compare_at_unit_price != null &&
+                  Number(item.compare_at_unit_price) > Number(item.unit_price ?? 0) + 0.01)
+
+              const eligibility = item.product_id
+                ? productEligibility.get(item.product_id)
+                : undefined
+
+              if (isOutlet || !eligibility?.eligible) {
+                for (const adj of itemAdjs) adjIdsToRemove.push(adj.id)
+                continue
+              }
+
+              const unitPrice = Number(item.unit_price ?? 0)
+              const qty = item.quantity ?? 1
+              const targetPercent = eligibility.lc && lcTierActive ? 0.25 : 0.15
+              const targetCode = eligibility.lc && lcTierActive
+                ? BRADERIE_LC_25_CODE
+                : BRADERIE_CODE
+              const targetDesc = eligibility.lc && lcTierActive
+                ? "Braderie 2026 -25% LC dès 3 articles"
+                : "Braderie 2026 -15%"
+              const expectedHT = computeAmountHT(unitPrice, qty, targetPercent)
+              const eps = 0.001
+
+              const firstAdj = itemAdjs[0]
+              const current = Number(firstAdj.amount ?? 0)
+              if (
+                Math.abs(current - expectedHT) > eps ||
+                firstAdj.code !== targetCode ||
+                firstAdj.description !== targetDesc
+              ) {
+                adjsToUpdate.push({
+                  id: firstAdj.id,
+                  amount: expectedHT,
+                  code: targetCode,
+                  description: targetDesc,
+                })
+              }
+              for (let i = 1; i < itemAdjs.length; i++) {
+                adjIdsToRemove.push(itemAdjs[i].id)
+              }
+            }
+
+            if (adjIdsToRemove.length > 0) {
+              await (cartModuleService as any).deleteLineItemAdjustments(adjIdsToRemove)
+            }
+            if (adjsToUpdate.length > 0) {
+              await (cartModuleService as any).updateLineItemAdjustments(adjsToUpdate)
+            }
+            if (adjsToCreate.length > 0) {
+              await (cartModuleService as any).addLineItemAdjustments(adjsToCreate)
+            }
+            if (adjIdsToRemove.length + adjsToUpdate.length + adjsToCreate.length > 0) {
+              console.log(
+                `[CartHook] Panier ${cartId} — Braderie: -${adjIdsToRemove.length} / upd ${adjsToUpdate.length} / +${adjsToCreate.length} (LC qty ${lcQuantity})`
+              )
+            }
+          }
+        }
+      }
+
+      // ── D. LIVRAISON GRATUITE ────────────────────────────────────────────
 
       const subtotalEuros = items.reduce(
         (sum: number, i: any) => sum + Number(i.unit_price ?? 0) * (i.quantity ?? 1),
@@ -372,7 +591,7 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
         }
       }
 
-      // ── D. BON CADEAU : suppression livraison physique ───────────────────
+      // ── E. BON CADEAU : suppression livraison physique ───────────────────
 
       const giftCardOnly = items.length > 0 && items.every((i: any) => isGiftCardItem(i))
       if (giftCardOnly) {
