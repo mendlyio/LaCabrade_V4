@@ -8,7 +8,7 @@ const START_AT = new Date("2026-06-18T22:00:00.000Z")
 const END_AT = new Date("2026-06-21T07:00:00.000Z")
 const STORAGE_KEY = "lc_braderie_popup_dismissed_2026"
 const DELAY_MS = 900
-const IMAGE_SRC = "/promotions/braderie-2026.png"
+const IMAGE_SRC = "https://ik.imagekit.io/kodt9cn6f/braderie.webp"
 
 export function isBraderiePopupActive(now = new Date()): boolean {
   return now >= START_AT && now <= END_AT
