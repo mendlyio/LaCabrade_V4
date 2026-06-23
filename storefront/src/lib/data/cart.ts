@@ -771,6 +771,58 @@ export async function completeCartById(cartId: string) {
 }
 
 /**
+ * Finalise une commande intégralement couverte par bon cadeau.
+ *
+ * Les bons cadeau ne réduisent pas le total Medusa du panier ; quand ils
+ * couvrent 100 % du montant, aucune session Stripe n'existe et le complete
+ * standard échoue. Cette route backend ajoute un credit_line (total → 0) puis
+ * finalise la commande.
+ */
+export async function placeGiftCardOrder() {
+  const cartId = await getCartIdSafe()
+  if (!cartId) {
+    throw new Error("No existing cart found when placing an order")
+  }
+
+  const backendUrl =
+    process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
+  const headers: Record<string, string> = { "Content-Type": "application/json" }
+  const authHeaders = await getAuthHeadersSafe()
+  if (authHeaders) Object.assign(headers, authHeaders)
+  const publishableKey = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+  if (publishableKey) headers["x-publishable-api-key"] = publishableKey
+
+  const res = await fetch(
+    `${backendUrl}/store/custom/complete-gift-card-cart`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ cart_id: cartId }),
+    }
+  )
+
+  const cartRes = await res.json().catch(() => ({}))
+
+  if (!res.ok || cartRes?.type !== "order" || !cartRes?.order?.id) {
+    const errorMsg =
+      cartRes?.error?.message ||
+      cartRes?.message ||
+      "La commande n'a pas pu être finalisée. Veuillez réessayer."
+    throw new Error(errorMsg)
+  }
+
+  const countryCode =
+    cartRes.order.shipping_address?.country_code?.toLowerCase() ||
+    cartRes.order.billing_address?.country_code?.toLowerCase() ||
+    "be"
+  await removeCartIdSafe()
+  await setCartCountSafe(0)
+  revalidateTag("cart")
+  revalidateTag("order")
+  redirect(`/${countryCode}/order/confirmed/${cartRes.order.id}`)
+}
+
+/**
  * Updates the countrycode param and revalidates the regions cache
  * @param regionId
  * @param countryCode

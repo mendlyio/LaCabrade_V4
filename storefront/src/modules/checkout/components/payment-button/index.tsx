@@ -7,7 +7,7 @@ import { useElements, useStripe } from "@stripe/react-stripe-js"
 import React, { useCallback, useContext, useRef, useState } from "react"
 import ErrorMessage from "../error-message"
 import Spinner from "@modules/common/icons/spinner"
-import { placeOrder } from "@lib/data/cart"
+import { placeOrder, placeGiftCardOrder } from "@lib/data/cart"
 import { getPaymentAmountCents } from "@lib/util/cart-amounts"
 import { HttpTypes } from "@medusajs/types"
 import { isManual, isPaypal, isStripe } from "@lib/constants"
@@ -103,8 +103,11 @@ const GiftCardPaymentButton = () => {
     setSubmitting(true)
     setErrorMessage(null)
     try {
-      await placeOrder()
+      await placeGiftCardOrder()
     } catch (err: any) {
+      if (err?.digest?.includes?.("NEXT_REDIRECT")) {
+        throw err
+      }
       setErrorMessage(err?.message ?? "Erreur lors de la validation de la commande.")
       submitGuard.current = false
       setSubmitting(false)

@@ -8,6 +8,7 @@ import PaymentButton from "../payment-button"
 import LastChanceUpsell from "../last-chance-upsell"
 import { useSearchParams } from "next/navigation"
 import { placeOrder } from "@lib/data/cart"
+import { getPaymentAmountCents } from "@lib/util/cart-amounts"
 
 const MAX_RETRIES = 3
 const RETRY_DELAY_MS = 2000
@@ -70,11 +71,13 @@ const Review = ({
     }
   }, [searchParams])
 
-  const hasGiftCardPromotion = (cart?.promotions || []).some(
-    (p: any) => p?.code && /^(LC-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}|[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4})$/.test(p.code)
-  )
+  // Les bons cadeau sont stockés en metadata (applied_gift_cards) et réduisent le
+  // montant à payer côté storefront — pas le total Medusa du panier. On détecte
+  // donc le « 100 % bon cadeau » via le montant à payer effectif (= 0).
+  const appliedGiftCards: Array<{ balance: number }> =
+    (cart?.metadata as any)?.applied_gift_cards ?? []
   const paidByGiftcard =
-    hasGiftCardPromotion && cart?.total !== undefined && cart?.total !== null && cart.total === 0
+    appliedGiftCards.length > 0 && getPaymentAmountCents(cart as any) === 0
 
   const previousStepsCompleted =
     cart.shipping_address &&
