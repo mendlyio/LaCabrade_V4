@@ -634,17 +634,17 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
             ),
           ]
 
-          const { data: catLinks } = await query.graph({
-            entity: "product_category_product",
-            fields: ["product_id", "product_category_id"],
-            filters: { product_category_id: [...PICKUP_ONLY_CATEGORY_IDS] },
+          // Même pattern que Block C : requêter les produits avec leurs catégories
+          const { data: products } = await query.graph({
+            entity: "product",
+            fields: ["id", "categories.id"],
+            filters: { id: productIds },
           })
 
-          const pickupOnlyProductIds = new Set(
-            catLinks.map((l: any) => l.product_id)
-          )
-          hasPickupOnlyItems = productIds.some((id) =>
-            pickupOnlyProductIds.has(id)
+          hasPickupOnlyItems = products.some((p: any) =>
+            (p.categories ?? []).some((c: any) =>
+              PICKUP_ONLY_CATEGORY_IDS.has(c.id)
+            )
           )
         } catch {
           // En cas d'erreur de requête, ne pas bloquer le workflow
