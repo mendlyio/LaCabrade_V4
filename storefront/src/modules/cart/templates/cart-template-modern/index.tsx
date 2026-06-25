@@ -66,6 +66,20 @@ const CartTemplateModern = ({
               <div className="space-y-6">
                 {!customer && <SignInPrompt />}
 
+                {(cart?.metadata as any)?.has_pickup_only_items && (
+                  <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+                    <span className="mt-0.5 text-lg leading-none">🏪</span>
+                    <div>
+                      <p className="text-sm font-semibold text-amber-800">
+                        Retrait en magasin uniquement
+                      </p>
+                      <p className="text-xs text-amber-700 mt-0.5">
+                        Votre panier contient des articles lourds (sacs d'aliments 20&nbsp;kg+). Ces produits ne peuvent pas être expédiés à domicile — seul le retrait à La Cabrade est disponible.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                   <div className="px-6 py-4 border-b border-gray-100">
                     <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">

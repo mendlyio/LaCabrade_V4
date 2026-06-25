@@ -36,7 +36,7 @@
 
 import { refreshCartItemsWorkflow } from "@medusajs/medusa/core-flows"
 import { StepResponse } from "@medusajs/framework/workflows-sdk"
-import { Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import type { ICartModuleService } from "@medusajs/framework/types"
 
 // ─── Constantes PO ──────────────────────────────────────────────────────────
@@ -87,6 +87,14 @@ const BRADERIE_LC_COLLECTION_HANDLES = new Set(["lc-equestrian"])
 
 const FREE_SHIPPING_THRESHOLD = 75
 const FREE_SHIPPING_PROMO_CODE = "FREE_SHIPPING_75"
+
+// ─── Constantes Aliments (retrait magasin uniquement) ────────────────────────
+// Catégorie "Aliments" (sacs 20kg Bleu Roy, etc.) → uniquement retrait magasin
+const PICKUP_ONLY_CATEGORY_IDS = new Set([
+  "pcat_01KVX10SVGE92821F0Q6VSSQ5V", // Aliments (Bleu Roy 20kg+)
+])
+// ID de l'option "Retrait en point de dépôt (gratuit)"
+const STORE_PICKUP_OPTION_ID = "so_01KJ7FA1BGT5DXBE8ZZ8SHP95A"
 
 function isPortesOuvertesPeriod(): boolean {
   const now = new Date()
@@ -606,6 +614,72 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
           await (cartModuleService as any).softDeleteShippingMethods(physicalSmIds)
           console.log(
             `[CartHook] Panier ${cartId} — 100% bons cadeau: supprimé ${physicalSmIds.length} méthode(s) physique(s)`
+          )
+        }
+      }
+
+      // ── F. ALIMENTS : retrait magasin uniquement ─────────────────────────
+      // Les sacs d'aliments 20kg+ (catégorie "aliments") ne peuvent être
+      // expédiés → seul le "Retrait en point de dépôt" est autorisé.
+
+      const nonGcItems = items.filter((i: any) => !isGiftCardItem(i))
+      let hasPickupOnlyItems = false
+
+      if (nonGcItems.length > 0) {
+        try {
+          const query = container.resolve(ContainerRegistrationKeys.QUERY)
+          const productIds = [
+            ...new Set(
+              nonGcItems.map((i: any) => i.product_id).filter(Boolean)
+            ),
+          ]
+
+          const { data: catLinks } = await query.graph({
+            entity: "product_category_product",
+            fields: ["product_id", "product_category_id"],
+            filters: { product_category_id: [...PICKUP_ONLY_CATEGORY_IDS] },
+          })
+
+          const pickupOnlyProductIds = new Set(
+            catLinks.map((l: any) => l.product_id)
+          )
+          hasPickupOnlyItems = productIds.some((id) =>
+            pickupOnlyProductIds.has(id)
+          )
+        } catch {
+          // En cas d'erreur de requête, ne pas bloquer le workflow
+        }
+      }
+
+      // Mettre à jour le metadata uniquement si la valeur change
+      const currentMeta = (cart.metadata as any) ?? {}
+      if (currentMeta.has_pickup_only_items !== hasPickupOnlyItems) {
+        await cartModuleService.updateCarts([
+          {
+            id: cartId,
+            metadata: {
+              ...currentMeta,
+              has_pickup_only_items: hasPickupOnlyItems,
+            },
+          },
+        ])
+      }
+
+      // Retirer toute méthode de livraison incompatible (non-retrait magasin)
+      if (hasPickupOnlyItems) {
+        const shippingMethods = (cart as any).shipping_methods ?? []
+        const invalidSmIds = shippingMethods
+          .filter(
+            (sm: any) =>
+              sm.shipping_option_id !== STORE_PICKUP_OPTION_ID
+          )
+          .map((sm: any) => sm.id)
+        if (invalidSmIds.length > 0) {
+          await (cartModuleService as any).softDeleteShippingMethods(
+            invalidSmIds
+          )
+          console.log(
+            `[CartHook] Panier ${cartId} — aliments: supprimé ${invalidSmIds.length} méthode(s) incompatible(s)`
           )
         }
       }

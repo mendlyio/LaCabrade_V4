@@ -142,9 +142,23 @@ export default async function CheckoutForm({
   // Livraison numérique : visible uniquement si panier = bon cadeau seul
   // Sinon : masquer Livraison numérique
   const giftCardOnly = isGiftCardOnlyCart(cart)
+
+  // Aliments (sacs 20kg+) : uniquement retrait en point de dépôt
+  const hasPickupOnlyItems = (cart.metadata as any)?.has_pickup_only_items === true
+
+  function isStorePickupShippingOption(opt: { name?: string | null; data?: Record<string, unknown> }): boolean {
+    const mode = (opt.data as any)?.mode
+    const name = (opt.name ?? "").toLowerCase()
+    return (
+      mode === "store_pickup" ||
+      (name.includes("retrait") && (name.includes("dépôt") || name.includes("depot") || name.includes("magasin")))
+    )
+  }
+
   const filteredShippingMethods = (shippingMethods ?? []).filter((opt) => {
     const isDigital = isDigitalShippingOption(opt)
     if (giftCardOnly) return isDigital
+    if (hasPickupOnlyItems) return isStorePickupShippingOption(opt)
     return !isDigital
   })
 
@@ -179,7 +193,7 @@ export default async function CheckoutForm({
 
       {/* Étape 2 : Livraison */}
       <div className="relative pb-8 mb-0">
-        <Shipping cart={cart} availableShippingMethods={filteredShippingMethods} />
+        <Shipping cart={cart} availableShippingMethods={filteredShippingMethods} hasPickupOnlyItems={hasPickupOnlyItems} />
         <div className="mx-4 sm:mx-0 sm:ml-[40px] mt-6 border-b-2 border-dashed border-gray-200" />
       </div>
 

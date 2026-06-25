@@ -53,11 +53,13 @@ function isBpostHomeOption(option: HttpTypes.StoreCartShippingOption): boolean {
 type ShippingProps = {
   cart: HttpTypes.StoreCart
   availableShippingMethods: HttpTypes.StoreCartShippingOption[] | null
+  hasPickupOnlyItems?: boolean
 }
 
 const Shipping: React.FC<ShippingProps> = ({
   cart,
   availableShippingMethods,
+  hasPickupOnlyItems = false,
 }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -251,6 +253,19 @@ const Shipping: React.FC<ShippingProps> = ({
 
       {isOpen ? (
         <div data-testid="delivery-options-container">
+          {hasPickupOnlyItems && (
+            <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+              <span className="mt-0.5 text-lg leading-none">🏪</span>
+              <div>
+                <p className="text-sm font-semibold text-amber-800">
+                  Retrait en magasin uniquement
+                </p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Votre panier contient des articles lourds (sacs d'aliments 20&nbsp;kg+) qui ne peuvent pas être expédiés à domicile. Seul le retrait à La Cabrade est disponible.
+                </p>
+              </div>
+            </div>
+          )}
           <div ref={deliveryOptionsRef} className="pb-6">
             <RadioGroup value={displayedMethodId ?? ""} onChange={set}>
               <div className="space-y-3">
