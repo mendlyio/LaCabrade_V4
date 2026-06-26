@@ -129,7 +129,7 @@ export const PORTES_OUVERTES_PROMO: ActivePromoConfig = {
 //   19 juin 00:00 BEL = 18 juin 22:00 UTC
 //   21 juin 09:00 BEL = 21 juin 07:00 UTC
 export const BRADERIE_PROMO: ActivePromoConfig = {
-  active: true,
+  active: false,
   code: "BRADERIE_15",
   discountPercent: 15,
   label: "Braderie",
