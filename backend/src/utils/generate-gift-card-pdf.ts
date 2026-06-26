@@ -155,7 +155,8 @@ export async function generateGiftCardPDF(data: GiftCardPDFData): Promise<Buffer
     color: BRAND_COLOR,
   })
 
-  const pdfBytes = await pdfDoc.save()
+  // useObjectStreams: false → génère une table xref traditionnelle (compatible Acrobat Reader)
+  const pdfBytes = await pdfDoc.save({ useObjectStreams: false })
   return Buffer.from(pdfBytes)
 }
 
