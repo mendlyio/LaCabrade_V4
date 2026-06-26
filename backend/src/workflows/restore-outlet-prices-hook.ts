@@ -34,7 +34,7 @@
  * pour les edge-cases déclenchés hors de refreshCartItemsWorkflow.
  */
 
-import { refreshCartItemsWorkflow } from "@medusajs/medusa/core-flows"
+import { refreshCartItemsWorkflow, createCartCreditLinesWorkflow } from "@medusajs/medusa/core-flows"
 import { StepResponse } from "@medusajs/framework/workflows-sdk"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import type { ICartModuleService } from "@medusajs/framework/types"
@@ -87,6 +87,10 @@ const BRADERIE_LC_COLLECTION_HANDLES = new Set(["lc-equestrian"])
 
 const FREE_SHIPPING_THRESHOLD = 75
 const FREE_SHIPPING_PROMO_CODE = "FREE_SHIPPING_75"
+
+// ─── Constantes exonération TVA intracommunautaire ───────────────────────────
+const VAT_RATE = 0.21
+const VAT_EXEMPTION_REFERENCE = "intra_community_vat_exemption"
 
 // ─── Constantes Aliments (retrait magasin uniquement) ────────────────────────
 // Catégorie "Aliments" (sacs 20kg Bleu Roy, etc.) → uniquement retrait magasin
@@ -681,6 +685,77 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
           console.log(
             `[CartHook] Panier ${cartId} — aliments: supprimé ${invalidSmIds.length} méthode(s) incompatible(s)`
           )
+        }
+      }
+
+      // ── G. EXONÉRATION TVA INTRACOMMUNAUTAIRE ────────────────────────────
+      // Clients professionnels hors Belgique avec numéro de TVA valide :
+      // on déduit la TVA du total via une credit_line pour que le montant
+      // Medusa (TTC) = montant Stripe (HT affiché). Sans ça, Medusa affiche
+      // un "outstanding amount" égal à la TVA après chaque commande.
+
+      const cartVatNumber = (cart.metadata as any)?.vat_number || null
+      const cartCountry = (cart as any).shipping_address?.country_code?.toLowerCase()
+      const isVatExempt = !!(cartVatNumber && cartCountry && cartCountry !== "be")
+
+      if (isVatExempt) {
+        try {
+          // Calculer le sous-total TTC (items + livraison nette)
+          const itemsTtc = items.reduce(
+            (sum: number, i: any) => sum + Number(i.unit_price ?? 0) * (i.quantity ?? 1),
+            0
+          )
+          const shippingMethods = (cart as any).shipping_methods ?? []
+          const shippingNet = shippingMethods.reduce((sum: number, sm: any) => {
+            const base = Number(sm.amount ?? 0)
+            const adjReduction = (sm.adjustments ?? []).reduce(
+              (s: number, a: any) => s + Number(a.amount ?? 0), 0
+            )
+            return sum + Math.max(0, base - adjReduction)
+          }, 0)
+
+          const totalTtc = itemsTtc + shippingNet
+          const vatAmount = Math.round(totalTtc * (VAT_RATE / (1 + VAT_RATE)) * 100) / 100
+
+          if (vatAmount > 0) {
+            // Vérifier si une credit_line d'exonération existe déjà
+            const { data: creditLines } = await (container.resolve(ContainerRegistrationKeys.QUERY) as any).graph({
+              entity: "cart_credit_line",
+              fields: ["id", "amount", "reference"],
+              filters: { cart_id: cartId, reference: VAT_EXEMPTION_REFERENCE },
+            }).catch(() => ({ data: [] }))
+
+            const existingCL = (creditLines ?? []).find(
+              (cl: any) => cl.reference === VAT_EXEMPTION_REFERENCE
+            )
+
+            if (!existingCL) {
+              await createCartCreditLinesWorkflow(container).run({
+                input: [
+                  {
+                    cart_id: cartId,
+                    amount: vatAmount,
+                    reference: VAT_EXEMPTION_REFERENCE,
+                    reference_id: cartId,
+                    metadata: { vat_number: cartVatNumber, country: cartCountry },
+                  },
+                ] as any,
+              })
+              console.log(
+                `[CartHook] Panier ${cartId} — exonération TVA intracommunautaire: -${vatAmount}€ (${cartVatNumber})`
+              )
+            } else if (Math.abs(Number(existingCL.amount) - vatAmount) > 0.01) {
+              // Montant VAT a changé (ajout d'articles) → mettre à jour
+              await cartModuleService.updateCarts([
+                { id: cartId, metadata: cart.metadata as any },
+              ])
+              console.log(
+                `[CartHook] Panier ${cartId} — exonération TVA: montant mis à jour ${existingCL.amount}→${vatAmount}€`
+              )
+            }
+          }
+        } catch (vatErr: any) {
+          console.warn(`[CartHook] Exonération TVA non appliquée: ${vatErr?.message}`)
         }
       }
     } catch (error: any) {
