@@ -49,7 +49,6 @@ const GiftCardsPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [disabling, setDisabling] = useState<string | null>(null)
   const [resending, setResending] = useState<string | null>(null)
-  const [downloading, setDownloading] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ id: string; msg: string; ok: boolean } | null>(null)
   const [count, setCount] = useState(0)
 
@@ -120,29 +119,6 @@ const GiftCardsPage = () => {
     }
   }
 
-  // Télécharger le PDF du bon cadeau
-  const handleDownloadPdf = async (gc: GiftCardRow) => {
-    setDownloading(gc.id)
-    try {
-      const res = await fetch(`/admin/gift-cards/${gc.id}/pdf`, {
-        credentials: "include",
-      })
-      if (!res.ok) throw new Error("Téléchargement impossible")
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `bon-cadeau-lacabrade-${gc.code}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
-    } catch (e) {
-      showNotice(gc.id, "Erreur lors du téléchargement du PDF", false)
-    } finally {
-      setDownloading(null)
-    }
-  }
 
   const totalActive = giftCards.filter((gc) => gc.status === "active").length
   const totalBalance = giftCards
@@ -278,14 +254,14 @@ const GiftCardsPage = () => {
                           >
                             {resending === gc.id ? "Envoi..." : "✉ Renvoyer l'email"}
                           </button>
-                          <button
-                            onClick={() => handleDownloadPdf(gc)}
-                            disabled={downloading === gc.id}
+                          <a
+                            href={`/admin/gift-cards/${gc.id}/pdf`}
+                            download={`bon-cadeau-lacabrade-${gc.code}.pdf`}
                             title="Télécharger le PDF du bon cadeau"
-                            className="text-xs px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
+                            className="text-xs px-3 py-1.5 rounded border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                           >
-                            {downloading === gc.id ? "..." : "⬇ PDF"}
-                          </button>
+                            ⬇ PDF
+                          </a>
                           {gc.status === "active" && (
                             <button
                               onClick={() => handleDisable(gc)}
