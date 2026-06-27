@@ -115,7 +115,7 @@ export default class BpostModuleService {
     }
   }
 
-  private async sendToApi<T = any>({ method, endpoint, data, headers, rawBinary }: { method: string; endpoint: string; data?: any; headers?: Record<string, string>; rawBinary?: boolean }): Promise<{ httpCode: number; response: T; rawBuffer?: Buffer }> {
+  private async sendToApi<T = any>({ method, endpoint, data, headers, rawBinary, _retry }: { method: string; endpoint: string; data?: any; headers?: Record<string, string>; rawBinary?: boolean; _retry?: boolean }): Promise<{ httpCode: number; response: T; rawBuffer?: Buffer }> {
     this.ensureKeys()
     const envUrl = process.env.BPOST_API_URL || this.options.apiUrl
     const resolvedBase =
@@ -203,6 +203,17 @@ export default class BpostModuleService {
     if (!res.ok) {
       const message = (response && (response.Error?.Info || response.error || response.message)) || `Bpost API ${httpCode}`
       console.error(`[Bpost] Erreur ${httpCode}: ${message}`)
+
+      // 401 sur un endpoint non-/keys → token expiré côté serveur Bpost.
+      // On vide le cache et on réessaie une seule fois avec un token frais.
+      if (httpCode === 401 && !endpoint.includes("/keys") && !_retry) {
+        console.log(`[Bpost] Token 401 — vidage cache et retry avec token frais...`)
+        BpostModuleService.tokenCache = null
+        this.currentToken = undefined
+        await this.ensureToken()
+        return this.sendToApi({ method, endpoint, data, headers, rawBinary, _retry: true })
+      }
+
       throw new Error(message)
     }
     return { httpCode, response }
