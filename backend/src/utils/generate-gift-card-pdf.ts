@@ -20,15 +20,32 @@ function stripEmojis(str: string): string {
 }
 
 /**
+ * Nettoie le texte pour la compatibilité WinAnsi (encoding pdf-lib StandardFonts).
+ * - Remplace les \n par un espace (les sauts de ligne sont gérés par wrapText)
+ * - Remplace les caractères hors Latin-1 (> 0xFF) par leur équivalent ASCII ou un espace
+ * - Remplace les guillemets typographiques, tirets em/en, etc.
+ */
+function sanitizeForPdf(str: string): string {
+  return str
+    .replace(/\r\n|\r/g, "\n")        // normaliser CRLF → LF
+    .replace(/[«»""„]/g, '"')         // guillemets typographiques → ASCII
+    .replace(/[''‚]/g, "'")           // apostrophes typographiques → ASCII
+    .replace(/[–—]/g, "-")            // tirets em/en → trait d'union
+    .replace(/[…]/g, "...")           // points de suspension → 3 points
+    .replace(/[\u00A0]/g, " ")        // espace insécable → espace normal
+    .replace(/[^\x09\x0A\x0D\x20-\xFF]/g, "")  // supprimer tout ce qui dépasse Latin-1 (sauf tab/LF/CR)
+}
+
+/**
  * Génère un PDF de bon cadeau La Cabrade.
  * Retourne un Buffer prêt pour l'envoi par email en pièce jointe.
  */
 export async function generateGiftCardPDF(data: GiftCardPDFData): Promise<Buffer> {
   data = {
     ...data,
-    recipientName: stripEmojis(data.recipientName),
-    message: stripEmojis(data.message),
-    senderName: data.senderName ? stripEmojis(data.senderName) : data.senderName,
+    recipientName: sanitizeForPdf(stripEmojis(data.recipientName)),
+    message: sanitizeForPdf(stripEmojis(data.message)),
+    senderName: data.senderName ? sanitizeForPdf(stripEmojis(data.senderName)) : data.senderName,
   }
   const pdfDoc = await PDFDocument.create()
   const page = pdfDoc.addPage([595, 420]) // Format paysage A5-ish
@@ -96,7 +113,9 @@ export async function generateGiftCardPDF(data: GiftCardPDFData): Promise<Buffer
   // --- Message personnalisé ---
   if (data.message) {
     const maxCharsPerLine = 55
-    const lines = wrapText(data.message, maxCharsPerLine)
+    // Découper d'abord par sauts de ligne explicites, puis word-wrap chaque paragraphe
+    const rawParagraphs = data.message.split("\n").filter(p => p.trim().length > 0)
+    const lines = rawParagraphs.flatMap(p => wrapText(p.trim(), maxCharsPerLine))
     let yPos = height - 225
     
     // Guillemets
