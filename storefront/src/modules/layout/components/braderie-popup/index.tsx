@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from "react"
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
-const START_AT = new Date("2026-06-18T22:00:00.000Z")
-const END_AT = new Date("2026-06-21T07:00:00.000Z")
-const STORAGE_KEY = "lc_braderie_popup_dismissed_2026"
+const START_AT = new Date("2026-06-29T22:00:00.000Z")
+const END_AT = new Date("2026-07-31T21:59:59.000Z")
+const STORAGE_KEY = "lc_soldes_ete_2026_popup_dismissed"
 const DELAY_MS = 900
-const IMAGE_SRC = "https://ik.imagekit.io/kodt9cn6f/braderie.webp"
+const IMAGE_SRC = "https://ik.imagekit.io/kodt9cn6f/soldeLC.webp"
 
 export function isBraderiePopupActive(now = new Date()): boolean {
   return now >= START_AT && now <= END_AT
@@ -44,13 +44,13 @@ export default function BraderiePopup() {
         className="relative w-full max-w-[420px] overflow-hidden rounded-2xl bg-[#f5dde3] shadow-2xl animate-popup-in"
         role="dialog"
         aria-modal="true"
-        aria-label="Braderie La Cabrade"
+        aria-label="Soldes Été La Cabrade"
         onClick={(event) => event.stopPropagation()}
       >
         <button
           type="button"
           onClick={dismiss}
-          aria-label="Fermer la popup Braderie"
+          aria-label="Fermer la popup Soldes"
           className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#be123c] shadow-sm transition hover:bg-white hover:text-[#9f1239]"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -62,11 +62,11 @@ export default function BraderiePopup() {
           href="/promotions"
           onClick={dismiss}
           className="block focus:outline-none focus:ring-4 focus:ring-[#be123c]/30"
-          aria-label="Voir la Braderie La Cabrade"
+          aria-label="Voir les Soldes La Cabrade"
         >
           <Image
             src={IMAGE_SRC}
-            alt="Braderie La Cabrade les 19 et 20 juin"
+            alt="Soldes Été La Cabrade — Vêtements Cavalier -25%, LC Equestrian -15%, Outlet -60%"
             width={1080}
             height={1350}
             priority

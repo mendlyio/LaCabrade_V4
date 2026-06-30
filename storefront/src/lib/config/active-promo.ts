@@ -124,10 +124,7 @@ export const PORTES_OUVERTES_PROMO: ActivePromoConfig = {
   outletDiscountPercent: 60,
 }
 
-// ─── Braderie 2026 (19–21 juin matin) ─────────────────────────────────────────
-// Heure belge (CEST = UTC+2 en juin) :
-//   19 juin 00:00 BEL = 18 juin 22:00 UTC
-//   21 juin 09:00 BEL = 21 juin 07:00 UTC
+// ─── Braderie 2026 (19–21 juin matin) — TERMINÉE ──────────────────────────────
 export const BRADERIE_PROMO: ActivePromoConfig = {
   active: false,
   code: "BRADERIE_15",
@@ -137,39 +134,73 @@ export const BRADERIE_PROMO: ActivePromoConfig = {
   endDate: new Date("2026-06-21T07:00:00.000Z"),
   excludedCategoryHandles: [],
   includedCategoryHandles: [
-    // Vêtements Cavalier ciblés — les produits sont rangés dans les SOUS-catégories,
-    // donc on liste parents + enfants réels (handles en base, comparés en lowercase).
-    // Concours
-    "concours",
-    "accessoires-de-concours",
-    "pantalons-de-concours",
-    "polos-de-concours",
-    "vestes-de-concours",
-    // Pantalons
-    "pantalons",
-    "pantalons-dame",
-    "pantalons-enfant",
-    // Sweats et pulls
-    "sweats-et-pulls",
-    "sweats-et-pulls-dame",
-    "sweats-et-pulls-enfant",
-    // T-shirts et polos
-    "t-shirts-et-polos",
-    "t-shirts-et-polos-dame",
-    "t-shirts-et-polos-enfant",
-    // Vestes
-    "vestes",
-    "vestes-dame",
-    "vestes-enfant",
-    // LC Equestrian (handle réel : LC-Equestrian → comparé en lowercase)
+    "concours", "accessoires-de-concours", "pantalons-de-concours",
+    "polos-de-concours", "vestes-de-concours",
+    "pantalons", "pantalons-dame", "pantalons-enfant",
+    "sweats-et-pulls", "sweats-et-pulls-dame", "sweats-et-pulls-enfant",
+    "t-shirts-et-polos", "t-shirts-et-polos-dame", "t-shirts-et-polos-enfant",
+    "vestes", "vestes-dame", "vestes-enfant",
     "lc-equestrian",
   ],
   includedCollectionHandles: ["lc-equestrian"],
 }
 
+// ─── Soldes Été 2026 (30 juin → 31 juillet) ────────────────────────────────────
+// Heure belge (CEST = UTC+2) :
+//   30 juin 00:00 BEL = 29 juin 22:00 UTC
+//   31 juillet 23:59 BEL = 31 juillet 21:59 UTC
+//
+// Règles :
+//   • Vêtements Cavalier (concours / pantalons / sweats / tshirts / vestes) → -25%
+//   • LC Equestrian (catégorie ou collection)                               → -15%
+//   • Outlet                                                                → -60% (vs -50% habituel)
+//     ↳ Géré en Block A du hook (adjustment supplémentaire de +10% du prix original)
+export const SOLDE_PROMO: ActivePromoConfig = {
+  active: true,
+  code: "SOLDE_LC_15",
+  discountPercent: 15,
+  label: "Soldes",
+  startDate: new Date("2026-06-29T22:00:00.000Z"),
+  endDate: new Date("2026-07-31T21:59:59.000Z"),
+  excludedCategoryHandles: [],
+  includedCategoryHandles: [
+    // Vêtements Cavalier ciblés (+ sous-catégories dame/enfant/concours)
+    "concours", "accessoires-de-concours", "pantalons-de-concours",
+    "polos-de-concours", "vestes-de-concours",
+    "pantalons", "pantalons-dame", "pantalons-enfant",
+    "sweats-et-pulls", "sweats-et-pulls-dame", "sweats-et-pulls-enfant",
+    "t-shirts-et-polos", "t-shirts-et-polos-dame", "t-shirts-et-polos-enfant",
+    "vestes", "vestes-dame", "vestes-enfant",
+    // LC Equestrian
+    "lc-equestrian",
+  ],
+  includedCollectionHandles: ["lc-equestrian"],
+  tiers: [
+    // -25% sur toutes les catégories Vêtements Cavalier ciblées
+    {
+      discountPercent: 25,
+      categoryHandles: [
+        "concours", "accessoires-de-concours", "pantalons-de-concours",
+        "polos-de-concours", "vestes-de-concours",
+        "pantalons", "pantalons-dame", "pantalons-enfant",
+        "sweats-et-pulls", "sweats-et-pulls-dame", "sweats-et-pulls-enfant",
+        "t-shirts-et-polos", "t-shirts-et-polos-dame", "t-shirts-et-polos-enfant",
+        "vestes", "vestes-dame", "vestes-enfant",
+      ],
+    },
+    // -15% sur LC Equestrian (catégorie ou collection)
+    {
+      discountPercent: 15,
+      categoryHandles: ["lc-equestrian"],
+      collectionHandles: ["lc-equestrian"],
+    },
+  ],
+  outletDiscountPercent: 60,
+}
+
 // ─── Promotion active ──────────────────────────────────────────────────────────
-// Pointer ici pour changer de promo (ex: PAQUES_PROMO, PORTES_OUVERTES_PROMO ou BRADERIE_PROMO)
-export const ACTIVE_PROMO: ActivePromoConfig = BRADERIE_PROMO
+// Pointer ici pour changer de promo (ex: PAQUES_PROMO, PORTES_OUVERTES_PROMO, BRADERIE_PROMO, SOLDE_PROMO)
+export const ACTIVE_PROMO: ActivePromoConfig = SOLDE_PROMO
 
 /** La promo est-elle actuellement active ? */
 export function isPromoActive(): boolean {

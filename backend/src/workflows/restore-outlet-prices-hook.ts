@@ -47,6 +47,7 @@ const ALL_PO_CODES = new Set([PO_CODE, PO_CAVALIER_CODE, PO_LC_CODE])
 const KNOWN_AUTO_CODES = new Set([
   PO_CODE, PO_CAVALIER_CODE, PO_LC_CODE,
   "BRADERIE_15", "BRADERIE_LC_25",
+  "SOLDE_LC_15", "SOLDE_CAVALIER_25", "SOLDE_OUTLET_60",
   "OUTLET_50", "FREE_SHIPPING_75", "PAQUES_10",
 ])
 const PO_START = new Date("2026-04-30T22:00:00.000Z")
@@ -85,6 +86,25 @@ const BRADERIE_CAVALIER_HANDLES = new Set([
 const BRADERIE_LC_HANDLES = new Set(["lc-equestrian"])
 const BRADERIE_LC_COLLECTION_HANDLES = new Set(["lc-equestrian"])
 
+// ─── Constantes Soldes Été 2026 ──────────────────────────────────────────────
+// 30 juin 00:00 BEL (29 juin 22:00 UTC) → 31 juillet 23:59 BEL (31 juillet 21:59 UTC)
+const SOLDE_CODE = "SOLDE_LC_15"
+const SOLDE_CAVALIER_CODE = "SOLDE_CAVALIER_25"
+const ALL_SOLDE_CODES = new Set([SOLDE_CODE, SOLDE_CAVALIER_CODE])
+const SOLDE_START = new Date("2026-06-29T22:00:00.000Z")
+const SOLDE_END = new Date("2026-07-31T21:59:59.000Z")
+// Handles des catégories Cavalier ciblées (parents — subtree collecté dans le hook)
+const SOLDE_CAVALIER_PARENT_HANDLES = new Set([
+  "concours",
+  "pantalons",
+  "sweats-et-pulls",
+  "t-shirts-et-polos",
+  "vestes",
+])
+const SOLDE_LC_HANDLES = new Set(["lc-equestrian"])
+// Remise outlet Soldes : 60% au lieu des 50% habituels
+const SOLDE_OUTLET_TARGET_PCT = 0.60
+
 const FREE_SHIPPING_THRESHOLD = 75
 const FREE_SHIPPING_PROMO_CODE = "FREE_SHIPPING_75"
 
@@ -108,6 +128,11 @@ function isPortesOuvertesPeriod(): boolean {
 function isBraderiePeriod(): boolean {
   const now = new Date()
   return now >= BRADERIE_START && now <= BRADERIE_END
+}
+
+function isSoldePeriod(): boolean {
+  const now = new Date()
+  return now >= SOLDE_START && now <= SOLDE_END
 }
 
 /**
@@ -225,6 +250,39 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
           console.log(
             `[CartHook] Panier ${cartId} — outlet: restauré le prix pour ${toRestore.length} article(s)`
           )
+        }
+
+        // ── Soldes : remise outlet portée à -60% ─────────────────────────
+        // OUTLET_50 ajuste à -50% via unit_price. Pendant les Soldes on ajoute
+        // un adjustment de la différence (10% du prix original) pour atteindre -60%.
+        // (Les adjustments précédents SOLDE_OUTLET_60 ont déjà été supprimés
+        // en début de Block A avec tous les autres adjustments outlet.)
+        if (isSoldePeriod()) {
+          const outletExtraAdjs: any[] = []
+          for (const item of outletItems) {
+            const md = item.metadata as any
+            if (!md?.outlet_original_price || !md?.outlet_discount_percent) continue
+            const originalPrice = Number(md.outlet_original_price)
+            const currentPct = Number(md.outlet_discount_percent) / 100
+            if (SOLDE_OUTLET_TARGET_PCT <= currentPct + 0.001) continue
+            const extraPct = SOLDE_OUTLET_TARGET_PCT - currentPct
+            const qty = item.quantity ?? 1
+            const extraAmt = Math.round(originalPrice * extraPct * qty * 100) / 100
+            if (extraAmt > 0.001) {
+              outletExtraAdjs.push({
+                item_id: item.id,
+                amount: extraAmt,
+                code: "SOLDE_OUTLET_60",
+                description: "Soldes Été 2026 −60%",
+              })
+            }
+          }
+          if (outletExtraAdjs.length > 0) {
+            await (cartModuleService as any).addLineItemAdjustments(outletExtraAdjs)
+            console.log(
+              `[CartHook] Panier ${cartId} — Soldes outlet -60%: +${outletExtraAdjs.length} adjustment(s)`
+            )
+          }
         }
       }
 
@@ -574,6 +632,187 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
             if (adjIdsToRemove.length + adjsToUpdate.length + adjsToCreate.length > 0) {
               console.log(
                 `[CartHook] Panier ${cartId} — Braderie: -${adjIdsToRemove.length} / upd ${adjsToUpdate.length} / +${adjsToCreate.length} (LC qty ${lcQuantity})`
+              )
+            }
+          }
+        }
+      }
+
+      // ── C-bis. SOLDES ÉTÉ 2026 ──────────────────────────────────────────
+      // Code Medusa créé par seed-soldes-ete-2026.ts :
+      //   SOLDE_LC_15  → promo globale -15% (filtrage par ce bloc)
+      // Ce bloc :
+      //   - retire SOLDE_LC_15 des articles non éligibles
+      //   - garde -15% (SOLDE_LC_15) sur les articles LC Equestrian
+      //   - monte à -25% (SOLDE_CAVALIER_25) sur les vêtements Cavalier ciblés
+      //   - supprime l'adjustment sur les articles outlet (géré dans Block A)
+
+      const soldesAdjs = allAdjs.filter(
+        (a: any) => a.code && ALL_SOLDE_CODES.has(a.code)
+      )
+
+      if (soldesAdjs.length > 0) {
+        const soldeAdjIdsToRemove: string[] = []
+        const soldeAdjsToCreate: any[] = []
+        const soldeAdjsToUpdate: any[] = []
+
+        if (!isSoldePeriod()) {
+          await (cartModuleService as any).deleteLineItemAdjustments(
+            soldesAdjs.map((a: any) => a.id)
+          )
+          console.log(
+            `[CartHook] Panier ${cartId} — Soldes hors période: supprimé ${soldesAdjs.length} adjustment(s)`
+          )
+        } else {
+          const hasManualCode = allAdjs.some(
+            (a: any) => a.code && !KNOWN_AUTO_CODES.has(a.code)
+          )
+
+          if (hasManualCode) {
+            await (cartModuleService as any).deleteLineItemAdjustments(
+              soldesAdjs.map((a: any) => a.id)
+            )
+            console.log(
+              `[CartHook] Panier ${cartId} — Soldes: code manuel détecté, supprimé ${soldesAdjs.length} adjustment(s)`
+            )
+          } else {
+            const soldesAdjsByItem = new Map<string, any[]>()
+            for (const adj of soldesAdjs) {
+              if (!adj.item_id) continue
+              const list = soldesAdjsByItem.get(adj.item_id) ?? []
+              list.push(adj)
+              soldesAdjsByItem.set(adj.item_id, list)
+            }
+
+            const soldeProductIds = [
+              ...new Set(
+                items
+                  .filter((i: any) => soldesAdjsByItem.has(i.id) && i.product_id)
+                  .map((i: any) => i.product_id)
+              ),
+            ] as string[]
+
+            // Charger toutes les catégories pour construire les arbres
+            const allCategoriesForSoldes: Array<{
+              id: string
+              handle?: string | null
+              parent_category_id?: string | null
+            }> = await productModule
+              .listProductCategories(
+                {},
+                { select: ["id", "handle", "parent_category_id"], take: 500 }
+              )
+              .catch(() => [])
+
+            // Collecter les IDs Cavalier (parents ciblés + tous leurs enfants)
+            const soldeCavalierCategoryIds = new Set<string>()
+            const soldeLcCategoryIds = new Set<string>()
+            for (const category of allCategoriesForSoldes) {
+              const handle = (category.handle ?? "").toLowerCase()
+              if (SOLDE_CAVALIER_PARENT_HANDLES.has(handle)) {
+                collectSubtreeIds(category.id, allCategoriesForSoldes).forEach(
+                  (id) => soldeCavalierCategoryIds.add(id)
+                )
+              }
+              if (SOLDE_LC_HANDLES.has(handle)) {
+                collectSubtreeIds(category.id, allCategoriesForSoldes).forEach(
+                  (id) => soldeLcCategoryIds.add(id)
+                )
+              }
+            }
+
+            const soldeProductEligibility = new Map<
+              string,
+              { isCavalier: boolean; isLC: boolean }
+            >()
+            if (soldeProductIds.length > 0) {
+              const soldeProducts: any[] = await productModule
+                .listProducts(
+                  { id: soldeProductIds },
+                  { relations: ["categories", "collection"], select: ["id"] }
+                )
+                .catch(() => [])
+
+              for (const product of soldeProducts) {
+                const categoryIds = (product.categories ?? []).map((c: any) => c.id)
+                const collectionHandle = (product.collection?.handle ?? "").toLowerCase()
+                const isCavalier = categoryIds.some((id: string) =>
+                  soldeCavalierCategoryIds.has(id)
+                )
+                const isLC =
+                  categoryIds.some((id: string) => soldeLcCategoryIds.has(id)) ||
+                  SOLDE_LC_HANDLES.has(collectionHandle)
+                soldeProductEligibility.set(product.id, { isCavalier, isLC })
+              }
+            }
+
+            for (const item of items) {
+              const itemAdjs = soldesAdjsByItem.get(item.id)
+              if (!itemAdjs?.length) continue
+
+              const isOutlet =
+                item.metadata?.outlet_discount === true ||
+                (item.compare_at_unit_price != null &&
+                  Number(item.compare_at_unit_price) > Number(item.unit_price ?? 0) + 0.01)
+
+              if (isOutlet) {
+                // Outlet : SOLDE_OUTLET_60 géré en Block A ; supprimer le reste
+                for (const adj of itemAdjs) {
+                  if (adj.code !== "SOLDE_OUTLET_60") soldeAdjIdsToRemove.push(adj.id)
+                }
+                continue
+              }
+
+              const eligibility = item.product_id
+                ? soldeProductEligibility.get(item.product_id)
+                : undefined
+
+              if (!eligibility?.isCavalier && !eligibility?.isLC) {
+                for (const adj of itemAdjs) soldeAdjIdsToRemove.push(adj.id)
+                continue
+              }
+
+              const unitPrice = Number(item.unit_price ?? 0)
+              const qty = item.quantity ?? 1
+              const targetPercent = eligibility.isCavalier ? 0.25 : 0.15
+              const targetCode = eligibility.isCavalier ? SOLDE_CAVALIER_CODE : SOLDE_CODE
+              const targetDesc = eligibility.isCavalier
+                ? "Soldes Été 2026 −25% Cavalier"
+                : "Soldes Été 2026 −15% LC"
+              const expectedHT = computeDiscountAmount(unitPrice, qty, targetPercent)
+              const eps = 0.001
+
+              const firstAdj = itemAdjs[0]
+              const current = Number(firstAdj.amount ?? 0)
+              if (
+                Math.abs(current - expectedHT) > eps ||
+                firstAdj.code !== targetCode ||
+                firstAdj.description !== targetDesc
+              ) {
+                soldeAdjsToUpdate.push({
+                  id: firstAdj.id,
+                  amount: expectedHT,
+                  code: targetCode,
+                  description: targetDesc,
+                })
+              }
+              for (let i = 1; i < itemAdjs.length; i++) {
+                soldeAdjIdsToRemove.push(itemAdjs[i].id)
+              }
+            }
+
+            if (soldeAdjIdsToRemove.length > 0) {
+              await (cartModuleService as any).deleteLineItemAdjustments(soldeAdjIdsToRemove)
+            }
+            if (soldeAdjsToUpdate.length > 0) {
+              await (cartModuleService as any).updateLineItemAdjustments(soldeAdjsToUpdate)
+            }
+            if (soldeAdjsToCreate.length > 0) {
+              await (cartModuleService as any).addLineItemAdjustments(soldeAdjsToCreate)
+            }
+            if (soldeAdjIdsToRemove.length + soldeAdjsToUpdate.length + soldeAdjsToCreate.length > 0) {
+              console.log(
+                `[CartHook] Panier ${cartId} — Soldes: -${soldeAdjIdsToRemove.length} / upd ${soldeAdjsToUpdate.length} / +${soldeAdjsToCreate.length}`
               )
             }
           }
