@@ -136,15 +136,22 @@ function isSoldePeriod(): boolean {
 }
 
 /**
- * Montant d'une remise de line item adjustment.
+ * Montant HT d'une remise de line item adjustment.
  *
- * ⚠️  Pour les articles tax-inclusive (cas de cette boutique), Medusa soustrait
- * le montant de l'adjustment DIRECTEMENT du prix TTC (item_total = original_total
- * − Σ amounts). Le montant doit donc être exprimé en TTC : prix_TTC × % × qty.
- * (Vérifié en prod : un -15% natif Medusa sur 54,90€ = 8,235 = 54,90 × 0,15.)
+ * ⚠️  Les adjustments Medusa sont créés avec is_tax_inclusive: false (défaut).
+ * Dans ce cas, Medusa interprète le montant comme HT et recalcule automatiquement
+ * la TVA dessus : remise_TTC = amount_HT × (1 + taux_TVA).
+ *
+ * Pour obtenir une remise TTC = unitPriceTTC × pct, on doit passer le montant HT :
+ *   amount_HT = (unitPriceTTC / 1.21) × pct × qty
+ * → Medusa applique : amount_HT × 1.21 = unitPriceTTC × pct  ✓
+ *
+ * Taux TVA standard belge : 21% (valable pour tous les articles sellerie).
  */
+const TAX_RATE_FACTOR = 1.21
+
 function computeDiscountAmount(unitPriceTTC: number, qty: number, pct: number): number {
-  return unitPriceTTC * pct * qty
+  return (unitPriceTTC / TAX_RATE_FACTOR) * pct * qty
 }
 
 function collectSubtreeIds(
@@ -267,7 +274,8 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
             if (SOLDE_OUTLET_TARGET_PCT <= currentPct + 0.001) continue
             const extraPct = SOLDE_OUTLET_TARGET_PCT - currentPct
             const qty = item.quantity ?? 1
-            const extraAmt = Math.round(originalPrice * extraPct * qty * 100) / 100
+            // Montant HT : Medusa (is_tax_inclusive:false) ajoute 21% → remise TTC correcte
+            const extraAmt = Math.round((originalPrice / TAX_RATE_FACTOR) * extraPct * qty * 100) / 100
             if (extraAmt > 0.001) {
               outletExtraAdjs.push({
                 item_id: item.id,
