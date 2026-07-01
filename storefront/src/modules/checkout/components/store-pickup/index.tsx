@@ -31,11 +31,6 @@ const storeLocations = [
     address: "Chau. Romaine 246, 4300 Waremme",
   },
   {
-    id: "esso-spa",
-    name: "Esso Goffin Spa",
-    address: "Av. Jean Gouders 118, 4845 Jalhay",
-  },
-  {
     id: "cabrade-retinne",
     name: "Sellerie la Cabrade",
     address: "Rue de la clef 96, 4621 Retinne",
