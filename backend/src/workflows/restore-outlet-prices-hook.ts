@@ -774,11 +774,13 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
 
               const unitPrice = Number(item.unit_price ?? 0)
               const qty = item.quantity ?? 1
-              const targetPercent = eligibility.isCavalier ? 0.25 : 0.15
-              const targetCode = eligibility.isCavalier ? SOLDE_CAVALIER_CODE : SOLDE_CODE
-              const targetDesc = eligibility.isCavalier
-                ? "Soldes Été 2026 −25% Cavalier"
-                : "Soldes Été 2026 −15% LC"
+              // LC est prioritaire sur Cavalier : un article LC classé dans une sous-catégorie
+              // Cavalier (pantalons-dame, vestes-dame…) reste à -15% et non à -25%.
+              const targetPercent = eligibility.isLC ? 0.15 : 0.25
+              const targetCode = eligibility.isLC ? SOLDE_CODE : SOLDE_CAVALIER_CODE
+              const targetDesc = eligibility.isLC
+                ? "Soldes Été 2026 −15% LC"
+                : "Soldes Été 2026 −25% Cavalier"
               const expectedHT = computeDiscountAmount(unitPrice, qty, targetPercent)
               const eps = 0.001
 

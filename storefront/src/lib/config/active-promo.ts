@@ -176,7 +176,15 @@ export const SOLDE_PROMO: ActivePromoConfig = {
   ],
   includedCollectionHandles: ["lc-equestrian"],
   tiers: [
-    // -25% sur toutes les catégories Vêtements Cavalier ciblées
+    // -15% sur LC Equestrian — EN PREMIER (prioritaire).
+    // Les articles LC sont souvent dans des sous-catégories Cavalier (pantalons-dame, vestes-dame…).
+    // On les identifie en premier pour éviter qu'ils basculent sur le tier Cavalier à -25%.
+    {
+      discountPercent: 15,
+      categoryHandles: ["lc-equestrian"],
+      collectionHandles: ["lc-equestrian"],
+    },
+    // -25% sur les Vêtements Cavalier ciblés (hors LC Equestrian — déjà traité au-dessus)
     {
       discountPercent: 25,
       categoryHandles: [
@@ -187,12 +195,6 @@ export const SOLDE_PROMO: ActivePromoConfig = {
         "t-shirts-et-polos", "t-shirts-et-polos-dame", "t-shirts-et-polos-enfant",
         "vestes", "vestes-dame", "vestes-enfant",
       ],
-    },
-    // -15% sur LC Equestrian (catégorie ou collection)
-    {
-      discountPercent: 15,
-      categoryHandles: ["lc-equestrian"],
-      collectionHandles: ["lc-equestrian"],
     },
   ],
   outletDiscountPercent: 60,
