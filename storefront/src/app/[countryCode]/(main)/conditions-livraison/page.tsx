@@ -15,12 +15,6 @@ export default function ConditionsLivraisonPage() {
           </h1>
           
           <div className="prose prose-lg max-w-none">
-            <div className="bg-amber-50 border-l-4 border-amber-500 p-6 mb-8">
-              <p className="text-sm text-amber-800 font-medium">
-                📝 Cette page est en cours de rédaction et sera complétée prochainement avec les informations détaillées sur nos conditions de livraison.
-              </p>
-            </div>
-
             {/* Bannière livraison gratuite */}
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6 mb-8">
               <div className="flex items-center gap-4">
@@ -50,14 +44,14 @@ export default function ConditionsLivraisonPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                  <h3 className="font-semibold text-blue-900 mb-2">🇧🇪 Belgique</h3>
+                  <h3 className="font-semibold text-blue-900 mb-2">Belgique</h3>
                   <p className="text-sm text-blue-800">
                     Livraison standard : 3-5 jours ouvrables<br />
                     Gratuite dès 75€
                   </p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <h3 className="font-semibold text-gray-900 mb-2">🌍 International</h3>
+                  <h3 className="font-semibold text-gray-900 mb-2">International</h3>
                   <p className="text-sm text-gray-700">
                     Sur demande<br />
                     Contactez-nous pour un devis
@@ -147,7 +141,7 @@ export default function ConditionsLivraisonPage() {
                         <span className="text-gray-600">Disponible sous 24-48h</span>
                       </div>
                       <div className="mt-3 text-xs text-gray-500">
-                        📍 Rue de la Clef, 96 - B-4620 Fléron
+                        Rue de la Clef, 96 — B-4621 Fléron
                       </div>
                     </div>
                   </div>

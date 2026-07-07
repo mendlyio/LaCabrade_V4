@@ -15,12 +15,6 @@ export default function ConditionsPaiementPage() {
           </h1>
           
           <div className="prose prose-lg max-w-none">
-            <div className="bg-amber-50 border-l-4 border-amber-500 p-6 mb-8">
-              <p className="text-sm text-amber-800 font-medium">
-                📝 Cette page est en cours de rédaction et sera complétée prochainement avec les informations détaillées sur nos conditions de paiement.
-              </p>
-            </div>
-
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 1. Moyens de paiement acceptés

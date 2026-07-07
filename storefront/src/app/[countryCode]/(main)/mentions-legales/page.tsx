@@ -16,18 +16,23 @@ export default function MentionsLegalesPage() {
             {/* Éditeur */}
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Éditeur du site</h2>
-              <p className="mb-2"><strong className="text-gray-900">Raison sociale :</strong> La Cabrade - LC•EQUESTRIAN</p>
-              <p className="mb-2"><strong className="text-gray-900">Forme juridique :</strong> [À compléter]</p>
-              <p className="mb-2"><strong className="text-gray-900">Adresse :</strong> Rue de la Clef, 96 - B-4620 Fléron, Belgique</p>
-              <p className="mb-2"><strong className="text-gray-900">Numéro TVA :</strong> [À compléter]</p>
+              <p className="mb-2"><strong className="text-gray-900">Raison sociale :</strong> Sellerie La Cabrade</p>
+              <p className="mb-2"><strong className="text-gray-900">Nom commercial :</strong> La Cabrade — LC•EQUESTRIAN</p>
+              <p className="mb-2"><strong className="text-gray-900">Forme juridique :</strong> Société anonyme (Naamloze vennootschap)</p>
+              <p className="mb-2"><strong className="text-gray-900">Numéro d&apos;entreprise (BCE) :</strong> 0463.063.053</p>
+              <p className="mb-2"><strong className="text-gray-900">Numéro TVA :</strong> BE0463.063.053</p>
+              <p className="mb-2"><strong className="text-gray-900">Capital social :</strong> 62.000,00 EUR</p>
+              <p className="mb-2"><strong className="text-gray-900">Siège social :</strong> Rue de la Clef 96 — B-4621 Fléron, Belgique</p>
               <p className="mb-2"><strong className="text-gray-900">Téléphone :</strong> +32 (0)4/358.60.99</p>
               <p className="mb-2"><strong className="text-gray-900">Email :</strong> contact@sellerie-lacabrade.be</p>
+              <p className="mb-2"><strong className="text-gray-900">Site web :</strong> www.sellerie-lacabrade.be</p>
             </section>
 
             {/* Directeur de publication */}
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">2. Directeur de publication</h2>
-              <p>[À compléter - Nom et prénom du responsable légal]</p>
+              <p className="mb-2">Michel Livet, gérant délégué</p>
+              <p>Adresse du siège social : Rue de la Clef 96 — B-4621 Fléron, Belgique</p>
             </section>
 
             {/* Hébergement */}
@@ -41,10 +46,10 @@ export default function MentionsLegalesPage() {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">4. Propriété intellectuelle</h2>
               <p className="mb-3">
-                L'ensemble du contenu de ce site (textes, images, vidéos, logos, etc.) est la propriété exclusive de La Cabrade ou de ses partenaires.
+                L&apos;ensemble du contenu de ce site (textes, images, vidéos, logos, etc.) est la propriété exclusive de La Cabrade ou de ses partenaires.
               </p>
               <p>
-                Toute reproduction, représentation, modification, publication, transmission, ou dénaturation, totale ou partielle du site ou de son contenu, par quelque procédé que ce soit, et sur quelque support que ce soit, est interdite sans l'autorisation préalable expresse de La Cabrade.
+                Toute reproduction, représentation, modification, publication, transmission, ou dénaturation, totale ou partielle du site ou de son contenu, par quelque procédé que ce soit, et sur quelque support que ce soit, est interdite sans l&apos;autorisation préalable expresse de La Cabrade.
               </p>
             </section>
 
@@ -52,10 +57,10 @@ export default function MentionsLegalesPage() {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">5. Protection des données personnelles</h2>
               <p className="mb-3">
-                Conformément au Règlement Général sur la Protection des Données (RGPD) et à la loi belge du 30 juillet 2018 relative à la protection des personnes physiques à l'égard des traitements de données à caractère personnel, vous disposez d'un droit d'accès, de rectification, de suppression et d'opposition aux données personnelles vous concernant.
+                Conformément au Règlement Général sur la Protection des Données (RGPD) et à la loi belge du 30 juillet 2018 relative à la protection des personnes physiques à l&apos;égard des traitements de données à caractère personnel, vous disposez d&apos;un droit d&apos;accès, de rectification, de suppression et d&apos;opposition aux données personnelles vous concernant.
               </p>
               <p>
-                Pour plus d'informations sur la protection de vos données, consultez notre <a href="/confidentialite" className="text-amber-600 hover:text-amber-700 underline">Politique de Confidentialité</a>.
+                Pour plus d&apos;informations sur la protection de vos données, consultez notre <a href="/confidentialite" className="text-amber-600 hover:text-amber-700 underline">Politique de Confidentialité</a>.
               </p>
             </section>
 
@@ -71,10 +76,10 @@ export default function MentionsLegalesPage() {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">7. Liens hypertextes</h2>
               <p className="mb-3">
-                Le site peut contenir des liens vers d'autres sites internet. La Cabrade ne saurait être tenue responsable du contenu de ces sites tiers.
+                Le site peut contenir des liens vers d&apos;autres sites internet. La Cabrade ne saurait être tenue responsable du contenu de ces sites tiers.
               </p>
               <p>
-                La création de liens hypertextes vers le site lacabrade.com nécessite une autorisation préalable écrite de La Cabrade.
+                La création de liens hypertextes vers le site sellerie-lacabrade.be nécessite une autorisation préalable écrite de La Cabrade.
               </p>
             </section>
 
@@ -82,10 +87,10 @@ export default function MentionsLegalesPage() {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">8. Limitation de responsabilité</h2>
               <p className="mb-3">
-                La Cabrade s'efforce d'assurer au mieux l'exactitude et la mise à jour des informations diffusées sur ce site. Toutefois, elle ne peut garantir l'exactitude, la précision ou l'exhaustivité des informations mises à disposition.
+                La Cabrade s&apos;efforce d&apos;assurer au mieux l&apos;exactitude et la mise à jour des informations diffusées sur ce site. Toutefois, elle ne peut garantir l&apos;exactitude, la précision ou l&apos;exhaustivité des informations mises à disposition.
               </p>
               <p>
-                La Cabrade décline toute responsabilité en cas d'interruption du site, de survenance de bugs, ou de dommages résultant d'une intrusion frauduleuse d'un tiers.
+                La Cabrade décline toute responsabilité en cas d&apos;interruption du site, de survenance de bugs, ou de dommages résultant d&apos;une intrusion frauduleuse d&apos;un tiers.
               </p>
             </section>
 
@@ -96,7 +101,7 @@ export default function MentionsLegalesPage() {
                 Les présentes mentions légales sont régies par le droit belge.
               </p>
               <p>
-                En cas de litige, et à défaut d'accord amiable, les tribunaux belges seront seuls compétents.
+                En cas de litige, et à défaut d&apos;accord amiable, les tribunaux belges seront seuls compétents.
               </p>
             </section>
           </div>
@@ -104,7 +109,18 @@ export default function MentionsLegalesPage() {
           {/* Date de mise à jour */}
           <div className="mt-8 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-500">
-              Dernière mise à jour : {new Date().toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
+              Dernière mise à jour : 7 juillet 2026
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              Source des données d&apos;entreprise :{" "}
+              <a
+                href="https://kbopub.economie.fgov.be/kbopub/toonondernemingps.html?ondernemingsnummer=463063053"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-amber-600 hover:text-amber-700 underline"
+              >
+                Banque-Carrefour des Entreprises (BCE)
+              </a>
             </p>
           </div>
         </div>
@@ -112,4 +128,3 @@ export default function MentionsLegalesPage() {
     </div>
   )
 }
-

@@ -383,11 +383,7 @@ export default function ProductActionsModern({
               {priceData.formatted}
             </div>
           )}
-          <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-            <span>TVA incluse</span>
-            <span className="text-gray-300">•</span>
-            <span className="text-green-700 font-medium">🚚 Livraison offerte dès 75 €</span>
-          </div>
+          <p className="mt-2 text-xs text-gray-500">TVA incluse</p>
         </div>
       )}
 
@@ -605,20 +601,6 @@ export default function ProductActionsModern({
           )}
         </button>
 
-        {/* ── Trust signals ── */}
-        <div className="grid grid-cols-2 gap-2 pt-1">
-          {[
-            { icon: "🔒", label: "Paiement sécurisé" },
-            { icon: "🔄", label: "Retours faciles sous 14j" },
-            { icon: "🚚", label: "Livraison Bpost / Point relais" },
-            { icon: "💬", label: "Conseil expert équestre" },
-          ].map((t) => (
-            <div key={t.label} className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
-              <span>{t.icon}</span>
-              <span>{t.label}</span>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Formulaire alertez-moi : variante épuisée OU produit globalement épuisé */}
