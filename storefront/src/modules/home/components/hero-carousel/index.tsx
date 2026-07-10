@@ -29,7 +29,7 @@ const HeroCarousel = () => {
     }] : []),
     {
       id: 1,
-      image: "https://ik.imagekit.io/kodt9cn6f/Cabrade/header-3.webp",
+      image: "https://ik.imagekit.io/kodt9cn6f/Banner%20facebook.webp",
       alt: "Sellerie La Cabrade - Tous les articles équestres",
       buttonText: "Voir tous les articles",
       buttonHref: "/store",
