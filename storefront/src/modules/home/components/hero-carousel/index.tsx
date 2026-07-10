@@ -26,6 +26,7 @@ const HeroCarousel = () => {
       unoptimized: true,
       objectFit: "contain" as const,
       overlay: false,
+      showButton: true,
     }] : []),
     {
       id: 1,
@@ -36,7 +37,8 @@ const HeroCarousel = () => {
       buttonStyle: "bg-amber-600 text-white hover:bg-amber-700",
       unoptimized: false,
       objectFit: "cover" as const,
-      overlay: true,
+      overlay: false,
+      showButton: false,
     },
     {
       id: 2,
@@ -48,6 +50,7 @@ const HeroCarousel = () => {
       unoptimized: false,
       objectFit: "cover" as const,
       overlay: true,
+      showButton: true,
     },
     {
       id: 3,
@@ -59,6 +62,7 @@ const HeroCarousel = () => {
       unoptimized: false,
       objectFit: "cover" as const,
       overlay: true,
+      showButton: true,
     },
   ]
 
@@ -102,14 +106,16 @@ const HeroCarousel = () => {
         ))}
       </div>
 
-      <div className="absolute bottom-20 sm:bottom-24 left-0 right-0 z-20 flex justify-center px-4">
-        <LocalizedClientLink
-          href={slides[currentSlide].buttonHref}
-          className={`inline-flex px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-semibold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${slides[currentSlide].buttonStyle}`}
-        >
-          {slides[currentSlide].buttonText}
-        </LocalizedClientLink>
-      </div>
+      {slides[currentSlide].showButton && (
+        <div className="absolute bottom-20 sm:bottom-24 left-0 right-0 z-20 flex justify-center px-4">
+          <LocalizedClientLink
+            href={slides[currentSlide].buttonHref}
+            className={`inline-flex px-6 py-3 sm:px-8 sm:py-4 text-sm sm:text-base font-semibold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ${slides[currentSlide].buttonStyle}`}
+          >
+            {slides[currentSlide].buttonText}
+          </LocalizedClientLink>
+        </div>
+      )}
 
       <div className="absolute bottom-8 left-0 right-0 z-30 flex justify-center gap-2">
         {slides.map((_, index) => (
