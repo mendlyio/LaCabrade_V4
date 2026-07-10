@@ -77,8 +77,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
               usage_limit: 1,
               application_method: {
                 type: "percentage",
-                target_type: "order",
+                target_type: "items",
                 value: 10,
+                max_quantity: 100,
+                apply_to_quantity: 1,
               },
             } as any,
           ],
