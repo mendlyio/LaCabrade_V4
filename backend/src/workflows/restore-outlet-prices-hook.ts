@@ -47,7 +47,7 @@ const ALL_PO_CODES = new Set([PO_CODE, PO_CAVALIER_CODE, PO_LC_CODE])
 const KNOWN_AUTO_CODES = new Set([
   PO_CODE, PO_CAVALIER_CODE, PO_LC_CODE,
   "BRADERIE_15", "BRADERIE_LC_25",
-  "SOLDE_LC_15", "SOLDE_CAVALIER_25", "SOLDE_OUTLET_60",
+  "SOLDE_LC_15", "SOLDE_CAVALIER_25", "SOLDE_CAVALIER_30", "SOLDE_OUTLET_60",
   "OUTLET_50", "FREE_SHIPPING_75", "PAQUES_10",
 ])
 const PO_START = new Date("2026-04-30T22:00:00.000Z")
@@ -89,7 +89,7 @@ const BRADERIE_LC_COLLECTION_HANDLES = new Set(["lc-equestrian"])
 // ─── Constantes Soldes Été 2026 ──────────────────────────────────────────────
 // 30 juin 00:00 BEL (29 juin 22:00 UTC) → 31 juillet 23:59 BEL (31 juillet 21:59 UTC)
 const SOLDE_CODE = "SOLDE_LC_15"
-const SOLDE_CAVALIER_CODE = "SOLDE_CAVALIER_25"
+const SOLDE_CAVALIER_CODE = "SOLDE_CAVALIER_30"
 const ALL_SOLDE_CODES = new Set([SOLDE_CODE, SOLDE_CAVALIER_CODE])
 const SOLDE_START = new Date("2026-06-29T22:00:00.000Z")
 const SOLDE_END = new Date("2026-07-31T21:59:59.000Z")
@@ -652,7 +652,7 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
       // Ce bloc :
       //   - retire SOLDE_LC_15 des articles non éligibles
       //   - garde -15% (SOLDE_LC_15) sur les articles LC Equestrian
-      //   - monte à -25% (SOLDE_CAVALIER_25) sur les vêtements Cavalier ciblés
+      //   - monte à -30% (SOLDE_CAVALIER_30) sur les vêtements Cavalier ciblés
       //   - supprime l'adjustment sur les articles outlet (géré dans Block A)
 
       const soldesAdjs = allAdjs.filter(
@@ -784,11 +784,11 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
               const qty = item.quantity ?? 1
               // LC est prioritaire sur Cavalier : un article LC classé dans une sous-catégorie
               // Cavalier (pantalons-dame, vestes-dame…) reste à -15% et non à -25%.
-              const targetPercent = eligibility.isLC ? 0.15 : 0.25
+              const targetPercent = eligibility.isLC ? 0.15 : 0.30
               const targetCode = eligibility.isLC ? SOLDE_CODE : SOLDE_CAVALIER_CODE
               const targetDesc = eligibility.isLC
                 ? "Soldes Été 2026 −15% LC"
-                : "Soldes Été 2026 −25% Cavalier"
+                : "Soldes Été 2026 −30% Cavalier"
               const expectedHT = computeDiscountAmount(unitPrice, qty, targetPercent)
               const eps = 0.001
 

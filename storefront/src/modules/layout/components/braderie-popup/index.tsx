@@ -6,9 +6,9 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 
 const START_AT = new Date("2026-06-29T22:00:00.000Z")
 const END_AT = new Date("2026-07-31T21:59:59.000Z")
-const STORAGE_KEY = "lc_soldes_ete_2026_popup_dismissed"
+const STORAGE_KEY = "lc_soldes_ete_2026_deuxieme_demarque_popup_dismissed"
 const DELAY_MS = 900
-const IMAGE_SRC = "https://ik.imagekit.io/kodt9cn6f/soldeLC.webp"
+const IMAGE_SRC = "https://ik.imagekit.io/kodt9cn6f/Deuxie%CC%80me%20de%CC%81marque%20soldes.webp"
 
 export function isBraderiePopupActive(now = new Date()): boolean {
   return now >= START_AT && now <= END_AT
@@ -66,7 +66,7 @@ export default function BraderiePopup() {
         >
           <Image
             src={IMAGE_SRC}
-            alt="Soldes Été La Cabrade — Vêtements Cavalier -25%, LC Equestrian -15%, Outlet -60%"
+            alt="Soldes Été La Cabrade — 2ème démarque — Vêtements Cavalier -30%, LC Equestrian -15%, Outlet -60%"
             width={1080}
             height={1350}
             priority

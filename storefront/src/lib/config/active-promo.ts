@@ -150,8 +150,8 @@ export const BRADERIE_PROMO: ActivePromoConfig = {
 //   30 juin 00:00 BEL = 29 juin 22:00 UTC
 //   31 juillet 23:59 BEL = 31 juillet 21:59 UTC
 //
-// Règles :
-//   • Vêtements Cavalier (concours / pantalons / sweats / tshirts / vestes) → -25%
+// Règles (2ème démarque à partir du 13 juillet) :
+//   • Vêtements Cavalier (concours / pantalons / sweats / tshirts / vestes) → -30%
 //   • LC Equestrian (catégorie ou collection)                               → -15%
 //   • Outlet                                                                → -60% (vs -50% habituel)
 //     ↳ Géré en Block A du hook (adjustment supplémentaire de +10% du prix original)
@@ -184,9 +184,9 @@ export const SOLDE_PROMO: ActivePromoConfig = {
       categoryHandles: ["lc-equestrian"],
       collectionHandles: ["lc-equestrian"],
     },
-    // -25% sur les Vêtements Cavalier ciblés (hors LC Equestrian — déjà traité au-dessus)
+    // -30% sur les Vêtements Cavalier ciblés (hors LC Equestrian — déjà traité au-dessus)
     {
-      discountPercent: 25,
+      discountPercent: 30,
       categoryHandles: [
         "concours", "accessoires-de-concours", "pantalons-de-concours",
         "polos-de-concours", "vestes-de-concours",
