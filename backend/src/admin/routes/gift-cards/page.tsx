@@ -49,6 +49,7 @@ const GiftCardsPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [disabling, setDisabling] = useState<string | null>(null)
   const [resending, setResending] = useState<string | null>(null)
+  const [updating, setUpdating] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ id: string; msg: string; ok: boolean } | null>(null)
   const [count, setCount] = useState(0)
 
@@ -96,6 +97,43 @@ const GiftCardsPage = () => {
   const showNotice = (id: string, msg: string, ok: boolean) => {
     setNotice({ id, msg, ok })
     setTimeout(() => setNotice((n) => (n && n.id === id ? null : n)), 6000)
+  }
+
+  const handleUpdateBalance = async (gc: GiftCardRow) => {
+    const input = window.prompt(
+      `Nouveau solde pour ${gc.code} (montant initial ${formatCurrency(gc.original_amount)}) :`,
+      String(gc.balance)
+    )
+    if (input === null) return
+    const balance = Number(String(input).replace(",", ".").trim())
+    if (Number.isNaN(balance) || balance < 0) {
+      showNotice(gc.id, "Montant invalide", false)
+      return
+    }
+    if (balance > gc.original_amount) {
+      showNotice(gc.id, "Le solde ne peut pas dépasser le montant initial", false)
+      return
+    }
+    setUpdating(gc.id)
+    try {
+      const res = await fetch(`/admin/gift-cards/${gc.id}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ balance }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        showNotice(gc.id, `Solde mis à jour : ${formatCurrency(balance)}`, true)
+        await fetchGiftCards()
+      } else {
+        showNotice(gc.id, data?.message || "Erreur lors de la mise à jour", false)
+      }
+    } catch {
+      showNotice(gc.id, "Erreur réseau lors de la mise à jour", false)
+    } finally {
+      setUpdating(null)
+    }
   }
 
   // Renvoyer l'email du bon cadeau (avec PDF en pièce jointe)
@@ -246,6 +284,16 @@ const GiftCardsPage = () => {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2 flex-wrap">
+                          {gc.status !== "disabled" && (
+                            <button
+                              onClick={() => handleUpdateBalance(gc)}
+                              disabled={updating === gc.id}
+                              title="Modifier le solde restant (ex. dépense magasin)"
+                              className="text-xs px-3 py-1.5 rounded border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors disabled:opacity-50"
+                            >
+                              {updating === gc.id ? "..." : "Modifier solde"}
+                            </button>
+                          )}
                           <button
                             onClick={() => handleResend(gc)}
                             disabled={resending === gc.id}

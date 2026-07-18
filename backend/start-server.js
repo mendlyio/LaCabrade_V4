@@ -39,6 +39,91 @@ function checkEnvironment() {
   console.log('✅ Environment variables validated');
 }
 
+/**
+ * Ajustements manuels de soldes bons cadeaux (magasin / support).
+ * Idempotent : ne fait rien si le solde est déjà à la valeur cible.
+ */
+async function applyPendingGiftCardBalanceFixes(client) {
+  const fixes = [
+    {
+      code: 'LC-GPSK-FLQQ-CHY5',
+      email: 'charlotte-12@hotmail.fr',
+      balance: 29.27,
+      reason: 'Partie dépensée en magasin — solde restant 29,27€',
+    },
+  ]
+
+  for (const fix of fixes) {
+    try {
+      const { rows } = await client.query(
+        `SELECT id, balance, promotion_id, status
+         FROM gift_card_tracking
+         WHERE code = $1
+           AND lower(recipient_email) = lower($2)
+           AND deleted_at IS NULL
+         LIMIT 1`,
+        [fix.code, fix.email]
+      )
+
+      if (!rows.length) {
+        console.log(`[GiftCard Fix] ${fix.code}: introuvable, skip`)
+        continue
+      }
+
+      const gc = rows[0]
+      const current = Number(gc.balance)
+      if (Math.abs(current - fix.balance) < 0.005 && gc.status === 'active') {
+        console.log(`[GiftCard Fix] ${fix.code}: déjà à ${fix.balance}€`)
+        continue
+      }
+
+      const rawBalance = JSON.stringify({
+        value: String(fix.balance),
+        precision: 20,
+      })
+      const newStatus = fix.balance <= 0 ? 'depleted' : 'active'
+
+      await client.query(
+        `UPDATE gift_card_tracking
+         SET balance = $1,
+             raw_balance = $2::jsonb,
+             status = $3,
+             updated_at = now()
+         WHERE id = $4`,
+        [fix.balance, rawBalance, newStatus, gc.id]
+      )
+
+      if (gc.promotion_id) {
+        try {
+          await client.query(
+            `UPDATE promotion_application_method
+             SET value = $1,
+                 raw_value = $2::jsonb
+             WHERE promotion_id = $3`,
+            [fix.balance, rawBalance, gc.promotion_id]
+          )
+          if (newStatus === 'active') {
+            await client.query(
+              `UPDATE promotion SET status = 'active', updated_at = now() WHERE id = $1`,
+              [gc.promotion_id]
+            )
+          }
+        } catch (promoErr) {
+          console.log(
+            `[GiftCard Fix] ${fix.code}: tracking OK, promo non mise à jour (${promoErr.message})`
+          )
+        }
+      }
+
+      console.log(
+        `[GiftCard Fix] ✅ ${fix.code}: ${current}€ → ${fix.balance}€ (${fix.reason})`
+      )
+    } catch (err) {
+      console.log(`[GiftCard Fix] ⚠️ ${fix.code}: ${err.message}`)
+    }
+  }
+}
+
 // Attendre que PostgreSQL soit prêt
 async function waitForPostgres() {
   // Attente initiale pour laisser PostgreSQL démarrer complètement
@@ -61,6 +146,8 @@ async function waitForPostgres() {
       console.log('   ✓ Connected to PostgreSQL');
       await client.query('SELECT 1');
       console.log('   ✓ Query test successful');
+      // One-shot ops: ajustement soldes bons cadeaux (idempotent)
+      await applyPendingGiftCardBalanceFixes(client);
       await client.end();
       console.log('✅ PostgreSQL is ready!');
       return true;
