@@ -207,7 +207,7 @@ export default async function LcEquestrianPage({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <h3 className="font-semibold text-sm text-gray-900 mb-1">6 points d'enlèvement</h3>
+              <h3 className="font-semibold text-sm text-gray-900 mb-1">Retrait en magasin</h3>
               <p className="text-xs text-gray-500">Livraison gratuite</p>
             </div>
           </div>

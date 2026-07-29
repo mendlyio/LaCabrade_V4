@@ -8,28 +8,30 @@ import { setPickupLocation } from "@lib/data/cart"
 
 /* ------------------------------------------------------------------ */
 /*  Liste des magasins disponibles pour le retrait                    */
+/*  Points partenaires temporairement désactivés — à réactiver plus   */
+/*  tard (Q8 Malmedy / Petit Rechain, Capalu, Tom & Co).              */
 /* ------------------------------------------------------------------ */
 const storeLocations = [
-  {
-    id: "q8-malmedy",
-    name: "Q8 Malmedy",
-    address: "Avenue du pont de Warche 9, 4960 Malmedy",
-  },
-  {
-    id: "q8-rechain",
-    name: "Q8 Petit Rechain",
-    address: "Avenue du parc 27, 4800 Verviers",
-  },
-  {
-    id: "capalu-vith",
-    name: "Capalu Saint Vith",
-    address: "Hauptstrasse 49, 4780 Saint Vith",
-  },
-  {
-    id: "tomco-waremme",
-    name: "Tom & Co Waremme",
-    address: "Chau. Romaine 246, 4300 Waremme",
-  },
+  // {
+  //   id: "q8-malmedy",
+  //   name: "Q8 Malmedy",
+  //   address: "Avenue du pont de Warche 9, 4960 Malmedy",
+  // },
+  // {
+  //   id: "q8-rechain",
+  //   name: "Q8 Petit Rechain",
+  //   address: "Avenue du parc 27, 4800 Verviers",
+  // },
+  // {
+  //   id: "capalu-vith",
+  //   name: "Capalu Saint Vith",
+  //   address: "Hauptstrasse 49, 4780 Saint Vith",
+  // },
+  // {
+  //   id: "tomco-waremme",
+  //   name: "Tom & Co Waremme",
+  //   address: "Chau. Romaine 246, 4300 Waremme",
+  // },
   {
     id: "cabrade-retinne",
     name: "Sellerie la Cabrade",

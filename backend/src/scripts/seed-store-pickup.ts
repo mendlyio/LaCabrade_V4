@@ -78,7 +78,7 @@ export default async function seedStorePickup({ container }: ExecArgs) {
         shipping_profile_id: shippingProfile.id,
         type: {
           label: "Retrait en magasin",
-          description: "Retirez votre commande dans l'un de nos points de dépôt partenaires. Gratuit.",
+          description: "Retirez votre commande en magasin à la Sellerie La Cabrade. Gratuit.",
           code: "store-pickup",
         },
         data: {
@@ -101,12 +101,9 @@ export default async function seedStorePickup({ container }: ExecArgs) {
   logger.info("   Mode : store_pickup")
   logger.info("")
   logger.info("Points de retrait disponibles dans le checkout:")
-  logger.info("  📍 Q8 Malmedy — Avenue du pont de Warche 9, 4960 Malmedy")
-  logger.info("  📍 Q8 Petit Rechain — Avenue du parc 27, 4800 Verviers")
-  logger.info("  📍 Capalu Saint-Vith — Hauptstrasse 49, 4780 Saint Vith")
-  logger.info("  📍 Tom & Co Waremme — Chau. Romaine 246, 4300 Waremme")
-  logger.info("  📍 Esso Goffin Spa — Av. Jean Gouders 118, 4845 Jalhay")
   logger.info("  📍 Sellerie La Cabrade — Rue de la clef 96, 4621 Retinne")
+  logger.info("")
+  logger.info("  (Points partenaires temporairement désactivés : Q8 Malmedy, Q8 Petit Rechain, Capalu Saint-Vith, Tom & Co Waremme)")
   logger.info("")
   logger.info("⚠️  Pensez à activer cette option dans Settings → Regions de l'admin Medusa.")
 }
