@@ -4,16 +4,10 @@ import { createPromotionsWorkflow } from "@medusajs/medusa/core-flows"
 import { INotificationModuleService } from "@medusajs/framework/types"
 import { NEWSLETTER_MODULE } from "../../../modules/newsletter"
 import { EmailTemplates } from "../../../modules/email-notifications/templates"
-
-const CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-
-function generatePromoCode(prefix: string): string {
-  let code = prefix + "-"
-  for (let i = 0; i < 6; i++) {
-    code += CHARS[Math.floor(Math.random() * CHARS.length)]
-  }
-  return code
-}
+import {
+  generatePromoCode,
+  buildNewsletterPromotionPayload,
+} from "../../../utils/newsletter-promo"
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const { email, birthday, website } = req.body as {
@@ -62,34 +56,27 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     // Générer un code promo unique
     const promoCode = generatePromoCode("NL")
 
-    // Créer la promotion Medusa (-10%, usage unique)
+    // Créer la promotion Medusa (-10%, usage unique) — obligatoire avant l'email
     let promotionId: string | null = null
     try {
       const createPromotions = createPromotionsWorkflow(req.scope)
       const result = await createPromotions.run({
         input: {
-          promotionsData: [
-            {
-              code: promoCode,
-              type: "standard",
-              status: "active",
-              is_automatic: false,
-              usage_limit: 1,
-              application_method: {
-                type: "percentage",
-                target_type: "items",
-                value: 10,
-                max_quantity: 100,
-                apply_to_quantity: 1,
-              },
-            } as any,
-          ],
+          promotionsData: [buildNewsletterPromotionPayload(promoCode) as any],
         },
       })
       promotionId = result?.result?.[0]?.id ?? null
+      if (!promotionId) {
+        throw new Error("Promotion créée sans ID")
+      }
       console.log(`[Newsletter] Promotion créée: ${promoCode} (ID: ${promotionId})`)
     } catch (promoErr: any) {
       console.error("[Newsletter] Erreur création promotion:", promoErr.message)
+      return res.status(500).json({
+        message:
+          "Impossible de générer votre code promo pour le moment. Réessayez dans quelques minutes.",
+        error: promoErr.message,
+      })
     }
 
     // Sauvegarder l'abonné
@@ -121,6 +108,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       console.log(`[Newsletter] Email de bienvenue envoyé à ${email}`)
     } catch (emailErr: any) {
       console.error("[Newsletter] Erreur envoi email:", emailErr.message)
+      // L'abonné et la promo existent : on confirme quand même (code visible en réponse)
     }
 
     return res.status(201).json({

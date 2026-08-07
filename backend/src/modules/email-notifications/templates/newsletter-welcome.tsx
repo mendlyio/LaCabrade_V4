@@ -64,7 +64,7 @@ export const NewsletterWelcomeTemplate: React.FC<NewsletterWelcomeTemplateProps>
             {promoCode}
           </Text>
           <Text style={{ fontSize: '12px', margin: '0', color: '#6B7280' }}>
-            Code à usage unique — valable sur toute la boutique
+            Code à usage unique — valable hors articles Outlet déjà soldés
           </Text>
         </Section>
 
