@@ -28,18 +28,7 @@ const HeroCarousel = () => {
       overlay: false,
       showButton: true,
     }] : []),
-    {
-      id: 1,
-      image: "https://ik.imagekit.io/kodt9cn6f/Banner%20facebook.webp",
-      alt: "Sellerie La Cabrade - Tous les articles équestres",
-      buttonText: "Voir tous les articles",
-      buttonHref: "/store",
-      buttonStyle: "bg-amber-600 text-white hover:bg-amber-700",
-      unoptimized: false,
-      objectFit: "cover" as const,
-      overlay: false,
-      showButton: false,
-    },
+    // Ancien 1er slide (Banner facebook) retiré
     {
       id: 2,
       image: "https://ik.imagekit.io/kodt9cn6f/Slide-LC-Equestrian.webp",
