@@ -2,12 +2,12 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
 import { createPromotionsWorkflow } from "@medusajs/medusa/core-flows"
 import { INotificationModuleService } from "@medusajs/framework/types"
-import { NEWSLETTER_MODULE } from "../../../../modules/newsletter"
-import { EmailTemplates } from "../../../../modules/email-notifications/templates"
+import { NEWSLETTER_MODULE } from "../../../../../modules/newsletter"
+import { EmailTemplates } from "../../../../../modules/email-notifications/templates"
 import {
   generatePromoCode,
   buildNewsletterPromotionPayload,
-} from "../../../../utils/newsletter-promo"
+} from "../../../../../utils/newsletter-promo"
 
 /**
  * Régénère un code NL- pour un abonné (promo manquante / déjà utilisée / cassée).
