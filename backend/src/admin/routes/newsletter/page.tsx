@@ -47,6 +47,7 @@ const NewsletterPage = () => {
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("active")
   const [disabling, setDisabling] = useState<string | null>(null)
+  const [regenerating, setRegenerating] = useState<string | null>(null)
   const [count, setCount] = useState(0)
 
   const fetchSubscribers = useCallback(async () => {
@@ -87,6 +88,37 @@ const NewsletterPage = () => {
       console.error("Erreur désabonnement:", e)
     } finally {
       setDisabling(null)
+    }
+  }
+
+  const handleRegeneratePromo = async (sub: Subscriber) => {
+    if (
+      !confirm(
+        `Régénérer le code -10% pour ${sub.email} ?\n\nL'ancien code (${sub.promo_code || "—"}) sera désactivé et un nouvel email sera envoyé.`
+      )
+    ) {
+      return
+    }
+    setRegenerating(sub.id)
+    try {
+      const res = await fetch(`/admin/newsletter/${sub.id}/regenerate-promo`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resend_email: true }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(`Erreur : ${data.message || res.status}`)
+      } else {
+        alert(`Nouveau code : ${data.promo_code}\nEmail renvoyé à ${data.email}`)
+        await fetchSubscribers()
+      }
+    } catch (e) {
+      console.error("Erreur régénération:", e)
+      alert("Erreur lors de la régénération")
+    } finally {
+      setRegenerating(null)
     }
   }
 
@@ -227,15 +259,27 @@ const NewsletterPage = () => {
                         {formatDate(sub.created_at)}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        {sub.status === "active" && (
-                          <button
-                            onClick={() => handleUnsubscribe(sub)}
-                            disabled={disabling === sub.id}
-                            className="text-xs px-3 py-1.5 rounded border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
-                          >
-                            {disabling === sub.id ? "..." : "Désabonner"}
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {sub.status === "active" && (
+                            <button
+                              onClick={() => handleRegeneratePromo(sub)}
+                              disabled={regenerating === sub.id}
+                              className="text-xs px-3 py-1.5 rounded border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors disabled:opacity-50"
+                              title="Régénérer le code -10% et renvoyer l'email"
+                            >
+                              {regenerating === sub.id ? "..." : "Nouveau code"}
+                            </button>
+                          )}
+                          {sub.status === "active" && (
+                            <button
+                              onClick={() => handleUnsubscribe(sub)}
+                              disabled={disabling === sub.id}
+                              className="text-xs px-3 py-1.5 rounded border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                            >
+                              {disabling === sub.id ? "..." : "Désabonner"}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )

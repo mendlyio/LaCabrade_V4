@@ -4,16 +4,10 @@ import { createPromotionsWorkflow } from "@medusajs/medusa/core-flows"
 import { INotificationModuleService } from "@medusajs/framework/types"
 import { NEWSLETTER_MODULE } from "../modules/newsletter"
 import { EmailTemplates } from "../modules/email-notifications/templates"
-
-const CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-
-function generatePromoCode(prefix: string): string {
-  let code = prefix + "-"
-  for (let i = 0; i < 6; i++) {
-    code += CHARS[Math.floor(Math.random() * CHARS.length)]
-  }
-  return code
-}
+import {
+  generatePromoCode,
+  buildNewsletterPromotionPayload,
+} from "../utils/newsletter-promo"
 
 export default async function sendBirthdayPromosJob(container: MedusaContainer) {
   const today = new Date()
@@ -43,35 +37,32 @@ export default async function sendBirthdayPromosJob(container: MedusaContainer) 
       try {
         const promoCode = generatePromoCode("ANNIV")
 
-        // Créer la promotion Medusa (-10%, usage unique, valable 7 jours)
+        // Créer la promotion Medusa (-10%, usage unique)
+        // Note: expiresAt calculé pour log/future campagne ; non branché sur Medusa campaign pour l'instant
         const expiresAt = new Date()
         expiresAt.setDate(expiresAt.getDate() + 7)
 
         try {
           const createPromotions = createPromotionsWorkflow(container)
-          await createPromotions.run({
+          const result = await createPromotions.run({
             input: {
-              promotionsData: [
-                {
-                  code: promoCode,
-                  type: "standard",
-                  status: "active",
-                  is_automatic: false,
-                  usage_limit: 1,
-                  application_method: {
-                    type: "percentage",
-                    target_type: "items",
-                    value: 10,
-                    max_quantity: 100,
-                    apply_to_quantity: 1,
-                  },
-                } as any,
-              ],
+              promotionsData: [buildNewsletterPromotionPayload(promoCode) as any],
             },
           })
-          console.log(`[Birthday Job] Promotion anniversaire créée: ${promoCode} pour ${subscriber.email}`)
+          const promotionId = result?.result?.[0]?.id ?? null
+          if (!promotionId) {
+            throw new Error("Promotion créée sans ID")
+          }
+          console.log(
+            `[Birthday Job] Promotion anniversaire créée: ${promoCode} pour ${subscriber.email} (expire ${expiresAt.toISOString().slice(0, 10)})`
+          )
         } catch (promoErr: any) {
-          console.error(`[Birthday Job] Erreur création promotion pour ${subscriber.email}:`, promoErr.message)
+          console.error(
+            `[Birthday Job] Erreur création promotion pour ${subscriber.email}:`,
+            promoErr.message
+          )
+          // Ne pas envoyer d'email avec un code mort
+          continue
         }
 
         // Mettre à jour le champ birthday_promo_code de l'abonné
@@ -101,7 +92,7 @@ export default async function sendBirthdayPromosJob(container: MedusaContainer) 
       }
     }
 
-    console.log(`[Birthday Job] Terminé. ${subscribers.length} email(s) envoyé(s).`)
+    console.log(`[Birthday Job] Terminé. ${subscribers.length} email(s) traité(s).`)
   } catch (err: any) {
     console.error("[Birthday Job] Erreur générale:", err.message)
   }

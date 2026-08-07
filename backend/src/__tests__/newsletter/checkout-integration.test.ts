@@ -32,8 +32,11 @@ function buildPromotionPayload(code: string) {
     usage_limit: 1,
     application_method: {
       type: "percentage",
-      target_type: "order",
+      target_type: "items",
+      allocation: "each",
       value: 10,
+      max_quantity: 100,
+      apply_to_quantity: 1,
     },
   }
 }
@@ -97,8 +100,10 @@ describe("Format payload createPromotionsWorkflow", () => {
     expect(payload.is_automatic).toBe(false)
     expect(payload.usage_limit).toBe(1)
     expect(payload.application_method.type).toBe("percentage")
-    expect(payload.application_method.target_type).toBe("order")
+    expect(payload.application_method.target_type).toBe("items")
+    expect(payload.application_method.allocation).toBe("each")
     expect(payload.application_method.value).toBe(10)
+    expect(payload.application_method.max_quantity).toBe(100)
   })
 
   it("usage_limit: 1 garantit qu'un seul cart peut l'utiliser", () => {

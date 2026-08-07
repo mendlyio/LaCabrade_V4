@@ -142,7 +142,14 @@ describe("Newsletter — Simulation d'inscription complète", () => {
           status: "active",
           is_automatic: false,
           usage_limit: 1,
-          application_method: { type: "percentage", target_type: "order", value: 10 },
+          application_method: {
+            type: "percentage",
+            target_type: "items",
+            allocation: "each",
+            value: 10,
+            max_quantity: 100,
+            apply_to_quantity: 1,
+          },
         }],
       },
     })

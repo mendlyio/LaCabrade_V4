@@ -654,6 +654,16 @@ export async function submitPromotionForm(
       .filter((p: any) => p.code != null && !p.is_automatic)
       .map((p: any) => p.code as string)
     await applyPromotions([...existingCodes, code])
+
+    // Medusa ignore silencieusement les codes invalides / déjà utilisés /
+    // mal configurés : on vérifie que le code est bien présent sur le panier.
+    const updatedCart = await retrieveCart()
+    const applied = (updatedCart?.promotions ?? []).some(
+      (p: any) => p?.code?.toUpperCase() === code
+    )
+    if (!applied) {
+      return "Ce code promo n'est pas applicable (invalide, déjà utilisé, ou non cumulable avec les articles de votre panier)."
+    }
   } catch (e: any) {
     return e.message
   }
