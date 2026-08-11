@@ -21,7 +21,7 @@ import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 /**
- * Détecte si une option de livraison correspond au retrait en magasin.
+ * Détecte si une option de livraison correspond au retrait en magasin / point de dépôt.
  */
 function isStorePickupOption(
   option: HttpTypes.StoreCartShippingOption
@@ -30,7 +30,10 @@ function isStorePickupOption(
   const mode = ((option as any).data?.mode ?? (option as any).metadata?.mode ?? "").toLowerCase()
   return (
     mode === "store_pickup" ||
-    (name.includes("retrait") && name.includes("magasin")) ||
+    (name.includes("retrait") &&
+      (name.includes("dépôt") ||
+        name.includes("depot") ||
+        name.includes("magasin"))) ||
     (name.includes("click") && name.includes("collect"))
   )
 }
@@ -92,6 +95,24 @@ const Shipping: React.FC<ShippingProps> = ({
   }
 
   const handleSubmit = () => {
+    // Garde-fou : ne jamais passer au paiement sans point de retrait
+    if (
+      selectedShippingMethod &&
+      isStorePickupOption(selectedShippingMethod) &&
+      !(cart.metadata?.pickup_location as any)?.id
+    ) {
+      setError("Veuillez choisir un point de retrait avant de continuer.")
+      return
+    }
+    if (
+      selectedShippingMethod &&
+      isBpostPickupOption(selectedShippingMethod) &&
+      !(cart.metadata?.bpost_pickup_point as any)?.Id
+    ) {
+      setError("Veuillez choisir un point relais Bpost avant de continuer.")
+      return
+    }
+
     if (cart?.items?.length && selectedShippingMethod) {
       const trackingCart = cartToTrackingCart(
         cart.items as any,
@@ -458,6 +479,16 @@ const Shipping: React.FC<ShippingProps> = ({
               !cart.shipping_methods?.[0] ||
               (selectedShippingMethod &&
                 isStorePickupOption(selectedShippingMethod) &&
+                !(cart.metadata?.pickup_location as any)?.id) ||
+              (selectedShippingMethod &&
+                isBpostPickupOption(selectedShippingMethod) &&
+                !(cart.metadata?.bpost_pickup_point as any)?.Id) ||
+              // Si la méthode panier n'est pas retrouvée dans la liste (data.mode absent),
+              // basculer sur le nom de la méthode du panier pour ne pas laisser passer.
+              (!selectedShippingMethod &&
+                !!cart.shipping_methods?.[0] &&
+                /retrait/i.test(cart.shipping_methods[0].name ?? "") &&
+                /(d[eé]p[oô]t|magasin)/i.test(cart.shipping_methods[0].name ?? "") &&
                 !(cart.metadata?.pickup_location as any)?.id)
             }
             data-testid="submit-delivery-option-button"

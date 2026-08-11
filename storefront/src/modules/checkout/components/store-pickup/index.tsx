@@ -61,6 +61,33 @@ const StorePickup = ({ cart }: StorePickupProps) => {
     setSelectedId(loc?.id ?? null)
   }, [cart.metadata?.pickup_location])
 
+  // Un seul point disponible : le sélectionner automatiquement pour éviter
+  // de passer au paiement sans pickup_location (bug commande #204).
+  useEffect(() => {
+    if (storeLocations.length !== 1) return
+    const only = storeLocations[0]
+    const savedId = (cart.metadata?.pickup_location as StoreLocation | null)?.id
+    if (savedId === only.id || isPending) return
+
+    setSelectedId(only.id)
+    startTransition(async () => {
+      try {
+        await setPickupLocation({
+          cartId: cart.id,
+          pickupLocation: {
+            id: only.id,
+            name: only.name,
+            address: only.address,
+          },
+        })
+      } catch {
+        setError("Impossible de sauvegarder le choix. Réessayez.")
+        setSelectedId(null)
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cart.id])
+
   const handleSelect = (location: StoreLocation) => {
     if (isPending) return
     setError(null)
