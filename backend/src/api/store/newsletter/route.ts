@@ -7,7 +7,30 @@ import { EmailTemplates } from "../../../modules/email-notifications/templates"
 import {
   generatePromoCode,
   buildNewsletterPromotionPayload,
+  ensureNewsletterPromotionUsable,
 } from "../../../utils/newsletter-promo"
+
+async function sendWelcomeEmail(
+  scope: MedusaRequest["scope"],
+  email: string,
+  promoCode: string,
+  subject = "🎁 Votre code -10% La Cabrade vous attend"
+) {
+  const notificationService: INotificationModuleService = scope.resolve(
+    Modules.NOTIFICATION
+  )
+  await notificationService.createNotifications({
+    to: email,
+    channel: "email",
+    template: EmailTemplates.NEWSLETTER_WELCOME,
+    data: {
+      email,
+      promoCode,
+      preview: `Votre code -10% est arrivé ! 🎁`,
+      emailOptions: { subject },
+    },
+  } as any)
+}
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const { email, birthday, website } = req.body as {
@@ -46,10 +69,45 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     )
 
     if (existing) {
+      // Réparer le code s'il est cassé / manquant (bug allocation items sans each)
+      let promoCode = existing.promo_code as string | null
+      let repaired = false
+      try {
+        const result = await ensureNewsletterPromotionUsable(
+          req.scope,
+          promoCode
+        )
+        promoCode = result.code
+        repaired = result.repaired || result.created
+        if (promoCode !== existing.promo_code) {
+          await newsletterService.updateNewsletterSubscribers(
+            { id: existing.id },
+            { promo_code: promoCode }
+          )
+        }
+        if (repaired && promoCode) {
+          try {
+            await sendWelcomeEmail(
+              req.scope,
+              email,
+              promoCode,
+              "🎁 Votre code -10% La Cabrade (mis à jour)"
+            )
+          } catch (e: any) {
+            console.error("[Newsletter] Renvoi email réparation:", e.message)
+          }
+        }
+      } catch (e: any) {
+        console.error("[Newsletter] Réparation code existant:", e.message)
+      }
+
       return res.status(200).json({
-        message: "Vous êtes déjà inscrit(e) à notre newsletter.",
+        message: repaired
+          ? "Vous êtes déjà inscrit(e). Votre code -10% a été vérifié / renvoyé par email."
+          : "Vous êtes déjà inscrit(e) à notre newsletter.",
         already_subscribed: true,
-        promo_code: existing.promo_code,
+        promo_code: promoCode,
+        repaired,
       })
     }
 
@@ -57,7 +115,6 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     const promoCode = generatePromoCode("NL")
 
     // Créer la promotion Medusa (-10%, usage unique) — obligatoire avant l'email
-    let promotionId: string | null = null
     try {
       const createPromotions = createPromotionsWorkflow(req.scope)
       const result = await createPromotions.run({
@@ -65,7 +122,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           promotionsData: [buildNewsletterPromotionPayload(promoCode) as any],
         },
       })
-      promotionId = result?.result?.[0]?.id ?? null
+      const promotionId = result?.result?.[0]?.id ?? null
       if (!promotionId) {
         throw new Error("Promotion créée sans ID")
       }
@@ -89,26 +146,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
     // Envoyer l'email de bienvenue avec le code promo
     try {
-      const notificationService: INotificationModuleService = req.scope.resolve(
-        Modules.NOTIFICATION
-      )
-      await notificationService.createNotifications({
-        to: email,
-        channel: "email",
-        template: EmailTemplates.NEWSLETTER_WELCOME,
-        data: {
-          email,
-          promoCode,
-          preview: `Votre code -10% est arrivé ! 🎁`,
-          emailOptions: {
-            subject: "🎁 Votre code -10% La Cabrade vous attend",
-          },
-        },
-      } as any)
+      await sendWelcomeEmail(req.scope, email, promoCode)
       console.log(`[Newsletter] Email de bienvenue envoyé à ${email}`)
     } catch (emailErr: any) {
       console.error("[Newsletter] Erreur envoi email:", emailErr.message)
-      // L'abonné et la promo existent : on confirme quand même (code visible en réponse)
     }
 
     return res.status(201).json({

@@ -156,7 +156,7 @@ export const BRADERIE_PROMO: ActivePromoConfig = {
 //   • Outlet                                                                → -60% (vs -50% habituel)
 //     ↳ Géré en Block A du hook (adjustment supplémentaire de +10% du prix original)
 export const SOLDE_PROMO: ActivePromoConfig = {
-  active: true,
+  active: false,
   code: "SOLDE_LC_15",
   discountPercent: 15,
   label: "Soldes",
