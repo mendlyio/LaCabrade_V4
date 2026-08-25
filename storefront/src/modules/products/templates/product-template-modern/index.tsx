@@ -335,7 +335,7 @@ const ProductTemplateModern = async ({
                       </svg>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-900 text-sm">Retrait en magasin</div>
+                      <div className="font-semibold text-gray-900 text-sm">5 points d'enlèvement</div>
                       <div className="text-xs text-gray-600">Livraison gratuite</div>
                     </div>
                   </div>
