@@ -254,13 +254,34 @@ async function main() {
   console.log('\n🚀 Starting Medusa server...');
   console.log('   Server will be available on port 9000');
   
-  // Augmenter la limite de mémoire Node.js pour éviter les erreurs "heap out of memory"
-  const nodeOptions = process.env.NODE_OPTIONS || '';
-  const memoryLimit = process.env.NODE_MAX_OLD_SPACE_SIZE || '2048';
-  if (!nodeOptions.includes('--max-old-space-size')) {
-    process.env.NODE_OPTIONS = `${nodeOptions} --max-old-space-size=${memoryLimit}`.trim();
-    console.log(`   Node memory limit: ${memoryLimit} MB`);
+  // Heap Node.js : ne jamais égaler le plafond cgroup Railway (2 Go).
+  // --max-old-space-size=2048 + buffers natifs (images Odoo, pg) → SIGKILL 137.
+  const DEFAULT_HEAP_MB = 1536;
+  let nodeOptions = process.env.NODE_OPTIONS || '';
+  const explicitHeap = process.env.NODE_MAX_OLD_SPACE_SIZE;
+  const existingHeapMatch = nodeOptions.match(/--max-old-space-size=(\d+)/);
+  let heapMb = explicitHeap
+    ? Number(explicitHeap)
+    : existingHeapMatch
+      ? Number(existingHeapMatch[1])
+      : DEFAULT_HEAP_MB;
+  if (!Number.isFinite(heapMb) || heapMb <= 0) {
+    heapMb = DEFAULT_HEAP_MB;
   }
+  // L'ancien défaut 2048 saturait le conteneur 2 Go. On recadre sauf override explicite.
+  if (!explicitHeap && heapMb >= 2048) {
+    heapMb = DEFAULT_HEAP_MB;
+  }
+  if (existingHeapMatch) {
+    nodeOptions = nodeOptions.replace(
+      /--max-old-space-size=\d+/,
+      `--max-old-space-size=${heapMb}`
+    );
+  } else {
+    nodeOptions = `${nodeOptions} --max-old-space-size=${heapMb}`.trim();
+  }
+  process.env.NODE_OPTIONS = nodeOptions;
+  console.log(`   Node memory limit: ${heapMb} MB`);
   
   const medusaServerPath = path.join(process.cwd(), '.medusa', 'server');
   if (!fs.existsSync(medusaServerPath)) {

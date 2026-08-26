@@ -20,6 +20,11 @@ import { OdooProduct, OdooCategory, Pagination } from "../modules/odoo/service"
 import OdooModuleService from "../modules/odoo/service"
 import { restoreSoftDeletedPricingForProduct } from "../utils/restore-soft-deleted-pricing-for-product"
 import { ensurePriceSetsForProduct } from "../utils/ensure-price-sets-for-product"
+import {
+  completeVariantOptions,
+  findExistingVariant,
+  isVariantCollisionError,
+} from "../utils/odoo-variant-match"
 
 type SyncFromErpInput = Pagination & {
   dryRun?: boolean
@@ -298,21 +303,49 @@ const fetchExistingProductsStep = createStep(
     // Inclure aussi les produits soft-deleted: si un produit a été "supprimé" dans l'admin,
     // un ré-import doit le restaurer puis l'updater (sinon on tente de recréer et on peut
     // se heurter à des contraintes uniques: handle/sku/etc.).
-    const products = await productService.listProducts(
-      {},
-      {
-        select: ["id", "metadata", "deleted_at"],
-        relations: ["variants"],
-        take: 10000,
-        withDeleted: true,
+    // Listing léger puis retrieve des seuls produits concernés : le select
+    // restreint + relations variants ne chargeait pas toujours sku/metadata
+    // des variantes → matching SKU cassé → upsert créait des doublons.
+    const PAGE = 250
+    const matchedIds: string[] = []
+    let offset = 0
+    while (true) {
+      const page = await productService.listProducts(
+        {},
+        {
+          select: ["id", "metadata", "deleted_at"],
+          take: PAGE,
+          skip: offset,
+          withDeleted: true,
+        }
+      )
+      if (!page.length) break
+      for (const p of page as any[]) {
+        const ext = p?.metadata?.external_id
+        if (ext === null || ext === undefined) continue
+        if (externalIds.includes(String(ext))) {
+          matchedIds.push(p.id)
+        }
       }
-    )
-    // external_id peut être stocké en number ou string selon les imports précédents
-    const activeProducts = products.filter((p: any) => {
-      const ext = p?.metadata?.external_id
-      if (ext === null || ext === undefined) return false
-      return externalIds.includes(String(ext))
-    })
+      if (matchedIds.length === externalIds.length) break
+      if (page.length < PAGE) break
+      offset += PAGE
+    }
+
+    const activeProducts: any[] = []
+    const RETRIEVE_CHUNK = 20
+    for (let i = 0; i < matchedIds.length; i += RETRIEVE_CHUNK) {
+      const chunk = matchedIds.slice(i, i + RETRIEVE_CHUNK)
+      const rows = await Promise.all(
+        chunk.map((id) =>
+          productService.retrieveProduct(id, {
+            relations: ["variants"],
+            withDeleted: true,
+          })
+        )
+      )
+      activeProducts.push(...rows)
+    }
     return new StepResponse(activeProducts)
   }
 )
@@ -532,7 +565,14 @@ export const syncFromErpWorkflow = createWorkflow(
 
               return {
                 id: existingProduct
-                  ? existingProduct.variants.find((v) => v.sku === variantSku || v.sku === variant.default_code)?.id
+                  ? findExistingVariant(existingProduct.variants, {
+                      sku: variantSku,
+                      options,
+                      metadata: {
+                        odoo_variant_id: variant.id,
+                        external_id: `${variant.id}`,
+                      },
+                    })?.id
                   : undefined,
                 title: variantTitle,
                 sku: variantSku,
@@ -587,7 +627,16 @@ export const syncFromErpWorkflow = createWorkflow(
             
             product.options = [{ title: "Default", values: ["Default"] }]
             product.variants.push({
-              id: existingProduct ? existingProduct.variants[0]?.id : undefined,
+              id: existingProduct
+                ? findExistingVariant(existingProduct.variants, {
+                    sku: productSku,
+                    options: { Default: "Default" },
+                    metadata: {
+                      odoo_variant_id: variantId,
+                      external_id: `${variantId}`,
+                    },
+                  })?.id || existingProduct.variants[0]?.id
+                : undefined,
               title: "Default",
               sku: productSku,
               barcode: firstVariant?.barcode || odooProduct.default_code || undefined,
@@ -933,14 +982,47 @@ export const syncFromErpWorkflow = createWorkflow(
                       
                       // Utiliser le workflow officiel Medusa qui gère les prix correctement
                       const workflow = updateProductsWorkflow(container)
-                      await workflow.run({ input: { products: [updatePayload] } })
+                      try {
+                        await workflow.run({ input: { products: [updatePayload] } })
+                      } catch (optErr: any) {
+                        // Options déjà présentes : on garde le produit tel quel et on continue l'upsert variantes.
+                        if (isVariantCollisionError(optErr?.message)) {
+                          console.warn(
+                            `⚠️ [UPDATE] Options déjà présentes pour ${p.id}, mise à jour sans recréer les options`
+                          )
+                          const { options: _opts, ...withoutOptions } = updatePayload
+                          await workflow.run({ input: { products: [withoutOptions] } })
+                        } else {
+                          throw optErr
+                        }
+                      }
 
                       // 2) Upsert variantes (création + update) — overwrite SKU/options/title/etc.
                       console.log(`🔍 [UPDATE] Avant upsert ${p.id}: ${p.variants?.length || 0} variantes, première a des prix? ${!!p.variants?.[0]?.prices}`)
                       if (Array.isArray(p.variants) && p.variants.length) {
-                        await productService.upsertProductVariants(
-                          p.variants.map((v: any) => ({
-                            id: v.id,
+                        const currentProduct = await productService.retrieveProduct(p.id, {
+                          relations: ["variants", "options", "options.values"],
+                        })
+                        const requiredOptionTitles = (currentProduct.options || []).map(
+                          (opt: any) => opt.title
+                        ).filter(Boolean)
+
+                        const variantsToUpsert: any[] = []
+                        for (const v of p.variants) {
+                          const match = findExistingVariant(currentProduct.variants, v)
+                          const options = completeVariantOptions(
+                            v.options,
+                            requiredOptionTitles,
+                            match
+                          )
+                          if (!options) {
+                            console.warn(
+                              `⚠️ [UPDATE] Variante ${v.sku || v.title} ignorée: options incomplètes (produit ${p.id})`
+                            )
+                            continue
+                          }
+                          variantsToUpsert.push({
+                            id: match?.id || v.id,
                             product_id: p.id,
                             title: v.title,
                             sku: v.sku,
@@ -948,10 +1030,36 @@ export const syncFromErpWorkflow = createWorkflow(
                             weight: v.weight,
                             manage_inventory: v.manage_inventory,
                             metadata: v.metadata,
-                            options: v.options,
-                          }))
-                        )
-                        console.log(`✅ [UPDATE] Upsert variantes OK pour ${p.id}`)
+                            options,
+                          })
+                        }
+
+                        if (variantsToUpsert.length) {
+                          try {
+                            await productService.upsertProductVariants(variantsToUpsert)
+                            console.log(`✅ [UPDATE] Upsert variantes OK pour ${p.id}`)
+                          } catch (upsertErr: any) {
+                            if (!isVariantCollisionError(upsertErr?.message)) {
+                              throw upsertErr
+                            }
+                            console.warn(
+                              `⚠️ [UPDATE] Upsert groupé en collision pour ${p.id}, retry une par une`
+                            )
+                            for (const payload of variantsToUpsert) {
+                              try {
+                                await productService.upsertProductVariants([payload])
+                              } catch (oneErr: any) {
+                                if (isVariantCollisionError(oneErr?.message)) {
+                                  console.warn(
+                                    `⚠️ [UPDATE] Variante ${payload.sku || payload.title} déjà présente, skip`
+                                  )
+                                  continue
+                                }
+                                throw oneErr
+                              }
+                            }
+                          }
+                        }
                       }
                     }
 
