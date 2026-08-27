@@ -1,6 +1,10 @@
 import { HttpTypes } from "@medusajs/types"
 import { NextRequest, NextResponse } from "next/server"
 import { LACABRADE_REDIRECTS } from "@lib/lacabrade-redirects"
+import {
+  REGION_ERROR_BACKOFF_MS,
+  shouldRefreshRegionMap,
+} from "@lib/util/region-map-refresh"
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
 const PUBLISHABLE_API_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
@@ -36,14 +40,20 @@ async function fetchWithTimeout(
 const regionMapCache = {
   regionMap: new Map<string, HttpTypes.StoreRegion>(),
   regionMapUpdated: Date.now(),
+  backoffUntil: 0,
 }
 
 async function getRegionMap() {
-  const { regionMap, regionMapUpdated } = regionMapCache
+  const { regionMap, regionMapUpdated, backoffUntil } = regionMapCache
+  const hasCache = !!regionMap.keys().next().value
 
   if (
-    !regionMap.keys().next().value ||
-    regionMapUpdated < Date.now() - 3600 * 1000
+    shouldRefreshRegionMap({
+      hasCache,
+      cacheUpdatedAt: regionMapUpdated,
+      now: Date.now(),
+      backoffUntil,
+    })
   ) {
     try {
       // Vérifier que les variables d'environnement sont définies
@@ -57,6 +67,7 @@ async function getRegionMap() {
         } as any
         regionMapCache.regionMap.set('fr', defaultRegion)
         regionMapCache.regionMapUpdated = Date.now()
+        regionMapCache.backoffUntil = 0
         return regionMapCache.regionMap
       }
 
@@ -87,6 +98,7 @@ async function getRegionMap() {
         } as any
         regionMapCache.regionMap.set('fr', defaultRegion)
         regionMapCache.regionMapUpdated = Date.now()
+        regionMapCache.backoffUntil = 0
         return regionMapCache.regionMap
       }
 
@@ -98,8 +110,11 @@ async function getRegionMap() {
       })
 
       regionMapCache.regionMapUpdated = Date.now()
+      regionMapCache.backoffUntil = 0
     } catch (error) {
       console.error('⚠️  Error fetching regions from backend:', error)
+      // Garder le dernier cache valide et ne pas relancer un fetch à chaque hit.
+      regionMapCache.backoffUntil = Date.now() + REGION_ERROR_BACKOFF_MS
       // Utiliser une région par défaut en cas d'erreur
       if (!regionMapCache.regionMap.has('fr')) {
         const defaultRegion: HttpTypes.StoreRegion = {

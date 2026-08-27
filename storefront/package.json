@@ -16,7 +16,7 @@
     "dev": "npm run wait && npm run launcher dev",
     "build": "next build",
     "build:with-backend": "npm run wait && npm run launcher build",
-    "start": "next start",
+    "start": "node start-server.js",
     "start:with-backend": "npm run launcher start",
     "build:next": "next build",
     "lint": "next lint",
