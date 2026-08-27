@@ -5,6 +5,7 @@ const META_CAPI_ACCESS_TOKEN = process.env.META_CAPI_ACCESS_TOKEN
 
 interface TrackPurchaseBody {
   orderId: string
+  eventId?: string
   value: number
   currency: string
   items: Array<{
@@ -15,11 +16,19 @@ interface TrackPurchaseBody {
   }>
   tax?: number
   shipping?: number
+  /** Cookie _fbp envoyé par le navigateur (Meta Browser ID) */
+  fbp?: string
+  /** Cookie _fbc envoyé par le navigateur (Meta Click ID) */
+  fbc?: string
 }
 
 /**
  * API pour envoyer l'événement Purchase à Meta CAPI (Conversions API).
  * Appelé côté client après une commande validée, uniquement si consentement cookies.
+ *
+ * Bonnes pratiques appliquées :
+ * - event_id partagé avec le Pixel navigateur pour éviter la double-comptabilisation
+ * - user_data enrichi avec IP client, user_agent, fbp, fbc pour améliorer l'Event Match Quality
  */
 export async function POST(req: NextRequest) {
   try {
@@ -28,15 +37,32 @@ export async function POST(req: NextRequest) {
     }
 
     const body = (await req.json()) as TrackPurchaseBody
-    const { orderId, value, currency, items, tax = 0, shipping = 0 } = body
+    const { orderId, eventId, value, currency, items, tax = 0, shipping = 0, fbp, fbc } = body
 
     if (!orderId || value == null || !currency) {
       return NextResponse.json({ ok: false, error: "missing_data" }, { status: 400 })
     }
 
-    const eventId = `purchase_${orderId}_${Date.now()}`
+    // Utiliser l'event_id fourni par le Pixel pour la déduplication, sinon en générer un
+    const capiEventId = eventId ?? `purchase_${orderId}_${Date.now()}`
     const eventTime = Math.floor(Date.now() / 1000)
 
+    // ── user_data : enrichi pour améliorer l'Event Match Quality ─────────────
+    // IP client (X-Forwarded-For en priorité car derrière proxy/CDN)
+    const clientIp =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      undefined
+
+    const userAgent = req.headers.get("user-agent") || undefined
+
+    const userData: Record<string, unknown> = {}
+    if (clientIp) userData.client_ip_address = clientIp
+    if (userAgent) userData.client_user_agent = userAgent
+    if (fbp) userData.fbp = fbp
+    if (fbc) userData.fbc = fbc
+
+    // ── custom_data ───────────────────────────────────────────────────────────
     const customData: Record<string, unknown> = {
       currency,
       value: Number(value.toFixed(2)),
@@ -64,9 +90,9 @@ export async function POST(req: NextRequest) {
             {
               event_name: "Purchase",
               event_time: eventTime,
-              event_id: eventId,
+              event_id: capiEventId,
               event_source_url: req.headers.get("referer") || undefined,
-              user_data: {},
+              user_data: userData,
               custom_data: customData,
               action_source: "website",
             },

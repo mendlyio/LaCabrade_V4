@@ -307,22 +307,29 @@ export function trackMetaPurchase(
   transactionId: string,
   cart: TrackingCart,
   tax?: number,
-  shipping?: number
+  shipping?: number,
+  eventId?: string
 ) {
   if (!META_PIXEL_ID || !hasConsent()) return
   const fbq = (window as any).fbq
   if (!fbq) return
 
-  fbq("track", "Purchase", {
-    content_ids: cart.items.map((i) => i.item_id),
-    content_type: "product",
-    num_items: cart.items.reduce((s, i) => s + i.quantity, 0),
-    value: cart.value,
-    currency: cart.currency,
-    order_id: transactionId,
-    ...(tax != null && { tax }),
-    ...(shipping != null && { shipping }),
-  })
+  fbq(
+    "track",
+    "Purchase",
+    {
+      content_ids: cart.items.map((i) => i.item_id),
+      content_type: "product",
+      num_items: cart.items.reduce((s, i) => s + i.quantity, 0),
+      value: cart.value,
+      currency: cart.currency,
+      order_id: transactionId,
+      ...(tax != null && { tax }),
+      ...(shipping != null && { shipping }),
+    },
+    // eventID passé en 4e argument pour la déduplication Pixel/CAPI
+    eventId ? { eventID: eventId } : undefined
+  )
 }
 
 export function trackMetaViewContent(
