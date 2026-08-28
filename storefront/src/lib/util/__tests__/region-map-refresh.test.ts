@@ -3,7 +3,13 @@
  * Exécuter : cd storefront && npx tsx src/lib/util/__tests__/region-map-refresh.test.ts
  */
 
-import { shouldRefreshRegionMap, REGION_CACHE_MS, REGION_ERROR_BACKOFF_MS } from "../region-map-refresh"
+import {
+  shouldRefreshRegionMap,
+  REGION_CACHE_MS,
+  REGION_ERROR_BACKOFF_MS,
+  attachInflight,
+  seedFallbackRegionMap,
+} from "../region-map-refresh"
 
 let passed = 0
 let failed = 0
@@ -81,6 +87,23 @@ assert(
   }),
   true
 )
+
+const inflightA = attachInflight(null, () => Promise.resolve("regions"))
+const inflightB = attachInflight(inflightA.promise, () => Promise.resolve("other"))
+assert("premier appel → démarre le fetch", inflightA.started, true)
+assert("appel concurrent → réutilise le même fetch", inflightB.started, false)
+assert("même promise partagée", inflightA.promise === inflightB.promise, true)
+
+const fallbackMap = new Map<string, any>()
+const fallbackRegion = { id: "reg_default", name: "France" } as any
+seedFallbackRegionMap(fallbackMap, fallbackRegion)
+assert("repli seed fr", fallbackMap.get("fr") === fallbackRegion, true)
+assert("repli seed be (évite /be → /fr)", fallbackMap.get("be") === fallbackRegion, true)
+
+const existingBe = { id: "reg_be" } as any
+fallbackMap.set("be", existingBe)
+seedFallbackRegionMap(fallbackMap, fallbackRegion)
+assert("repli n'écrase pas une région déjà sync", fallbackMap.get("be") === existingBe, true)
 
 console.log(`\n${passed} passed, ${failed} failed`)
 if (failed) process.exit(1)

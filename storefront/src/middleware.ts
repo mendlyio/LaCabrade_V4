@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { LACABRADE_REDIRECTS } from "@lib/lacabrade-redirects"
 import {
   REGION_ERROR_BACKOFF_MS,
+  attachInflight,
+  seedFallbackRegionMap,
   shouldRefreshRegionMap,
 } from "@lib/util/region-map-refresh"
 
@@ -43,6 +45,85 @@ const regionMapCache = {
   backoffUntil: 0,
 }
 
+let regionMapInflight: Promise<Map<string, HttpTypes.StoreRegion>> | null = null
+
+function createMiddlewareFallbackRegion(): HttpTypes.StoreRegion {
+  return {
+    id: "reg_default",
+    name: "France",
+    currency_code: "eur",
+    countries: [
+      { iso_2: "fr", name: "France" },
+      { iso_2: "be", name: "Belgique" },
+    ],
+  } as HttpTypes.StoreRegion
+}
+
+function applyMiddlewareFallback(resetBackoff: boolean) {
+  seedFallbackRegionMap(regionMapCache.regionMap, createMiddlewareFallbackRegion())
+  regionMapCache.regionMapUpdated = Date.now()
+  regionMapCache.backoffUntil = resetBackoff
+    ? 0
+    : Date.now() + REGION_ERROR_BACKOFF_MS
+}
+
+async function refreshRegionMap() {
+  try {
+    // Vérifier que les variables d'environnement sont définies
+    if (!BACKEND_URL || !PUBLISHABLE_API_KEY) {
+      console.warn('⚠️  Backend URL or Publishable API Key not configured. Using default region.')
+      applyMiddlewareFallback(true)
+      return regionMapCache.regionMap
+    }
+
+    // Fetch regions from Medusa. We can't use the JS client here because middleware is running on Edge and the client needs a Node environment.
+    const response = await fetchWithTimeout(`${BACKEND_URL}/store/regions`, {
+      headers: {
+        "x-publishable-api-key": PUBLISHABLE_API_KEY,
+      },
+      next: {
+        revalidate: 3600,
+        tags: ["regions"],
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch regions: ${response.status}`)
+    }
+
+    const { regions } = await response.json()
+
+    if (!regions?.length) {
+      // Créer une région par défaut si aucune n'existe
+      applyMiddlewareFallback(true)
+      return regionMapCache.regionMap
+    }
+
+    // Create a map of country codes to regions.
+    regions.forEach((region: HttpTypes.StoreRegion) => {
+      region.countries?.forEach((c) => {
+        regionMapCache.regionMap.set(c.iso_2 ?? "", region)
+      })
+    })
+
+    regionMapCache.regionMapUpdated = Date.now()
+    regionMapCache.backoffUntil = 0
+  } catch (error) {
+    console.error('⚠️  Error fetching regions from backend:', error)
+    // Garder le dernier cache valide et ne pas relancer un fetch à chaque hit.
+    regionMapCache.backoffUntil = Date.now() + REGION_ERROR_BACKOFF_MS
+    // Repli FR+BE : sans `be`, /be/... était redirigé vers /fr/...
+    if (
+      !regionMapCache.regionMap.has("fr") ||
+      !regionMapCache.regionMap.has("be")
+    ) {
+      applyMiddlewareFallback(false)
+    }
+  }
+
+  return regionMapCache.regionMap
+}
+
 async function getRegionMap() {
   const { regionMap, regionMapUpdated, backoffUntil } = regionMapCache
   const hasCache = !!regionMap.keys().next().value
@@ -55,78 +136,19 @@ async function getRegionMap() {
       backoffUntil,
     })
   ) {
-    try {
-      // Vérifier que les variables d'environnement sont définies
-      if (!BACKEND_URL || !PUBLISHABLE_API_KEY) {
-        console.warn('⚠️  Backend URL or Publishable API Key not configured. Using default region.')
-        const defaultRegion: HttpTypes.StoreRegion = {
-          id: 'reg_default',
-          name: 'France',
-          currency_code: 'eur',
-          countries: [{ iso_2: 'fr', name: 'France' }] as any,
-        } as any
-        regionMapCache.regionMap.set('fr', defaultRegion)
-        regionMapCache.regionMapUpdated = Date.now()
-        regionMapCache.backoffUntil = 0
-        return regionMapCache.regionMap
-      }
-
-      // Fetch regions from Medusa. We can't use the JS client here because middleware is running on Edge and the client needs a Node environment.
-      const response = await fetchWithTimeout(`${BACKEND_URL}/store/regions`, {
-        headers: {
-          "x-publishable-api-key": PUBLISHABLE_API_KEY,
-        },
-        next: {
-          revalidate: 3600,
-          tags: ["regions"],
-        },
+    const { promise, started } = attachInflight(
+      regionMapInflight,
+      refreshRegionMap
+    )
+    if (started) {
+      regionMapInflight = promise
+      void promise.finally(() => {
+        if (regionMapInflight === promise) {
+          regionMapInflight = null
+        }
       })
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch regions: ${response.status}`)
-      }
-
-      const { regions } = await response.json()
-
-      if (!regions?.length) {
-        // Créer une région par défaut si aucune n'existe
-        const defaultRegion: HttpTypes.StoreRegion = {
-          id: 'reg_default',
-          name: 'France',
-          currency_code: 'eur',
-          countries: [{ iso_2: 'fr', name: 'France' }] as any,
-        } as any
-        regionMapCache.regionMap.set('fr', defaultRegion)
-        regionMapCache.regionMapUpdated = Date.now()
-        regionMapCache.backoffUntil = 0
-        return regionMapCache.regionMap
-      }
-
-      // Create a map of country codes to regions.
-      regions.forEach((region: HttpTypes.StoreRegion) => {
-        region.countries?.forEach((c) => {
-          regionMapCache.regionMap.set(c.iso_2 ?? "", region)
-        })
-      })
-
-      regionMapCache.regionMapUpdated = Date.now()
-      regionMapCache.backoffUntil = 0
-    } catch (error) {
-      console.error('⚠️  Error fetching regions from backend:', error)
-      // Garder le dernier cache valide et ne pas relancer un fetch à chaque hit.
-      regionMapCache.backoffUntil = Date.now() + REGION_ERROR_BACKOFF_MS
-      // Utiliser une région par défaut en cas d'erreur
-      if (!regionMapCache.regionMap.has('fr')) {
-        const defaultRegion: HttpTypes.StoreRegion = {
-          id: 'reg_default',
-          name: 'France',
-          currency_code: 'eur',
-          countries: [{ iso_2: 'fr', name: 'France' }] as any,
-        } as any
-        regionMapCache.regionMap.set('fr', defaultRegion)
-        regionMapCache.regionMapUpdated = Date.now()
-      }
     }
+    await promise
   }
 
   return regionMapCache.regionMap
