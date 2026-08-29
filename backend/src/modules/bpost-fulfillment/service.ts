@@ -1,5 +1,20 @@
 import { AbstractFulfillmentProviderService } from "@medusajs/framework/utils"
 import type { MedusaContainer } from "@medusajs/framework/types"
+import BpostModuleService from "../bpost/service"
+
+/**
+ * Le container injecté dans un fulfillment provider Medusa est le cradle
+ * Awilix du module fulfillment, pas le scope app. Accéder à `.resolve`
+ * y déclenche AwilixResolutionError: Could not resolve 'resolve'.
+ * On instancie donc le client Bpost comme les scripts / tests (mêmes env).
+ */
+export function createBpostClient(options?: Record<string, any>): BpostModuleService {
+  return new BpostModuleService({}, {
+    publicKey: options?.publicKey || process.env.BPOST_PUBLIC_KEY,
+    privateKey: options?.privateKey || process.env.BPOST_PRIVATE_KEY,
+    webhookSecret: options?.webhookSecret || process.env.BPOST_WEBHOOK_SECRET,
+  })
+}
 
 // Provider Bpost pour livraison avec prix fixe
 export default class BpostFulfillmentProviderService extends AbstractFulfillmentProviderService {
@@ -88,7 +103,7 @@ export default class BpostFulfillmentProviderService extends AbstractFulfillment
   // Hooks de création d'expédition: délègue au module Bpost existant
   async createFulfillment(data: any, items: any, order: any, fulfillment: any): Promise<any> {
     try {
-      const bpost = this.container.resolve("bpost") as any
+      const bpost = createBpostClient(this.options)
 
       // Seuil : commandes > 250 € → pas d'étiquette automatique (génération manuelle en backoffice)
       const MANUAL_THRESHOLD_CENTS = 25000

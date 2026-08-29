@@ -239,7 +239,12 @@ const medusaConfig = {
         providers: [
           ...((BPOST_PUBLIC_KEY && BPOST_PRIVATE_KEY) ? [{
             resolve: './src/modules/bpost-fulfillment',
-            id: 'bpost'
+            id: 'bpost',
+            options: {
+              publicKey: BPOST_PUBLIC_KEY,
+              privateKey: BPOST_PRIVATE_KEY,
+              webhookSecret: BPOST_WEBHOOK_SECRET
+            }
           }] : []),
           {
             resolve: '@medusajs/fulfillment-manual',
