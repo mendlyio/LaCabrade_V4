@@ -21,6 +21,9 @@ const nextConfig = {
   images: {
     // AVIF en priorité (meilleure compression que WebP), puis WebP — réduit le poids vs WebP seul.
     formats: ["image/avif", "image/webp"],
+    // Pas de 2048/3840 : sizes="100vw" (hero) encodait de l'AVIF 4K via sharp
+    // et faisait dépasser le cgroup 2 Go. 1920 suffit au shop.
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     // Valeurs autorisées pour la prop `quality` sur <Image /> (Next.js 16+ exigera une liste explicite).
     qualities: [75, 70, 65, 60, 55, 50],
     // Cache les images optimisées 30 jours côté serveur (défaut : 60 s) — réduit la charge backend.

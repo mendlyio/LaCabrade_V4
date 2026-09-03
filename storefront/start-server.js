@@ -35,6 +35,9 @@ process.env.NODE_OPTIONS = nodeOptions
 if (!process.env.OMP_NUM_THREADS) {
   process.env.OMP_NUM_THREADS = "1"
 }
+if (!process.env.SHARP_CONCURRENCY) {
+  process.env.SHARP_CONCURRENCY = "1"
+}
 
 console.log(`   Storefront Node memory limit: ${heapMb} MB`)
 

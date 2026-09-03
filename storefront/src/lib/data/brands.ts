@@ -1,4 +1,5 @@
 import { cache } from "react"
+import { unstable_cache } from "next/cache"
 import { sdk } from "@lib/config"
 import { slugify } from "@lib/util/slugify"
 
@@ -16,7 +17,15 @@ const normalizeBrand = (brand?: string | null) => {
   return brand.trim()
 }
 
-export const listBrands = cache(async function (): Promise<Brand[]> {
+/**
+ * Scan catalogue pour le menu Marques (Nav sur chaque page).
+ * Next 15 ne cache plus un fetch qui n'a que `tags` (défaut no-store) :
+ * chaque SSR relisait ~1393 produits → event loop saturée, RAM 2 Go,
+ * puis SIGKILL (dernier : 2026-09-03 06:49). Même contrat que
+ * listCategories : cache 1 h, tags brands+products (invalidation
+ * stock / produits inchangée).
+ */
+const _fetchAllBrands = async (): Promise<Brand[]> => {
   const brandCounts = new Map<string, { name: string; count: number }>()
 
   const processBatch = (products: any[]) => {
@@ -78,7 +87,15 @@ export const listBrands = cache(async function (): Promise<Brand[]> {
       count,
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }))
-})
+}
+
+const _cachedFetchAllBrands = unstable_cache(
+  _fetchAllBrands,
+  ["all-brands"],
+  { revalidate: 3600, tags: ["brands", "products"] }
+)
+
+export const listBrands = cache(_cachedFetchAllBrands)
 
 /**
  * Liste les marques présentes UNIQUEMENT dans les catégories données
