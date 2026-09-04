@@ -10,7 +10,7 @@
  *  - validateWebhookSignature()
  */
 
-import BpostModuleService from "../../modules/bpost/service"
+import BpostModuleService, { centroidForBpostPickup } from "../../modules/bpost/service"
 
 // ─── Mock global fetch ────────────────────────────────────────────────────────
 
@@ -446,6 +446,73 @@ describe("ping()", () => {
 // ════════════════════════════════════════════════════════════════════════════
 // validateWebhookSignature()
 // ════════════════════════════════════════════════════════════════════════════
+
+// ════════════════════════════════════════════════════════════════════════════
+// listPickupPoints() — Address.Lat / Address.Long exigés par Bpost
+// ════════════════════════════════════════════════════════════════════════════
+
+describe("centroidForBpostPickup()", () => {
+  it("6600 Bastogne → centroïde Luxembourg belge (pas Bruxelles)", () => {
+    const c = centroidForBpostPickup("6600", "BE")
+    expect(c.lat).toBeCloseTo(50.0047, 3)
+    expect(c.lon).toBeCloseTo(5.7194, 3)
+  })
+
+  it("1000 Bruxelles", () => {
+    const c = centroidForBpostPickup("1000", "BE")
+    expect(c.lat).toBeCloseTo(50.8503, 3)
+    expect(c.lon).toBeCloseTo(4.3517, 3)
+  })
+
+  it("préfixe inconnu → Bruxelles (même repli que cityMap)", () => {
+    const c = centroidForBpostPickup("", "BE")
+    expect(c.lat).toBeCloseTo(50.8503, 3)
+    expect(c.lon).toBeCloseTo(4.3517, 3)
+  })
+})
+
+describe("listPickupPoints() — payload /pickuppoints", () => {
+  const TOKEN_RESPONSE = { Key: "tok-abc", Expire: new Date(Date.now() + 3600000).toISOString() }
+  const CARRIERS = { Error: { Id: 0, Info: "" }, Carrier: [{ Id: 68, Name: "bpost shm" }] }
+  const POINTS_OK = {
+    Error: { Id: 0, Info: "" },
+    Point: [{ PointId: "P1", Information: { Name: "Relais Test", ZipCode: "6600", City: "Bastogne" } }],
+  }
+
+  function getPickupBody() {
+    const pickupCall = mockFetch.mock.calls.find((call: any[]) =>
+      String(call[0]).includes("/pickuppoints")
+    )
+    if (!pickupCall) throw new Error("Aucun appel /pickuppoints trouvé")
+    return JSON.parse(pickupCall[1].body)
+  }
+
+  it("envoie Address.Lat et Address.Long (requis par Bpost Error 99)", async () => {
+    const svc = makeService()
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN_RESPONSE))
+      .mockResolvedValueOnce(makeJsonResponse(CARRIERS))
+      .mockResolvedValueOnce(makeJsonResponse(POINTS_OK))
+
+    const r = await svc.listPickupPoints({
+      postalCode: "6600",
+      country: "BE",
+      city: "Bastogne",
+      street: "Rue d’Assenois 10B",
+    })
+
+    expect(r.points.length).toBe(1)
+    const body = getPickupBody()
+    expect(body.Address.PostalCode).toBe("6600")
+    expect(body.Address.City).toBe("Bastogne")
+    expect(typeof body.Address.Lat).toBe("number")
+    expect(typeof body.Address.Long).toBe("number")
+    expect(body.Address.Lat).toBeCloseTo(50.0047, 3)
+    expect(body.Address.Long).toBeCloseTo(5.7194, 3)
+    expect(body.Address.Lat).not.toBe(0)
+    expect(body.Address.Long).not.toBe(0)
+  })
+})
 
 describe("validateWebhookSignature()", () => {
   it("valide une signature HMAC correcte", () => {

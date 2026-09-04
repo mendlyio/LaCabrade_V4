@@ -53,6 +53,49 @@ export function extractBpostTrackingFromPdf(base64Pdf: string): string | undefin
   }
 }
 
+/**
+ * Centroïde approximatif d'une zone postale belge (2 premiers chiffres).
+ * L'API Bpost /pickuppoints exige Address.Lat et Address.Long (plugin WP les envoie
+ * après géolocalisation Leaflet). Sans ces champs, Bpost répond Error 99
+ * « Required field missing or empty value: Address.Lat / Address.Long »
+ * et le checkout n'affiche aucun point relais.
+ *
+ * On n'appelle pas de géocodeur externe : pas de latence ni de dépendance
+ * qui pourrait bloquer l'étape livraison. Le centroïde sert uniquement de
+ * point de recherche ; la sélection du point et le paiement restent inchangés.
+ */
+export function centroidForBpostPickup(
+  postalCode: string,
+  country?: string
+): { lat: number; lon: number } {
+  const cc = String(country || "BE").toUpperCase()
+  const digits = String(postalCode || "").replace(/\D/g, "")
+
+  if (cc === "FR" && digits.length >= 2) {
+    return { lat: 48.8566, lon: 2.3522 }
+  }
+
+  const n = parseInt(digits.slice(0, 2), 10)
+  if (n >= 10 && n <= 12) return { lat: 50.8503, lon: 4.3517 } // Bruxelles
+  if (n === 13) return { lat: 50.7167, lon: 4.6167 } // Wavre
+  if (n === 14) return { lat: 50.5972, lon: 4.3236 } // Nivelles
+  if (n >= 15 && n <= 19) return { lat: 50.8503, lon: 4.3517 } // périphérie Bruxelles
+  if (n >= 20 && n <= 29) return { lat: 51.2194, lon: 4.4025 } // Anvers
+  if (n >= 30 && n <= 34) return { lat: 50.8798, lon: 4.7005 } // Louvain
+  if (n >= 35 && n <= 39) return { lat: 50.9307, lon: 5.3378 } // Hasselt
+  if (n >= 40 && n <= 49) return { lat: 50.6326, lon: 5.5797 } // Liège
+  if (n >= 50 && n <= 59) return { lat: 50.4674, lon: 4.8719 } // Namur
+  if (n >= 60 && n <= 65) return { lat: 50.4108, lon: 4.4446 } // Charleroi
+  if (n === 66) return { lat: 50.0047, lon: 5.7194 } // Bastogne
+  if (n === 67) return { lat: 49.6833, lon: 5.8167 } // Arlon
+  if (n === 68) return { lat: 49.5667, lon: 5.8056 } // Aubange
+  if (n === 69) return { lat: 50.2269, lon: 5.3442 } // Marche-en-Famenne
+  if (n >= 70 && n <= 79) return { lat: 50.4542, lon: 3.9519 } // Mons
+  if (n >= 80 && n <= 89) return { lat: 51.2093, lon: 3.2247 } // Bruges
+  if (n >= 90 && n <= 99) return { lat: 51.0543, lon: 3.7174 } // Gand
+  return { lat: 50.8503, lon: 4.3517 }
+}
+
 type BpostOptions = {
   publicKey?: string
   privateKey?: string
@@ -332,12 +375,18 @@ export default class BpostModuleService {
         cityToUse = cityMap[pc] || "Bruxelles"
       }
       
+      // Plugin WP : Address.Lat / Address.Long sont obligatoires sur /pickuppoints.
+      // Centroïde de la zone postale (pas de géocodeur externe).
+      const coords = centroidForBpostPickup(postalCode, country)
+
       const basePayload = {
         Address: {
           City: cityToUse || "Bruxelles",
           Country: country || "BE",
           PostalCode: postalCode,
           Streetname1: street || "Rue de la Station",
+          Lat: coords.lat,
+          Long: coords.lon,
         },
         // D'après le plugin WP : pas de CarrierId si non nécessaire, Language fr/nl
         Language: country === "BE" ? "fr" : "en",
