@@ -72,41 +72,42 @@ export const getProductByHandle = cache(async function (
     .then(({ products }) => products[0])
 })
 
-export const getProductsList = cache(async function ({
-  pageParam = 1,
-  queryParams,
-  countryCode,
-}: {
-  pageParam?: number
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
-  countryCode: string
-}): Promise<{
+/**
+ * Listes boutique / marques / catégories.
+ * Next 15 : `{ tags }` seul = no-store. Les pages marques et catégories
+ * relisent tout le catalogue (lots de 100, en parallèle) pour filtrer
+ * côté serveur — même logique qu'avant, mais sans cache ça tenait N
+ * catalogues en RAM (SIGKILL 06/09 16:36, crawler /be/marques +
+ * /be/categories, 40–125 s). Même contrat que getProductByHandle /
+ * listBrands : cache 1 h, tag products (invalidation inchangée).
+ * Panier / checkout : getProductsById n'est pas concerné.
+ */
+const _fetchProductsList = async (
+  pageParam: number,
+  queryKey: string,
+  regionId: string
+): Promise<{
   response: { products: HttpTypes.StoreProduct[]; count: number }
   nextPage: number | null
   queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
-}> {
+}> => {
+  const queryParams = (
+    queryKey ? JSON.parse(queryKey) : undefined
+  ) as (HttpTypes.FindParams & HttpTypes.StoreProductParams) | undefined
   const limit = queryParams?.limit || 12
-  const validPageParam = Math.max(pageParam, 1);
+  const validPageParam = Math.max(pageParam, 1)
   const offset = (validPageParam - 1) * limit
-  const region = await getRegion(countryCode)
-
-  if (!region) {
-    return {
-      response: { products: [], count: 0 },
-      nextPage: null,
-    }
-  }
   return sdk.store.product
     .list(
       {
         limit,
         offset,
-        region_id: region.id,
+        region_id: regionId,
         fields: "*variants.calculated_price,+variants.prices",
         ...queryParams,
         is_giftcard: false,
       },
-      { next: { tags: ["products"] } }
+      { next: { tags: ["products"], revalidate: 3600 } }
     )
     .then(({ products, count }) => {
       const filtered = products.filter((p) => p.handle !== GIFT_CARD_PRODUCT_HANDLE)
@@ -122,6 +123,42 @@ export const getProductsList = cache(async function ({
         queryParams,
       }
     })
+}
+
+const _cachedFetchProductsList = unstable_cache(
+  _fetchProductsList,
+  ["products-list"],
+  { revalidate: 3600, tags: ["products"] }
+)
+
+export const getProductsList = cache(async function ({
+  pageParam = 1,
+  queryParams,
+  countryCode,
+}: {
+  pageParam?: number
+  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+  countryCode: string
+}): Promise<{
+  response: { products: HttpTypes.StoreProduct[]; count: number }
+  nextPage: number | null
+  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+}> {
+  const region = await getRegion(countryCode)
+
+  if (!region) {
+    return {
+      response: { products: [], count: 0 },
+      nextPage: null,
+      queryParams,
+    }
+  }
+
+  return _cachedFetchProductsList(
+    pageParam,
+    JSON.stringify(queryParams ?? {}),
+    region.id
+  )
 })
 
 /**
