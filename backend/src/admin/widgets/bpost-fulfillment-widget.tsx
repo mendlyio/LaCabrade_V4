@@ -100,18 +100,21 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
 
   // Données déjà présentes dans les métadonnées de la commande
   const metaLabelUrl: string = (order?.metadata as any)?.bpost_label_url || ""
+  const metaLabelData: string = (order?.metadata as any)?.bpost_label_data || ""
   const metaTracking: string = (order?.metadata as any)?.bpost_tracking || ""
   const metaShipmentId: string = (order?.metadata as any)?.bpost_shipment_id || ""
 
   const hasExistingLabel =
-    bpostFulfillments.some((f: any) => f.data?.label_url) ||
+    bpostFulfillments.some((f: any) => f.data?.label_url || f.data?.label_data) ||
     !!metaLabelUrl ||
+    !!metaLabelData ||
+    !!metaShipmentId ||
     !!generated?.labelUrl
 
   // Commande > 250 € : étiquette non générée automatiquement
   const wasAutoSkipped = bpostFulfillments.some((f: any) => f.data?.auto_label_skipped === true)
 
-  const hasAnyBpost = hasBpostShipping || bpostFulfillments.length > 0 || !!metaLabelUrl || !!metaShipmentId
+  const hasAnyBpost = hasBpostShipping || bpostFulfillments.length > 0 || !!metaLabelUrl || !!metaLabelData || !!metaShipmentId
 
   if (!hasAnyBpost) return null
 
@@ -413,7 +416,7 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
         )}
 
         {/* ── SECTION : Étiquette déjà présente en métadonnées (commande rechargée) ── */}
-        {!generated && metaLabelUrl && (
+        {!generated && hasExistingLabel && (
           <div className="border border-ui-border-base rounded-lg p-4 flex flex-col gap-3 bg-ui-bg-subtle">
             {effectiveTracking && (
               <div className="flex flex-col gap-1">
@@ -476,7 +479,7 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
-                {labelUrl ? (
+                {(labelUrl || fulfillment.data?.label_data || metaLabelData || metaShipmentId) ? (
                   <a href={`/admin/bpost/download-label/${effectiveOrderId}`} target="_blank" rel="noreferrer" download>
                     <Button variant="primary" size="small">
                       <DownloadIcon className="w-4 h-4 mr-1" />

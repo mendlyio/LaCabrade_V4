@@ -254,12 +254,28 @@ describe("Cas 4c — fallback Bpost API, retourne labelUrl HTTP", () => {
 // ════════════════════════════════════════════════════════════════════════════
 
 describe("Cas 5 & 6 — 404 (données manquantes)", () => {
-  it("retourne 404 si les metadata sont vides et aucun shipment ID", async () => {
+  it("retourne 404 si metadata vides et getLabel(orderId) ne renvoie rien", async () => {
     mockRetrieveOrder.mockResolvedValue({ id: "order-empty", metadata: {} })
+    mockGetLabel.mockResolvedValue({ labelUrl: "", labelData: undefined })
     const res = makeRes()
     await GET(makeReq("order-empty"), res)
+    // Fallback : ClientReferenceCode = order.id → on tente quand même getLabel
+    expect(mockGetLabel).toHaveBeenCalledWith("order-empty", "order-empty")
     expect(res.status).toHaveBeenCalledWith(404)
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.any(String) }))
+  })
+
+  it("récupère le PDF via getLabel(orderId) même sans metadata (shipment déjà chez Bpost)", async () => {
+    mockRetrieveOrder.mockResolvedValue({ id: "order_01RECOVERY", metadata: {} })
+    mockGetLabel.mockResolvedValue({
+      labelUrl: FAKE_PDF_DATA_URI,
+      labelData: FAKE_PDF_BASE64,
+    })
+    const res = makeRes()
+    await GET(makeReq("order_01RECOVERY"), res)
+    expect(mockGetLabel).toHaveBeenCalledWith("order_01RECOVERY", "order_01RECOVERY")
+    expect(res.send).toHaveBeenCalled()
+    expect(mockUpdateOrders).toHaveBeenCalled()
   })
 
   it("retourne 404 si Bpost ne renvoie ni labelData ni labelUrl", async () => {
