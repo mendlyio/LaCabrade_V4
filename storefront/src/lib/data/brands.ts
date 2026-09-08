@@ -98,17 +98,14 @@ const _cachedFetchAllBrands = unstable_cache(
 export const listBrands = cache(_cachedFetchAllBrands)
 
 /**
- * Liste les marques présentes UNIQUEMENT dans les catégories données
- * (la catégorie courante + ses descendants). Évite d'afficher dans la
- * colonne de filtres des marques qui n'existent pas dans la catégorie.
- *
- * Bonus performance : ne scanne que les produits de la catégorie au lieu
- * de tout le catalogue (comme le faisait listBrands sur les pages catégorie).
+ * Marques présentes uniquement dans les catégories données
+ * (courante + descendants). Next 15 : tags seuls = no-store, chaque
+ * page catégorie rescannait ses produits (lots parallèles). Même
+ * contrat que listBrands : cache 1 h, tags brands+products.
  */
-export const listBrandsByCategory = cache(async function (
-  categoryIds: string[]
-): Promise<Brand[]> {
-  if (!categoryIds || categoryIds.length === 0) {
+const _fetchBrandsByCategory = async (categoryIdsKey: string): Promise<Brand[]> => {
+  const categoryIds = categoryIdsKey.split(",").filter(Boolean)
+  if (categoryIds.length === 0) {
     return []
   }
 
@@ -140,7 +137,7 @@ export const listBrandsByCategory = cache(async function (
         category_id: categoryIds,
         fields: "id,metadata,+collection.title,+collection.handle",
       } as any,
-      { next: { tags: ["brands", "products"] } }
+      { next: { tags: ["brands", "products"], revalidate: 3600 } }
     )
 
     processBatch(first.products)
@@ -158,7 +155,7 @@ export const listBrandsByCategory = cache(async function (
               category_id: categoryIds,
               fields: "id,metadata,+collection.title,+collection.handle",
             } as any,
-            { next: { tags: ["brands", "products"] } }
+            { next: { tags: ["brands", "products"], revalidate: 3600 } }
           )
         )
       }
@@ -177,6 +174,22 @@ export const listBrandsByCategory = cache(async function (
       count,
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }))
+}
+
+const _cachedFetchBrandsByCategory = unstable_cache(
+  _fetchBrandsByCategory,
+  ["brands-by-category"],
+  { revalidate: 3600, tags: ["brands", "products"] }
+)
+
+export const listBrandsByCategory = cache(async function (
+  categoryIds: string[]
+): Promise<Brand[]> {
+  if (!categoryIds || categoryIds.length === 0) {
+    return []
+  }
+
+  return _cachedFetchBrandsByCategory([...categoryIds].sort().join(","))
 })
 
 export const getBrandBySlug = cache(async function (slug: string) {
