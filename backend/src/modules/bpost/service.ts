@@ -508,7 +508,7 @@ export default class BpostModuleService {
     pickupPointId?: string
     weightGrams?: number
     reference?: string
-  }): Promise<{ shipmentId: string; labelUrl?: string; labelData?: string; trackingNumber?: string; clientReference?: string }> {
+  }): Promise<{ shipmentId: string; labelUrl?: string; labelData?: string; trackingNumber?: string; clientReference?: string; alreadyExisted?: boolean }> {
     await this.ensureToken()
 
     const clientRef = input.reference || input.orderId
@@ -539,13 +539,13 @@ export default class BpostModuleService {
       Carrier: { Id: 68 },        // bpost shm — carrier confirmé en live
       OptionList: [{ Id: 126, Value: productId }],  // produit explicite (évite auto-select erroné)
       Address: {
-        Name: input.recipient.name,
-        Email: input.recipient.email || "",
-        Phone: input.recipient.phone || "",
-        Streetname1: input.recipient.address.address_1,
-        Streetname2: input.recipient.address.address_2 || "",
-        PostalCode: input.recipient.address.postal_code,
-        City: input.recipient.address.city,
+        Name: (input.recipient.name || "").trim(),
+        Email: (input.recipient.email || "").trim(),
+        Phone: (input.recipient.phone || "").trim(),
+        Streetname1: (input.recipient.address.address_1 || "").trim(),
+        Streetname2: (input.recipient.address.address_2 || "").trim(),
+        PostalCode: (input.recipient.address.postal_code || "").trim(),
+        City: (input.recipient.address.city || "").trim(),
         Country: countryCode,
       },
       Dimensions: {
@@ -596,6 +596,18 @@ export default class BpostModuleService {
     // Vérifier les erreurs par shipment
     const shipmentError = this.extractErrorInfo(created)
     if (shipmentError) {
+      // Id 200 = "Shipment already exists" : l'envoi est déjà chez Bpost.
+      // On ne bloque pas : le caller peut récupérer l'étiquette via getLabel.
+      if (this.isShipmentAlreadyExists(created, shipmentError)) {
+        console.warn(
+          `[Bpost] createShipment: shipment déjà existant pour ref=${clientRef} — on continue vers getLabel`
+        )
+        return {
+          shipmentId: clientRef,
+          clientReference: clientRef,
+          alreadyExisted: true,
+        }
+      }
       console.error(`[Bpost] createShipment ERREUR shipment: ${shipmentError}`)
       throw new Error(`Bpost createShipment: ${shipmentError}`)
     }
@@ -632,8 +644,17 @@ export default class BpostModuleService {
       console.log(`[Bpost] getLabel: lancement création label pour ref "${refId}"`)
 
       // Stratégie 1 : POST /labels avec ClientReferenceCodeList
-      const result = await this.tryPostLabels(refId, errors)
+      let result = await this.tryPostLabels(refId, errors)
       if (result) return result
+
+      // Retry unique si Bpost a répondu "No valid items" (parfois transitoire juste après createShipment)
+      const hadNoValidItems = errors.some((e) => /no valid items/i.test(e))
+      if (hadNoValidItems) {
+        console.warn(`[Bpost] getLabel(${refId}): "No valid items" — nouvel essai POST /labels dans 3s`)
+        await new Promise((r) => setTimeout(r, 3000))
+        result = await this.tryPostLabels(refId, errors)
+        if (result) return result
+      }
 
       // Stratégie 2 : POST /labels avec OrderReferenceList (alternative Bpost)
       const result2 = await this.tryPostLabelsOrderRef(refId, errors)
@@ -793,6 +814,15 @@ export default class BpostModuleService {
       || null
   }
 
+  /** Id 200 / message "already exists" = shipment déjà créé chez Bpost (pas une vraie erreur). */
+  private isShipmentAlreadyExists(created: any, errorMessage: string): boolean {
+    const list = created?.ErrorList || created?.errorList || created?.Errors || created?.errors
+    if (Array.isArray(list) && list.some((e: any) => Number(e?.Id ?? e?.id) === 200)) {
+      return true
+    }
+    return /already exists/i.test(errorMessage || "")
+  }
+
   private extractErrorInfo(response: any): string | null {
     if (!response || typeof response !== "object") return null
 
@@ -900,8 +930,12 @@ export default class BpostModuleService {
       }
     }
 
-    console.warn(`[Bpost] getLabel(${refId}): timeout après ${maxAttempts} tentatives de polling`)
-    errors.push(`Timeout polling pour ref "${refId}" après ${maxAttempts} tentatives`)
+    // Ne pas masquer une erreur définitive (ex: "No valid items") derrière un faux timeout
+    const lastErr = errors[errors.length - 1] || ""
+    if (!/Poll #\d+:/.test(lastErr)) {
+      console.warn(`[Bpost] getLabel(${refId}): timeout après ${maxAttempts} tentatives de polling`)
+      errors.push(`Timeout polling pour ref "${refId}" après ${maxAttempts} tentatives`)
+    }
     return null
   }
 

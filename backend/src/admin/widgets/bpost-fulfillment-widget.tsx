@@ -121,7 +121,7 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
 
   // ─── Générer l'étiquette ─────────────────────────────────────────────────
 
-  const handleGenerateLabel = async (forceEmail = false) => {
+  const handleGenerateLabel = async (forceEmail = false, forceNewReference = false) => {
     if (!effectiveOrderId) return
     setIsGenerating(true)
     setError(null)
@@ -134,15 +134,23 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
           order_id: effectiveOrderId,
           send_email: true,
           force_email: forceEmail,
+          force_new_reference: forceNewReference,
         }),
       })
       const data = await res.json()
       if (!res.ok) {
         throw new Error(data?.message || data?.error || "Erreur lors de la génération")
       }
+      const nextLabelUrl = data?.shipment?.labelUrl || ""
+      if (!nextLabelUrl) {
+        throw new Error(
+          data?.message ||
+            "Bpost n'a pas renvoyé d'étiquette. Vérifiez l'adresse (numéro de rue) puis réessayez."
+        )
+      }
       setGenerated({
         trackingNumber: data?.tracking_number || data?.shipment?.trackingNumber || "",
-        labelUrl: data?.shipment?.labelUrl || "",
+        labelUrl: nextLabelUrl,
         emailSent: !!data?.email_sent,
       })
       setEmailStatus(data?.email_sent ? "sent" : "idle")
@@ -531,7 +539,7 @@ const BpostFulfillmentWidget = ({ data: order }: { data: any }) => {
             <Button
               variant="secondary"
               size="small"
-          onClick={() => handleGenerateLabel(false)}
+          onClick={() => handleGenerateLabel(false, true)}
           disabled={isGenerating}
         >
           {isGenerating ? "Génération…" : "Regénérer"}

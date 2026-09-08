@@ -305,6 +305,24 @@ describe("createShipment() — structure payload API v3", () => {
     await expect(svc.createShipment({ orderId: "o", recipient: baseRecipient })).rejects.toThrow("Adresse introuvable")
   })
 
+  it("Shipment already exists (Id 200) → alreadyExisted sans throw", async () => {
+    const svc = makeService()
+    mockFetch
+      .mockResolvedValueOnce(makeJsonResponse(TOKEN_RESPONSE))
+      .mockResolvedValueOnce(makeJsonResponse({
+        Error: { Id: 0, Info: "" },
+        Shipment: [{
+          ClientReferenceCode: "o",
+          ErrorList: [{ Id: 200, Tekst: "Shipment already exists" }],
+        }],
+      }))
+
+    const r = await svc.createShipment({ orderId: "o", recipient: baseRecipient })
+    expect(r.alreadyExisted).toBe(true)
+    expect(r.shipmentId).toBe("o")
+    expect(r.clientReference).toBe("o")
+  })
+
   it("PDF binaire retourné directement → labelData base64", async () => {
     const svc = makeService()
     const pdfBytes = fakePdfBuffer()

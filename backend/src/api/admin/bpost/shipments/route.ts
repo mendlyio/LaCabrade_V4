@@ -75,6 +75,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       send_email = true,
       resend_only = false,
       force_email = false,  // envoie l'email même sans tracking (label suffit)
+      force_new_reference = false, // régénération : nouvelle ref Bpost (ex. après correction d'adresse)
     } = req.body as any
 
     const orderService = req.scope.resolve(Modules.ORDER)
@@ -117,27 +118,37 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     const pickupFromMetadata = meta?.bpost_pickup_point
     const inferredPickupId = pickup_point_id || pickupFromMetadata?.Id || pickupFromMetadata?.id
 
-    const result = await svc.createShipment({
-      orderId: order_id,
-      recipient: {
-        name: `${order.shipping_address?.first_name || ""} ${order.shipping_address?.last_name || ""}`.trim(),
-        email: order.email,
-        phone: order.shipping_address?.phone,
-        address: {
-          address_1: order.shipping_address?.address_1 || "",
-          address_2: order.shipping_address?.address_2 || "",
-          postal_code: order.shipping_address?.postal_code || "",
-          city: order.shipping_address?.city || "",
-          country_code: order.shipping_address?.country_code || "BE",
-        },
+    const street = (order.shipping_address?.address_1 || "").trim()
+    const streetLooksIncomplete = street.length > 0 && !/\d/.test(street)
+
+    // Nouvelle référence si régénération forcée (ex. adresse corrigée après un échec Bpost)
+    const baseRef = reference || order_id
+    const clientRef = force_new_reference
+      ? `${baseRef}-r${Date.now().toString(36).slice(-5)}`
+      : baseRef
+
+    const recipient = {
+      name: `${order.shipping_address?.first_name || ""} ${order.shipping_address?.last_name || ""}`.trim(),
+      email: order.email,
+      phone: order.shipping_address?.phone,
+      address: {
+        address_1: order.shipping_address?.address_1 || "",
+        address_2: order.shipping_address?.address_2 || "",
+        postal_code: order.shipping_address?.postal_code || "",
+        city: order.shipping_address?.city || "",
+        country_code: order.shipping_address?.country_code || "BE",
       },
+    }
+
+    let result = await svc.createShipment({
+      orderId: order_id,
+      recipient,
       pickupPointId: inferredPickupId,
       weightGrams: weight_grams,
-      reference,
+      reference: clientRef,
     })
 
     // Récupérer l'étiquette PDF via POST /labels (séparé de POST /shipments)
-    // Le tracking number vient aussi de la réponse /labels (barcode), pas de POST /shipments
     let labelUrl = result.labelUrl || ""
     let labelData: string | undefined = result.labelData
     let trackingFromLabel: string | undefined
@@ -153,9 +164,54 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       }
     }
 
+    // Si shipment déjà existant mais label KO (ex. adresse invalide au 1er essai),
+    // retenter une fois avec une nouvelle référence.
+    let labelReady = !!(labelData || labelUrl)
+    if (!labelReady && result.alreadyExisted && !force_new_reference) {
+      const retryRef = `${baseRef}-r${Date.now().toString(36).slice(-5)}`
+      console.warn(
+        `[Bpost] Label absent pour shipment existant — nouvel essai avec ref "${retryRef}"`
+      )
+      try {
+        result = await svc.createShipment({
+          orderId: order_id,
+          recipient,
+          pickupPointId: inferredPickupId,
+          weightGrams: weight_grams,
+          reference: retryRef,
+        })
+        if (result.clientReference) {
+          const labelResult = await svc.getLabel(result.clientReference, result.clientReference)
+          labelUrl = labelResult.labelUrl || ""
+          labelData = labelResult.labelData
+          trackingFromLabel = labelResult.trackingNumber
+        }
+        labelReady = !!(labelData || labelUrl)
+      } catch (retryErr: any) {
+        console.error("[Bpost] Retry nouvelle référence échoué:", retryErr?.message)
+      }
+    }
+
     const finalLabelUrl = labelUrl || ""
-    // Tracking : préférer celui du label (barcode), sinon celui de createShipment (absent selon spec)
     const finalTracking = trackingFromLabel || result.trackingNumber || undefined
+    labelReady = !!(labelData || labelUrl)
+
+    if (!labelReady) {
+      const hint = streetLooksIncomplete
+        ? " L'adresse semble sans numéro de rue — corrigez-la puis régénérez l'étiquette."
+        : " Vérifiez l'adresse (numéro de rue, code postal) puis régénérez."
+      console.error(
+        `[Bpost] Étiquette introuvable pour order=${order_id} ref=${result.clientReference}` +
+        (streetLooksIncomplete ? " (adresse sans chiffre)" : "")
+      )
+      return res.status(422).json({
+        success: false,
+        message:
+          "Bpost n'a pas pu générer l'étiquette (souvent adresse invalide)." + hint,
+        already_existed: !!result.alreadyExisted,
+        client_reference: result.clientReference,
+      })
+    }
 
     // Sauvegarder dans les métadonnées de la commande
     const newMetadata: Record<string, any> = {
@@ -166,15 +222,11 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     }
     if (finalTracking) newMetadata.bpost_tracking = finalTracking
     if (labelData) {
-      // PDF base64 stocké pour téléchargement sans re-auth Bpost
       newMetadata.bpost_label_data = labelData
     }
 
     const updated = await orderService.updateOrders([{ id: order_id, metadata: newMetadata }])
 
-    // Envoyer l'email si : (label + tracking) OU (force_email + label)
-    // Le tracking null signifie que le compte Bpost n'a pas de plages de codes-barres allouées.
-    const labelReady = !!(labelData || labelUrl)
     const canSendEmail = send_email && labelReady && (finalTracking || force_email)
     let emailSent = false
     if (canSendEmail) {
@@ -191,8 +243,6 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
         `   → Cause probable : plages de codes-barres non allouées sur le compte Bpost.\n` +
         `   → Solution : contacter Bpost pour activer les barcodes, OU passer force_email=true.`
       )
-    } else if (send_email && !labelReady) {
-      console.warn(`[Bpost] ⚠️ Email NON envoyé — label ABSENT`)
     }
 
     return res.json({
