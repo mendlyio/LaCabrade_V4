@@ -29,7 +29,13 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     const categoryId = req.query.categoryId ? parseInt(req.query.categoryId as string) : undefined
 
     // Récupérer page de produits Odoo avec total + recherche
-    const { products: odooProducts, total } = await odooService.fetchProductsPaged({ limit, offset, q, categoryId })
+    const { products: odooProducts, total } = await odooService.fetchProductsPaged({
+      limit,
+      offset,
+      q,
+      categoryId,
+      lite: true,
+    })
 
     // Si aucun produit Odoo, retourner immédiatement
     if (odooProducts.length === 0) {
@@ -76,9 +82,13 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       qty_available: product.qty_available || 0,
       synced: syncedOdooIds.has(product.id.toString()),
       currency: product.currency_id?.display_name || "EUR",
-      image_url: (product.image_512 && typeof product.image_512 === 'string')
-        ? `data:image/png;base64,${product.image_512}` 
-        : null,
+      image_url: (() => {
+        const thumb =
+          (typeof product.image_128 === "string" && product.image_128) ||
+          (typeof product.image_512 === "string" && product.image_512) ||
+          ""
+        return thumb ? `data:image/png;base64,${thumb}` : null
+      })(),
     }))
 
     return res.json({

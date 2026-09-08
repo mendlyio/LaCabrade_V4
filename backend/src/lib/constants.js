@@ -9,9 +9,23 @@ function assertValue(value, message) {
   return value
 }
 
+function ensureAbsoluteHttpUrl(url, fallback) {
+  fallback = fallback || 'http://localhost:9000'
+  if (!url) return fallback
+  const trimmed = String(url).trim()
+  if (!trimmed) return fallback
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  if (/(^localhost)|(^127\.)|(^0\.0\.0\.0)/i.test(trimmed)) {
+    return 'http://' + trimmed
+  }
+  return 'https://' + trimmed
+}
+
 module.exports = {
   IS_DEV: process.env.NODE_ENV === 'development',
-  BACKEND_URL: process.env.BACKEND_PUBLIC_URL ?? process.env.RAILWAY_PUBLIC_DOMAIN_VALUE ?? 'http://localhost:9000',
+  BACKEND_URL: ensureAbsoluteHttpUrl(
+    process.env.BACKEND_PUBLIC_URL ?? process.env.RAILWAY_PUBLIC_DOMAIN_VALUE
+  ),
   DATABASE_URL: assertValue(process.env.DATABASE_URL, 'Environment variable for DATABASE_URL is not set'),
   REDIS_URL: process.env.REDIS_URL,
   ADMIN_CORS: process.env.ADMIN_CORS,

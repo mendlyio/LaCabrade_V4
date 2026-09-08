@@ -21,6 +21,7 @@ export type OdooProduct = {
   description_sale?: string
   qty_available?: number
   image_512?: string | false
+  image_128?: string | false
   ept_image_ids?: number[] // IDs des images additionnelles dans common.product.image.ept (module EPT)
   weight?: number
   volume?: number
@@ -1346,9 +1347,9 @@ export default class OdooModuleService {
   }
 
   async fetchProductsPaged(
-    params: Pagination & { q?: string; categoryId?: number }
+    params: Pagination & { q?: string; categoryId?: number; lite?: boolean }
   ): Promise<{ products: OdooProduct[]; total: number }> {
-    console.log(`[ODOO] fetchProductsPaged START: offset=${params?.offset}, limit=${params?.limit}, q=${params?.q}`)
+    console.log(`[ODOO] fetchProductsPaged START: offset=${params?.offset}, limit=${params?.limit}, q=${params?.q}, lite=${!!params?.lite}`)
     
     if (!this.uid) {
       console.log(`[ODOO] Logging in...`)
@@ -1413,25 +1414,42 @@ export default class OdooModuleService {
 
     console.log(`[ODOO] Reading product templates...`)
     const brandField = this.getBrandField()
-    const fields = [
-      "name",
-      "display_name",
-      "list_price",
-      "default_code",
-      "description_sale",
-      "currency_id",
-      "product_variant_ids",
-      "product_variant_count",
-      "attribute_line_ids",
-      "qty_available",
-      "image_512",
-      "ept_image_ids",
-      "weight",
-      "volume",
-      "categ_id",
-      ...(brandField ? [brandField] : []),
-    ]
+    const lite = !!params?.lite
+    const fields = lite
+      ? [
+          "name",
+          "display_name",
+          "list_price",
+          "default_code",
+          "currency_id",
+          "qty_available",
+          "image_128",
+          "categ_id",
+        ]
+      : [
+          "name",
+          "display_name",
+          "list_price",
+          "default_code",
+          "description_sale",
+          "currency_id",
+          "product_variant_ids",
+          "product_variant_count",
+          "attribute_line_ids",
+          "qty_available",
+          "image_512",
+          "ept_image_ids",
+          "weight",
+          "volume",
+          "categ_id",
+          ...(brandField ? [brandField] : []),
+        ]
     const products: OdooProduct[] = await this.safeReadProductTemplates(productIds, fields)
+
+    if (lite) {
+      console.log(`[ODOO] fetchProductsPaged COMPLETE (lite): returning ${products.length} products`)
+      return { products, total }
+    }
 
     for (const product of products) {
       // Enrichir les variantes — y compris les produits simples (1 variante)

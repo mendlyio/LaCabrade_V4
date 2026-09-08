@@ -2,6 +2,11 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
 import { ODOO_MODULE } from "../../../../modules/odoo"
 import OdooModuleService from "../../../../modules/odoo/service"
+import {
+  createMinioClientFromEnv,
+  minioObjectMeta,
+  minioPublicUrl,
+} from "../../../../lib/minio"
 
 /**
  * POST /admin/odoo/sync-images
@@ -63,12 +68,8 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     let updated = 0
     let errors: string[] = []
 
-    // Vérifier les variables MinIO
-    if (
-      !process.env.MINIO_ENDPOINT ||
-      !process.env.MINIO_ACCESS_KEY ||
-      !process.env.MINIO_SECRET_KEY
-    ) {
+    const minio = createMinioClientFromEnv()
+    if (!minio) {
       return res.status(500).json({
         error: "Configuration MinIO manquante",
         message:
@@ -76,18 +77,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       })
     }
 
-    const { Client } = await import("minio")
-    const rawEndpoint = process.env.MINIO_ENDPOINT
-    const endpoint = rawEndpoint.replace(/^https?:\/\//, "")
-    const bucket = process.env.MINIO_BUCKET || "medusa-media"
-
-    const minioClient = new Client({
-      endPoint: endpoint,
-      port: 443,
-      useSSL: true,
-      accessKey: process.env.MINIO_ACCESS_KEY,
-      secretKey: process.env.MINIO_SECRET_KEY,
-    })
+    const { client: minioClient, endPoint: endpoint, bucket } = minio
 
     for (const medusaProduct of productsWithOdooId) {
       try {
@@ -116,11 +106,8 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
           if (shouldUploadMain) {
             const filename = `odoo/products/${medusaProduct.id}/main-${Date.now()}.png`
             const buffer = Buffer.from(odooProduct.image_512, "base64")
-            await minioClient.putObject(bucket, filename, buffer, buffer.length, {
-              "Content-Type": "image/png",
-              "x-amz-acl": "public-read",
-            })
-            const url = `https://${endpoint}/${bucket}/${filename}`
+            await minioClient.putObject(bucket, filename, buffer, buffer.length, minioObjectMeta("image/png"))
+            const url = minioPublicUrl(endpoint, bucket, filename)
             newImageUrls.push(url)
             console.log(
               `📷 [SYNC-IMAGES] Image principale ${force ? 're-uploadée' : 'ajoutée'} pour ${medusaProduct.id}`
@@ -158,13 +145,10 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
                   filename,
                   buffer,
                   buffer.length,
-                  {
-                    "Content-Type": "image/png",
-                    "x-amz-acl": "public-read",
-                  }
+                  minioObjectMeta("image/png")
                 )
 
-                const url = `https://${endpoint}/${bucket}/${filename}`
+                const url = minioPublicUrl(endpoint, bucket, filename)
                 newImageUrls.push(url)
               }
             }

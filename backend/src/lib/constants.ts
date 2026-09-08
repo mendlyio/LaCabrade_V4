@@ -1,6 +1,7 @@
 import { loadEnv } from '@medusajs/framework/utils'
 
 import { assertValue } from 'utils/assert-value'
+import { ensureAbsoluteHttpUrl } from './minio'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
@@ -12,7 +13,9 @@ export const IS_DEV = process.env.NODE_ENV === 'development'
 /**
  * Public URL for the backend
  */
-export const BACKEND_URL = process.env.BACKEND_PUBLIC_URL ?? process.env.RAILWAY_PUBLIC_DOMAIN_VALUE ?? 'http://localhost:9000'
+export const BACKEND_URL = ensureAbsoluteHttpUrl(
+  process.env.BACKEND_PUBLIC_URL ?? process.env.RAILWAY_PUBLIC_DOMAIN_VALUE
+)
 
 /**
  * Database URL for Postgres instance used by the backend

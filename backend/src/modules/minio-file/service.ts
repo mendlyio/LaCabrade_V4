@@ -9,6 +9,15 @@ import {
 import { Client } from 'minio';
 import path from 'path';
 import { ulid } from 'ulid';
+import { Readable } from 'stream';
+import {
+  DEFAULT_MINIO_BUCKET,
+  createMinioClient,
+  minioObjectMeta,
+  minioPublicUrl,
+  normalizeMinioFileKey,
+  stripMinioProtocol,
+} from '../../lib/minio';
 
 type InjectedDependencies = {
   logger: Logger
@@ -28,10 +37,8 @@ export interface MinioFileProviderOptions {
   bucket?: string
 }
 
-const DEFAULT_BUCKET = 'medusa-media'
-
 /**
- * Service to handle file storage using MinIO.
+ * Service to handle file storage using MinIO / Railway Bucket.
  */
 class MinioFileProviderService extends AbstractFileProviderService {
   static identifier = 'minio-file'
@@ -39,6 +46,7 @@ class MinioFileProviderService extends AbstractFileProviderService {
   protected readonly logger_: Logger
   protected client: Client
   protected readonly bucket: string
+  protected readonly host: string
 
   constructor({ logger }: InjectedDependencies, options: MinioFileProviderOptions) {
     super()
@@ -50,28 +58,21 @@ class MinioFileProviderService extends AbstractFileProviderService {
       bucket: options.bucket
     }
 
-    // Use provided bucket or default
-    this.bucket = this.config_.bucket || DEFAULT_BUCKET
+    this.bucket = this.config_.bucket || DEFAULT_MINIO_BUCKET
+    this.host = stripMinioProtocol(this.config_.endPoint)
     this.logger_.info(`MinIO service initialized with bucket: ${this.bucket}`)
+    this.logger_.info(`Initializing MinIO client with endpoint: ${this.host}`)
 
-    // Initialize Minio client
-    // Note: Railway provides endpoints without protocol
-    const endPoint = this.config_.endPoint.replace(/^https?:\/\//, '')
-    
-    this.logger_.info(`Initializing MinIO client with endpoint: ${endPoint}`)
-
-    this.client = new Client({
-      endPoint: endPoint,
-      port: 443,
-      useSSL: true,
+    this.client = createMinioClient({
+      endPoint: this.host,
       accessKey: this.config_.accessKey,
-      secretKey: this.config_.secretKey
+      secretKey: this.config_.secretKey,
+      bucket: this.bucket,
     })
 
-    // Initialize bucket and policy
     this.initializeBucket().catch(error => {
       this.logger_.error(`Failed to initialize MinIO bucket: ${error.message}`)
-      this.logger_.error(`MinIO Configuration: Endpoint=${endPoint}, Bucket=${this.bucket}`)
+      this.logger_.error(`MinIO Configuration: Endpoint=${this.host}, Bucket=${this.bucket}`)
     })
   }
 
@@ -92,54 +93,43 @@ class MinioFileProviderService extends AbstractFileProviderService {
     })
   }
 
+  private publicUrl(fileKey: string): string {
+    return minioPublicUrl(this.host, this.bucket, fileKey)
+  }
+
+  private fileKey(fileKey: string | undefined): string | null {
+    return normalizeMinioFileKey(fileKey, this.bucket, this.host)
+  }
+
   private async initializeBucket(): Promise<void> {
     try {
-      // Check if bucket exists
       const bucketExists = await this.client.bucketExists(this.bucket)
       
       if (!bucketExists) {
-        // Create the bucket
         await this.client.makeBucket(this.bucket)
         this.logger_.info(`Created bucket: ${this.bucket}`)
-
-        // Set bucket policy to allow public read access
-        const policy = {
-          Version: '2012-10-17',
-          Statement: [
-            {
-              Sid: 'PublicRead',
-              Effect: 'Allow',
-              Principal: '*',
-              Action: ['s3:GetObject'],
-              Resource: [`arn:aws:s3:::${this.bucket}/*`]
-            }
-          ]
-        }
-
-        await this.client.setBucketPolicy(this.bucket, JSON.stringify(policy))
-        this.logger_.info(`Set public read policy for bucket: ${this.bucket}`)
       } else {
         this.logger_.info(`Using existing bucket: ${this.bucket}`)
-        
-        // Verify/update policy on existing bucket
-        try {
-          const policy = {
-            Version: '2012-10-17',
-            Statement: [
-              {
-                Sid: 'PublicRead',
-                Effect: 'Allow',
-                Principal: '*',
-                Action: ['s3:GetObject'],
-                Resource: [`arn:aws:s3:::${this.bucket}/*`]
-              }
-            ]
+      }
+
+      const policy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Sid: 'PublicRead',
+            Effect: 'Allow',
+            Principal: '*',
+            Action: ['s3:GetObject'],
+            Resource: [`arn:aws:s3:::${this.bucket}/*`]
           }
-          await this.client.setBucketPolicy(this.bucket, JSON.stringify(policy))
-          this.logger_.info(`Updated public read policy for existing bucket: ${this.bucket}`)
-        } catch (policyError) {
-          this.logger_.warn(`Failed to update policy for existing bucket: ${policyError.message}`)
-        }
+        ]
+      }
+
+      try {
+        await this.client.setBucketPolicy(this.bucket, JSON.stringify(policy))
+        this.logger_.info(`Set public read policy for bucket: ${this.bucket}`)
+      } catch (policyError) {
+        this.logger_.warn(`Failed to update policy for existing bucket: ${policyError.message}`)
       }
     } catch (error) {
       this.logger_.error(`Error initializing bucket: ${error.message}`)
@@ -169,21 +159,15 @@ class MinioFileProviderService extends AbstractFileProviderService {
       const fileKey = `${parsedFilename.name}-${ulid()}${parsedFilename.ext}`
       const content = Buffer.from(file.content, 'binary')
 
-      // Upload file with public-read access
       await this.client.putObject(
         this.bucket,
         fileKey,
         content,
         content.length,
-        {
-          'Content-Type': file.mimeType,
-          'x-amz-meta-original-filename': file.filename,
-          'x-amz-acl': 'public-read'
-        }
+        minioObjectMeta(file.mimeType, file.filename)
       )
 
-      // Generate URL using the endpoint and bucket
-      const url = `https://${this.config_.endPoint}/${this.bucket}/${fileKey}`
+      const url = this.publicUrl(fileKey)
 
       this.logger_.info(`Successfully uploaded file ${fileKey} to MinIO bucket ${this.bucket}`)
 
@@ -201,28 +185,47 @@ class MinioFileProviderService extends AbstractFileProviderService {
   }
 
   async delete(
-    fileData: ProviderDeleteFileDTO
+    files: ProviderDeleteFileDTO | ProviderDeleteFileDTO[]
   ): Promise<void> {
-    if (!fileData?.fileKey) {
-      throw new MedusaError(
-        MedusaError.Types.INVALID_DATA,
-        'No file key provided'
-      )
-    }
+    const fileArray = Array.isArray(files) ? files : [files]
 
-    try {
-      await this.client.removeObject(this.bucket, fileData.fileKey)
-      this.logger_.info(`Successfully deleted file ${fileData.fileKey} from MinIO bucket ${this.bucket}`)
-    } catch (error) {
-      // Log error but don't throw if file doesn't exist
-      this.logger_.warn(`Failed to delete file ${fileData.fileKey}: ${error.message}`)
+    for (const fileData of fileArray) {
+      const fileKey = this.fileKey(fileData?.fileKey)
+      if (!fileKey) {
+        this.logger_.warn('MinIO delete skipped: no file key provided')
+        continue
+      }
+
+      try {
+        await this.client.removeObject(this.bucket, fileKey)
+        this.logger_.info(`Successfully deleted file ${fileKey} from MinIO bucket ${this.bucket}`)
+      } catch (error) {
+        this.logger_.warn(`Failed to delete file ${fileKey}: ${error.message}`)
+      }
     }
   }
 
   async getPresignedDownloadUrl(
     fileData: ProviderGetFileDTO
   ): Promise<string> {
-    if (!fileData?.fileKey) {
+    const fileKey = this.fileKey(fileData?.fileKey)
+    if (!fileKey) {
+      throw new MedusaError(
+        MedusaError.Types.INVALID_DATA,
+        'No file key provided'
+      )
+    }
+
+    // Objects are public-read. Returning the stable HTTPS URL avoids MinIO
+    // presign quirks (region / path-style / http:443) that break the admin UI.
+    return this.publicUrl(fileKey)
+  }
+
+  async getDownloadStream(
+    fileData: ProviderGetFileDTO
+  ): Promise<Readable> {
+    const fileKey = this.fileKey(fileData?.fileKey)
+    if (!fileKey) {
       throw new MedusaError(
         MedusaError.Types.INVALID_DATA,
         'No file key provided'
@@ -230,20 +233,25 @@ class MinioFileProviderService extends AbstractFileProviderService {
     }
 
     try {
-      const url = await this.client.presignedGetObject(
-        this.bucket,
-        fileData.fileKey,
-        24 * 60 * 60 // URL expires in 24 hours
-      )
-      this.logger_.info(`Generated presigned URL for file ${fileData.fileKey}`)
-      return url
+      return await this.client.getObject(this.bucket, fileKey)
     } catch (error) {
-      this.logger_.error(`Failed to generate presigned URL: ${error.message}`)
+      this.logger_.error(`Failed to stream file ${fileKey}: ${error.message}`)
       throw new MedusaError(
         MedusaError.Types.UNEXPECTED_STATE,
-        `Failed to generate presigned URL: ${error.message}`
+        `Failed to stream file: ${error.message}`
       )
     }
+  }
+
+  async getAsBuffer(
+    fileData: ProviderGetFileDTO
+  ): Promise<Buffer> {
+    const stream = await this.getDownloadStream(fileData)
+    const chunks: Buffer[] = []
+    for await (const chunk of stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+    }
+    return Buffer.concat(chunks)
   }
 }
 

@@ -25,6 +25,11 @@ import {
   findExistingVariant,
   isVariantCollisionError,
 } from "../utils/odoo-variant-match"
+import {
+  createMinioClientFromEnv,
+  minioObjectMeta,
+  minioPublicUrl,
+} from "../lib/minio"
 
 type SyncFromErpInput = Pagination & {
   dryRun?: boolean
@@ -753,35 +758,21 @@ export const syncFromErpWorkflow = createWorkflow(
             // Image Upload (MinIO) - Upload toutes les images depuis Odoo
             if (created) {
                 try {
-                    // Vérifier que les variables MinIO sont définies
-                    if (!process.env.MINIO_ENDPOINT || !process.env.MINIO_ACCESS_KEY || !process.env.MINIO_SECRET_KEY) {
+                    const minio = createMinioClientFromEnv()
+                    if (!minio) {
                         console.warn(`⚠️ [WORKFLOW] Variables MinIO non définies, upload d'image ignoré pour produit ${created.id}`)
                     } else {
                         const imageUrls: string[] = []
-                        const { Client } = await import('minio')
-                        const rawEndpoint = process.env.MINIO_ENDPOINT
-                        const endpoint = rawEndpoint.replace(/^https?:\/\//, '')
-                        const bucket = process.env.MINIO_BUCKET || 'medusa-media'
-                        
-                        const client = new Client({
-                            endPoint: endpoint,
-                            port: 443, 
-                            useSSL: true,
-                            accessKey: process.env.MINIO_ACCESS_KEY,
-                            secretKey: process.env.MINIO_SECRET_KEY
-                        })
+                        const { client, endPoint: endpoint, bucket } = minio
                         
                         // Upload image principale (image_512) en premier
                         if (productData.odoo_image_base64) {
                             const filename = `odoo/products/${created.id}/main-${Date.now()}.png`
                             const buffer = Buffer.from(productData.odoo_image_base64, 'base64')
                             
-                            await client.putObject(bucket, filename, buffer, buffer.length, { 
-                                'Content-Type': 'image/png', 
-                                'x-amz-acl': 'public-read' 
-                            })
+                            await client.putObject(bucket, filename, buffer, buffer.length, minioObjectMeta('image/png'))
                             
-                            const url = `https://${endpoint}/${bucket}/${filename}`
+                            const url = minioPublicUrl(endpoint, bucket, filename)
                             imageUrls.push(url)
                             console.log(`📷 [WORKFLOW] Image principale uploadée: ${url}`)
                         }
@@ -801,12 +792,9 @@ export const syncFromErpWorkflow = createWorkflow(
                                         const filename = `odoo/products/${created.id}/img-${img.id}-${Date.now()}.png`
                                         const buffer = Buffer.from(img.image, 'base64')
                                         
-                                        await client.putObject(bucket, filename, buffer, buffer.length, { 
-                                            'Content-Type': 'image/png', 
-                                            'x-amz-acl': 'public-read' 
-                                        })
+                                        await client.putObject(bucket, filename, buffer, buffer.length, minioObjectMeta('image/png'))
                                         
-                                        const url = `https://${endpoint}/${bucket}/${filename}`
+                                        const url = minioPublicUrl(endpoint, bucket, filename)
                                         imageUrls.push(url)
                                         console.log(`✅ [WORKFLOW] Image ${img.id} uploadée (sequence: ${img.sequence})`)
                                     }
@@ -1066,32 +1054,19 @@ export const syncFromErpWorkflow = createWorkflow(
                     // 2b) Re-sync images depuis Odoo (si le produit a des images Odoo)
                     if (!priceOnly && (p.odoo_image_base64 || (p.odoo_image_ids && p.odoo_image_ids.length > 0))) {
                       try {
-                        if (!process.env.MINIO_ENDPOINT || !process.env.MINIO_ACCESS_KEY || !process.env.MINIO_SECRET_KEY) {
+                        const minio = createMinioClientFromEnv()
+                        if (!minio) {
                           console.warn(`⚠️ [UPDATE] Variables MinIO non définies, images ignorées pour ${p.id}`)
                         } else {
                           const imageUrls: string[] = []
-                          const { Client } = await import('minio')
-                          const rawEndpoint = process.env.MINIO_ENDPOINT
-                          const endpoint = rawEndpoint.replace(/^https?:\/\//, '')
-                          const bucket = process.env.MINIO_BUCKET || 'medusa-media'
-
-                          const client = new Client({
-                            endPoint: endpoint,
-                            port: 443,
-                            useSSL: true,
-                            accessKey: process.env.MINIO_ACCESS_KEY,
-                            secretKey: process.env.MINIO_SECRET_KEY,
-                          })
+                          const { client, endPoint: endpoint, bucket } = minio
 
                           // Upload image principale (image_512)
                           if (p.odoo_image_base64) {
                             const filename = `odoo/products/${p.id}/main-${Date.now()}.png`
                             const buffer = Buffer.from(p.odoo_image_base64, 'base64')
-                            await client.putObject(bucket, filename, buffer, buffer.length, {
-                              'Content-Type': 'image/png',
-                              'x-amz-acl': 'public-read',
-                            })
-                            const url = `https://${endpoint}/${bucket}/${filename}`
+                            await client.putObject(bucket, filename, buffer, buffer.length, minioObjectMeta('image/png'))
+                            const url = minioPublicUrl(endpoint, bucket, filename)
                             imageUrls.push(url)
                             console.log(`📷 [UPDATE] Image principale re-uploadée: ${url}`)
                           }
@@ -1107,11 +1082,8 @@ export const syncFromErpWorkflow = createWorkflow(
                                 if (img.image && typeof img.image === 'string') {
                                   const filename = `odoo/products/${p.id}/img-${img.id}-${Date.now()}.png`
                                   const buffer = Buffer.from(img.image, 'base64')
-                                  await client.putObject(bucket, filename, buffer, buffer.length, {
-                                    'Content-Type': 'image/png',
-                                    'x-amz-acl': 'public-read',
-                                  })
-                                  const url = `https://${endpoint}/${bucket}/${filename}`
+                                  await client.putObject(bucket, filename, buffer, buffer.length, minioObjectMeta('image/png'))
+                                  const url = minioPublicUrl(endpoint, bucket, filename)
                                   imageUrls.push(url)
                                 }
                               }
