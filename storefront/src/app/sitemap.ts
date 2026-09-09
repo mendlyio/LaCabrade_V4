@@ -1,5 +1,5 @@
 import { MetadataRoute } from "next"
-import { getProductsList } from "@lib/data/products"
+import { listProductHandles } from "@lib/data/products"
 import { listCategories } from "@lib/data/categories"
 import { getCollectionsList } from "@lib/data/collections"
 import { listBrands } from "@lib/data/brands"
@@ -60,25 +60,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
 async function fetchAllProducts(prefix: string): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = []
-  let allProducts: { handle?: string | null }[] = []
-  let page = 1
-  let hasMore = true
+  const handles = await listProductHandles(DEFAULT_COUNTRY)
 
-  while (hasMore && page <= 50) {
-    const { response, nextPage } = await getProductsList({
-      pageParam: page,
-      queryParams: { limit: 100 },
-      countryCode: DEFAULT_COUNTRY,
-    })
-    allProducts = allProducts.concat(response.products)
-    hasMore = nextPage !== null
-    page++
-  }
-
-  for (const product of allProducts) {
-    if (!product.handle) continue
+  for (const handle of handles) {
     entries.push({
-      url: `${prefix}/products/${product.handle}`,
+      url: `${prefix}/products/${handle}`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.8,

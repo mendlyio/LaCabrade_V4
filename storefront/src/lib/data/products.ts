@@ -162,6 +162,80 @@ export const getProductsList = cache(async function ({
 })
 
 /**
+ * Handles produits pour le sitemap uniquement.
+ * getProductsList charge variantes + prix : 15 pages × 100 fiches
+ * tenaient ~2,3 Mo dans le data cache Next (`/sitemap.xml`, limite 2 Mo)
+ * → cache raté à chaque crawl, rescans catalogue, pression RAM.
+ * Ici on ne demande que `handle`, même filtres (région BE, pas gift card).
+ * Boutique / checkout : getProductsList et getProductsById inchangés.
+ */
+const _fetchProductHandles = async (regionId: string): Promise<string[]> => {
+  const handles: string[] = []
+  const BATCH = 500
+
+  const pushHandles = (products: { handle?: string | null }[]) => {
+    for (const product of products) {
+      if (!product.handle || product.handle === GIFT_CARD_PRODUCT_HANDLE) continue
+      handles.push(product.handle)
+    }
+  }
+
+  const first = await sdk.store.product.list(
+    {
+      limit: BATCH,
+      offset: 0,
+      region_id: regionId,
+      fields: "handle",
+      is_giftcard: false,
+    },
+    { next: { tags: ["products"], revalidate: 3600 } }
+  )
+
+  pushHandles(first.products)
+  const total = first.count || 0
+
+  if (total > BATCH) {
+    const remaining: Promise<{ products: { handle?: string | null }[] }>[] = []
+    for (let offset = BATCH; offset < total; offset += BATCH) {
+      remaining.push(
+        sdk.store.product.list(
+          {
+            limit: BATCH,
+            offset,
+            region_id: regionId,
+            fields: "handle",
+            is_giftcard: false,
+          },
+          { next: { tags: ["products"], revalidate: 3600 } }
+        )
+      )
+    }
+    const batches = await Promise.all(remaining)
+    batches.forEach((batch) => pushHandles(batch.products))
+  }
+
+  return handles
+}
+
+const _cachedFetchProductHandles = unstable_cache(
+  _fetchProductHandles,
+  ["product-handles-sitemap"],
+  { revalidate: 3600, tags: ["products"] }
+)
+
+export const listProductHandles = cache(async function (
+  countryCode: string
+): Promise<string[]> {
+  const region = await getRegion(countryCode)
+
+  if (!region) {
+    return []
+  }
+
+  return _cachedFetchProductHandles(region.id)
+})
+
+/**
  * This will fetch 100 products to the Next.js cache and sort them based on the sortBy parameter.
  * It will then return the paginated products based on the page and limit parameters.
  * @param prioritizeLcEquestrian - page recherche : produits LC-Equestrian en premier
