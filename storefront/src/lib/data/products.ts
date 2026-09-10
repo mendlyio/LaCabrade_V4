@@ -73,6 +73,56 @@ export const getProductByHandle = cache(async function (
 })
 
 /**
+ * Garde uniquement ce que les grilles / filtres / « charger plus » lisent.
+ * `*variants.calculated_price` ramène aussi description HTML : 100 fiches
+ * ≈ 2,4 Mo, Next refuse le cache, chaque /marques/* rescannait le catalogue
+ * (logs 09–10/09, RAM storefront 1,96/2 Go). Filtrage inchangé.
+ */
+function slimListedProduct(product: HttpTypes.StoreProduct): HttpTypes.StoreProduct {
+  const collection = product.collection
+    ? {
+        id: product.collection.id,
+        title: product.collection.title,
+        handle: product.collection.handle,
+      }
+    : product.collection
+
+  return {
+    id: product.id,
+    title: product.title,
+    handle: product.handle,
+    thumbnail: product.thumbnail,
+    created_at: product.created_at,
+    metadata: product.metadata,
+    collection_id: product.collection_id,
+    collection: collection as HttpTypes.StoreProduct["collection"],
+    categories: (product.categories || []).map((category) => ({
+      id: category.id,
+      handle: category.handle,
+      name: category.name,
+    })) as HttpTypes.StoreProduct["categories"],
+    images: (product.images || []).map((image) => ({
+      id: image.id,
+      url: image.url,
+    })) as HttpTypes.StoreProduct["images"],
+    options: (product.options || []).map((option) => ({
+      id: option.id,
+      title: option.title,
+    })) as HttpTypes.StoreProduct["options"],
+    variants: (product.variants || []).map((variant) => ({
+      id: variant.id,
+      title: variant.title,
+      manage_inventory: variant.manage_inventory,
+      allow_backorder: variant.allow_backorder,
+      inventory_quantity: variant.inventory_quantity,
+      calculated_price: variant.calculated_price,
+      prices: variant.prices,
+      options: variant.options,
+    })) as HttpTypes.StoreProduct["variants"],
+  } as HttpTypes.StoreProduct
+}
+
+/**
  * Listes boutique / marques / catégories.
  * Next 15 : `{ tags }` seul = no-store. Les pages marques et catégories
  * relisent tout le catalogue (lots de 100, en parallèle) pour filtrer
@@ -110,7 +160,9 @@ const _fetchProductsList = async (
       { next: { tags: ["products"], revalidate: 3600 } }
     )
     .then(({ products, count }) => {
-      const filtered = products.filter((p) => p.handle !== GIFT_CARD_PRODUCT_HANDLE)
+      const filtered = products
+        .filter((p) => p.handle !== GIFT_CARD_PRODUCT_HANDLE)
+        .map(slimListedProduct)
       const filteredCount = count - (products.length - filtered.length)
       const nextPage = filteredCount > offset + limit ? pageParam + 1 : null
 
