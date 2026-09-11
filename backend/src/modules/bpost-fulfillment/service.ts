@@ -154,29 +154,10 @@ export default class BpostFulfillmentProviderService extends AbstractFulfillment
         console.warn("Bpost: Impossible de récupérer l'étiquette immédiatement", e)
       }
 
-      // Persister sur la commande : sans ça, l'admin ne peut pas re-télécharger après reload
-      // (download-label lit order.metadata, pas seulement fulfillment.data).
-      if (labelUrl || labelData || result.shipmentId || result.clientReference) {
-        try {
-          const { Modules } = await import("@medusajs/framework/utils")
-          const orderModule = this.container.resolve(Modules.ORDER) as any
-          const existingMeta = (order?.metadata as Record<string, any>) || {}
-          const nextMeta: Record<string, any> = {
-            ...existingMeta,
-            bpost_shipment_id: result.shipmentId || result.clientReference,
-            bpost_client_reference: result.clientReference || result.shipmentId,
-          }
-          if (labelUrl) nextMeta.bpost_label_url = labelUrl
-          if (labelData) nextMeta.bpost_label_data = labelData
-          if (trackingNumber) nextMeta.bpost_tracking = trackingNumber
-          await orderModule.updateOrders([{ id: order.id, metadata: nextMeta }])
-          console.log(`[Bpost] Métadonnées étiquette persistées sur ${order.id}`)
-        } catch (metaErr: any) {
-          console.warn(
-            `[Bpost] Impossible de persister metadata commande (fulfillment cradle?): ${metaErr?.message}`
-          )
-        }
-      }
+      // Ne pas this.container.resolve(ORDER) ici : le cradle fulfillment
+      // lève AwilixResolutionError (Could not resolve 'resolve'). Le PDF
+      // reste dans fulfillment.data ; le subscriber fulfillment.created
+      // (scope app) copie vers order.metadata. Seuil / payload inchangés.
 
       return {
         data: {

@@ -125,6 +125,8 @@ describe("BpostFulfillmentProviderService.createFulfillment", () => {
     })
     expect(mockGetLabel).toHaveBeenCalledWith("shp_1", "ref_1")
     expect(result.data.label_url).toBe("https://labels.example/1.pdf")
+    expect(result.data.label_data).toBeUndefined()
+    expect(result.data.shipmentId).toBe("shp_1")
     expect(result.data.public_tracking_url).toContain("323200000000000000")
   })
 
