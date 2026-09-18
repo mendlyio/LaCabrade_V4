@@ -2,6 +2,7 @@ import { Modules } from "@medusajs/framework/utils"
 import { IOrderModuleService, ICartModuleService } from "@medusajs/framework/types"
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
 import { GIFT_CARD_TRACKING_MODULE } from "../modules/gift-card-tracking/constants"
+import { resolveGiftCardFaceValueEuros } from "../utils/gift-card-amount"
 
 type AppliedGiftCard = { code: string; balance: number }
 
@@ -66,11 +67,19 @@ export default async function giftCardUsedHandler({
       appliedGiftCards.map((g) => g.code)
     )
 
-    // Compute order total in euros (Odoo products = euros, gift card items = centimes).
+    // Compute order total in euros. Odoo + bons cadeau sont en euros ;
+    // un unit_price catalogue en centimes (GC-050 = 5000) est renormalisé.
     const itemTotalEuros = (order.items || []).reduce((sum, item: any) => {
       const isGC = !!(item.metadata as any)?.is_gift_card
       const unitPrice = Number(item.unit_price ?? 0)
-      const price = isGC ? unitPrice / 100 : unitPrice
+      const price = isGC
+        ? (resolveGiftCardFaceValueEuros({
+            sku: item.variant_sku,
+            title: item.title || item.product_title,
+            unitPrice,
+            metadataFaceValue: (item.metadata as any)?.face_value_euros,
+          }) ?? 0)
+        : unitPrice
       return sum + price * (item.quantity ?? 1)
     }, 0)
 

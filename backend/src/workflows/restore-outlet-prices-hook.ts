@@ -38,6 +38,7 @@ import { refreshCartItemsWorkflow, createCartCreditLinesWorkflow } from "@medusa
 import { StepResponse } from "@medusajs/framework/workflows-sdk"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import type { ICartModuleService } from "@medusajs/framework/types"
+import { resolveGiftCardFaceValueEuros } from "../utils/gift-card-amount"
 
 // ─── Constantes PO ──────────────────────────────────────────────────────────
 const PO_CODE = "PO_GLOBAL_10"
@@ -180,6 +181,51 @@ function isDigitalShippingMethod(sm: any): boolean {
   return name.includes("numérique") || name.includes("digital") || sm.data?.mode === "digital"
 }
 
+async function restoreGiftCardEuroPrices(
+  cartModuleService: ICartModuleService,
+  cartId: string,
+  items: any[]
+): Promise<void> {
+  const gcToFix = items.filter((item: any) => {
+    if (!isGiftCardItem(item)) return false
+    const face = resolveGiftCardFaceValueEuros({
+      sku: item.variant_sku,
+      title: item.title || item.product_title,
+      unitPrice: item.unit_price,
+      metadataFaceValue: (item.metadata as any)?.face_value_euros,
+    })
+    if (face == null) return false
+    return Math.abs(Number(item.unit_price ?? 0) - face) > 0.01
+  })
+
+  if (gcToFix.length === 0) return
+
+  await Promise.all(
+    gcToFix.map((item: any) => {
+      const face = resolveGiftCardFaceValueEuros({
+        sku: item.variant_sku,
+        title: item.title || item.product_title,
+        unitPrice: item.unit_price,
+        metadataFaceValue: (item.metadata as any)?.face_value_euros,
+      }) as number
+      item.unit_price = face
+      item.metadata = {
+        ...((item.metadata as Record<string, unknown>) || {}),
+        is_gift_card: true,
+        face_value_euros: face,
+      }
+      return cartModuleService.updateLineItems(item.id, {
+        unit_price: face,
+        is_custom_price: true,
+        metadata: item.metadata,
+      })
+    })
+  )
+  console.log(
+    `[CartHook] Panier ${cartId} — bons cadeau: restauré ${gcToFix.length} unit_price en euros`
+  )
+}
+
 // ─── Hook ───────────────────────────────────────────────────────────────────
 
 refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
@@ -204,6 +250,8 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
 
       const items = (cart.items ?? []) as any[]
       if (items.length === 0) return new StepResponse(undefined)
+
+      await restoreGiftCardEuroPrices(cartModuleService, cartId, items)
 
       const allItemIds = items.map((i: any) => i.id)
 

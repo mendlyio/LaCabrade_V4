@@ -68,8 +68,8 @@ export default function GiftCardForm({ variants, countryCode }: GiftCardFormProp
       newErrors.message = "Le message ne peut pas dépasser 500 caractères"
     }
     if (selectedAmount === "custom") {
-      const amount = Number(customAmount)
-      if (!amount || amount < 10) {
+      const amount = Number(String(customAmount).replace(",", ".").trim())
+      if (!Number.isFinite(amount) || amount < 10) {
         newErrors.amount = "Le montant minimum est de 10€"
       } else if (amount > 500) {
         newErrors.amount = "Le montant maximum est de 500€"
@@ -91,9 +91,19 @@ export default function GiftCardForm({ variants, countryCode }: GiftCardFormProp
     try {
       const variant = getVariantForAmount(selectedAmount)
       const isCustom = selectedAmount === "custom"
-      const customAmt = isCustom ? Number(customAmount) : undefined
+      const customAmt = isCustom
+        ? Number(String(customAmount).replace(",", ".").trim())
+        : undefined
+      if (isCustom && (!Number.isFinite(customAmt) || (customAmt as number) > 500)) {
+        setErrors((prev) => ({
+          ...prev,
+          amount: "Le montant maximum est de 500€",
+        }))
+        setIsLoading(false)
+        return
+      }
       // Si montant fixe mais variant non trouvé (ex: produit non seedé), fallback sur custom_amount
-      const variantId = variant?.id
+      const variantId = isCustom ? undefined : variant?.id
       const fallbackCustomAmount =
         !variantId && !isCustom && ["25", "50", "100"].includes(selectedAmount)
           ? Number(selectedAmount)
@@ -101,7 +111,7 @@ export default function GiftCardForm({ variants, countryCode }: GiftCardFormProp
 
       const result = await addGiftCardToCart({
         variantId: variantId ?? undefined,
-        customAmount: customAmt ?? fallbackCustomAmount,
+        customAmount: isCustom ? customAmt : fallbackCustomAmount,
         recipientEmail: recipientEmail.trim(),
         recipientName: recipientName.trim(),
         message: message.trim(),
