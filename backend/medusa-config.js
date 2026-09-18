@@ -289,5 +289,6 @@ const medusaConfig = {
   ]
 };
 
-console.log(JSON.stringify(medusaConfig, null, 2));
+// Ne jamais dumper medusaConfig : Stripe / Bpost webhookSecret et clés y figurent.
+// Relancé au boot (ex. OOM 18/09 09:04) ça se retrouve dans les logs Railway.
 export default defineConfig(medusaConfig);

@@ -5,6 +5,10 @@ import { unstable_cache } from "next/cache"
 import { getRegion } from "./regions"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { sortProducts } from "@lib/util/sort-products"
+import {
+  productListCacheQuery,
+  productListRequestFields,
+} from "@lib/util/product-list-fields"
 
 /** Produit Bon Cadeau (ref GC-025) - caché des listes, visible uniquement sur /bon-cadeau */
 export const GIFT_CARD_PRODUCT_HANDLE = "bon-cadeau"
@@ -71,6 +75,36 @@ export const getProductByHandle = cache(async function (
     )
     .then(({ products }) => products[0])
 })
+
+const productListInflight = new Map<
+  string,
+  Promise<{
+    response: { products: HttpTypes.StoreProduct[]; count: number }
+    nextPage: number | null
+    queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+  }>
+>()
+
+function fetchProductsListCoalesced(
+  pageParam: number,
+  queryKey: string,
+  regionId: string
+) {
+  const inflightKey = `${pageParam}\0${queryKey}\0${regionId}`
+  const existing = productListInflight.get(inflightKey)
+  if (existing) {
+    return existing
+  }
+  const promise = _cachedFetchProductsList(pageParam, queryKey, regionId).finally(
+    () => {
+      if (productListInflight.get(inflightKey) === promise) {
+        productListInflight.delete(inflightKey)
+      }
+    }
+  )
+  productListInflight.set(inflightKey, promise)
+  return promise
+}
 
 /**
  * Garde uniquement ce que les grilles / filtres / « charger plus » lisent.
@@ -153,9 +187,11 @@ const _fetchProductsList = async (
         limit,
         offset,
         region_id: regionId,
-        fields: "*variants.calculated_price,+variants.prices",
         ...queryParams,
         is_giftcard: false,
+        // Force -description/-subtitle après le spread : les callers
+        // gardent metadata/catégories, le HTML liste n'est plus chargé.
+        fields: productListRequestFields(queryParams),
       },
       { next: { tags: ["products"], revalidate: 3600 } }
     )
@@ -206,9 +242,9 @@ export const getProductsList = cache(async function ({
     }
   }
 
-  return _cachedFetchProductsList(
+  return fetchProductsListCoalesced(
     pageParam,
-    JSON.stringify(queryParams ?? {}),
+    productListCacheQuery(queryParams),
     region.id
   )
 })
