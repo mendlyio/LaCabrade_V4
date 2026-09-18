@@ -123,12 +123,11 @@ export async function POST(
       type = "fixed"
     } else {
       const custom = validateCustomGiftCardAmount(custom_amount)
-      if (custom.ok) {
-        amountEuros = custom.amount
-      } else {
+      if (!custom.ok) {
         res.status(400).json({ message: custom.message })
         return
       }
+      amountEuros = custom.amount
       type = "custom"
       variant = productVariants[0]
       if (!variant) {

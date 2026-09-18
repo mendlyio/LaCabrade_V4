@@ -29,10 +29,11 @@ describe("parseGiftCardAmount", () => {
 
 describe("validateCustomGiftCardAmount — saisie client en euros", () => {
   it("accepte 10, 50, 500", () => {
-    expect(validateCustomGiftCardAmount(10)).toEqual({ ok: true, amount: 10 })
-    expect(validateCustomGiftCardAmount(50)).toEqual({ ok: true, amount: 50 })
-    expect(validateCustomGiftCardAmount(500)).toEqual({ ok: true, amount: 500 })
-    expect(validateCustomGiftCardAmount("80")).toEqual({ ok: true, amount: 80 })
+    expect(validateCustomGiftCardAmount(10).ok).toBe(true)
+    expect(validateCustomGiftCardAmount(10).amount).toBe(10)
+    expect(validateCustomGiftCardAmount(50).amount).toBe(50)
+    expect(validateCustomGiftCardAmount(500).amount).toBe(500)
+    expect(validateCustomGiftCardAmount("80").amount).toBe(80)
   })
 
   it("rejette 5000 au lieu de le convertir en 50 €", () => {
