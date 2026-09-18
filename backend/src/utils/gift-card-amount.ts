@@ -49,13 +49,16 @@ export function isGiftCardAmountInRange(amount: number): boolean {
  * Montant personnalisé envoyé par le client. Jamais de conversion centimes :
  * 5000 doit être rejeté, pas transformé en 50 €.
  */
-export function validateCustomGiftCardAmount(
-  value: unknown
-): { ok: true; amount: number } | { ok: false; message: string } {
+export function validateCustomGiftCardAmount(value: unknown): {
+  ok: boolean
+  amount: number
+  message: string
+} {
   const parsed = parseGiftCardAmount(value)
   if (parsed == null) {
     return {
       ok: false,
+      amount: 0,
       message: `Le montant personnalisé doit être un nombre entre ${GIFT_CARD_MIN_EUROS}€ et ${GIFT_CARD_MAX_EUROS}€`,
     }
   }
@@ -63,16 +66,18 @@ export function validateCustomGiftCardAmount(
   if (amount < GIFT_CARD_MIN_EUROS) {
     return {
       ok: false,
+      amount: 0,
       message: `Le montant personnalisé doit être d'au moins ${GIFT_CARD_MIN_EUROS}€`,
     }
   }
   if (amount > GIFT_CARD_MAX_EUROS) {
     return {
       ok: false,
+      amount: 0,
       message: `Le montant personnalisé ne peut pas dépasser ${GIFT_CARD_MAX_EUROS}€`,
     }
   }
-  return { ok: true, amount }
+  return { ok: true, amount, message: "" }
 }
 
 /**
