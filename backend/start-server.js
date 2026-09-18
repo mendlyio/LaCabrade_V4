@@ -124,6 +124,90 @@ async function applyPendingGiftCardBalanceFixes(client) {
   }
 }
 
+/**
+ * Filet de sécurité : un GC-050 (50 €) stocké en centimes (5000) ne doit
+ * jamais rester à 5000 € de valeur faciale / de promotion.
+ */
+async function sanitizeGiftCardCentAmounts(client) {
+  try {
+    const { rows } = await client.query(
+      `SELECT id, code, original_amount, balance, promotion_id, status
+       FROM gift_card_tracking
+       WHERE deleted_at IS NULL
+         AND original_amount > 500
+       LIMIT 200`
+    )
+    if (!rows.length) return
+
+    for (const gc of rows) {
+      try {
+      const original = Number(gc.original_amount)
+      const euros = Math.round((original / 100) * 100) / 100
+      if (euros < 10 || euros > 500) {
+        console.log(
+          `[GiftCard Fix] ${gc.code}: original_amount=${original} hors conversion, skip`
+        )
+        continue
+      }
+      const ratio = euros / original
+      const newBalance = Math.round(Number(gc.balance) * ratio * 100) / 100
+      const rawOriginal = JSON.stringify({ value: String(euros), precision: 20 })
+      const rawBalance = JSON.stringify({ value: String(newBalance), precision: 20 })
+      const newStatus = newBalance <= 0 ? "depleted" : gc.status
+
+      try {
+        await client.query(
+          `UPDATE gift_card_tracking
+           SET original_amount = $1,
+               raw_original_amount = $2::jsonb,
+               balance = $3,
+               raw_balance = $4::jsonb,
+               status = $5,
+               updated_at = now()
+           WHERE id = $6`,
+          [euros, rawOriginal, newBalance, rawBalance, newStatus, gc.id]
+        )
+      } catch {
+        await client.query(
+          `UPDATE gift_card_tracking
+           SET original_amount = $1,
+               balance = $2,
+               raw_balance = $3::jsonb,
+               status = $4,
+               updated_at = now()
+           WHERE id = $5`,
+          [euros, newBalance, rawBalance, newStatus, gc.id]
+        )
+      }
+
+      if (gc.promotion_id) {
+        try {
+          await client.query(
+            `UPDATE promotion_application_method
+             SET value = $1,
+                 raw_value = $2::jsonb
+             WHERE promotion_id = $3`,
+            [euros, rawOriginal, gc.promotion_id]
+          )
+        } catch (promoErr) {
+          console.log(
+            `[GiftCard Fix] ${gc.code}: tracking OK, promo non mise à jour (${promoErr.message})`
+          )
+        }
+      }
+
+      console.log(
+        `[GiftCard Fix] ✅ ${gc.code}: ${original} → ${euros}€ (solde ${newBalance}€, centimes → euros)`
+      )
+      } catch (rowErr) {
+        console.log(`[GiftCard Fix] ⚠️ ${gc.code}: ${rowErr.message}`)
+      }
+    }
+  } catch (err) {
+    console.log(`[GiftCard Fix] ⚠️ sanitize centimes: ${err.message}`)
+  }
+}
+
 // Attendre que PostgreSQL soit prêt
 async function waitForPostgres() {
   // Attente initiale pour laisser PostgreSQL démarrer complètement
@@ -148,6 +232,7 @@ async function waitForPostgres() {
       console.log('   ✓ Query test successful');
       // One-shot ops: ajustement soldes bons cadeaux (idempotent)
       await applyPendingGiftCardBalanceFixes(client);
+      await sanitizeGiftCardCentAmounts(client);
       await client.end();
       console.log('✅ PostgreSQL is ready!');
       return true;

@@ -146,9 +146,9 @@ export async function addGiftCardToCart(
     }
 
     // Tous les bons cadeaux passent par l'endpoint backend custom qui
-    // normalise le unit_price en euros (cohérent avec les produits Odoo).
+    // force le unit_price en euros (10–500) et is_custom_price.
     const hasVariant = !!input.variantId
-    const hasCustom = !!input.customAmount
+    const hasCustom = input.customAmount != null && Number.isFinite(Number(input.customAmount))
 
     if (hasVariant || hasCustom) {
       const headers: Record<string, string> = {
@@ -164,8 +164,12 @@ export async function addGiftCardToCart(
         recipient_name: input.recipientName,
         message: input.message || "",
       }
-      if (hasVariant) body.variant_id = input.variantId
-      if (hasCustom) body.custom_amount = input.customAmount
+      // Un seul chemin : le variant fixe ignore le custom_amount (anti 5000→50).
+      if (hasVariant) {
+        body.variant_id = input.variantId
+      } else {
+        body.custom_amount = Number(input.customAmount)
+      }
 
       const res = await fetch(
         `${BACKEND_URL}/store/custom/gift-card-add-to-cart`,

@@ -2,6 +2,7 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
 import type { ICartModuleService } from "@medusajs/framework/types"
 import { GIFT_CARD_TRACKING_MODULE } from "../../../../modules/gift-card-tracking/constants"
+import { normalizeStoredGiftCardAmounts } from "../../../../utils/gift-card-amount"
 
 type AppliedGiftCard = { code: string; balance: number }
 
@@ -57,13 +58,16 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
           continue
         }
 
-        const currentBalance = Number(gc.balance)
-        if (currentBalance <= 0) {
+        const { balance } = normalizeStoredGiftCardAmounts(
+          gc.original_amount,
+          gc.balance
+        )
+        if (balance <= 0) {
           removed.push(applied.code)
           continue
         }
 
-        validated.push({ code: applied.code, balance: currentBalance })
+        validated.push({ code: applied.code, balance })
       } catch {
         // On ne retire pas en cas d'erreur réseau/service pour éviter les faux positifs
         validated.push(applied)

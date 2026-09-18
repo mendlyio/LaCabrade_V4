@@ -7,6 +7,7 @@ import { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
 import { createPromotionsWorkflow } from "@medusajs/medusa/core-flows"
 import { EmailTemplates } from "../modules/email-notifications/templates"
 import { generateGiftCardPDF, generateGiftCardCode } from "../utils/generate-gift-card-pdf"
+import { resolveGiftCardFaceValueEuros } from "../utils/gift-card-amount"
 import { syncGiftCardToOdoo } from "../utils/sync-gift-card-odoo"
 import { ODOO_MODULE } from "../modules/odoo"
 import OdooModuleService from "../modules/odoo/service"
@@ -74,7 +75,19 @@ export default async function giftCardOrderedHandler({
         const recipientEmail = metadata.recipient_email
         const recipientName = metadata.recipient_name || "Cher(e) destinataire"
         const giftMessage = metadata.gift_message || ""
-        const amount = Number(item.unit_price)
+        const amount = resolveGiftCardFaceValueEuros({
+          sku: item.variant_sku,
+          title: item.title || item.product_title,
+          unitPrice: item.unit_price,
+          metadataFaceValue: metadata.face_value_euros,
+        })
+
+        if (amount == null) {
+          console.error(
+            `[GiftCard] Montant invalide pour item ${item.id} (unit_price=${item.unit_price}, sku=${item.variant_sku}) — émission annulée`
+          )
+          continue
+        }
 
         const code = generateGiftCardCode()
         console.log(`[GiftCard] Code généré: ${code} (${amount}€ pour ${recipientEmail})`)

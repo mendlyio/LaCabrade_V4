@@ -1,11 +1,17 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
 import { Modules } from "@medusajs/framework/utils"
 import { ICartModuleService, IProductModuleService } from "@medusajs/framework/types"
+import {
+  GIFT_CARD_PRODUCT_HANDLE,
+  giftCardMetadata,
+  resolveGiftCardFaceValueEuros,
+  validateCustomGiftCardAmount,
+} from "../../../../utils/gift-card-amount"
 
 interface AddGiftCardToCartBody {
   cart_id: string
   variant_id?: string
-  custom_amount?: number
+  custom_amount?: number | string
   recipient_email: string
   recipient_name: string
   message?: string
@@ -15,7 +21,8 @@ interface AddGiftCardToCartBody {
  * POST /store/custom/gift-card-add-to-cart
  *
  * Ajoute un bon cadeau au panier avec les métadonnées du destinataire.
- * Supporte les montants fixes (via variant_id) et les montants personnalisés (via custom_amount).
+ * Le unit_price est toujours en euros (10–500), is_custom_price=true pour
+ * empêcher Medusa de rétablir le prix catalogue en centimes (GC-050 = 5000).
  */
 export async function POST(
   req: MedusaRequest,
@@ -31,7 +38,6 @@ export async function POST(
       message,
     } = req.body as AddGiftCardToCartBody
 
-    // --- Validation ---
     if (!cart_id) {
       res.status(400).json({ message: "cart_id est requis" })
       return
@@ -52,140 +58,128 @@ export async function POST(
       return
     }
 
-    if (!variant_id && !custom_amount) {
+    if (!variant_id && custom_amount === undefined) {
       res.status(400).json({ message: "variant_id ou custom_amount est requis" })
       return
-    }
-
-    if (custom_amount !== undefined) {
-      if (typeof custom_amount !== "number" || custom_amount < 10) {
-        res.status(400).json({ message: "Le montant personnalisé doit être d'au moins 10€" })
-        return
-      }
-      if (custom_amount > 500) {
-        res.status(400).json({ message: "Le montant personnalisé ne peut pas dépasser 500€" })
-        return
-      }
     }
 
     const cartModuleService: ICartModuleService = req.scope.resolve(Modules.CART)
     const productModuleService: IProductModuleService = req.scope.resolve(Modules.PRODUCT)
 
-    const giftCardMetadata = {
-      is_gift_card: true,
+    const recipientMeta = {
       recipient_email: recipient_email.trim().toLowerCase(),
       recipient_name: recipient_name.trim(),
       gift_message: message?.trim() || "",
     }
 
+    const giftCardProducts = await productModuleService.listProducts(
+      { handle: GIFT_CARD_PRODUCT_HANDLE },
+      { relations: ["variants"], take: 1 }
+    )
+
+    if (!giftCardProducts.length) {
+      res.status(404).json({
+        message: "Produit Bon Cadeau non trouvé. Veuillez exécuter le seed.",
+      })
+      return
+    }
+
+    const giftCardProduct = giftCardProducts[0]
+    const productVariants = giftCardProduct.variants || []
+
+    let amountEuros: number
+    let variant: (typeof productVariants)[number] | undefined
+    let type: "fixed" | "custom"
+
     if (variant_id) {
-      // --- Montant fixe via variant ---
-      const workflowEngine = req.scope.resolve(Modules.WORKFLOW_ENGINE) as any
-
-      await workflowEngine.run("add-to-cart", {
-        input: {
-          cart_id,
-          items: [{ variant_id, quantity: 1 }],
-        },
-        transactionId: `gift-card-add-${cart_id}-${Date.now()}`,
-      })
-
-      const cart = await cartModuleService.retrieveCart(cart_id, {
-        relations: ["items"],
-      })
-
-      const lineItem = cart.items?.find(
-        (item: any) => item.variant_id === variant_id
-      )
-
-      if (lineItem) {
-        // Medusa stocke le variant price en centimes, mais tous les produits
-        // de ce projet utilisent l'euro comme unité dans unit_price.
-        // On convertit pour rester cohérent avec les produits Odoo.
-        const priceInCents = Number(lineItem.unit_price) || 0
-        const priceInEuros = priceInCents / 100
-
-        await cartModuleService.updateLineItems(lineItem.id, {
-          unit_price: priceInEuros,
-          metadata: {
-            ...((lineItem.metadata as Record<string, unknown>) || {}),
-            ...giftCardMetadata,
-          },
-        })
+      variant = productVariants.find((v: any) => v.id === variant_id)
+      if (!variant) {
+        const listed = await productModuleService.listProductVariants(
+          { id: variant_id },
+          { take: 1 }
+        )
+        variant = listed[0]
+        if (!variant || (variant as any).product_id !== giftCardProduct.id) {
+          res.status(400).json({ message: "Variant bon cadeau invalide" })
+          return
+        }
       }
 
-      console.log(
-        `[GiftCard] ✅ Bon cadeau (variant ${variant_id}) ajouté au cart ${cart_id} pour ${recipient_email}`
-      )
-
-      res.status(200).json({
-        success: true,
-        type: "fixed",
-        variant_id,
-        recipient_email,
+      const resolved = resolveGiftCardFaceValueEuros({
+        sku: variant.sku,
+        title: variant.title,
+        unitPrice: (variant as any).calculated_price?.calculated_amount,
       })
-    } else if (custom_amount) {
-      // --- Montant personnalisé ---
-      const giftCardProducts = await productModuleService.listProducts(
-        { handle: "bon-cadeau" },
-        { relations: ["variants"], take: 1 }
-      )
 
-      if (!giftCardProducts.length) {
-        res.status(404).json({ message: "Produit Bon Cadeau non trouvé. Veuillez exécuter le seed." })
+      if (resolved == null) {
+        res.status(400).json({
+          message:
+            "Impossible de déterminer le montant de ce bon cadeau (plafond 500€)",
+        })
         return
       }
 
-      const giftCardProduct = giftCardProducts[0]
-
-      let referenceVariant = giftCardProduct.variants?.[0]
-      if (!referenceVariant) {
+      amountEuros = resolved
+      type = "fixed"
+    } else {
+      const custom = validateCustomGiftCardAmount(custom_amount)
+      if (!custom.ok) {
+        res.status(400).json({ message: custom.message })
+        return
+      }
+      amountEuros = custom.amount
+      type = "custom"
+      variant = productVariants[0]
+      if (!variant) {
         const variants = await productModuleService.listProductVariants(
           { product_id: giftCardProduct.id },
           { take: 1 }
         )
-        referenceVariant = variants[0]
+        variant = variants[0]
       }
-
-      if (!referenceVariant) {
+      if (!variant) {
         res.status(500).json({
           message:
             "Aucun variant trouvé pour le produit Bon Cadeau. Exécutez le script de seed : npx medusa exec src/scripts/seed-gift-card.ts",
         })
         return
       }
-
-      // unit_price en euros (cohérent avec les produits Odoo)
-      const [lineItem] = await cartModuleService.addLineItems(cart_id, [
-        {
-          title: `Bon Cadeau ${custom_amount}€`,
-          subtitle: "La Cabrade",
-          thumbnail: giftCardProduct.thumbnail || undefined,
-          product_id: giftCardProduct.id,
-          product_title: giftCardProduct.title,
-          variant_id: referenceVariant.id,
-          variant_title: `Bon Cadeau ${custom_amount}€`,
-          variant_sku: `GC-CUSTOM-${custom_amount}`,
-          quantity: 1,
-          unit_price: custom_amount,
-          is_custom_price: true,
-          is_tax_inclusive: true,
-          metadata: giftCardMetadata,
-        },
-      ])
-
-      console.log(
-        `[GiftCard] ✅ Bon cadeau personnalisé ${custom_amount}€ ajouté au cart ${cart_id} pour ${recipient_email}`
-      )
-
-      res.status(200).json({
-        success: true,
-        type: "custom",
-        amount: custom_amount,
-        line_item_id: lineItem.id,
-        recipient_email,
-      })
     }
+
+    const metadata = giftCardMetadata(recipientMeta, amountEuros)
+    const variantSku =
+      type === "custom" ? `GC-CUSTOM-${amountEuros}` : variant.sku || undefined
+
+    const [lineItem] = await cartModuleService.addLineItems(cart_id, [
+      {
+        title: `Bon Cadeau ${amountEuros}€`,
+        subtitle: "La Cabrade",
+        thumbnail: giftCardProduct.thumbnail || undefined,
+        product_id: giftCardProduct.id,
+        product_title: giftCardProduct.title,
+        variant_id: variant.id,
+        variant_title: `Bon Cadeau ${amountEuros}€`,
+        variant_sku: variantSku,
+        quantity: 1,
+        unit_price: amountEuros,
+        is_custom_price: true,
+        is_tax_inclusive: true,
+        metadata,
+      },
+    ])
+
+    console.log(
+      `[GiftCard] ✅ Bon cadeau ${amountEuros}€ (${type}${variant.sku ? ` ${variant.sku}` : ""}) ajouté au cart ${cart_id} pour ${recipient_email}`
+    )
+
+    res.status(200).json({
+      success: true,
+      type,
+      amount: amountEuros,
+      variant_id: variant.id,
+      line_item_id: lineItem.id,
+      recipient_email,
+    })
   } catch (error: any) {
     console.error("[GiftCard] ❌ Erreur:", error)
     res.status(500).json({

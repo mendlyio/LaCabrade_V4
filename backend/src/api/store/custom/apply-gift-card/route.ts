@@ -2,6 +2,7 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
 import type { ICartModuleService } from "@medusajs/framework/types"
 import { GIFT_CARD_TRACKING_MODULE } from "../../../../modules/gift-card-tracking/constants"
+import { normalizeStoredGiftCardAmounts } from "../../../../utils/gift-card-amount"
 
 type AppliedGiftCard = { code: string; balance: number }
 
@@ -35,7 +36,13 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
       return res.status(400).json({ message: "Ce bon cadeau a déjà été entièrement utilisé" })
     }
 
-    const balance = Number(gc.balance)
+    const { original: normalizedOriginal, balance, renormalized } =
+      normalizeStoredGiftCardAmounts(gc.original_amount, gc.balance)
+    if (renormalized) {
+      console.warn(
+        `[apply-gift-card] ${normalizedCode}: solde ${gc.balance} renormalisé → ${balance}€ (original ${gc.original_amount} → ${normalizedOriginal}€)`
+      )
+    }
     if (balance <= 0) {
       return res.status(400).json({ message: "Ce bon cadeau n'a plus de solde" })
     }
@@ -62,7 +69,7 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
     return res.json({
       gift_card: {
         code: normalizedCode,
-        original_amount: Number(gc.original_amount),
+        original_amount: normalizedOriginal,
         balance,
         status: gc.status,
       },
