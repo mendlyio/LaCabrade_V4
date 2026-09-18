@@ -38,7 +38,7 @@ describe("validateCustomGiftCardAmount — saisie client en euros", () => {
   it("rejette 5000 au lieu de le convertir en 50 €", () => {
     const result = validateCustomGiftCardAmount(5000)
     expect(result.ok).toBe(false)
-    if (!result.ok) {
+    if (result.ok === false) {
       expect(result.message).toContain(String(GIFT_CARD_MAX_EUROS))
     }
     expect(validateCustomGiftCardAmount("5000").ok).toBe(false)
