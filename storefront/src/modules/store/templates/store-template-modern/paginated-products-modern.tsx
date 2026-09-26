@@ -1,5 +1,6 @@
 import { getRegion } from "@lib/data/regions"
 import { getProductsList } from "@lib/data/products"
+import { mapPool } from "@lib/util/map-pool"
 import { slugify } from "@lib/util/slugify"
 import { sortProducts } from "@lib/util/sort-products"
 import { listCategories } from "@lib/data/categories"
@@ -200,19 +201,21 @@ export default async function PaginatedProductsModern({
       allProducts = firstBatch.response.products || []
       const totalProducts = firstBatch.response.count || 0
 
-      // Lots restants récupérés EN PARALLÈLE (et non séquentiellement)
+      // Lots restants toujours en parallèle (filtre / offsets inchangés),
+      // mais bornés : 15 lots de 100 le 25/09 04:03 ont saturé le heap
+      // backend (FATAL + 819 5xx /store/products). 3 lots à la fois.
       if (totalProducts > batchSize) {
-        const requests: Promise<any>[] = []
+        const offsets: number[] = []
         for (let off = batchSize; off < totalProducts; off += batchSize) {
-          requests.push(
-            getProductsList({
-              pageParam: 1,
-              queryParams: { ...queryParams, limit: batchSize, offset: off },
-              countryCode,
-            })
-          )
+          offsets.push(off)
         }
-        const batches = await Promise.all(requests)
+        const batches = await mapPool(offsets, 3, (off) =>
+          getProductsList({
+            pageParam: 1,
+            queryParams: { ...queryParams, limit: batchSize, offset: off },
+            countryCode,
+          })
+        )
         batches.forEach((b) => {
           allProducts = allProducts.concat(b.response.products || [])
         })
