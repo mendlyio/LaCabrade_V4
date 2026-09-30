@@ -1,5 +1,6 @@
 import { getRegion } from "@lib/data/regions"
 import { getProductsList } from "@lib/data/products"
+import { catalogListQuery } from "@lib/util/catalog-list-query"
 import { mapPool } from "@lib/util/map-pool"
 import { slugify } from "@lib/util/slugify"
 import { sortProducts } from "@lib/util/sort-products"
@@ -191,11 +192,14 @@ export default async function PaginatedProductsModern({
       // Fetch ALL products puis filtrage côté serveur/client
       const batchSize = 100
       let allProducts: any[] = []
+      // Sans category_id : une seule clé cache pour toutes les pages
+      // catégorie (même lots que les marques). Filtrage après, inchangé.
+      const listQueryParams = catalogListQuery(queryParams)
 
       // 1er lot : permet de connaître le nombre total de produits
       const firstBatch = await getProductsList({
         pageParam: 1,
-        queryParams: { ...queryParams, limit: batchSize, offset: 0 },
+        queryParams: { ...listQueryParams, limit: batchSize, offset: 0 },
         countryCode,
       })
       allProducts = firstBatch.response.products || []
@@ -212,7 +216,7 @@ export default async function PaginatedProductsModern({
         const batches = await mapPool(offsets, 3, (off) =>
           getProductsList({
             pageParam: 1,
-            queryParams: { ...queryParams, limit: batchSize, offset: off },
+            queryParams: { ...listQueryParams, limit: batchSize, offset: off },
             countryCode,
           })
         )
