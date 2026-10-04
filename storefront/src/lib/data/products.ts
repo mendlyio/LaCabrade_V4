@@ -9,6 +9,11 @@ import {
   productListCacheQuery,
   productListRequestFields,
 } from "@lib/util/product-list-fields"
+import {
+  CATALOG_ASSEMBLY_BATCH,
+  catalogAssemblyQuery,
+} from "@lib/util/catalog-list-query"
+import { mapPool } from "@lib/util/map-pool"
 
 /** Produit Bon Cadeau (ref GC-025) - caché des listes, visible uniquement sur /bon-cadeau */
 export const GIFT_CARD_PRODUCT_HANDLE = "bon-cadeau"
@@ -248,6 +253,86 @@ export const getProductsList = cache(async function ({
     region.id
   )
 })
+
+const catalogAssemblyInflight = new Map<
+  string,
+  Promise<{ products: HttpTypes.StoreProduct[]; count: number }>
+>()
+
+/**
+ * Assemble les lots catalogue (100, max 3 en parallèle) une seule fois
+ * pour toutes les pages catégorie / marque déjà en vol.
+ * catalogListQuery partage déjà la clé cache Next par lot ; sans cette
+ * coalescence, un crawl FR à cache froid tenait N catalogues en RAM
+ * (Killed 04/10 01:26). Filtrage marque / catégorie après coup inchangé.
+ * Panier / checkout : getProductsById n'est pas concerné.
+ */
+export async function getAssembledCatalogList({
+  countryCode,
+  queryParams,
+}: {
+  countryCode: string
+  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+}): Promise<{ products: HttpTypes.StoreProduct[]; count: number }> {
+  const listQueryParams = catalogAssemblyQuery(
+    (queryParams || {}) as Record<string, unknown>
+  )
+  const inflightKey = `${countryCode}\0${productListCacheQuery(
+    listQueryParams as HttpTypes.FindParams & HttpTypes.StoreProductParams
+  )}`
+  const existing = catalogAssemblyInflight.get(inflightKey)
+  if (existing) {
+    return existing
+  }
+
+  const promise = (async () => {
+    const firstBatch = await getProductsList({
+      pageParam: 1,
+      queryParams: {
+        ...listQueryParams,
+        limit: CATALOG_ASSEMBLY_BATCH,
+        offset: 0,
+      },
+      countryCode,
+    })
+    let products = firstBatch.response.products || []
+    const totalProducts = firstBatch.response.count || 0
+
+    if (totalProducts > CATALOG_ASSEMBLY_BATCH) {
+      const offsets: number[] = []
+      for (
+        let off = CATALOG_ASSEMBLY_BATCH;
+        off < totalProducts;
+        off += CATALOG_ASSEMBLY_BATCH
+      ) {
+        offsets.push(off)
+      }
+      const batches = await mapPool(offsets, 3, (off) =>
+        getProductsList({
+          pageParam: 1,
+          queryParams: {
+            ...listQueryParams,
+            limit: CATALOG_ASSEMBLY_BATCH,
+            offset: off,
+          },
+          countryCode,
+        })
+      )
+      for (const batch of batches) {
+        products = products.concat(batch.response.products || [])
+      }
+    }
+
+    return { products, count: totalProducts }
+  })().finally(() => {
+    if (catalogAssemblyInflight.get(inflightKey) === promise) {
+      catalogAssemblyInflight.delete(inflightKey)
+    }
+  })
+
+  catalogAssemblyInflight.set(inflightKey, promise)
+  return promise
+}
 
 /**
  * Handles produits pour le sitemap uniquement.
