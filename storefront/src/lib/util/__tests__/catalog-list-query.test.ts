@@ -3,7 +3,11 @@
  * Exécuter : cd storefront && npx tsx src/lib/util/__tests__/catalog-list-query.test.ts
  */
 
-import { catalogListQuery } from "../catalog-list-query"
+import {
+  CATALOG_ASSEMBLY_BATCH,
+  catalogAssemblyQuery,
+  catalogListQuery,
+} from "../catalog-list-query"
 import { productListCacheQuery } from "../product-list-fields"
 
 let passed = 0
@@ -64,6 +68,38 @@ const withSearch = catalogListQuery({
   q: "licol",
 })
 assert("q de recherche conservé", (withSearch as { q?: string }).q, "licol")
+
+const pageTwo = {
+  ...categoryA,
+  offset: 100,
+  limit: 100,
+}
+const assemblyA = catalogAssemblyQuery(categoryA)
+const assemblyB = catalogAssemblyQuery(categoryB)
+const assemblyPageTwo = catalogAssemblyQuery(pageTwo)
+const assemblySearch = catalogAssemblyQuery({
+  ...categoryA,
+  q: "licol",
+})
+
+assert("lots catalogue toujours 100", assemblyA.limit, CATALOG_ASSEMBLY_BATCH)
+assert("offset page normalisé à 0", assemblyA.offset, 0)
+assert("offset page 2 aussi à 0", assemblyPageTwo.offset, 0)
+assert(
+  "deux catégories + pages → même clé assemblage",
+  productListCacheQuery(assemblyA as any) ===
+    productListCacheQuery(assemblyB as any) &&
+    productListCacheQuery(assemblyA as any) ===
+      productListCacheQuery(assemblyPageTwo as any),
+  true
+)
+assert(
+  "q de recherche : clé assemblage distincte",
+  productListCacheQuery(assemblyA as any) !==
+    productListCacheQuery(assemblySearch as any),
+  true
+)
+assert("q conservé sur l'assemblage", (assemblySearch as { q?: string }).q, "licol")
 
 console.log(`\n${passed} passed, ${failed} failed`)
 if (failed) process.exit(1)
