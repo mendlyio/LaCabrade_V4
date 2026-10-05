@@ -11,3 +11,22 @@ export function catalogListQuery<T extends Record<string, unknown>>(
   const { category_id: _categoryId, ...rest } = queryParams
   return rest
 }
+
+/** Taille des lots catalogue (inchangée : 100). */
+export const CATALOG_ASSEMBLY_BATCH = 100
+
+/**
+ * Même catalogue pour toutes les pages catégorie / marque d'une région,
+ * quelle que soit la page ou le category_id. Le crawl /fr/categories +
+ * /fr/marques du 04/10 01:26 relançait N assemblages en parallèle
+ * (lots déjà en cache, mais N copies en RAM → Killed).
+ */
+export function catalogAssemblyQuery<T extends Record<string, unknown>>(
+  queryParams: T
+): Omit<T, "category_id"> & { limit: number; offset: number } {
+  return {
+    ...catalogListQuery(queryParams),
+    limit: CATALOG_ASSEMBLY_BATCH,
+    offset: 0,
+  }
+}

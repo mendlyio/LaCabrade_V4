@@ -1,7 +1,5 @@
 import { getRegion } from "@lib/data/regions"
-import { getProductsList } from "@lib/data/products"
-import { catalogListQuery } from "@lib/util/catalog-list-query"
-import { mapPool } from "@lib/util/map-pool"
+import { getAssembledCatalogList, getProductsList } from "@lib/data/products"
 import { slugify } from "@lib/util/slugify"
 import { sortProducts } from "@lib/util/sort-products"
 import { listCategories } from "@lib/data/categories"
@@ -189,41 +187,15 @@ export default async function PaginatedProductsModern({
   let result
   try {
     if (hasBrandFilter || hasCategoryFilter || needsClientSideSort || hasSearchQuery) {
-      // Fetch ALL products puis filtrage côté serveur/client
-      const batchSize = 100
-      let allProducts: any[] = []
-      // Sans category_id : une seule clé cache pour toutes les pages
-      // catégorie (même lots que les marques). Filtrage après, inchangé.
-      const listQueryParams = catalogListQuery(queryParams)
-
-      // 1er lot : permet de connaître le nombre total de produits
-      const firstBatch = await getProductsList({
-        pageParam: 1,
-        queryParams: { ...listQueryParams, limit: batchSize, offset: 0 },
+      // Fetch ALL products puis filtrage côté serveur/client.
+      // Lots de 100, max 3 en parallèle, category_id hors clé cache :
+      // inchangé. L'assemblage est coalescé entre pages déjà en vol
+      // (Killed 04/10 01:26 : N copies du catalogue FR en RAM).
+      const assembled = await getAssembledCatalogList({
         countryCode,
+        queryParams,
       })
-      allProducts = firstBatch.response.products || []
-      const totalProducts = firstBatch.response.count || 0
-
-      // Lots restants toujours en parallèle (filtre / offsets inchangés),
-      // mais bornés : 15 lots de 100 le 25/09 04:03 ont saturé le heap
-      // backend (FATAL + 819 5xx /store/products). 3 lots à la fois.
-      if (totalProducts > batchSize) {
-        const offsets: number[] = []
-        for (let off = batchSize; off < totalProducts; off += batchSize) {
-          offsets.push(off)
-        }
-        const batches = await mapPool(offsets, 3, (off) =>
-          getProductsList({
-            pageParam: 1,
-            queryParams: { ...listQueryParams, limit: batchSize, offset: off },
-            countryCode,
-          })
-        )
-        batches.forEach((b) => {
-          allProducts = allProducts.concat(b.response.products || [])
-        })
-      }
+      let allProducts: any[] = assembled.products.slice()
 
       // Filtrer par marque côté serveur (si filtre marque actif)
       let finalProducts = allProducts
