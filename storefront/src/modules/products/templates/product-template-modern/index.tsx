@@ -92,10 +92,20 @@ const ProductTemplateModern = async ({
       return path
     })
     .filter((p) => p.length > 0)
+  const promoCategoryHandles = [
+    ...new Set(
+      (allPaths.length
+        ? allPaths.flatMap((path) => path.map((cat) => cat.handle || ""))
+        : (product.categories || []).map((cat) => cat.handle || "")
+      ).filter(Boolean)
+    ),
+  ]
+
   const isOutlet =
     allPaths.some((path) =>
       path.some((cat) => (cat.handle || "").toLowerCase().startsWith("outlet"))
     ) ||
+    promoCategoryHandles.some((handle) => handle.toLowerCase().startsWith("outlet")) ||
     // Fallback : metadata.odoo_category (sync Odoo) ou catégorie Medusa assignée manuellement
     (product.metadata?.odoo_category &&
       String(product.metadata.odoo_category).toLowerCase().includes("outlet"))
@@ -260,6 +270,7 @@ const ProductTemplateModern = async ({
                     region={region}
                     countryCode={countryCode}
                     isOutlet={isOutlet}
+                    promoCategoryHandles={promoCategoryHandles}
                   />
                 </Suspense>
               </div>

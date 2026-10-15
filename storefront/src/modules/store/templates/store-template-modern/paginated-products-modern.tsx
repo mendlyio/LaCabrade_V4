@@ -408,6 +408,11 @@ export default async function PaginatedProductsModern({
           queryParams={queryParams}
           brandSlug={searchParams.brand || undefined}
           allProducts={needsClientPagination ? filteredProducts : undefined}
+          categoryCatalog={(categories || []).map((c: any) => ({
+            id: c.id,
+            handle: c.handle,
+            parent_category_id: c.parent_category_id ?? c.parent_category?.id ?? null,
+          }))}
         />
         </>
       ) : (

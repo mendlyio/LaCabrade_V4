@@ -1,6 +1,13 @@
 import { MedusaRequest, MedusaResponse } from '@medusajs/framework/http'
 import { Modules } from '@medusajs/framework/utils'
 import { Client } from 'pg'
+import {
+  expandCategoryHandles,
+  getOutletDiscountPercent,
+  isPoOctobrePeriod,
+  PO_OCTOBRE_SALE_DATE_META,
+  type CategoryNode,
+} from '../../utils/portes-ouvertes-octobre'
 
 const STORE_URL = process.env.STORE_URL || 'https://www.sellerie-lacabrade.be'
 
@@ -30,50 +37,27 @@ function stripHtml(str: string): string {
 
 // ── Calcul prix promotionnel ──────────────────────────────────────────────────
 
-const PO_START = new Date("2026-04-30T22:00:00.000Z")
-const PO_END   = new Date("2026-05-09T21:59:59.000Z")
-// Format Meta sale_price_effective_date : "YYYY-MM-DDThh:mm+TZ/YYYY-MM-DDThh:mm+TZ"
-const PO_SALE_DATE_META = "2026-04-30T22:00+0000/2026-05-09T21:59+0000"
-
 const OUTLET_HANDLE_PREFIX = "outlet"
-const CAVALIER_HANDLES = new Set(["cavalier"])
-const LC_HANDLES = new Set(["lc-equestrian", "lc_equestrian", "la-cabrade"])
-const PO_EXCLUDED_HANDLES = new Set([
-  "tondeuses-et-peignes",
-  "complements-alimentaires", "compléments-alimentaires",
-  "systeme-renal", "systeme-circulatoire", "systeme-lymphatique",
-  "immunite", "systeme-locomoteur", "systeme-hepatique", "système-hépatique",
-  "systeme-digestif", "système-digestif",
-  "vitamines-et-mineraux", "vitamines-et-minéraux",
-  "muscles-et-recuperation", "muscles,-récupérations-et-performance",
-  "metabolisme", "métabolisme",
-  "sabots", "sabots-et-crins", "sabots,-robe-et-crins",
-  "systeme-respiratoire", "système-respiratoire",
-  "nervosite-et-comportement", "nervosité-et-comportement",
-  "criniere", "soins-robe-et-criniere",
-  "selles", "selles-sur-mesure",
-])
 
 function computeSalePrice(
   basePrice: number,
-  categoryHandles: string[]
+  categoryHandles: string[],
+  now = new Date()
 ): { salePrice: number | null; saleDate: string | null } {
   const handles = categoryHandles.map((h) => h.toLowerCase())
 
-  // Outlet (-60%) — toujours actif
   if (handles.some((h) => h.startsWith(OUTLET_HANDLE_PREFIX))) {
-    return { salePrice: Math.round(basePrice * 0.40 * 100) / 100, saleDate: null }
+    const payRatio = 1 - getOutletDiscountPercent(now) / 100
+    return { salePrice: Math.round(basePrice * payRatio * 100) / 100, saleDate: null }
   }
 
-  // PO — uniquement pendant la période 1–9 mai 2026
-  const now = new Date()
-  if (now < PO_START || now > PO_END) return { salePrice: null, saleDate: null }
-  if (handles.some((h) => PO_EXCLUDED_HANDLES.has(h))) return { salePrice: null, saleDate: null }
+  if (!isPoOctobrePeriod(now)) return { salePrice: null, saleDate: null }
+  if (!handles.includes("cavalier")) return { salePrice: null, saleDate: null }
 
-  if (handles.some((h) => CAVALIER_HANDLES.has(h)) || handles.some((h) => LC_HANDLES.has(h))) {
-    return { salePrice: Math.round(basePrice * 0.80 * 100) / 100, saleDate: PO_SALE_DATE_META }
+  return {
+    salePrice: Math.round(basePrice * 0.80 * 100) / 100,
+    saleDate: PO_OCTOBRE_SALE_DATE_META,
   }
-  return { salePrice: Math.round(basePrice * 0.90 * 100) / 100, saleDate: PO_SALE_DATE_META }
 }
 
 function resolvePublicUrl(raw: string): string {
@@ -259,6 +243,13 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       offset += take
     }
 
+    const categoryCatalog: CategoryNode[] = await productService
+      .listProductCategories(
+        {},
+        { select: ["id", "handle", "parent_category_id"], take: 1000 }
+      )
+      .catch(() => [])
+
     // ── Récupération prix + stock via SQL ──────────────────────────────────
     const variantIds = allProducts.flatMap((p: any) =>
       (p.variants ?? []).map((v: any) => v.id)
@@ -421,7 +412,7 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         // Livraison encodée : country:region:service:price (Facebook format)
         const { salePrice, saleDate } = computeSalePrice(
           amount,
-          (product.categories ?? []).map((c: any) => c.handle ?? '')
+          expandCategoryHandles(product.categories ?? [], categoryCatalog)
         )
         const effectivePrice = salePrice ?? amount
         const shippingBE = `BE:::${effectivePrice >= 75 ? '0.00 EUR' : '5.95 EUR'}`

@@ -1,6 +1,7 @@
 import { Modules } from "@medusajs/framework/utils"
 import type { ICartModuleService } from "@medusajs/framework/types"
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/medusa"
+import { outletPriceSync } from "../utils/portes-ouvertes-octobre"
 
 /**
  * Filet de sécurité asynchrone pour les articles outlet.
@@ -58,31 +59,18 @@ export default async function cartOutletPromoGuardHandler({
       )
     }
 
-    // Restaurer unit_price si reseté
-    const toRestore = outletItems.filter((item: any) => {
-      const md = item.metadata as any
-      if (!md?.outlet_original_price || !md?.outlet_discount_percent) return false
-      const priceReset = Math.abs(Number(item.unit_price ?? 0) - md.outlet_original_price) < 0.01
-      const cmpAtMissing =
-        !item.compare_at_unit_price ||
-        Math.abs(Number(item.compare_at_unit_price) - md.outlet_original_price) > 0.01
-      return priceReset || cmpAtMissing
-    })
+    // Aligner le unit_price sur le % en vigueur (60 % pendant les PO d'octobre).
+    const toSync = outletItems.filter((item: any) => outletPriceSync(item) != null)
 
-    if (toRestore.length > 0) {
+    if (toSync.length > 0) {
       await Promise.all(
-        toRestore.map((item: any) => {
-          const md = item.metadata as any
-          const discounted =
-            Math.round(md.outlet_original_price * (1 - md.outlet_discount_percent / 100) * 100) / 100
-          return cartModuleService.updateLineItems(item.id, {
-            unit_price: discounted,
-            compare_at_unit_price: md.outlet_original_price,
-          })
+        toSync.map((item: any) => {
+          const patch = outletPriceSync(item)!
+          return cartModuleService.updateLineItems(item.id, patch)
         })
       )
       console.log(
-        `[OutletPromoGuard] Panier ${cartId}: restauré prix pour ${toRestore.length} article(s) (fallback)`
+        `[OutletPromoGuard] Panier ${cartId}: prix outlet aligné pour ${toSync.length} article(s) (fallback)`
       )
     }
   } catch (error) {

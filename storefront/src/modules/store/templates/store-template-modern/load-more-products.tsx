@@ -12,6 +12,10 @@ import {
   getProductPromoDiscount,
   getOutletDiscountPercent,
 } from "@lib/config/active-promo"
+import {
+  collectHandlesWithAncestors,
+  type CategoryRef,
+} from "@lib/util/category-ancestors"
 
 const COLOR_OPTION_TITLES = ["couleur", "color", "colour", "coloris"]
 const COLOR_MAP: Record<string, string> = {
@@ -38,6 +42,7 @@ type LoadMoreProductsProps = {
   brandSlug?: string
   /** Quand fourni, pagination côté client (pas de fetch API) — utilisé avec filtres */
   allProducts?: HttpTypes.StoreProduct[]
+  categoryCatalog?: CategoryRef[]
 }
 
 const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
@@ -47,10 +52,12 @@ function ProductCardClient({
   product,
   isNew,
   onProductClick,
+  categoryCatalog = [],
 }: {
   product: HttpTypes.StoreProduct
   isNew?: boolean
   onProductClick?: () => void
+  categoryCatalog?: CategoryRef[]
 }) {
   // ── Trouver le variant le moins cher (calculated_price ou fallback variant.prices) ──
   // calculated_amount = euros ; variant.prices[0].amount = centimes
@@ -120,24 +127,22 @@ function ProductCardClient({
   const hasColorSwatches = colorValues.length > 1
   const variantCount = (product.variants || []).length
 
-  // Détection catégories
+  // Détection catégories (ancêtres compris)
   const categories = (product as any).categories || []
-  const isLcEquestrian = categories.some((cat: any) =>
-    LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase())
+  const categoryHandles = collectHandlesWithAncestors(categories, categoryCatalog)
+  const isLcEquestrian = categoryHandles.some((handle) =>
+    LC_EQUESTRIAN_HANDLES.includes(handle.toLowerCase())
   )
-  const isOutlet = categories.some((cat: any) =>
-    (cat.handle || "").toLowerCase().startsWith("outlet")
-  )
+  const isOutlet = categoryHandles.some((handle) => handle.toLowerCase().startsWith("outlet"))
 
-  // Prix outlet : remise dynamique (60% pendant PO, 50% sinon)
+  // Prix outlet : dans le prix (60% pendant les PO, 50% sinon)
   const outletDiscountPct = getOutletDiscountPercent()
   const outletOriginalNumber = isOutlet ? (price ?? 0) : 0
   const outletPriceNumber = isOutlet ? outletOriginalNumber * (1 - outletDiscountPct / 100) : 0
   const outletPriceFormatted = isOutlet ? formatPrice(outletPriceNumber) : null
   const outletOriginalFormatted = isOutlet ? formatPrice(outletOriginalNumber) : null
 
-  // Promo active (multi-tier) — affichage visuel prix barré
-  const categoryHandles = categories.map((c: any) => c.handle || "")
+  // Promo cavalier — affichage visuel, distinct de l'outlet
   const collectionHandle = (product as any).collection?.handle || null
   const promoDiscountPercent = getProductPromoDiscount(categoryHandles, collectionHandle, isOutlet)
   const isPromoEligible = promoDiscountPercent !== null
@@ -320,6 +325,7 @@ export default function LoadMoreProducts({
   queryParams,
   brandSlug,
   allProducts,
+  categoryCatalog = [],
 }: LoadMoreProductsProps) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -540,6 +546,7 @@ export default function LoadMoreProducts({
             product={product}
             isNew={newProductIds.has(product.id)}
             onProductClick={handleProductClick}
+            categoryCatalog={categoryCatalog}
           />
         ))}
       </div>

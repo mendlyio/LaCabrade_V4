@@ -199,7 +199,7 @@ assertClose("PO -20% 39.90: HT→TTC = 20%", computeAmountHT(39.90, 1, 0.20) * 1
 heading("PortesOuvertesGuard — Codes connus (pas de conflit)")
 
 const KNOWN_AUTO_CODES = new Set([
-  "PO_GLOBAL_10", "PO_CAVALIER_20", "PO_LC_20",
+  "PO_GLOBAL_10", "PO_CAVALIER_20", "PO_LC_20", "PO_OCT_CAVALIER_20",
   "BRADERIE_15", "BRADERIE_LC_25",
   "OUTLET_50", "FREE_SHIPPING_75", "PAQUES_10",
 ])
@@ -211,6 +211,7 @@ function hasConflictingManualPromo(adjustments: Array<{ code?: string | null }>)
 assert("Code manuel NL-XXX → conflit", hasConflictingManualPromo([{ code: "NL-ABCDEF" }]), true)
 assert("Code manuel ANNIV10 → conflit", hasConflictingManualPromo([{ code: "ANNIV10" }]), true)
 assert("PO_GLOBAL_10 auto → pas de conflit", hasConflictingManualPromo([{ code: "PO_GLOBAL_10" }]), false)
+assert("PO_OCT_CAVALIER_20 auto → pas de conflit", hasConflictingManualPromo([{ code: "PO_OCT_CAVALIER_20" }]), false)
 assert("BRADERIE_15 auto → pas de conflit", hasConflictingManualPromo([{ code: "BRADERIE_15" }]), false)
 assert("FREE_SHIPPING_75 auto → pas de conflit", hasConflictingManualPromo([{ code: "FREE_SHIPPING_75" }]), false)
 assert("Mix PO+NL → conflit (NL est manuel)", hasConflictingManualPromo([{ code: "PO_GLOBAL_10" }, { code: "NL-TEST" }]), true)

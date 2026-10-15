@@ -39,6 +39,12 @@ import { StepResponse } from "@medusajs/framework/workflows-sdk"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import type { ICartModuleService } from "@medusajs/framework/types"
 import { resolveGiftCardFaceValueEuros } from "../utils/gift-card-amount"
+import {
+  isPoOctobrePeriod,
+  outletPriceSync,
+  PO_OCTOBRE_CODE,
+  PO_OCTOBRE_CAVALIER_PERCENT,
+} from "../utils/portes-ouvertes-octobre"
 
 // ─── Constantes PO ──────────────────────────────────────────────────────────
 const PO_CODE = "PO_GLOBAL_10"
@@ -50,6 +56,7 @@ const KNOWN_AUTO_CODES = new Set([
   "BRADERIE_15", "BRADERIE_LC_25",
   "SOLDE_LC_15", "SOLDE_CAVALIER_25", "SOLDE_CAVALIER_30", "SOLDE_OUTLET_60",
   "OUTLET_50", "FREE_SHIPPING_75", "PAQUES_10",
+  PO_OCTOBRE_CODE,
 ])
 const PO_START = new Date("2026-04-30T22:00:00.000Z")
 const PO_END   = new Date("2026-05-09T21:59:59.000Z")
@@ -276,34 +283,22 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
           )
         }
 
-        // Restaurer unit_price / compare_at si resetés par Medusa
-        const toRestore = outletItems.filter((item: any) => {
-          const md = item.metadata as any
-          if (!md?.outlet_original_price || !md?.outlet_discount_percent) return false
-          const currentPrice = Number(item.unit_price ?? 0)
-          const currentCmpAt = Number(item.compare_at_unit_price ?? 0)
-          const priceReset = Math.abs(currentPrice - md.outlet_original_price) < 0.01
-          const cmpAtMissing =
-            currentCmpAt === 0 ||
-            Math.abs(currentCmpAt - md.outlet_original_price) > 0.01
-          return priceReset || cmpAtMissing
-        })
+        // Aligner unit_price sur le % outlet en vigueur (50 %, ou 60 % pendant
+        // les PO d'octobre). La remise outlet vit dans le prix, pas dans un adjustment.
+        const toSync = outletItems.filter((item: any) => outletPriceSync(item) != null)
 
-        if (toRestore.length > 0) {
+        if (toSync.length > 0) {
           await Promise.all(
-            toRestore.map((item: any) => {
-              const md = item.metadata as any
-              const discounted = Math.round(
-                md.outlet_original_price * (1 - md.outlet_discount_percent / 100) * 100
-              ) / 100
-              return cartModuleService.updateLineItems(item.id, {
-                unit_price: discounted,
-                compare_at_unit_price: md.outlet_original_price,
-              })
+            toSync.map((item: any) => {
+              const patch = outletPriceSync(item)!
+              item.unit_price = patch.unit_price
+              item.compare_at_unit_price = patch.compare_at_unit_price
+              item.metadata = patch.metadata
+              return cartModuleService.updateLineItems(item.id, patch)
             })
           )
           console.log(
-            `[CartHook] Panier ${cartId} — outlet: restauré le prix pour ${toRestore.length} article(s)`
+            `[CartHook] Panier ${cartId} — outlet: prix aligné pour ${toSync.length} article(s)`
           )
         }
 
@@ -509,6 +504,139 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
             if (adjIdsToRemove.length + adjsToUpdate.length + adjsToCreate.length > 0) {
               console.log(
                 `[CartHook] Panier ${cartId} — PO: -${adjIdsToRemove.length} / upd ${adjsToUpdate.length} / +${adjsToCreate.length}`
+              )
+            }
+          }
+        }
+      }
+
+      // ── B-oct. PORTES OUVERTES OCTOBRE 2026 ─────────────────────────────
+      // −20 % sur toute la catégorie Cavalier (promo auto PO_OCT_CAVALIER_20).
+      // L'outlet n'est pas concerné : sa remise est dans unit_price (bloc A).
+
+      const poOctAdjs = allAdjs.filter((a: any) => a.code === PO_OCTOBRE_CODE)
+
+      if (poOctAdjs.length > 0) {
+        if (!isPoOctobrePeriod()) {
+          await (cartModuleService as any).deleteLineItemAdjustments(
+            poOctAdjs.map((a: any) => a.id)
+          )
+          console.log(
+            `[CartHook] Panier ${cartId} — PO octobre hors période: supprimé ${poOctAdjs.length} adjustment(s)`
+          )
+        } else {
+          const hasManualCode = allAdjs.some(
+            (a: any) => a.code && !KNOWN_AUTO_CODES.has(a.code)
+          )
+          if (hasManualCode) {
+            await (cartModuleService as any).deleteLineItemAdjustments(
+              poOctAdjs.map((a: any) => a.id)
+            )
+            console.log(
+              `[CartHook] Panier ${cartId} — PO octobre: code manuel détecté, supprimé ${poOctAdjs.length} adjustment(s)`
+            )
+          } else {
+            const poOctByItem = new Map<string, any[]>()
+            for (const adj of poOctAdjs) {
+              if (!adj.item_id) continue
+              const list = poOctByItem.get(adj.item_id) ?? []
+              list.push(adj)
+              poOctByItem.set(adj.item_id, list)
+            }
+
+            const allCategoriesForPo: Array<{
+              id: string
+              handle?: string | null
+              parent_category_id?: string | null
+            }> = await productModule
+              .listProductCategories(
+                {},
+                { select: ["id", "handle", "parent_category_id"], take: 1000 }
+              )
+              .catch(() => [])
+
+            const poOctCavalierIds = new Set<string>()
+            for (const category of allCategoriesForPo) {
+              if ((category.handle ?? "").toLowerCase() === "cavalier") {
+                collectSubtreeIds(category.id, allCategoriesForPo).forEach((id) =>
+                  poOctCavalierIds.add(id)
+                )
+              }
+            }
+
+            const poOctProductIds = [
+              ...new Set(
+                items
+                  .filter((i: any) => poOctByItem.has(i.id) && i.product_id)
+                  .map((i: any) => i.product_id)
+              ),
+            ] as string[]
+
+            const poOctCavalierProducts = new Set<string>()
+            if (poOctProductIds.length > 0) {
+              const poOctProducts: any[] = await productModule
+                .listProducts(
+                  { id: poOctProductIds },
+                  { relations: ["categories"], select: ["id"] }
+                )
+                .catch(() => [])
+              for (const product of poOctProducts) {
+                const inCavalier = (product.categories ?? []).some((c: any) =>
+                  poOctCavalierIds.has(c.id)
+                )
+                if (inCavalier) poOctCavalierProducts.add(product.id)
+              }
+            }
+
+            const octIdsToRemove: string[] = []
+            const octToUpdate: any[] = []
+
+            for (const item of items) {
+              const itemAdjs = poOctByItem.get(item.id)
+              if (!itemAdjs?.length) continue
+
+              const isOutlet =
+                item.metadata?.outlet_discount === true ||
+                (item.compare_at_unit_price != null &&
+                  Number(item.compare_at_unit_price) > Number(item.unit_price ?? 0) + 0.01)
+
+              const inCavalier =
+                !!item.product_id && poOctCavalierProducts.has(item.product_id)
+
+              if (isOutlet || !inCavalier) {
+                for (const adj of itemAdjs) octIdsToRemove.push(adj.id)
+                continue
+              }
+
+              const unitPrice = Number(item.unit_price ?? 0)
+              const qty = item.quantity ?? 1
+              const expectedHT = computeDiscountAmount(
+                unitPrice,
+                qty,
+                PO_OCTOBRE_CAVALIER_PERCENT / 100
+              )
+              const first = itemAdjs[0]
+              const current = Number(first.amount ?? 0)
+              if (Math.abs(current - expectedHT) > 0.001) {
+                octToUpdate.push({
+                  id: first.id,
+                  amount: expectedHT,
+                  code: PO_OCTOBRE_CODE,
+                  description: "Portes Ouvertes octobre 2026 −20% Cavalier",
+                })
+              }
+              for (let i = 1; i < itemAdjs.length; i++) octIdsToRemove.push(itemAdjs[i].id)
+            }
+
+            if (octIdsToRemove.length > 0) {
+              await (cartModuleService as any).deleteLineItemAdjustments(octIdsToRemove)
+            }
+            if (octToUpdate.length > 0) {
+              await (cartModuleService as any).updateLineItemAdjustments(octToUpdate)
+            }
+            if (octIdsToRemove.length + octToUpdate.length > 0) {
+              console.log(
+                `[CartHook] Panier ${cartId} — PO octobre: -${octIdsToRemove.length} / upd ${octToUpdate.length}`
               )
             }
           }

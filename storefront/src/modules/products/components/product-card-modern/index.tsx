@@ -13,6 +13,8 @@ import {
   getProductPromoDiscount,
   getOutletDiscountPercent,
 } from "@lib/config/active-promo"
+import { listCategories } from "@lib/data/categories"
+import { collectHandlesWithAncestors } from "@lib/util/category-ancestors"
 
 const LC_EQUESTRIAN_HANDLES = ["la-cabrade", "lc-equestrian", "lc_equestrian"]
 
@@ -54,23 +56,21 @@ export default async function ProductCardModern({
       (v) => v.calculated_price.calculated_amount !== cheapestPrice?.calculated_price_number
     )
 
-  // Détection catégories
+  // Détection catégories (ancêtres compris : « toute la catégorie cavalier »)
   const categories = (product as any).categories || (pricedProduct as any).categories || []
-  const isLcEquestrian = categories.some((cat: any) =>
-    LC_EQUESTRIAN_HANDLES.includes(cat.handle?.toLowerCase())
+  const categoryCatalog = await listCategories().catch(() => [])
+  const categoryHandles = collectHandlesWithAncestors(categories, categoryCatalog)
+  const isLcEquestrian = categoryHandles.some((handle) =>
+    LC_EQUESTRIAN_HANDLES.includes(handle.toLowerCase())
   )
-  const isOutlet = categories.some((cat: any) =>
-    (cat.handle || "").toLowerCase().startsWith("outlet")
-  )
+  const isOutlet = categoryHandles.some((handle) => handle.toLowerCase().startsWith("outlet"))
 
-  // Prix outlet : remise dynamique (60% pendant PO, 50% sinon)
+  // Prix outlet : remise dans le prix (60% pendant les PO, 50% sinon) — pas la promo cavalier
   const outletDiscountPct = getOutletDiscountPercent()
   const outletOriginalNumber = isOutlet ? (cheapestPrice?.calculated_price_number ?? 0) : 0
   const outletPriceNumber = isOutlet ? outletOriginalNumber * (1 - outletDiscountPct / 100) : 0
   const currencyCode = cheapestPrice?.currency_code || "eur"
 
-  // Promo active (multi-tier : -10% global, -20% cavalier/LC, outlet géré séparément)
-  const categoryHandles = categories.map((c: any) => c.handle || "")
   const collectionHandle = pricedProduct.collection?.handle || null
   const promoDiscountPercent = getProductPromoDiscount(categoryHandles, collectionHandle, isOutlet)
   const isPromoEligible = promoDiscountPercent !== null

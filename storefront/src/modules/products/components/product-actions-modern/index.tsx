@@ -19,6 +19,8 @@ type ProductActionsModernProps = {
   region: HttpTypes.StoreRegion
   countryCode: string
   isOutlet?: boolean
+  /** Handles du produit + ancêtres (toute la catégorie cavalier). */
+  promoCategoryHandles?: string[]
 }
 
 // ── Mapping couleur → hex (partagé avec product-card-modern) ─────────────────
@@ -64,6 +66,7 @@ export default function ProductActionsModern({
   product,
   region,
   isOutlet: isOutletProp,
+  promoCategoryHandles,
 }: ProductActionsModernProps) {
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [quantity, setQuantity] = useState(1)
@@ -302,8 +305,10 @@ export default function ProductActionsModern({
     const outletAmount = isOutlet && !hasDiscount ? amount * (1 - outletDiscountFraction) : null
     const outletOriginal = isOutlet && !hasDiscount ? amount : (isOutlet && hasDiscount ? original : null)
 
-    // Promo active (multi-tier : -10% global, -20% cavalier/LC, outlet géré séparément)
-    const categoryHandles = ((product as any).categories || []).map((c: any) => c.handle || "")
+    // Promo cavalier (−20 %). L'outlet est géré à part, via unit_price.
+    const categoryHandles =
+      promoCategoryHandles ??
+      ((product as any).categories || []).map((c: any) => c.handle || "")
     const collectionHandle = (product as any).collection?.handle || null
     const promoDiscountPercent = getProductPromoDiscount(categoryHandles, collectionHandle, isOutlet)
     const isPromoEligible = promoDiscountPercent !== null
@@ -326,7 +331,7 @@ export default function ProductActionsModern({
       formattedOutletOriginal: outletOriginal != null ? convertToLocale({ amount: outletOriginal, currency_code: currency }) : null,
       formattedPromo: promoAmount != null ? convertToLocale({ amount: promoAmount, currency_code: currency }) : null,
     }
-  }, [selectedVariant, product.variants, isOutlet, product])
+  }, [selectedVariant, product.variants, isOutlet, product, promoCategoryHandles])
 
   return (
     <div className="space-y-6">

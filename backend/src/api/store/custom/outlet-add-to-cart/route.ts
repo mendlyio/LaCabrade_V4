@@ -1,20 +1,9 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
 import { Modules } from "@medusajs/framework/utils"
 import { ICartModuleService } from "@medusajs/framework/types"
+import { getOutletDiscountPercent } from "../../../../utils/portes-ouvertes-octobre"
 
 const OUTLET_HANDLES = ["outlet", "outlet-727"]
-
-// ─── Remise outlet ────────────────────────────────────────────────────────────
-// Pendant les Portes Ouvertes 2026 (1–9 mai, heure belge = UTC+2) : -60%
-// Le reste de l'année : -50% (valeur par défaut)
-const PO_START = new Date("2026-04-30T22:00:00.000Z") // 1 mai 00:00 BEL
-const PO_END = new Date("2026-05-09T21:59:59.000Z")   // 9 mai 23:59 BEL
-
-function getOutletDiscountPercent(): number {
-  const now = new Date()
-  if (now >= PO_START && now <= PO_END) return 60
-  return 50
-}
 
 /** IDs des catégories outlet (racine + sous-catégories) */
 function getOutletCategoryIds(
@@ -33,7 +22,8 @@ function getOutletCategoryIds(
 /**
  * POST /store/custom/outlet-add-to-cart
  *
- * Ajoute un produit outlet au panier avec -50% appliqué directement sur le line item.
+ * Ajoute un produit outlet au panier avec la remise outlet dans le unit_price
+ * (−60 % pendant les PO d'octobre, −50 % le reste de l'année).
  * Vérifie côté serveur que le produit appartient bien à la catégorie outlet (ou sous-catégorie).
  *
  * Body: { cart_id: string, variant_id: string, quantity?: number }

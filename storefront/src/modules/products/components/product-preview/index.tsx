@@ -13,6 +13,8 @@ import {
   applyPromoDiscount,
   getProductPromoDiscount,
 } from "@lib/config/active-promo"
+import { listCategories } from "@lib/data/categories"
+import { collectHandlesWithAncestors } from "@lib/util/category-ancestors"
 
 export default async function ProductPreview({
   product,
@@ -39,10 +41,10 @@ export default async function ProductPreview({
   // Vérifier si en stock (fallback: inventory_quantity null/undefined → supposer en stock)
   const { isInStock } = getProductStockInfo(pricedProduct.variants)
 
-  // Promo active (Portes Ouvertes 2026 — multi-tier)
   const categories = (product as any).categories || (pricedProduct as any).categories || []
-  const isOutletProduct = categories.some((c: any) => (c.handle || "").toLowerCase().startsWith("outlet"))
-  const categoryHandles = categories.map((c: any) => c.handle || "")
+  const categoryCatalog = await listCategories().catch(() => [])
+  const categoryHandles = collectHandlesWithAncestors(categories, categoryCatalog)
+  const isOutletProduct = categoryHandles.some((handle) => handle.toLowerCase().startsWith("outlet"))
   const collectionHandle = (product as any).collection?.handle || (pricedProduct as any).collection?.handle || null
   const promoDiscountPercent = getProductPromoDiscount(categoryHandles, collectionHandle, isOutletProduct)
   const isPromoEligible = promoDiscountPercent !== null

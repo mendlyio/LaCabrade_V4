@@ -124,6 +124,29 @@ export const PORTES_OUVERTES_PROMO: ActivePromoConfig = {
   outletDiscountPercent: 60,
 }
 
+// ─── Portes Ouvertes octobre 2026 (16–24 octobre) ─────────────────────────────
+// Heure belge (CEST = UTC+2 jusqu'au 25 octobre) :
+//   16 oct 00:00 BEL = 15 oct 22:00 UTC
+//   24 oct 23:59 BEL = 24 oct 21:59 UTC
+//
+// Règles demandées (différentes des PO de mai) :
+//   • Toute la catégorie Cavalier, sous-catégories comprises → -20%
+//     (les appelants ajoutent le handle ancêtre « cavalier »)
+//   • Outlet → -60% via outletDiscountPercent (unit_price, pas un adjustment)
+//   • Pas de -10% global, pas de palier LC
+// Pour couper avant le 24 : active: false
+export const PORTES_OUVERTES_OCTOBRE_PROMO: ActivePromoConfig = {
+  active: true,
+  code: "PO_OCT_CAVALIER_20",
+  discountPercent: 20,
+  label: "Portes Ouvertes",
+  startDate: new Date("2026-10-15T22:00:00.000Z"),
+  endDate: new Date("2026-10-24T21:59:59.000Z"),
+  excludedCategoryHandles: [],
+  includedCategoryHandles: ["cavalier"],
+  outletDiscountPercent: 60,
+}
+
 // ─── Braderie 2026 (19–21 juin matin) — TERMINÉE ──────────────────────────────
 export const BRADERIE_PROMO: ActivePromoConfig = {
   active: false,
@@ -201,8 +224,8 @@ export const SOLDE_PROMO: ActivePromoConfig = {
 }
 
 // ─── Promotion active ──────────────────────────────────────────────────────────
-// Pointer ici pour changer de promo (ex: PAQUES_PROMO, PORTES_OUVERTES_PROMO, BRADERIE_PROMO, SOLDE_PROMO)
-export const ACTIVE_PROMO: ActivePromoConfig = SOLDE_PROMO
+// Pointer ici pour changer de promo (ex: PAQUES_PROMO, PORTES_OUVERTES_PROMO, PORTES_OUVERTES_OCTOBRE_PROMO, BRADERIE_PROMO, SOLDE_PROMO)
+export const ACTIVE_PROMO: ActivePromoConfig = PORTES_OUVERTES_OCTOBRE_PROMO
 
 /** La promo est-elle actuellement active ? */
 export function isPromoActive(): boolean {

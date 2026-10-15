@@ -4,12 +4,14 @@ import { useCallback, useEffect, useState } from "react"
 import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
-const START_AT = new Date("2026-06-29T22:00:00.000Z")
-const END_AT = new Date("2026-07-31T21:59:59.000Z")
-const STORAGE_KEY = "lc_soldes_ete_2026_deuxieme_demarque_popup_dismissed"
+// Portes Ouvertes octobre 2026 — 16 oct 00:00 → 24 oct 23:59 (heure belge, CEST)
+const START_AT = new Date("2026-10-15T22:00:00.000Z")
+const END_AT = new Date("2026-10-24T21:59:59.000Z")
+const STORAGE_KEY = "lc_po_octobre_2026_popup_dismissed"
 const DELAY_MS = 900
-const IMAGE_SRC = "https://ik.imagekit.io/kodt9cn6f/Deuxie%CC%80me%20de%CC%81marque%20soldes.webp"
+const IMAGE_SRC = "/promotions/portes-ouvertes-octobre-2026.webp"
 
+/** Vrai pendant la campagne affichée en popup (la newsletter cède la place). */
 export function isBraderiePopupActive(now = new Date()): boolean {
   return now >= START_AT && now <= END_AT
 }
@@ -41,17 +43,17 @@ export default function BraderiePopup() {
       }}
     >
       <div
-        className="relative w-full max-w-[420px] overflow-hidden rounded-2xl bg-[#f5dde3] shadow-2xl animate-popup-in"
+        className="relative w-full max-w-[560px] overflow-hidden rounded-2xl bg-[#f6f3ee] shadow-2xl animate-popup-in"
         role="dialog"
         aria-modal="true"
-        aria-label="Soldes Été La Cabrade"
+        aria-label="Portes ouvertes La Cabrade, du 16 au 24 octobre"
         onClick={(event) => event.stopPropagation()}
       >
         <button
           type="button"
           onClick={dismiss}
-          aria-label="Fermer la popup Soldes"
-          className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#be123c] shadow-sm transition hover:bg-white hover:text-[#9f1239]"
+          aria-label="Fermer la popup Portes ouvertes"
+          className="absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#7f1d1d] shadow-sm transition hover:bg-white"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
             <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -59,18 +61,18 @@ export default function BraderiePopup() {
         </button>
 
         <LocalizedClientLink
-          href="/promotions"
+          href="/store"
           onClick={dismiss}
-          className="block focus:outline-none focus:ring-4 focus:ring-[#be123c]/30"
-          aria-label="Voir les Soldes La Cabrade"
+          className="block focus:outline-none focus:ring-4 focus:ring-[#7f1d1d]/30"
+          aria-label="Voir la boutique — Portes ouvertes, cavalier -20 %, outlet -60 %"
         >
           <Image
             src={IMAGE_SRC}
-            alt="Soldes Été La Cabrade — 2ème démarque — Vêtements Cavalier -30%, LC Equestrian -15%, Outlet -60%"
-            width={1080}
-            height={1350}
+            alt="Portes ouvertes La Cabrade, du 16 au 24 octobre. -20 % sur toute la catégorie cavalier, -60 % sur toute la catégorie outlet."
+            width={1400}
+            height={1400}
             priority
-            sizes="(max-width: 640px) 92vw, 420px"
+            sizes="(max-width: 640px) 92vw, 560px"
             className="h-auto w-full"
           />
         </LocalizedClientLink>

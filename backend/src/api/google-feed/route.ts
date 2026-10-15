@@ -1,6 +1,13 @@
 import { MedusaRequest, MedusaResponse } from '@medusajs/framework/http'
 import { Modules } from '@medusajs/framework/utils'
 import { Client } from 'pg'
+import {
+  expandCategoryHandles,
+  getOutletDiscountPercent,
+  isPoOctobrePeriod,
+  PO_OCTOBRE_SALE_DATE_GOOGLE,
+  type CategoryNode,
+} from '../../utils/portes-ouvertes-octobre'
 
 const STORE_URL = process.env.STORE_URL || 'https://www.sellerie-lacabrade.be'
 const STORE_NAME = 'La Cabrade'
@@ -19,70 +26,35 @@ function escapeXml(str: string): string {
 
 // ── Calcul prix promotionnel ──────────────────────────────────────────────────
 
-const PO_START = new Date("2026-04-30T22:00:00.000Z")
-const PO_END   = new Date("2026-05-09T21:59:59.000Z")
-// Format Google sale_price_effective_date (ISO 8601 UTC)
-const PO_SALE_DATE = "2026-04-30T22:00+00:00/2026-05-09T21:59+00:00"
-
 const OUTLET_HANDLE_PREFIX = "outlet"
-const CAVALIER_HANDLES = new Set(["cavalier"])
-const LC_HANDLES = new Set(["lc-equestrian", "lc_equestrian", "la-cabrade"])
-const PO_EXCLUDED_HANDLES = new Set([
-  "tondeuses-et-peignes",
-  "complements-alimentaires", "compléments-alimentaires",
-  "systeme-renal", "systeme-circulatoire", "systeme-lymphatique",
-  "immunite", "systeme-locomoteur", "systeme-hepatique", "système-hépatique",
-  "systeme-digestif", "système-digestif",
-  "vitamines-et-mineraux", "vitamines-et-minéraux",
-  "muscles-et-recuperation", "muscles,-récupérations-et-performance",
-  "metabolisme", "métabolisme",
-  "sabots", "sabots-et-crins", "sabots,-robe-et-crins",
-  "systeme-respiratoire", "système-respiratoire",
-  "nervosite-et-comportement", "nervosité-et-comportement",
-  "criniere", "soins-robe-et-criniere",
-  "selles", "selles-sur-mesure",
-])
 
 /**
- * Retourne le prix promotionnel et les dates associées pour un produit.
- * @param basePrice  Prix catalogue TTC (source de vérité du feed)
- * @param categoryHandles  Handles des catégories du produit
+ * Prix promo du feed.
+ * Outlet : −50 % (ou −60 % pendant les PO d'octobre), sans date de fin
+ * (le pourcentage suit la période au moment de la génération).
+ * Cavalier : −20 % uniquement du 16 au 24 octobre 2026. Pas de remise globale.
  */
 function computeSalePrice(
   basePrice: number,
-  categoryHandles: string[]
+  categoryHandles: string[],
+  now = new Date()
 ): { salePrice: number | null; saleDate: string | null } {
   const handles = categoryHandles.map((h) => h.toLowerCase())
 
-  // Outlet (-60%) — toujours actif, pas de date d'expiration
   if (handles.some((h) => h.startsWith(OUTLET_HANDLE_PREFIX))) {
+    const payRatio = 1 - getOutletDiscountPercent(now) / 100
     return {
-      salePrice: Math.round(basePrice * 0.40 * 100) / 100,
+      salePrice: Math.round(basePrice * payRatio * 100) / 100,
       saleDate: null,
     }
   }
 
-  // PO — uniquement pendant la période 1–9 mai 2026
-  const now = new Date()
-  if (now < PO_START || now > PO_END) return { salePrice: null, saleDate: null }
+  if (!isPoOctobrePeriod(now)) return { salePrice: null, saleDate: null }
+  if (!handles.includes("cavalier")) return { salePrice: null, saleDate: null }
 
-  // Catégories exclues de la PO
-  if (handles.some((h) => PO_EXCLUDED_HANDLES.has(h))) {
-    return { salePrice: null, saleDate: null }
-  }
-
-  // Cavalier ou LC Equestrian (-20%)
-  if (handles.some((h) => CAVALIER_HANDLES.has(h)) || handles.some((h) => LC_HANDLES.has(h))) {
-    return {
-      salePrice: Math.round(basePrice * 0.80 * 100) / 100,
-      saleDate: PO_SALE_DATE,
-    }
-  }
-
-  // Global PO (-10%)
   return {
-    salePrice: Math.round(basePrice * 0.90 * 100) / 100,
-    saleDate: PO_SALE_DATE,
+    salePrice: Math.round(basePrice * 0.80 * 100) / 100,
+    saleDate: PO_OCTOBRE_SALE_DATE_GOOGLE,
   }
 }
 
@@ -301,6 +273,13 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       offset += take
     }
 
+    const categoryCatalog: CategoryNode[] = await productService
+      .listProductCategories(
+        {},
+        { select: ["id", "handle", "parent_category_id"], take: 1000 }
+      )
+      .catch(() => [])
+
     // ── Récupération prix EUR via SQL (source de vérité pricing) ───────────
     const variantIds = allProducts.flatMap((p: any) =>
       (p.variants ?? []).map((v: any) => v.id)
@@ -482,7 +461,10 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
         const mpn = (variant.sku || variant.id).substring(0, 70)
 
         // ── Prix + promo ────────────────────────────────────────────────────
-        const { salePrice, saleDate } = computeSalePrice(amount, (product.categories ?? []).map((c: any) => c.handle ?? ''))
+        const { salePrice, saleDate } = computeSalePrice(
+          amount,
+          expandCategoryHandles(product.categories ?? [], categoryCatalog)
+        )
         const itemXml = `    <item>
       <g:id>${escapeXml(offerId)}</g:id>
       <title>${escapeXml(title)}</title>
