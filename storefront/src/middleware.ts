@@ -199,10 +199,13 @@ export async function middleware(request: NextRequest) {
   // IMPORTANT: Ne jamais rediriger les routes internes Next.js (ex: /_next/image)
   // sinon l'optimiseur d'images et les assets Next cassent (404).
   const pathname = request.nextUrl.pathname
+  // Les fichiers de public/ (popup, images) n'ont pas de code pays.
+  // Sans ça, /promotions/fichier.webp est redirigé vers /fr/promotions/... et 404.
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
-    pathname === "/favicon.ico"
+    pathname === "/favicon.ico" ||
+    /\.(?:png|jpe?g|webp|gif|svg|ico|css|js|map|txt|xml|woff2?|webmanifest|avif)$/i.test(pathname)
   ) {
     return NextResponse.next()
   }
@@ -283,5 +286,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   // Exclure toutes les routes internes Next.js (/ _next /...), et l'API
   // Sinon /_next/image est redirigé vers /{country}/_next/image et renvoie 404.
-  matcher: ["/((?!api|_next|favicon.ico|sitemap.xml|robots.txt).*)"],
+  matcher: [
+    "/((?!api|_next|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:png|jpe?g|webp|gif|svg|ico|css|js|map|txt|xml|woff2?|webmanifest|avif)$).*)",
+  ],
 }

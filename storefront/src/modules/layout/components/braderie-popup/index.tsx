@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import Image from "next/image"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 // Portes Ouvertes octobre 2026 — 16 oct 00:00 → 24 oct 23:59 (heure belge, CEST)
@@ -66,13 +65,11 @@ export default function BraderiePopup() {
           className="block focus:outline-none focus:ring-4 focus:ring-[#7f1d1d]/30"
           aria-label="Voir la boutique — Portes ouvertes, cavalier -20 %, outlet -60 %"
         >
-          <Image
+          <img
             src={IMAGE_SRC}
             alt="Portes ouvertes La Cabrade, du 16 au 24 octobre. -20 % sur toute la catégorie cavalier, -60 % sur toute la catégorie outlet."
             width={1400}
             height={1400}
-            priority
-            sizes="(max-width: 640px) 92vw, 560px"
             className="h-auto w-full"
           />
         </LocalizedClientLink>

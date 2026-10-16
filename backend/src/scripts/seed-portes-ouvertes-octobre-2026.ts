@@ -46,6 +46,21 @@ function collectSubtreeIds(
   return ids
 }
 
+/**
+ * Crée PO_OCT_CAVALIER_20 si elle n'existe pas encore.
+ * Ne recrée rien si elle est déjà là (évite de la retirer des paniers).
+ * Après le 24 octobre, ne fait plus rien.
+ */
+export async function ensurePortesOuvertesOctobre2026({ container }: ExecArgs) {
+  if (new Date() > PO_OCTOBRE_END) return
+
+  const promotionModule = container.resolve(Modules.PROMOTION) as any
+  const existing = await promotionModule.listPromotions({ code: [PO_OCTOBRE_CODE] })
+  if (existing.length > 0) return
+
+  await seedPortesOuvertesOctobre2026({ container })
+}
+
 export default async function seedPortesOuvertesOctobre2026({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER)
   const promotionModule = container.resolve(Modules.PROMOTION) as any
