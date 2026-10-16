@@ -6,7 +6,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 // Portes Ouvertes octobre 2026 — 16 oct 00:00 → 24 oct 23:59 (heure belge, CEST)
 const START_AT = new Date("2026-10-15T22:00:00.000Z")
 const END_AT = new Date("2026-10-24T21:59:59.000Z")
-const STORAGE_KEY = "lc_po_octobre_2026_popup_dismissed"
+const STORAGE_KEY = "lc_po_octobre_2026_popup_v2"
 const DELAY_MS = 900
 const IMAGE_SRC = "/promotions/portes-ouvertes-octobre-2026.webp"
 
