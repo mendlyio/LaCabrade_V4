@@ -58,7 +58,7 @@ export async function ensurePortesOuvertesOctobre2026({ container }: ExecArgs) {
   const existing = await promotionModule.listPromotions({ code: [PO_OCTOBRE_CODE] })
   if (existing.length > 0) return
 
-  await seedPortesOuvertesOctobre2026({ container })
+  await seedPortesOuvertesOctobre2026({ container, args: [] })
 }
 
 export default async function seedPortesOuvertesOctobre2026({ container }: ExecArgs) {
