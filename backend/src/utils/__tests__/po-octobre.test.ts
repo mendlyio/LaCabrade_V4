@@ -62,6 +62,11 @@ assert(
   ["cheval"]
 )
 assert(
+  "un id de sous-catégorie suffit pour remonter à cavalier",
+  expandCategoryHandles([{ id: "leaf" }], catalog).sort(),
+  ["cavalier", "pantalons", "pantalons-dame"].sort()
+)
+assert(
   "outlet enfant remonte à outlet",
   expandCategoryHandles([{ id: "outlet-child", handle: "outlet-727" }], catalog).sort(),
   ["outlet", "outlet-727"].sort()

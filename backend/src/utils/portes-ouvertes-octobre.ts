@@ -54,10 +54,12 @@ export function expandCategoryHandles(
   for (const cat of categories) {
     if (!cat) continue
     if (cat.handle) handles.add(cat.handle)
+    const self = cat.id ? byId.get(cat.id) : undefined
+    if (self?.handle) handles.add(self.handle)
 
     const seen = new Set<string>()
     let parentId: string | null | undefined = cat.id
-      ? (byId.get(cat.id)?.parent_category_id ?? cat.parent_category_id)
+      ? (self?.parent_category_id ?? cat.parent_category_id)
       : cat.parent_category_id
 
     while (parentId && !seen.has(parentId)) {

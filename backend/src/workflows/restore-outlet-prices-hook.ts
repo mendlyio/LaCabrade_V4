@@ -40,10 +40,12 @@ import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import type { ICartModuleService } from "@medusajs/framework/types"
 import { resolveGiftCardFaceValueEuros } from "../utils/gift-card-amount"
 import {
+  expandCategoryHandles,
   isPoOctobrePeriod,
   outletPriceSync,
   PO_OCTOBRE_CODE,
   PO_OCTOBRE_CAVALIER_PERCENT,
+  type CategoryNode,
 } from "../utils/portes-ouvertes-octobre"
 
 // ─── Constantes PO ──────────────────────────────────────────────────────────
@@ -511,134 +513,171 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
       }
 
       // ── B-oct. PORTES OUVERTES OCTOBRE 2026 ─────────────────────────────
-      // −20 % sur toute la catégorie Cavalier (promo auto PO_OCT_CAVALIER_20).
-      // L'outlet n'est pas concerné : sa remise est dans unit_price (bloc A).
+      // −20 % sur toute la catégorie Cavalier, sous-catégories comprises.
+      // La promo Medusa peut ne cibler que la racine « cavalier » : on crée
+      // donc l'adjustment ici pour les produits rattachés à un enfant
+      // (ex. veste dans « vestes »). L'outlet reste dans unit_price.
 
       const poOctAdjs = allAdjs.filter((a: any) => a.code === PO_OCTOBRE_CODE)
+      const poOctByItem = new Map<string, any[]>()
+      for (const adj of poOctAdjs) {
+        if (!adj.item_id) continue
+        const list = poOctByItem.get(adj.item_id) ?? []
+        list.push(adj)
+        poOctByItem.set(adj.item_id, list)
+      }
 
-      if (poOctAdjs.length > 0) {
-        if (!isPoOctobrePeriod()) {
+      if (!isPoOctobrePeriod()) {
+        if (poOctAdjs.length > 0) {
           await (cartModuleService as any).deleteLineItemAdjustments(
             poOctAdjs.map((a: any) => a.id)
           )
           console.log(
             `[CartHook] Panier ${cartId} — PO octobre hors période: supprimé ${poOctAdjs.length} adjustment(s)`
           )
-        } else {
-          const hasManualCode = allAdjs.some(
-            (a: any) => a.code && !KNOWN_AUTO_CODES.has(a.code)
-          )
-          if (hasManualCode) {
+        }
+      } else {
+        const hasManualCode = allAdjs.some(
+          (a: any) => a.code && !KNOWN_AUTO_CODES.has(a.code)
+        )
+        if (hasManualCode) {
+          if (poOctAdjs.length > 0) {
             await (cartModuleService as any).deleteLineItemAdjustments(
               poOctAdjs.map((a: any) => a.id)
             )
             console.log(
               `[CartHook] Panier ${cartId} — PO octobre: code manuel détecté, supprimé ${poOctAdjs.length} adjustment(s)`
             )
-          } else {
-            const poOctByItem = new Map<string, any[]>()
-            for (const adj of poOctAdjs) {
-              if (!adj.item_id) continue
-              const list = poOctByItem.get(adj.item_id) ?? []
-              list.push(adj)
-              poOctByItem.set(adj.item_id, list)
-            }
-
-            const allCategoriesForPo: Array<{
-              id: string
-              handle?: string | null
-              parent_category_id?: string | null
-            }> = await productModule
-              .listProductCategories(
+          }
+        } else {
+          let categoryCatalog: CategoryNode[] = []
+          const productCategories = new Map<string, Array<{ id: string; handle?: string | null }>>()
+          try {
+            const query = container.resolve(ContainerRegistrationKeys.QUERY) as any
+            const { data: categories } = await query.graph({
+              entity: "product_category",
+              fields: ["id", "handle", "parent_category_id"],
+              pagination: { skip: 0, take: 1000 },
+            })
+            categoryCatalog = (categories ?? []) as CategoryNode[]
+            if (categoryCatalog.length === 0) {
+              categoryCatalog = await productModule.listProductCategories(
                 {},
-                { select: ["id", "handle", "parent_category_id"], take: 1000 }
+                { take: 1000 }
               )
-              .catch(() => [])
-
-            const poOctCavalierIds = new Set<string>()
-            for (const category of allCategoriesForPo) {
-              if ((category.handle ?? "").toLowerCase() === "cavalier") {
-                collectSubtreeIds(category.id, allCategoriesForPo).forEach((id) =>
-                  poOctCavalierIds.add(id)
-                )
-              }
             }
 
-            const poOctProductIds = [
-              ...new Set(
-                items
-                  .filter((i: any) => poOctByItem.has(i.id) && i.product_id)
-                  .map((i: any) => i.product_id)
-              ),
+            const productIds = [
+              ...new Set(items.map((i: any) => i.product_id).filter(Boolean)),
             ] as string[]
-
-            const poOctCavalierProducts = new Set<string>()
-            if (poOctProductIds.length > 0) {
-              const poOctProducts: any[] = await productModule
-                .listProducts(
-                  { id: poOctProductIds },
-                  { relations: ["categories"], select: ["id"] }
+            if (productIds.length > 0) {
+              const { data: products } = await query.graph({
+                entity: "product",
+                fields: ["id", "categories.id", "categories.handle"],
+                filters: { id: productIds },
+              })
+              for (const product of products ?? []) {
+                productCategories.set(
+                  product.id,
+                  (product.categories ?? []).map((c: any) => ({
+                    id: c.id,
+                    handle: c.handle,
+                  }))
                 )
-                .catch(() => [])
-              for (const product of poOctProducts) {
-                const inCavalier = (product.categories ?? []).some((c: any) =>
-                  poOctCavalierIds.has(c.id)
+              }
+              const missing = productIds.filter((id) => !productCategories.has(id))
+              if (missing.length > 0) {
+                const listed: any[] = await productModule.listProducts(
+                  { id: missing },
+                  { relations: ["categories"] }
                 )
-                if (inCavalier) poOctCavalierProducts.add(product.id)
+                for (const product of listed ?? []) {
+                  productCategories.set(
+                    product.id,
+                    (product.categories ?? []).map((c: any) => ({
+                      id: c.id,
+                      handle: c.handle,
+                    }))
+                  )
+                }
               }
             }
+          } catch (error: any) {
+            console.warn(
+              `[CartHook] Panier ${cartId} — PO octobre: catégories illisibles (${error?.message})`
+            )
+          }
 
-            const octIdsToRemove: string[] = []
-            const octToUpdate: any[] = []
+          const octIdsToRemove: string[] = []
+          const octToUpdate: any[] = []
+          const octToCreate: any[] = []
+          const canClassify = categoryCatalog.length > 0
 
-            for (const item of items) {
-              const itemAdjs = poOctByItem.get(item.id)
-              if (!itemAdjs?.length) continue
+          for (const item of items) {
+            if (isGiftCardItem(item)) continue
+            const itemAdjs = poOctByItem.get(item.id) ?? []
+            const cats = item.product_id
+              ? productCategories.get(item.product_id) ?? []
+              : []
+            const handles = expandCategoryHandles(cats, categoryCatalog).map((h) =>
+              h.toLowerCase()
+            )
+            const inCavalier = handles.includes("cavalier")
+            const isOutlet =
+              item.metadata?.outlet_discount === true ||
+              handles.some((h) => h.startsWith("outlet"))
 
-              const isOutlet =
-                item.metadata?.outlet_discount === true ||
-                (item.compare_at_unit_price != null &&
-                  Number(item.compare_at_unit_price) > Number(item.unit_price ?? 0) + 0.01)
+            // Sans arbre de catégories, on ne retire pas une remise déjà posée.
+            if (!canClassify) continue
 
-              const inCavalier =
-                !!item.product_id && poOctCavalierProducts.has(item.product_id)
-
-              if (isOutlet || !inCavalier) {
-                for (const adj of itemAdjs) octIdsToRemove.push(adj.id)
-                continue
-              }
-
-              const unitPrice = Number(item.unit_price ?? 0)
-              const qty = item.quantity ?? 1
-              const expectedHT = computeDiscountAmount(
-                unitPrice,
-                qty,
-                PO_OCTOBRE_CAVALIER_PERCENT / 100
-              )
-              const first = itemAdjs[0]
-              const current = Number(first.amount ?? 0)
-              if (Math.abs(current - expectedHT) > 0.001) {
-                octToUpdate.push({
-                  id: first.id,
-                  amount: expectedHT,
-                  code: PO_OCTOBRE_CODE,
-                  description: "Portes Ouvertes octobre 2026 −20% Cavalier",
-                })
-              }
-              for (let i = 1; i < itemAdjs.length; i++) octIdsToRemove.push(itemAdjs[i].id)
+            if (isOutlet || !inCavalier) {
+              for (const adj of itemAdjs) octIdsToRemove.push(adj.id)
+              continue
             }
 
-            if (octIdsToRemove.length > 0) {
-              await (cartModuleService as any).deleteLineItemAdjustments(octIdsToRemove)
+            const unitPrice = Number(item.unit_price ?? 0)
+            const qty = item.quantity ?? 1
+            if (unitPrice <= 0) continue
+            const expectedHT = computeDiscountAmount(
+              unitPrice,
+              qty,
+              PO_OCTOBRE_CAVALIER_PERCENT / 100
+            )
+            if (itemAdjs.length === 0) {
+              octToCreate.push({
+                item_id: item.id,
+                amount: expectedHT,
+                code: PO_OCTOBRE_CODE,
+                description: "Portes Ouvertes octobre 2026 −20% Cavalier",
+              })
+              continue
             }
-            if (octToUpdate.length > 0) {
-              await (cartModuleService as any).updateLineItemAdjustments(octToUpdate)
+            const first = itemAdjs[0]
+            const current = Number(first.amount ?? 0)
+            if (Math.abs(current - expectedHT) > 0.001) {
+              octToUpdate.push({
+                id: first.id,
+                amount: expectedHT,
+                code: PO_OCTOBRE_CODE,
+                description: "Portes Ouvertes octobre 2026 −20% Cavalier",
+              })
             }
-            if (octIdsToRemove.length + octToUpdate.length > 0) {
-              console.log(
-                `[CartHook] Panier ${cartId} — PO octobre: -${octIdsToRemove.length} / upd ${octToUpdate.length}`
-              )
-            }
+            for (let i = 1; i < itemAdjs.length; i++) octIdsToRemove.push(itemAdjs[i].id)
+          }
+
+          if (octIdsToRemove.length > 0) {
+            await (cartModuleService as any).deleteLineItemAdjustments(octIdsToRemove)
+          }
+          if (octToUpdate.length > 0) {
+            await (cartModuleService as any).updateLineItemAdjustments(octToUpdate)
+          }
+          if (octToCreate.length > 0) {
+            await (cartModuleService as any).addLineItemAdjustments(octToCreate)
+          }
+          if (octIdsToRemove.length + octToUpdate.length + octToCreate.length > 0) {
+            console.log(
+              `[CartHook] Panier ${cartId} — PO octobre: -${octIdsToRemove.length} / upd ${octToUpdate.length} / +${octToCreate.length}`
+            )
           }
         }
       }
