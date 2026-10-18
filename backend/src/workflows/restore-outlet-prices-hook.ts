@@ -552,6 +552,9 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
         } else {
           let categoryCatalog: CategoryNode[] = []
           const productCategories = new Map<string, Array<{ id: string; handle?: string | null }>>()
+          const productIds = [
+            ...new Set(items.map((i: any) => i.product_id).filter(Boolean)),
+          ] as string[]
           try {
             const query = container.resolve(ContainerRegistrationKeys.QUERY) as any
             const { data: categories } = await query.graph({
@@ -560,17 +563,18 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
               pagination: { skip: 0, take: 1000 },
             })
             categoryCatalog = (categories ?? []) as CategoryNode[]
-            if (categoryCatalog.length === 0) {
-              categoryCatalog = await productModule.listProductCategories(
-                {},
-                { take: 1000 }
-              )
-            }
+          } catch {
+            categoryCatalog = []
+          }
+          if (categoryCatalog.length === 0) {
+            categoryCatalog = await productModule
+              .listProductCategories({}, { take: 1000 })
+              .catch(() => [])
+          }
 
-            const productIds = [
-              ...new Set(items.map((i: any) => i.product_id).filter(Boolean)),
-            ] as string[]
-            if (productIds.length > 0) {
+          if (productIds.length > 0) {
+            try {
+              const query = container.resolve(ContainerRegistrationKeys.QUERY) as any
               const { data: products } = await query.graph({
                 entity: "product",
                 fields: ["id", "categories.id", "categories.handle"],
@@ -585,27 +589,24 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
                   }))
                 )
               }
-              const missing = productIds.filter((id) => !productCategories.has(id))
-              if (missing.length > 0) {
-                const listed: any[] = await productModule.listProducts(
-                  { id: missing },
-                  { relations: ["categories"] }
+            } catch {
+              // fallback plus bas
+            }
+            const missing = productIds.filter((id) => !productCategories.has(id))
+            if (missing.length > 0) {
+              const listed: any[] = await productModule
+                .listProducts({ id: missing }, { relations: ["categories"] })
+                .catch(() => [])
+              for (const product of listed ?? []) {
+                productCategories.set(
+                  product.id,
+                  (product.categories ?? []).map((c: any) => ({
+                    id: c.id,
+                    handle: c.handle,
+                  }))
                 )
-                for (const product of listed ?? []) {
-                  productCategories.set(
-                    product.id,
-                    (product.categories ?? []).map((c: any) => ({
-                      id: c.id,
-                      handle: c.handle,
-                    }))
-                  )
-                }
               }
             }
-          } catch (error: any) {
-            console.warn(
-              `[CartHook] Panier ${cartId} — PO octobre: catégories illisibles (${error?.message})`
-            )
           }
 
           const octIdsToRemove: string[] = []
