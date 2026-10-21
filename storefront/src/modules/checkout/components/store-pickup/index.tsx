@@ -26,11 +26,6 @@ const storeLocations = [
     address: "Hauptstrasse 49, 4780 Saint Vith",
   },
   {
-    id: "tomco-waremme",
-    name: "Tom & Co Waremme",
-    address: "Chau. Romaine 246, 4300 Waremme",
-  },
-  {
     id: "cabrade-retinne",
     name: "Sellerie la Cabrade",
     address: "Rue de la clef 96, 4621 Retinne",
@@ -53,11 +48,21 @@ const StorePickup = ({ cart }: StorePickupProps) => {
     savedLocation?.id ?? null
   )
 
-  // Synchroniser si le cart change
+  // Synchroniser si le cart change. Un point retiré (ex. Waremme) est effacé.
   useEffect(() => {
     const loc = (cart.metadata?.pickup_location as StoreLocation) ?? null
-    setSelectedId(loc?.id ?? null)
-  }, [cart.metadata?.pickup_location])
+    const stillAvailable = storeLocations.some((location) => location.id === loc?.id)
+    setSelectedId(stillAvailable ? loc!.id : null)
+    if (loc?.id && !stillAvailable) {
+      startTransition(async () => {
+        try {
+          await setPickupLocation({ cartId: cart.id, pickupLocation: null })
+        } catch {
+          setError("Impossible de mettre à jour le point de retrait.")
+        }
+      })
+    }
+  }, [cart.id, cart.metadata?.pickup_location])
 
   // Un seul point disponible : le sélectionner automatiquement pour éviter
   // de passer au paiement sans pickup_location (bug commande #204).

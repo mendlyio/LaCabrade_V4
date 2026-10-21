@@ -104,7 +104,6 @@ export default async function seedStorePickup({ container }: ExecArgs) {
   logger.info("  📍 Q8 Malmedy — Avenue du pont de Warche 9, 4960 Malmedy")
   logger.info("  📍 Q8 Petit Rechain — Avenue du parc 27, 4800 Verviers")
   logger.info("  📍 Capalu Saint-Vith — Hauptstrasse 49, 4780 Saint Vith")
-  logger.info("  📍 Tom & Co Waremme — Chau. Romaine 246, 4300 Waremme")
   logger.info("  📍 Sellerie La Cabrade — Rue de la clef 96, 4621 Retinne")
   logger.info("")
   logger.info("⚠️  Pensez à activer cette option dans Settings → Regions de l'admin Medusa.")
