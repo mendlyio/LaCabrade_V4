@@ -77,7 +77,7 @@
     "medusajs-launch-utils": "0.0.18",
     "meilisearch": "^0.41.0",
     "minio": "^8.0.3",
-    "next": "^15.5.12",
+    "next": "15.5.28",
     "patch-package": "^8.0.1",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
@@ -109,10 +109,25 @@
   },
   "packageManager": "pnpm@9.10.0",
   "engines": {
-    "node": "22.x",
+    "node": "22.23.4",
     "npm": "10.x"
   },
   "overrides": {
-    "next": "^15.5.12"
+    "next": "15.5.28",
+    "sharp": "0.35.5",
+    "fast-xml-parser": "5.11.2",
+    "minio": {
+      "fast-xml-parser": "4.5.7"
+    },
+    "proxy-addr": "2.0.8"
+  },
+  "pnpm": {
+    "overrides": {
+      "next": "15.5.28",
+      "sharp": "0.35.5",
+      "fast-xml-parser": "5.11.2",
+      "minio>fast-xml-parser": "4.5.7",
+      "proxy-addr": "2.0.8"
+    }
   }
 }

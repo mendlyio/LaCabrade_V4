@@ -8,7 +8,7 @@
     "medusa-storefront"
   ],
   "engines": {
-    "node": ">=20.0.0"
+    "node": "24.22.1"
   },
   "scripts": {
     "wait": "await-backend",
@@ -29,9 +29,9 @@
   "dependencies": {
     "@headlessui/react": "^1.6.1",
     "@hookform/error-message": "^2.0.0",
-    "@medusajs/js-sdk": "preview",
-    "@medusajs/types": "preview",
-    "@medusajs/ui": "preview",
+    "@medusajs/js-sdk": "2.12.4",
+    "@medusajs/types": "2.12.4",
+    "@medusajs/ui": "4.0.32",
     "@meilisearch/instant-meilisearch": "^0.7.1",
     "@paypal/paypal-js": "^5.0.6",
     "@paypal/react-paypal-js": "^7.8.1",
@@ -42,7 +42,7 @@
     "framer-motion": "^12.34.0",
     "lodash": "^4.17.21",
     "medusajs-launch-utils": "0.0.18",
-    "next": "^15.1.11",
+    "next": "15.5.28",
     "pg": "^8.11.3",
     "qs": "^6.12.1",
     "react": "^18.2.0",
@@ -51,14 +51,14 @@
     "react-instantsearch-hooks-web": "^6.29.0",
     "react-intersection-observer": "^9.3.4",
     "server-only": "^0.0.1",
-    "sharp": "^0.33.0",
+    "sharp": "0.35.5",
     "tailwindcss-radix": "^2.8.0",
     "webpack": "^5"
   },
   "devDependencies": {
     "@babel/core": "^7.17.5",
-    "@medusajs/client-types": "preview",
-    "@medusajs/ui-preset": "preview",
+    "@medusajs/client-types": "0.2.12-preview-20240505115807",
+    "@medusajs/ui-preset": "2.12.4",
     "@playwright/test": "^1.41.1",
     "@types/lodash": "^4.14.195",
     "@types/node": "17.0.21",
@@ -77,5 +77,15 @@
     "tailwindcss": "^3.0.23",
     "typescript": "^5.3.2"
   },
-  "packageManager": "pnpm@9.10.0+sha512.73a29afa36a0d092ece5271de5177ecbf8318d454ecd701343131b8ebc0c1a91c487da46ab77c8e596d6acf1461e3594ced4becedf8921b074fbd8653ed7051c"
+  "packageManager": "pnpm@9.10.0+sha512.73a29afa36a0d092ece5271de5177ecbf8318d454ecd701343131b8ebc0c1a91c487da46ab77c8e596d6acf1461e3594ced4becedf8921b074fbd8653ed7051c",
+  "overrides": {
+    "next": "15.5.28",
+    "sharp": "0.35.5"
+  },
+  "pnpm": {
+    "overrides": {
+      "next": "15.5.28",
+      "sharp": "0.35.5"
+    }
+  }
 }
