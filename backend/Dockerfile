@@ -25,7 +25,19 @@ ARG COOKIE_SECRET
 COPY . .
 
 # [phases.install]
+# NODE_ENV reste vide ici : npm ci doit installer les devDependencies.
 RUN npm ci --prefer-offline --no-audit || npm install --no-audit
+
+# medusa build inline admin.backendUrl (__BACKEND_URL__) dans le JS de l'admin.
+# Nixpacks voyait toutes les variables de service ; Docker ne les reçoit que
+# si elles sont déclarées en ARG. Sans elles, le SDK reste sur
+# http://localhost:9000 et le login navigateur n'atteint jamais ce service.
+ARG BACKEND_PUBLIC_URL
+ARG RAILWAY_PUBLIC_DOMAIN_VALUE
+
+# Cookies de session (Secure) : Nixpacks démarre en production.
+# Posé après npm ci pour ne pas omettre les devDependencies.
+ENV NODE_ENV=production
 
 # [phases.build]
 RUN NODE_OPTIONS=--max-old-space-size=4096 npm run build
