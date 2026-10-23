@@ -1,0 +1,17 @@
+node_modules
+.medusa
+.git
+.env
+.env.*
+!.env.example
+*.log
+npm-debug.log*
+.npm-cache
+coverage
+dist
+.DS_Store
+.idea
+.cache
+uploads
+medusa-db.sql
+tsconfig.tsbuildinfo

@@ -1,0 +1,66 @@
+# Reproduit storefront/nixpacks.toml.
+# Nixpacks installe nodejs_24 + l'attribut nixpkgs `pnpm` (pnpm_10 = 10.18.0,
+# même archive que le Node 24.10.0 observé). bookworm-slim est la famille
+# glibc équivalente, avec le patch Node exact.
+FROM node:24.22.1-bookworm-slim
+
+WORKDIR /app
+
+# [variables]
+ENV NODE_OPTIONS=--max-old-space-size=2048
+
+# Le champ packageManager pointe pnpm 9.10.0. Nixpacks n'utilise pas corepack :
+# il met le binaire nixpkgs pnpm 10.18.0 sur le PATH. On fait pareil.
+RUN corepack disable \
+    && npm install -g pnpm@10.18.0 \
+    && pnpm --version | grep -qx '10.18.0'
+
+# next build inline les NEXT_PUBLIC_*. Railway injecte les variables de
+# service du même nom comme build-args. Défaut vide : les replis du code
+# restent valides. Valeurs publiques, jamais écrites dans le dépôt.
+ARG NEXT_PUBLIC_FEATURE_SEARCH_ENABLED
+ARG NEXT_PUBLIC_STRIPE_KEY
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+ARG NEXT_PUBLIC_PAYPAL_CLIENT_ID
+ARG NEXT_PUBLIC_MEDUSA_BACKEND_URL
+ARG NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
+ARG NEXT_PUBLIC_META_PIXEL_ID
+ARG NEXT_PUBLIC_GOOGLE_ADS_ID
+ARG NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL
+ARG NEXT_PUBLIC_BASE_URL
+ARG NEXT_PUBLIC_DEFAULT_REGION
+ARG NEXT_PUBLIC_SEARCH_ENDPOINT
+ARG NEXT_PUBLIC_SEARCH_API_KEY
+ARG NEXT_PUBLIC_SEARCH_APP_ID
+ARG NEXT_PUBLIC_INDEX_NAME
+ARG NEXT_PUBLIC_MINIO_ENDPOINT
+
+ENV NEXT_PUBLIC_FEATURE_SEARCH_ENABLED=$NEXT_PUBLIC_FEATURE_SEARCH_ENABLED \
+    NEXT_PUBLIC_STRIPE_KEY=$NEXT_PUBLIC_STRIPE_KEY \
+    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
+    NEXT_PUBLIC_PAYPAL_CLIENT_ID=$NEXT_PUBLIC_PAYPAL_CLIENT_ID \
+    NEXT_PUBLIC_MEDUSA_BACKEND_URL=$NEXT_PUBLIC_MEDUSA_BACKEND_URL \
+    NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=$NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY \
+    NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID \
+    NEXT_PUBLIC_META_PIXEL_ID=$NEXT_PUBLIC_META_PIXEL_ID \
+    NEXT_PUBLIC_GOOGLE_ADS_ID=$NEXT_PUBLIC_GOOGLE_ADS_ID \
+    NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL=$NEXT_PUBLIC_GOOGLE_ADS_PURCHASE_LABEL \
+    NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL \
+    NEXT_PUBLIC_DEFAULT_REGION=$NEXT_PUBLIC_DEFAULT_REGION \
+    NEXT_PUBLIC_SEARCH_ENDPOINT=$NEXT_PUBLIC_SEARCH_ENDPOINT \
+    NEXT_PUBLIC_SEARCH_API_KEY=$NEXT_PUBLIC_SEARCH_API_KEY \
+    NEXT_PUBLIC_SEARCH_APP_ID=$NEXT_PUBLIC_SEARCH_APP_ID \
+    NEXT_PUBLIC_INDEX_NAME=$NEXT_PUBLIC_INDEX_NAME \
+    NEXT_PUBLIC_MINIO_ENDPOINT=$NEXT_PUBLIC_MINIO_ENDPOINT
+
+COPY . .
+
+# [phases.install] — pnpm 10.18.0, identique à l'attribut nixpkgs `pnpm`
+RUN pnpm install --no-frozen-lockfile
+
+# [phases.build]
+RUN NODE_OPTIONS=--max-old-space-size=2048 pnpm run build
+
+# railway.json deploy.startCommand (prime sur le `pnpm start` de nixpacks.toml)
+CMD ["node", "start-server.js"]

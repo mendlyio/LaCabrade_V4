@@ -1,10 +1,11 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "NODE_OPTIONS=--max-old-space-size=4096 npm run build"
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
   },
   "deploy": {
+    "startCommand": "node start-server.js",
     "multiRegionConfig": {
       "europe-west4-drams3a": {
         "numReplicas": 1
@@ -14,4 +15,3 @@
     "restartPolicyMaxRetries": 10
   }
 }
-
