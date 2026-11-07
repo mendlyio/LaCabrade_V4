@@ -136,7 +136,7 @@ export const PORTES_OUVERTES_PROMO: ActivePromoConfig = {
 //   • Pas de -10% global, pas de palier LC
 // Pour couper avant le 24 : active: false
 export const PORTES_OUVERTES_OCTOBRE_PROMO: ActivePromoConfig = {
-  active: true,
+  active: false,
   code: "PO_OCT_CAVALIER_20",
   discountPercent: 20,
   label: "Portes Ouvertes",
@@ -223,9 +223,54 @@ export const SOLDE_PROMO: ActivePromoConfig = {
   outletDiscountPercent: 60,
 }
 
+// ─── Fermeture magasin novembre 2026 (9–11 novembre) ─────────────────────────
+// Heure belge (CET = UTC+1 en novembre) :
+//   9 nov 00:00 BEL  = 8 nov 23:00 UTC
+//   11 nov 23:59 BEL = 11 nov 22:59 UTC
+//
+// −10 % sur tout le site, hors compléments alimentaires (+ sous-catégories,
+// les appelants ajoutent les handles ancêtres) et tondeuses. Outlet inchangé (−50 %).
+// Backend : promo FERMETURE_NOV_10 + bloc B-nov du hook panier.
+export const FERMETURE_NOVEMBRE_PROMO: ActivePromoConfig = {
+  active: true,
+  code: "FERMETURE_NOV_10",
+  discountPercent: 10,
+  label: "",
+  startDate: new Date("2026-11-08T23:00:00.000Z"),
+  endDate: new Date("2026-11-11T22:59:59.000Z"),
+  excludedCategoryHandles: [
+    "tondeuses-et-peignes",
+    "tondeuses",
+    "complements-alimentaires",
+    "compléments-alimentaires",
+    "systeme-renal",
+    "systeme-circulatoire",
+    "systeme-lymphatique",
+    "immunite",
+    "systeme-locomoteur",
+    "systeme-hepatique",
+    "système-hépatique",
+    "systeme-digestif",
+    "système-digestif",
+    "vitamines-et-mineraux",
+    "vitamines-et-minéraux",
+    "muscles-et-recuperation",
+    "muscles,-récupérations-et-performance",
+    "metabolisme",
+    "métabolisme",
+    "sabots-et-crins",
+    "sabots,-robe-et-crins",
+    "systeme-respiratoire",
+    "système-respiratoire",
+    "nervosite-et-comportement",
+    "nervosité-et-comportement",
+    "bon-cadeau",
+  ],
+}
+
 // ─── Promotion active ──────────────────────────────────────────────────────────
 // Pointer ici pour changer de promo (ex: PAQUES_PROMO, PORTES_OUVERTES_PROMO, PORTES_OUVERTES_OCTOBRE_PROMO, BRADERIE_PROMO, SOLDE_PROMO)
-export const ACTIVE_PROMO: ActivePromoConfig = PORTES_OUVERTES_OCTOBRE_PROMO
+export const ACTIVE_PROMO: ActivePromoConfig = FERMETURE_NOVEMBRE_PROMO
 
 /** La promo est-elle actuellement active ? */
 export function isPromoActive(): boolean {

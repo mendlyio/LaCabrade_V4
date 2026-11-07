@@ -8,6 +8,12 @@ import {
   PO_OCTOBRE_SALE_DATE_META,
   type CategoryNode,
 } from '../../utils/portes-ouvertes-octobre'
+import {
+  FERMETURE_NOV_PERCENT,
+  FERMETURE_NOV_SALE_DATE_META,
+  isFermetureNovEligible,
+  isFermetureNovPeriod,
+} from '../../utils/fermeture-novembre'
 
 const STORE_URL = process.env.STORE_URL || 'https://www.sellerie-lacabrade.be'
 
@@ -49,6 +55,14 @@ function computeSalePrice(
   if (handles.some((h) => h.startsWith(OUTLET_HANDLE_PREFIX))) {
     const payRatio = 1 - getOutletDiscountPercent(now) / 100
     return { salePrice: Math.round(basePrice * payRatio * 100) / 100, saleDate: null }
+  }
+
+  // Fermeture magasin 9–11 nov. 2026 : −10 % hors compléments alimentaires et tondeuses
+  if (isFermetureNovPeriod(now) && isFermetureNovEligible(handles, false)) {
+    return {
+      salePrice: Math.round(basePrice * (1 - FERMETURE_NOV_PERCENT / 100) * 100) / 100,
+      saleDate: FERMETURE_NOV_SALE_DATE_META,
+    }
   }
 
   if (!isPoOctobrePeriod(now)) return { salePrice: null, saleDate: null }

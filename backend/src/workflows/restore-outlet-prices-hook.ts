@@ -47,6 +47,12 @@ import {
   PO_OCTOBRE_CAVALIER_PERCENT,
   type CategoryNode,
 } from "../utils/portes-ouvertes-octobre"
+import {
+  FERMETURE_NOV_CODE,
+  FERMETURE_NOV_PERCENT,
+  isFermetureNovEligible,
+  isFermetureNovPeriod,
+} from "../utils/fermeture-novembre"
 
 // ─── Constantes PO ──────────────────────────────────────────────────────────
 const PO_CODE = "PO_GLOBAL_10"
@@ -59,6 +65,7 @@ const KNOWN_AUTO_CODES = new Set([
   "SOLDE_LC_15", "SOLDE_CAVALIER_25", "SOLDE_CAVALIER_30", "SOLDE_OUTLET_60",
   "OUTLET_50", "FREE_SHIPPING_75", "PAQUES_10",
   PO_OCTOBRE_CODE,
+  FERMETURE_NOV_CODE,
 ])
 const PO_START = new Date("2026-04-30T22:00:00.000Z")
 const PO_END   = new Date("2026-05-09T21:59:59.000Z")
@@ -678,6 +685,134 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
           if (octIdsToRemove.length + octToUpdate.length + octToCreate.length > 0) {
             console.log(
               `[CartHook] Panier ${cartId} — PO octobre: -${octIdsToRemove.length} / upd ${octToUpdate.length} / +${octToCreate.length}`
+            )
+          }
+        }
+      }
+
+      // ── B-nov. FERMETURE MAGASIN NOVEMBRE 2026 (−10 %) ──────────────────
+      // −10 % sur tout le site du 9 au 11 novembre, hors compléments
+      // alimentaires, tondeuses, outlet et bons cadeau. Promo Medusa globale
+      // FERMETURE_NOV_10 : ce bloc retire les articles exclus, crée la remise
+      // si le moteur ne l'a pas posée et corrige le montant HT.
+      {
+        const novAdjs = allAdjs.filter((a: any) => a.code === FERMETURE_NOV_CODE)
+        const novByItem = new Map<string, any[]>()
+        for (const adj of novAdjs) {
+          if (!adj.item_id) continue
+          const list = novByItem.get(adj.item_id) ?? []
+          list.push(adj)
+          novByItem.set(adj.item_id, list)
+        }
+        const hasManualCode = allAdjs.some(
+          (a: any) => a.code && !KNOWN_AUTO_CODES.has(a.code)
+        )
+
+        if (!isFermetureNovPeriod() || hasManualCode) {
+          if (novAdjs.length > 0) {
+            await (cartModuleService as any).deleteLineItemAdjustments(
+              novAdjs.map((a: any) => a.id)
+            )
+            console.log(
+              `[CartHook] Panier ${cartId} — fermeture nov.: ${hasManualCode ? "code manuel" : "hors période"}, supprimé ${novAdjs.length} adjustment(s)`
+            )
+          }
+        } else {
+          let catalog: CategoryNode[] = []
+          const productCats = new Map<string, Array<{ id: string; handle?: string | null }>>()
+          const productIds = [
+            ...new Set(items.map((i: any) => i.product_id).filter(Boolean)),
+          ] as string[]
+          try {
+            const query = container.resolve(ContainerRegistrationKeys.QUERY) as any
+            const { data: categories } = await query.graph({
+              entity: "product_category",
+              fields: ["id", "handle", "parent_category_id"],
+              pagination: { skip: 0, take: 1000 },
+            })
+            catalog = (categories ?? []) as CategoryNode[]
+            if (productIds.length > 0) {
+              const { data: products } = await query.graph({
+                entity: "product",
+                fields: ["id", "categories.id", "categories.handle"],
+                filters: { id: productIds },
+              })
+              for (const product of products ?? []) {
+                productCats.set(
+                  product.id,
+                  (product.categories ?? []).map((c: any) => ({ id: c.id, handle: c.handle }))
+                )
+              }
+            }
+          } catch {
+            // fallback ci-dessous
+          }
+          if (catalog.length === 0) {
+            catalog = await productModule.listProductCategories({}, { take: 1000 }).catch(() => [])
+          }
+          const missing = productIds.filter((id) => !productCats.has(id))
+          if (missing.length > 0) {
+            const listed: any[] = await productModule
+              .listProducts({ id: missing }, { relations: ["categories"] })
+              .catch(() => [])
+            for (const product of listed ?? []) {
+              productCats.set(
+                product.id,
+                (product.categories ?? []).map((c: any) => ({ id: c.id, handle: c.handle }))
+              )
+            }
+          }
+
+          const toRemove: string[] = []
+          const toUpdate: any[] = []
+          const toCreate: any[] = []
+          const canClassify = catalog.length > 0
+          const description = "Fermeture magasin −10%"
+
+          for (const item of items) {
+            const itemAdjs = novByItem.get(item.id) ?? []
+            if (isGiftCardItem(item)) {
+              for (const adj of itemAdjs) toRemove.push(adj.id)
+              continue
+            }
+            // Sans arbre de catégories on ne peut pas exclure : on ne touche à rien.
+            if (!canClassify) continue
+
+            const cats = item.product_id ? productCats.get(item.product_id) ?? [] : []
+            const handles = expandCategoryHandles(cats, catalog)
+            const isOutlet = item.metadata?.outlet_discount === true
+            if (!isFermetureNovEligible(handles, isOutlet)) {
+              for (const adj of itemAdjs) toRemove.push(adj.id)
+              continue
+            }
+
+            const unitPrice = Number(item.unit_price ?? 0)
+            const qty = item.quantity ?? 1
+            if (unitPrice <= 0) continue
+            const expectedHT = computeDiscountAmount(unitPrice, qty, FERMETURE_NOV_PERCENT / 100)
+            if (itemAdjs.length === 0) {
+              toCreate.push({ item_id: item.id, amount: expectedHT, code: FERMETURE_NOV_CODE, description })
+              continue
+            }
+            const first = itemAdjs[0]
+            if (Math.abs(Number(first.amount ?? 0) - expectedHT) > 0.001) {
+              toUpdate.push({ id: first.id, amount: expectedHT, code: FERMETURE_NOV_CODE, description })
+            }
+            for (let i = 1; i < itemAdjs.length; i++) toRemove.push(itemAdjs[i].id)
+          }
+
+          if (toRemove.length > 0) {
+            await (cartModuleService as any).deleteLineItemAdjustments(toRemove)
+          }
+          if (toUpdate.length > 0) {
+            await (cartModuleService as any).updateLineItemAdjustments(toUpdate)
+          }
+          if (toCreate.length > 0) {
+            await (cartModuleService as any).addLineItemAdjustments(toCreate)
+          }
+          if (toRemove.length + toUpdate.length + toCreate.length > 0) {
+            console.log(
+              `[CartHook] Panier ${cartId} — fermeture nov.: -${toRemove.length} / upd ${toUpdate.length} / +${toCreate.length}`
             )
           }
         }
