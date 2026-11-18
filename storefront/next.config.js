@@ -18,6 +18,33 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  async headers() {
+    const securityHeaders = [
+      {
+        key: "Strict-Transport-Security",
+        value: "max-age=63072000; includeSubDomains",
+      },
+      {
+        key: "X-Content-Type-Options",
+        value: "nosniff",
+      },
+      {
+        key: "Referrer-Policy",
+        value: "strict-origin-when-cross-origin",
+      },
+      {
+        key: "X-Frame-Options",
+        value: "SAMEORIGIN",
+      },
+    ]
+
+    return [
+      {
+        source: "/:path*",
+        headers: securityHeaders,
+      },
+    ]
+  },
   images: {
     // AVIF en priorité (meilleure compression que WebP), puis WebP — réduit le poids vs WebP seul.
     formats: ["image/avif", "image/webp"],
