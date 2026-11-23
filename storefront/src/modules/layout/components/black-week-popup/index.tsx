@@ -77,7 +77,7 @@ export default function BlackWeekPopup() {
 
   return (
     <div
-      className="fixed inset-0 z-[9000] flex items-center justify-center p-4 pb-36 sm:pb-28"
+      className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
       style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
       onClick={(event) => {
         if (event.target === event.currentTarget) dismiss()
@@ -116,7 +116,7 @@ export default function BlackWeekPopup() {
             width={840}
             height={1120}
             decoding="async"
-            className="h-auto max-h-[min(640px,calc(100dvh-9rem))] w-full object-contain"
+            className="h-auto max-h-[calc(100dvh-2rem)] w-full object-contain"
           />
         </LocalizedClientLink>
       </div>
