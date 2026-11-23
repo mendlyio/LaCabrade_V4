@@ -1,3 +1,5 @@
+import { BLACK_WEEK_OUTLET_PERCENT, isBlackWeekPeriod } from "./black-week"
+
 /**
  * Portes Ouvertes octobre 2026 (16–24 octobre, heure belge).
  *
@@ -34,9 +36,11 @@ export function isPoOctobrePeriod(now = new Date()): boolean {
   return now >= PO_OCTOBRE_START && now <= PO_OCTOBRE_END
 }
 
-/** 60 % pendant les PO d'octobre, 50 % le reste du temps. */
+/** 60 % pendant les PO d'octobre et la Black Week, 50 % le reste du temps. */
 export function getOutletDiscountPercent(now = new Date()): number {
-  return isPoOctobrePeriod(now) ? PO_OCTOBRE_OUTLET_PERCENT : OUTLET_BASE_PERCENT
+  if (isPoOctobrePeriod(now)) return PO_OCTOBRE_OUTLET_PERCENT
+  if (isBlackWeekPeriod(now)) return BLACK_WEEK_OUTLET_PERCENT
+  return OUTLET_BASE_PERCENT
 }
 
 /**

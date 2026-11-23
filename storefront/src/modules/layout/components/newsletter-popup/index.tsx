@@ -12,6 +12,7 @@ import {
 import Image from "next/image"
 import { useTranslate } from "@lib/context/language-context"
 import { isBraderiePopupActive } from "@modules/layout/components/braderie-popup"
+import { isBlackWeekPopupActive } from "@modules/layout/components/black-week-popup"
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ||
@@ -36,7 +37,7 @@ export default function NewsletterPopup() {
   const [errors, setErrors] = useState<{ email?: string; birthday?: string }>({})
 
   useEffect(() => {
-    if (isBraderiePopupActive()) return
+    if (isBraderiePopupActive() || isBlackWeekPopupActive()) return
     if (localStorage.getItem(STORAGE_KEY)) return
     const timer = setTimeout(() => setVisible(true), DELAY_MS)
     return () => clearTimeout(timer)

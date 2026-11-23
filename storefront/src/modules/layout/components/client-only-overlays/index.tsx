@@ -17,10 +17,16 @@ const BraderiePopup = dynamic(
   { ssr: false }
 )
 
+const BlackWeekPopup = dynamic(
+  () => import("@modules/layout/components/black-week-popup"),
+  { ssr: false }
+)
+
 export default function ClientOnlyOverlays() {
   return (
     <>
       <CookieBanner />
+      <BlackWeekPopup />
       <BraderiePopup />
       <NewsletterPopup />
     </>

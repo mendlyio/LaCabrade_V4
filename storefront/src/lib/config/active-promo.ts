@@ -268,9 +268,63 @@ export const FERMETURE_NOVEMBRE_PROMO: ActivePromoConfig = {
   ],
 }
 
+// ─── Black Week 2026 (23–30 novembre) ─────────────────────────────────────────
+// Heure belge (CET = UTC+1) :
+//   23 nov 00:00 BEL = 22 nov 23:00 UTC
+//   30 nov 23:59 BEL = 30 nov 22:59:59 UTC
+//
+// Prix barrés : −20 % sur un article éligible. Le −30 % dès 2 couvertures
+// se calcule au panier (il ne se voit pas sur une fiche à l'unité).
+// Outlet : −60 % via outletDiscountPercent, jamais cumulé avec le −20 %.
+// Tenir les handles alignés avec backend/src/utils/black-week.ts.
+const BLACK_WEEK_HANDLES = [
+  "pantalons",
+  "pantalons-dame",
+  "pantalons-enfant",
+  "sweats-et-pulls",
+  "sweats-et-pulls-dame",
+  "sweats-et-pulls-enfant",
+  "t-shirts-et-polos",
+  "t-shirts-et-polos-dame",
+  "t-shirts-et-polos-enfant",
+  "vestes",
+  "vestes-dame",
+  "vestes-enfant",
+  "gants",
+  "gants-de-travail",
+  "gants-techniques",
+  "pantalons-de-concours",
+  "polos-de-concours",
+  "vestes-de-concours",
+  "chaussettes",
+  "casquettes",
+  "ceintures",
+  "bonnets,-bandeaux,-echarpes-et-tours-de-cou",
+  "couvertures",
+  "couvertures-anti-eczema-et-anti-mouche",
+  "couvertures-d'ecurie",
+  "couvertures-d'extérieur",
+  "couvertures-de-marcheur-et-couvre-reins",
+  "couvertures-de-presentation",
+  "couvertures-polaires-et-sechantes",
+  "sous-couvertures-et-accessoires",
+]
+
+export const BLACK_WEEK_PROMO: ActivePromoConfig = {
+  active: true,
+  code: "BW_VETEMENTS_20",
+  discountPercent: 20,
+  label: "Black Week",
+  startDate: new Date("2026-11-22T23:00:00.000Z"),
+  endDate: new Date("2026-11-30T22:59:59.000Z"),
+  excludedCategoryHandles: [],
+  includedCategoryHandles: BLACK_WEEK_HANDLES,
+  outletDiscountPercent: 60,
+}
+
 // ─── Promotion active ──────────────────────────────────────────────────────────
 // Pointer ici pour changer de promo (ex: PAQUES_PROMO, PORTES_OUVERTES_PROMO, PORTES_OUVERTES_OCTOBRE_PROMO, BRADERIE_PROMO, SOLDE_PROMO)
-export const ACTIVE_PROMO: ActivePromoConfig = FERMETURE_NOVEMBRE_PROMO
+export const ACTIVE_PROMO: ActivePromoConfig = BLACK_WEEK_PROMO
 
 /** La promo est-elle actuellement active ? */
 export function isPromoActive(): boolean {

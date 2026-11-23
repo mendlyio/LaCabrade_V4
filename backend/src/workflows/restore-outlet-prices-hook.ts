@@ -53,6 +53,11 @@ import {
   isFermetureNovEligible,
   isFermetureNovPeriod,
 } from "../utils/fermeture-novembre"
+import {
+  BLACK_WEEK_CODES,
+  blackWeekAdjustmentsActive,
+  planBlackWeekAdjustments,
+} from "../utils/black-week"
 
 // ─── Constantes PO ──────────────────────────────────────────────────────────
 const PO_CODE = "PO_GLOBAL_10"
@@ -66,6 +71,7 @@ const KNOWN_AUTO_CODES = new Set([
   "OUTLET_50", "FREE_SHIPPING_75", "PAQUES_10",
   PO_OCTOBRE_CODE,
   FERMETURE_NOV_CODE,
+  ...BLACK_WEEK_CODES,
 ])
 const PO_START = new Date("2026-04-30T22:00:00.000Z")
 const PO_END   = new Date("2026-05-09T21:59:59.000Z")
@@ -150,6 +156,36 @@ function isBraderiePeriod(): boolean {
 function isSoldePeriod(): boolean {
   const now = new Date()
   return now >= SOLDE_START && now <= SOLDE_END
+}
+
+const BLACK_WEEK_CATALOG_TTL_MS = 5 * 60 * 1000
+let blackWeekCatalogCache: { at: number; nodes: CategoryNode[] } | null = null
+
+/** Arbre des catégories, mis en cache 5 min pour ne pas recharger tout le catalogue à chaque panier. */
+async function loadBlackWeekCatalog(container: any, productModule: any): Promise<CategoryNode[]> {
+  const now = Date.now()
+  if (blackWeekCatalogCache && now - blackWeekCatalogCache.at < BLACK_WEEK_CATALOG_TTL_MS) {
+    return blackWeekCatalogCache.nodes
+  }
+  let catalog: CategoryNode[] = []
+  try {
+    const query = container.resolve(ContainerRegistrationKeys.QUERY) as any
+    const { data: categories } = await query.graph({
+      entity: "product_category",
+      fields: ["id", "handle", "parent_category_id"],
+      pagination: { skip: 0, take: 1000 },
+    })
+    catalog = (categories ?? []) as CategoryNode[]
+  } catch {
+    catalog = []
+  }
+  if (catalog.length === 0) {
+    catalog = await productModule.listProductCategories({}, { take: 1000 }).catch(() => [])
+  }
+  if (catalog.length > 0) {
+    blackWeekCatalogCache = { at: now, nodes: catalog }
+  }
+  return catalog
 }
 
 /**
@@ -814,6 +850,113 @@ refreshCartItemsWorkflow.hooks.beforeRefreshingPaymentCollection(
             console.log(
               `[CartHook] Panier ${cartId} — fermeture nov.: -${toRemove.length} / upd ${toUpdate.length} / +${toCreate.length}`
             )
+          }
+        }
+      }
+
+      // ── B-bw. BLACK WEEK 2026 (23–30 novembre) ──────────────────────────
+      // Vêtements −20 %. Couvertures −20 %, −30 % dès que la quantité de
+      // couvertures (hors outlet) atteint 2. L'outlet reste dans unit_price
+      // (60 % cette semaine) : aucun adjustment, même si l'article est aussi
+      // un vêtement. Montants réécrits en HT.
+      {
+        const bwAdjs = allAdjs.filter((a: any) => a.code && BLACK_WEEK_CODES.has(a.code))
+        const hasManualCode = allAdjs.some(
+          (a: any) => a.code && !KNOWN_AUTO_CODES.has(a.code)
+        )
+        const apply = blackWeekAdjustmentsActive() && !hasManualCode
+
+        if (!apply) {
+          if (bwAdjs.length > 0) {
+            await (cartModuleService as any).deleteLineItemAdjustments(
+              bwAdjs.map((a: any) => a.id)
+            )
+            console.log(
+              `[CartHook] Panier ${cartId} — Black Week ${hasManualCode ? "code manuel" : "inactive"}: supprimé ${bwAdjs.length} adjustment(s)`
+            )
+          }
+        } else {
+          const catalog = await loadBlackWeekCatalog(container, productModule)
+          const productCats = new Map<string, Array<{ id: string; handle?: string | null }>>()
+          const productIds = [
+            ...new Set(items.map((i: any) => i.product_id).filter(Boolean)),
+          ] as string[]
+          if (productIds.length > 0) {
+            try {
+              const query = container.resolve(ContainerRegistrationKeys.QUERY) as any
+              const { data: products } = await query.graph({
+                entity: "product",
+                fields: ["id", "categories.id", "categories.handle"],
+                filters: { id: productIds },
+              })
+              for (const product of products ?? []) {
+                productCats.set(
+                  product.id,
+                  (product.categories ?? []).map((c: any) => ({ id: c.id, handle: c.handle }))
+                )
+              }
+            } catch {
+              // fallback ci-dessous
+            }
+          }
+          const missing = productIds.filter((id) => !productCats.has(id))
+          if (missing.length > 0) {
+            const listed: any[] = await productModule
+              .listProducts({ id: missing }, { relations: ["categories"] })
+              .catch(() => [])
+            for (const product of listed ?? []) {
+              productCats.set(
+                product.id,
+                (product.categories ?? []).map((c: any) => ({ id: c.id, handle: c.handle }))
+              )
+            }
+          }
+
+          // Sans arbre de catégories, on ne retire pas une remise déjà posée.
+          if (catalog.length > 0) {
+            const planned = planBlackWeekAdjustments({
+              apply: true,
+              items: items.map((item: any) => {
+                const cats = item.product_id ? productCats.get(item.product_id) ?? [] : []
+                const handles = expandCategoryHandles(cats, catalog)
+                const isOutlet =
+                  item.metadata?.outlet_discount === true ||
+                  handles.some((handle) => handle.toLowerCase().startsWith("outlet"))
+                return {
+                  id: item.id,
+                  unitPrice: Number(item.unit_price ?? 0),
+                  quantity: item.quantity ?? 1,
+                  handles,
+                  isOutlet,
+                  isGiftCard: isGiftCardItem(item),
+                }
+              }),
+              existing: bwAdjs
+                .filter((adjustment: any) => adjustment.item_id && adjustment.id)
+                .map((adjustment: any) => ({
+                  id: adjustment.id,
+                  item_id: adjustment.item_id,
+                  code: adjustment.code,
+                  amount: Number(adjustment.amount ?? 0),
+                })),
+              amountFor: (unitPrice, quantity, percent) =>
+                computeDiscountAmount(unitPrice, quantity, percent / 100),
+            })
+
+            if (planned.removeIds.length > 0) {
+              await (cartModuleService as any).deleteLineItemAdjustments(planned.removeIds)
+            }
+            if (planned.updates.length > 0) {
+              await (cartModuleService as any).updateLineItemAdjustments(planned.updates)
+            }
+            if (planned.creates.length > 0) {
+              await (cartModuleService as any).addLineItemAdjustments(planned.creates)
+            }
+            if (planned.removeIds.length + planned.updates.length + planned.creates.length > 0) {
+              console.log(
+                `[CartHook] Panier ${cartId} — Black Week: -${planned.removeIds.length} / upd ${planned.updates.length} / +${planned.creates.length}`
+              )
+            }
           }
         }
       }
